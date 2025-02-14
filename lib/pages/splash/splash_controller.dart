@@ -1,0 +1,32 @@
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import '../routes/app_pages.dart';
+
+class SplashController extends GetxController {
+  SplashController(AuthRepository authRepository);
+
+  final GetStorage _getStorage = GetStorage();
+
+  @override
+  void onInit() {
+    super.onInit();
+  }
+
+  @override
+  void onReady() async {
+    super.onReady();
+    // Future.delayed(const Duration(seconds: 3), () => Get.offAllNamed(Routes.login));
+
+    if (_getStorage.read("userId") != null) {
+      Get.offAllNamed(Routes.home);
+    } else {
+      Get.offAllNamed(Routes.login);
+    }
+  }
+
+  @override
+  void onClose() {
+    super.onClose();
+  }
+}
