@@ -84,7 +84,7 @@ class LoginController extends GetxController {
             _getStorage.write("userId", value.userId);
             _getStorage.write("sessionId", value.$id);
 
-            Get.offAllNamed(Routes.home);
+            Get.offAllNamed(Routes.userHome);
           }).catchError((error){
             FullScreenDialogLoader.cancelDialog();
             debugPrint("Error details: $error");
