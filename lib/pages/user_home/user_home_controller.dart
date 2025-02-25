@@ -13,20 +13,8 @@ class UserHomeController extends GetxController {
 
   final GetStorage  _getStorage = GetStorage();
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
 
-  @override
-  void onReady() async {
-    super.onReady();
-  }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
 
   logout() async {
     try {

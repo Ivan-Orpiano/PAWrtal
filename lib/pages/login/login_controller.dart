@@ -24,15 +24,7 @@ class LoginController extends GetxController {
 
     final GetStorage _getStorage = GetStorage();
 
-    @override
-    void onInit() {
-      super.onInit();
-    }
 
-    @override
-    void onReady() async {
-      super.onReady();
-    }
     
     @override
     void onClose() {
