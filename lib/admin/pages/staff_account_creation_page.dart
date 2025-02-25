@@ -74,7 +74,7 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(70),
                           child: Image.asset(
-                            'images/pfp.jpg',
+                            'lib/images/pfp.jpg',
                             height: 100,
                             width: 100,
                           ),

@@ -14,7 +14,7 @@ class _LandingPageState extends State<AdminLandingPage> {
       appBar: AppBar(
         centerTitle: true,
         title:
-            Image.asset('lib/images/PAWRtal_logo.png', width: 200, height: 200),
+            Image.asset('lib/images/PAWrtal_logo.png', width: 200, height: 200),
         elevation: 0,
       ),
       drawer: const Drawer(
@@ -60,7 +60,7 @@ class _LandingPageState extends State<AdminLandingPage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            Image(image: AssetImage('lib/images/sample_location.png')),
+            Image(image: AssetImage('lib/images/dogimage.jpg')),
             Padding(
               padding: EdgeInsets.only(top: 30),
               child: Text('Ratings and Reviews',
