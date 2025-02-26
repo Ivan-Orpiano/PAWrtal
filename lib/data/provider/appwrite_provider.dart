@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:capstone_app/pages/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 
 class AppWriteProvider{
@@ -9,8 +10,8 @@ class AppWriteProvider{
   
   AppWriteProvider() {
     client
-      .setEndpoint('http://10.0.2.2:4003/v1')
-      .setProject('679c39870009ddd3d2df')
+      .setEndpoint(AppwriteConstants.endPoint)
+      .setProject(AppwriteConstants.projectID)
       .setSelfSigned(status: true);
     account = Account(client);
   }

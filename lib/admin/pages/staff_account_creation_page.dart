@@ -1,4 +1,9 @@
+import 'dart:io';
+
+import 'package:capstone_app/admin/pages/staff_account_controller.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class StaffAccountCreationPage extends StatefulWidget {
   const StaffAccountCreationPage({super.key});
@@ -9,6 +14,9 @@ class StaffAccountCreationPage extends StatefulWidget {
 }
 
 class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
+  
+  final StaffAccountController controller = StaffAccountController(Get.find<AuthRepository>());
+
   bool pageAuth = false;
   bool appointmentsAuth = false;
   bool messagesAuth = false;
@@ -61,297 +69,208 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
               ),
             ),
             child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(
-                    height: 40,
-                  ),
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(left: 40, right: 50, bottom: 500),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(70),
-                          child: Image.asset(
-                            'lib/images/pfp.jpg',
-                            height: 100,
-                            width: 100,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Container(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      'Employee full name *',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                TextField(
-                                  decoration: InputDecoration(
-                                    hintText: 'ex. David Pogi',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color:
-                                            Color.fromARGB(255, 81, 115, 153),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Container(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      'Employee full name *',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                TextField(
-                                  decoration: InputDecoration(
-                                    hintText: 'ex. David Pogi',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color:
-                                            Color.fromARGB(255, 81, 115, 153),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Container(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      'Employee full name *',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                TextField(
-                                  decoration: InputDecoration(
-                                    hintText: 'ex. David Pogi',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color:
-                                            Color.fromARGB(255, 81, 115, 153),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Container(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      'Employee full name *',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                TextField(
-                                  decoration: InputDecoration(
-                                    hintText: 'ex. David Pogi',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color:
-                                            Color.fromARGB(255, 81, 115, 153),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Container(
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      'Employee full name *',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                TextField(
-                                  decoration: InputDecoration(
-                                    hintText: 'ex. David Pogi',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.black,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color:
-                                            Color.fromARGB(255, 81, 115, 153),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 110),
-                        const Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            'Authorities *',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        Column(
-                          children: [
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: pageAuth,
-                                  onChanged: (value) {
-                                    setState(
-                                      () {
-                                        pageAuth = value!;
-                                      },
-                                    );
-                                  },
-                                ),
-                                const Text('Veterinary Clinic Page'),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: appointmentsAuth,
-                                  onChanged: (value) {
-                                    setState(
-                                      () {
-                                        appointmentsAuth = value!;
-                                      },
-                                    );
-                                  },
-                                ),
-                                const Text('Appointment List'),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: messagesAuth,
-                                  onChanged: (value) {
-                                    setState(
-                                      () {
-                                        messagesAuth = value!;
-                                      },
-                                    );
-                                  },
-                                ),
-                                const Text('Messages'),
-                              ],
-                            ),
-                          ],
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: null,
-                          child: const Text('Create'),
-                        )
-                      ],
+              child: Form(
+                key: controller.formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Column(
+                  children: [
+                    const SizedBox(
+                      height: 40,
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(left: 40, right: 50, bottom: 500),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children:[
+                              Obx(() => controller.imagePath.value == ''
+                                ? const Text(
+                                  'Select Image from Gallery',
+                                  style: TextStyle(fontSize: 20),
+                                )
+                                : CircleAvatar(
+                                  radius: 80,
+                                  backgroundImage: FileImage(File(controller.imagePath.value)))),
+                              IconButton(
+                                icon: const Icon(Icons.image),
+                                onPressed: () {
+                                  controller.selectImage();
+                                },
+                              )
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: Container(
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.all(5.0),
+                                    child: Align(
+                                      alignment: Alignment.topLeft,
+                                      child: Text(
+                                        'Name *',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    decoration: InputDecoration(
+                                      hintText: 'ex. David Pogi',
+                                      labelStyle: const TextStyle(
+                                        color: Colors.black,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color:
+                                              Color.fromARGB(255, 81, 115, 153),
+                                        ),
+                                      ),
+                                    ),
+                                    keyboardType: TextInputType.text,
+                                    controller: controller.nameEditingController,
+                                    validator: (value) {
+                                      return controller.validateName(value!);
+                                    }
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: Container(
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.all(5.0),
+                                    child: Align(
+                                      alignment: Alignment.topLeft,
+                                      child: Text(
+                                        'Department *',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    decoration: InputDecoration(
+                                      hintText: 'ex. David Pogi',
+                                      labelStyle: const TextStyle(
+                                        color: Colors.black,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                          color:
+                                              Color.fromARGB(255, 81, 115, 153),
+                                        ),
+                                      ),
+                                    ),
+                                    keyboardType: TextInputType.text,
+                                    controller: controller.departmentEditingController,
+                                    validator: (value) {
+                                      return controller.validateDepartment(value!);
+                                    }
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 32),
+                          const Align(
+                            alignment: Alignment.topLeft,
+                            child: Text(
+                              'Authorities *',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: pageAuth,
+                                    onChanged: (value) {
+                                      setState(
+                                        () {
+                                          pageAuth = value!;
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  const Text('Veterinary Clinic Page'),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: appointmentsAuth,
+                                    onChanged: (value) {
+                                      setState(
+                                        () {
+                                          appointmentsAuth = value!;
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  const Text('Appointment List'),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: messagesAuth,
+                                    onChanged: (value) {
+                                      setState(
+                                        () {
+                                          messagesAuth = value!;
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  const Text('Messages'),
+                                ],
+                              ),
+                            ],
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              controller.validateAndSave (
+                                name: controller.nameEditingController.text,
+                                department: controller.departmentEditingController.text,
+                              );
+                            },
+                            child: const Text('Create'),
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
