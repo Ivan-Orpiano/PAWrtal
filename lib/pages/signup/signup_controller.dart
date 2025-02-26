@@ -22,15 +22,7 @@ class SignUpController extends GetxController {
   //form validation
   bool isFormValid = false;
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
 
-  @override
-  void onReady() async {
-    super.onReady();
-  }
   
   @override
   void onClose() {

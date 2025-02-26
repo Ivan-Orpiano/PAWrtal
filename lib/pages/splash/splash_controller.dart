@@ -8,10 +8,6 @@ class SplashController extends GetxController {
 
   final GetStorage _getStorage = GetStorage();
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
 
   @override
   void onReady() async {
@@ -25,8 +21,4 @@ class SplashController extends GetxController {
     }
   }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
 }

@@ -5,18 +5,6 @@ class AdminHomeController extends GetxController {
   AuthRepository authRepository;
   AdminHomeController(this.authRepository);
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
 
-  @override
-  void onReady() async {
-    super.onReady();
-  }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
 }
