@@ -1,5 +1,7 @@
 import 'package:capstone_app/pages/admin_home/admin_home_binding.dart';
 import 'package:capstone_app/pages/admin_home/admin_home_page.dart';
+import 'package:capstone_app/pages/super_admin_home/super_admin_home_binding.dart';
+import 'package:capstone_app/pages/super_admin_home/super_admin_home_page.dart';
 import 'package:capstone_app/pages/user_home/user_home_binding.dart';
 import 'package:capstone_app/pages/user_home/user_home_page.dart';
 import 'package:capstone_app/pages/login/login_binding.dart';
@@ -15,7 +17,7 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const initial = Routes.adminHome;
+  static const initial = Routes.superAdminHome;
 
   static final routes = [
     GetPage(
@@ -42,6 +44,11 @@ class AppPages {
       name: _Paths.adminHome,
       page: () => const AdminHomePage(),
       binding: AdminHomeBinding(),
+    ),
+    GetPage(
+      name: _Paths.superAdminHome,
+      page: () => const SuperAdminHomePage(),
+      binding: SuperAdminHomeBinding(),
     )
   ];
 }
