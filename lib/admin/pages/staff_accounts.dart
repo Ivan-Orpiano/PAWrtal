@@ -1,5 +1,5 @@
 import 'package:capstone_app/admin/components/staff_account_tile.dart';
-import 'package:capstone_app/admin/pages/staff_account_creation_page.dart';
+import 'package:capstone_app/admin/pages/staff_account/staff_account_creation_page.dart';
 import 'package:flutter/material.dart';
 
 class StaffAccountsPage extends StatefulWidget {

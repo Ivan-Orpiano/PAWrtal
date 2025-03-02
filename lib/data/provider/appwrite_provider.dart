@@ -7,6 +7,10 @@ class AppWriteProvider{
   Client client = Client();
 
   Account? account;
+
+  Storage? storage;
+  Databases? databases;
+
   
   AppWriteProvider() {
     client
@@ -14,6 +18,8 @@ class AppWriteProvider{
       .setProject(AppwriteConstants.projectID)
       .setSelfSigned(status: true);
     account = Account(client);
+    storage = Storage(client);
+    databases = Databases(client);
   }
 
   Future<models.User> signup(Map map) async {
@@ -53,4 +59,41 @@ class AppWriteProvider{
     );
     return response;
   }
+
+  Future<models.File> uploadStaffImage(String imagePath) {
+    String fileName = "${DateTime.now().millisecondsSinceEpoch}.${imagePath.split('.').last}";
+
+      final response = storage!.createFile(
+        bucketId: AppwriteConstants.staffBucketID,
+        fileId: ID.unique(),
+        file: InputFile.fromPath(path:imagePath, filename: fileName));
+
+        return response;
+  }
+
+  Future<dynamic> deleteStaffImage(String fileID) {
+
+      final response = storage!.deleteFile(
+        bucketId: AppwriteConstants.staffBucketID,
+        fileId: ID.unique(),
+        );
+
+        return response;
+  }
+
+  Future<models.Document> createStaff(Map map) async {
+    final response = databases!.createDocument(
+      databaseId: AppwriteConstants.dbID, 
+      collectionId: AppwriteConstants.staffCollectionID, 
+      documentId: ID.unique(), 
+      data: {
+        "name": map["name"],
+        "department": map["department"],
+        "createdBy": map["createdBy"],
+        "image": map["image"],
+        "createdAt": map["createdAt"]
+      });
+      return response;
+  }
+
 }

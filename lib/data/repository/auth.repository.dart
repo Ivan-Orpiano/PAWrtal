@@ -9,4 +9,7 @@ class AuthRepository {
   Future<models.User> signup(Map map) => appWriteProvider.signup(map);
   Future<models.Session> login(Map map) => appWriteProvider.login(map);
   Future<dynamic> logout(String sessionId) => appWriteProvider.logout(sessionId);
+  Future<models.File> uploadStaffImage(String imagePath) => appWriteProvider.uploadStaffImage(imagePath);
+  Future<dynamic> deleteStaffImage(String fileID) => appWriteProvider.deleteStaffImage(fileID);
+  Future<models.Document> createStaff(Map map) => appWriteProvider.createStaff(map);
 }

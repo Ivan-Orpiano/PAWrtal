@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:capstone_app/admin/pages/staff_account_controller.dart';
+import 'package:capstone_app/admin/pages/staff_account/staff_account_controller.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,7 +15,7 @@ class StaffAccountCreationPage extends StatefulWidget {
 
 class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
   
-  final StaffAccountController controller = StaffAccountController(Get.find<AuthRepository>());
+  final CreateStaffController controller = CreateStaffController(Get.find<AuthRepository>());
 
   bool pageAuth = false;
   bool appointmentsAuth = false;
@@ -166,7 +166,7 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                                   ),
                                   TextFormField(
                                     decoration: InputDecoration(
-                                      hintText: 'ex. David Pogi',
+                                      hintText: 'ex. Veterinary',
                                       labelStyle: const TextStyle(
                                         color: Colors.black,
                                       ),
