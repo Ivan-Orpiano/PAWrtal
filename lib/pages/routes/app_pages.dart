@@ -17,7 +17,7 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const initial = Routes.superAdminHome;
+  static const initial = Routes.adminHome;
 
   static final routes = [
     GetPage(

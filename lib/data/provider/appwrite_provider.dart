@@ -71,11 +71,10 @@ class AppWriteProvider{
         return response;
   }
 
-  Future<dynamic> deleteStaffImage(String fileID) {
-
+  Future<dynamic> deleteStaffImage(String fileId) {
       final response = storage!.deleteFile(
         bucketId: AppwriteConstants.staffBucketID,
-        fileId: ID.unique(),
+        fileId: fileId,
         );
 
         return response;
@@ -94,6 +93,30 @@ class AppWriteProvider{
         "createdAt": map["createdAt"]
       });
       return response;
+  }
+
+  Future<models.DocumentList> getStaff() async {
+    final response = databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID, 
+      collectionId: AppwriteConstants.staffCollectionID, 
+    );
+    return response;
+  }
+
+  Future<models.Document> updateStaff(Map map) async {
+    final response = databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID, 
+      collectionId: AppwriteConstants.staffCollectionID,
+      documentId: map["documentId"],
+      data: {
+        "name": map["name"],
+        "department": map["department"],
+        "createdBy": map["createdBy"],
+        "image": map["image"],
+
+      });
+    return response;
+
   }
 
 }
