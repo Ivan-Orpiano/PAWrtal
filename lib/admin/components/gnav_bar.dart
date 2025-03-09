@@ -28,7 +28,7 @@ class GnavBar extends StatelessWidget {
             text: "",
           ),
           GButton(
-            icon: Icons.add,
+            icon: Icons.person,
             text: "",
           ),
         ]);

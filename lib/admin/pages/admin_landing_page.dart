@@ -31,12 +31,11 @@ class _LandingPageState extends State<AdminLandingPage> {
         padding: const EdgeInsets.only(left: 5, right: 5),
         child: ListView(
           children: const [
-            Expanded(
-                child: Image(
+            Image(
               image: AssetImage('lib/images/test_image.jpg'),
               width: 300,
               height: 300,
-            )),
+            ),
             Text(
               'Veterinary Clinic',
               style: TextStyle(

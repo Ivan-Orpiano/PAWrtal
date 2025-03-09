@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:capstone_app/admin/pages/staff_account/staff_account_controller.dart';
+import 'package:capstone_app/admin/pages/staff_account_creation/staff_account_controller.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
