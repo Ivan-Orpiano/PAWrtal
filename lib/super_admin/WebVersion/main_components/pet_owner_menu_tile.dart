@@ -33,7 +33,7 @@ class PetOwnerTile extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset(
-                          'lib/images/kapitankalbo.png',
+                          'lib/images/user_profile.png',
                           height: screenHeight * 0.4,
                           width: screenWidth * 0.3,
                           fit: BoxFit.cover,

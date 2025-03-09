@@ -1,3 +1,4 @@
+import 'package:capstone_app/super_admin/WebVersion/pet_owners_pages/owner_details.dart';
 import 'package:flutter/material.dart';
 
 class PetOwner {
@@ -18,16 +19,16 @@ class _VerificationOwner extends State<VerificationOwner> {
   bool _showVerified = true;
 
   final List<String> _names = [
-    'Kaptitan Pangkie',
-    'Kaptitan Pongk',
-    'Kaptitan Phew',
-    'JKaptitan Pang',
-    'Kaptitan Pogo',
-    'GKaptitan kalb',
-    'Kaptitan Bok',
-    'Kaptitan Kal',
-    'Kaptitan Bo',
-    'Kaptitan Pogo',
+    'Gojo Satoru',
+    'Gojo Sarotu',
+    'Jogo Tarosu',
+    'Joog Sarotu',
+    'Gojo Torasu',
+    'Gooj Rutosa',
+    'Jogo Sotaru',
+    'Gojo Ratosu',
+    'Gjoo Tosura',
+    'Jgoo Sutaro',
   ];
   @override
   Widget build(BuildContext context) {
@@ -51,7 +52,7 @@ class _VerificationOwner extends State<VerificationOwner> {
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             Row(
@@ -101,14 +102,21 @@ class _VerificationOwner extends State<VerificationOwner> {
   Widget _buildOwnerTile(String name, bool showVerified) {
     return ListTile(
       leading: const CircleAvatar(
-        backgroundImage: AssetImage(
-            'lib/images/kapitankalbot.png'), // Replace with your image
+        backgroundImage: AssetImage('lib/images/kapitankalbot.png'),
       ),
       title: Text(name),
       trailing: showVerified
           ? const Icon(Icons.check_circle,
               color: Color.fromARGB(255, 0, 54, 155))
           : null,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const OwnerDetails(),
+          ),
+        );
+      },
     );
   }
 }

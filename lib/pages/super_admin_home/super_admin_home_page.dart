@@ -1,6 +1,6 @@
-import 'package:capstone_app/super_admin/WebVersion/main_tiles/vet_clinic_menu_tile.dart';
-import 'package:capstone_app/super_admin/WebVersion/main_tiles/pet_owner_menu_tile.dart';
-import 'package:capstone_app/super_admin/WebVersion/main_tiles/view_report_menu_tile.dart';
+import 'package:capstone_app/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
+import 'package:capstone_app/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
 
 import 'package:flutter/material.dart';
 
@@ -50,16 +50,16 @@ class _MySuperAdminHomePage extends State<SuperAdminHomePage> {
                         Expanded(child: ViewReportTile()),
                       ],
                     )
-                  : const SingleChildScrollView( 
-                      scrollDirection: Axis.vertical, 
+                  : const SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
                       child: Column(
                         children: [
                           VetClinicTile(),
                           PetOwnerTile(),
                           ViewReportTile(),
-                      ],
+                        ],
+                      ),
                     ),
-            ),
             ),
           );
         },

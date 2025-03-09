@@ -1,24 +1,23 @@
-import 'package:capstone_app/super_admin/WebVersion/view_report/view_reports_container.dart';
+import 'package:capstone_app/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
+import 'package:capstone_app/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
+
 import 'package:flutter/material.dart';
 
-class SuperAdViewReports extends StatefulWidget {
-  const SuperAdViewReports({super.key});
+class SuperAdMainPage extends StatefulWidget {
+  const SuperAdMainPage({super.key});
 
   @override
-  State<SuperAdViewReports> createState() => _SuperAdViewReportsState();
+  State<SuperAdMainPage> createState() => _MySuperAdMainPage();
 }
 
-class _SuperAdViewReportsState extends State<SuperAdViewReports> {
-  late final double screenHeight;
-  late final double screenWidth;
-  
-
+class _MySuperAdMainPage extends State<SuperAdMainPage> {
   @override
   Widget build(BuildContext context) {
-    screenHeight = MediaQuery.of(context).size.height;
-    screenWidth = MediaQuery.of(context).size.width;
+    //final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
@@ -35,8 +34,8 @@ class _SuperAdViewReportsState extends State<SuperAdViewReports> {
           ),
         ),
       ),
-
-  body: LayoutBuilder(
+      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+      body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           return SingleChildScrollView(
             child: Padding(
@@ -46,15 +45,18 @@ class _SuperAdViewReportsState extends State<SuperAdViewReports> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(child: ViewReportsContainer()),
-                     
+                        Expanded(child: VetClinicTile()),
+                        Expanded(child: PetOwnerTile()),
+                        Expanded(child: ViewReportTile()),
                       ],
                     )
                   : const SingleChildScrollView( 
                       scrollDirection: Axis.vertical, 
                       child: Column(
                         children: [
-                          ViewReportsContainer(),
+                          VetClinicTile(),
+                          PetOwnerTile(),
+                          ViewReportTile(),
                       ],
                     ),
             ),
@@ -62,13 +64,6 @@ class _SuperAdViewReportsState extends State<SuperAdViewReports> {
           );
         },
       ),
-
-
-
-
-
-
-   
     );
   }
 }
