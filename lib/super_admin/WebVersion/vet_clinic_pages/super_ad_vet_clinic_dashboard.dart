@@ -2,7 +2,9 @@ import 'package:capstone_app/super_admin/WebVersion/sa_dashboard_components/sa_m
 import 'package:capstone_app/super_admin/WebVersion/sa_dashboard_components/sa_search_bar.dart';
 import 'package:capstone_app/super_admin/WebVersion/sa_dashboard_components/sa_sort_button.dart';
 import 'package:capstone_app/super_admin/WebVersion/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
+// import 'package:capstone_app/super_admin/WebVersion/super_ad_main_menu_page.dart';
 import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
+import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdminVetClinic extends StatefulWidget {
@@ -39,32 +41,29 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Column(
-            // Use Column as the main layout
             children: [
-              // Non-scrollable header section
               Container(
                 margin: const EdgeInsets.only(top: 30, left: 30, right: 30),
                 child: const Column(
                   children: [
                     Row(
-                      children:  [
+                      children: [
                         Expanded(child: SuperAdminSearchBar()),
                         SizedBox(width: 1),
                         SuperAdminSortButton(),
                       ],
                     ),
-                     SizedBox(height: 10), // Add some spacing
-                     SuperAdminTags(),
+                    SizedBox(height: 10),
+                    SuperAdminTags(),
                   ],
                 ),
               ),
-
               Expanded(
                 child: SingleChildScrollView(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       int crossAxisCount = 3;
-                      if (constraints.maxWidth < 1000) {
+                      if (constraints.maxWidth < 800) {
                         crossAxisCount = 2;
                       }
                       if (constraints.maxWidth < 600) {
@@ -88,7 +87,18 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
                         ),
                         itemCount: 15,
                         itemBuilder: (context, index) {
-                          return const SuperAdminVetClinicTile();
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const SuperAdminVetClinicPage(),
+                                ),
+                              );
+                            },
+                            child: const SuperAdminVetClinicTile(),
+                          );
                         },
                       );
                     },
@@ -100,6 +110,7 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
         onPressed: () {
           Navigator.push(
             context,
@@ -108,8 +119,10 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
             ),
           );
         },
-        backgroundColor: const Color.fromARGB(255, 214, 217, 221),
-        child: const Icon(Icons.add),
+        child: const Icon(
+          Icons.add,
+          color: Color.fromARGB(255, 248, 253, 255),
+        ),
       ),
     );
   }

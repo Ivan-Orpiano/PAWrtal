@@ -1,4 +1,4 @@
-import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic.dart';
+import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart';
 import 'package:flutter/material.dart';
 
 class VetClinicTile extends StatelessWidget {

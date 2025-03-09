@@ -8,36 +8,35 @@ class ViewReportTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-
+    
     return InkWell(
         highlightColor: Colors.transparent,
         splashColor: Colors.transparent,
         hoverColor: Colors.transparent,
         onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const SuperAdViewReports(),
+            MaterialPageRoute(builder: (context) => const SuperAdViewReports(),
             )),
         child: Padding(
-            padding: const EdgeInsets.all(10),
+           padding: const EdgeInsets.all(10),
             child: SizedBox(
                 height: 650,
                 width: 450,
                 child: Container(
                     decoration: BoxDecoration(
-                      color: const Color.fromRGBO(81, 115, 153, 0.8),
-                      borderRadius: BorderRadius.circular(15),
+                    color: const Color.fromRGBO(81, 115, 153, 0.8),
+                    borderRadius: BorderRadius.circular(15),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'lib/images/view_report_icon.png',
-                          height: screenHeight * 0.4,
-                          width: screenWidth * 0.3,
-                          fit: BoxFit.cover,
-                        ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'lib/images/view_report_icon.png',
+                      height: screenHeight * 0.4,
+                      width: screenWidth * 0.3,
+                      fit: BoxFit.cover,
+                      ),
                         const SizedBox(height: 10),
                         const Text(
                           'View Reports',
