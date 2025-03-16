@@ -1,4 +1,3 @@
-import 'package:capstone_app/user/components/dashboard_components/tags.dart';
 import 'package:capstone_app/user_web/components/appbar_components/notification_icon_web.dart';
 import 'package:capstone_app/user_web/components/appbar_components/profile_icon_web.dart';
 import 'package:capstone_app/user_web/pages/appointments_web_page.dart';

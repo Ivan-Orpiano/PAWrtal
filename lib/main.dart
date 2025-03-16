@@ -1,7 +1,7 @@
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/pages/user_home/user_home_page.dart';
-import 'package:capstone_app/user_web/pages/web_user_home_page.dart';
+// import 'package:capstone_app/pages/user_home/user_home_page.dart';
+// import 'package:capstone_app/user_web/pages/web_user_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -29,11 +29,11 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return const GetMaterialApp(
+    return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      home: UserHomePage(),
-      // initialRoute: AppPages.initial,
-      // getPages: AppPages.routes,
+      // home: UserHomePage(),
+      initialRoute: AppPages.initial,
+      getPages: AppPages.routes,
     );
   }
 }

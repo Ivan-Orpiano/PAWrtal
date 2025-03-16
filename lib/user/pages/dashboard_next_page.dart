@@ -1,7 +1,6 @@
 import 'package:capstone_app/user/pages/messages_next_page.dart';
 import 'package:capstone_app/user/pages/schedule_appointment.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class DashboardNextPage extends StatelessWidget {
   const DashboardNextPage({super.key});
