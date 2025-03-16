@@ -1,4 +1,7 @@
+import 'package:capstone_app/user/pages/messages_next_page.dart';
+import 'package:capstone_app/user/pages/schedule_appointment.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class DashboardNextPage extends StatelessWidget {
   const DashboardNextPage({super.key});
@@ -108,23 +111,63 @@ class DashboardNextPage extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 15),
-            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-            shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)
-            )
-          ),
-          onPressed: () {},
-          child: const Text(
-            "Make an Appointment",
-            style: TextStyle(
-              color: Colors.white
+      bottomNavigationBar: SizedBox(
+        width: double.infinity,
+        child: Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, top: 20, bottom: 20, right: 10),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 75, vertical: 15),
+                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)
+                      )
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ScheduleAppointment(),
+                        )
+                      );
+                    },
+                    child: const Text(
+                      "Make an Appointment",
+                      style: TextStyle(
+                        color: Colors.white
+                      ),
+                    ),
+                  ),
+                ),
             ),
-          ),
+              Padding(
+                padding: const EdgeInsets.only(top: 20, bottom: 20, right: 10),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)
+                    )
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MessagesNextPage()
+                      )
+                    );
+                  },
+                  child: const Icon(
+                    Icons.message_rounded,
+                    color: Colors.white,
+                ),
+              ),
+            )
+          ],
         ),
       ),
     );
