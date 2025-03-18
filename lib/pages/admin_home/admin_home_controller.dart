@@ -66,9 +66,17 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
     }
 
   
-  // moveToCreateStaff() {
-  //   Get.toNamed(Routes.createStaff);
-  // }
+  moveToCreateStaff() {
+    Get.toNamed(Routes.createStaff);
+  }
+
+  moveToEditStaff(Staff staff) {
+  Get.toNamed(Routes.createStaff, arguments: {
+    'staff': staff,
+    'currentImage': staff.image,
+  });
+}
+
 
   getStaff() async {
     try {
