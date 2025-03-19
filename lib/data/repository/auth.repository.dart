@@ -20,4 +20,6 @@ class AuthRepository {
   Future<models.Document> updateStaff(Map map, {String? currentImage}) {
     return appWriteProvider.updateStaff(map, currentImage: currentImage);
   }
+
+  Future<dynamic> deleteStaff(Map map) => appWriteProvider.deleteStaff(map);
 }

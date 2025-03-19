@@ -126,4 +126,14 @@ class AppWriteProvider {
 
     return response;
   }
+
+  Future<dynamic> deleteStaff(Map map) async {
+    final response = databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.staffCollectionID,
+      documentId: map["documentId"],
+    );
+    
+    return response;
+  }
 }

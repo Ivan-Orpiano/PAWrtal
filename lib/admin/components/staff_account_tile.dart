@@ -19,7 +19,6 @@ class StaffAccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // use local placeholder image
     String imageUrl = (staff.image != null && staff.image.isNotEmpty)
         ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/${staff.image}/view?project=${AppwriteConstants.projectID}'
         : ''; // placeholder image

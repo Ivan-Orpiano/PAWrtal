@@ -317,7 +317,7 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                                     controller.departmentEditingController.text,
                                 isEdit: controller.isEdit.value,
                                 documentId: staff?.documentId ?? '',
-                                currentImage: Get.arguments['currentImage'],
+                                currentImage: Get.arguments != null ? Get.arguments['currentImage'] : null,
                                 // staffId: widget.staff?.id, // pass ID if editing
                               );
                             },

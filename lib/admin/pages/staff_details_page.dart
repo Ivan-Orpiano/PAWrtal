@@ -15,13 +15,13 @@ class StaffDetailsPage extends StatefulWidget {
 
 class _StaffDetailsPageState extends State<StaffDetailsPage> {
   final AdminHomeController controller = Get.find();
+
   bool pageAuth = false;
   bool appointmentsAuth = false;
   bool messagesAuth = false;
 
   @override
   Widget build(BuildContext context) {
-    // construct the image URL or fallback to local placeholder
     String imageUrl = (widget.staffData.image != null &&
             widget.staffData.image.isNotEmpty)
         ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/${widget.staffData.image}/view?project=${AppwriteConstants.projectID}'
@@ -31,20 +31,34 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
       color: const Color.fromARGB(255, 81, 115, 153),
       child: ListView(
         children: [
-          // close button
           Padding(
-            padding: const EdgeInsets.only(left: 10, top: 20),
+            padding: const EdgeInsets.only(left: 10, top: 30),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_downward_outlined, color: Colors.white),
+                  icon: const Icon(Icons.arrow_downward_outlined,
+                      color: Colors.white),
                   onPressed: () => Navigator.pop(context),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(),
+                  child: Column(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          controller.deleteStaff(widget.staffData);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
 
-          // profile picture with local placeholder
+          // profile picture
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 15),
             child: Center(
@@ -60,14 +74,14 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                           child: CircularProgressIndicator(),
                         ),
                         errorWidget: (context, url, error) => Image.asset(
-                          'assets/images/placeholder.png',  // local placeholder
+                          'assets/images/placeholder.png', // local placeholder
                           width: 100,
                           height: 100,
                           fit: BoxFit.cover,
                         ),
                       )
                     : Image.asset(
-                        'assets/images/placeholder.png',  // fallback for empty URL
+                        'assets/images/placeholder.png', // fallback for empty URL
                         width: 100,
                         height: 100,
                         fit: BoxFit.cover,
@@ -91,18 +105,13 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // edit button
                   Center(
                     child: IconButton(
-                      onPressed: () {
-                        controller.moveToEditStaff(widget.staffData);
-                      }, 
-                      icon: const Icon(
-                        Icons.edit, 
-                        color: Colors.lightBlue
-                      )
-                    ),
+                        onPressed: () {
+                          controller.moveToEditStaff(widget.staffData);
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.lightBlue)),
                   ),
 
                   // name
@@ -120,7 +129,7 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                   // phone number
                   const Center(
                     child: Padding(
-                      padding:  EdgeInsets.only(top: 5, bottom: 10),
+                      padding: EdgeInsets.only(top: 5, bottom: 10),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -139,8 +148,10 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                   const SizedBox(height: 20),
 
                   // email and password
-                  buildInfoRow("Email Address", "email" /*widget.staffData.email*/),
-                  buildInfoRow("Password", "*******"/*widget.staffData.address*/),
+                  buildInfoRow(
+                      "Email Address", "email" /*widget.staffData.email*/),
+                  buildInfoRow(
+                      "Password", "*******" /*widget.staffData.address*/),
                   const SizedBox(height: 20),
 
                   // authorities section
@@ -169,7 +180,8 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
         children: [
           Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14)),
           const SizedBox(height: 5),
-          Text(value, style: const TextStyle(color: Colors.black, fontSize: 14)),
+          Text(value,
+              style: const TextStyle(color: Colors.black, fontSize: 14)),
         ],
       ),
     );
