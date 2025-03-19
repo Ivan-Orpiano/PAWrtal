@@ -1,7 +1,9 @@
 import 'dart:io';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:capstone_app/admin/pages/staff_account_creation/staff_account_controller.dart';
+import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/pages/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -14,8 +16,33 @@ class StaffAccountCreationPage extends StatefulWidget {
 }
 
 class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
-  
-  final CreateStaffController controller = CreateStaffController(Get.find<AuthRepository>());
+  final CreateStaffController controller =
+      CreateStaffController(Get.find<AuthRepository>());
+
+  Staff? staff;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final args = Get.arguments;
+
+    if (args != null && args is Map<String, dynamic>) {
+      staff = args['staff'] as Staff?;
+
+      // load current image reference if available
+      String currentImage = args['currentImage'] ?? '';
+
+      controller.isEdit.value = true;
+      controller.nameEditingController.text = staff?.name ?? '';
+      controller.departmentEditingController.text = staff?.department ?? '';
+
+      // use current image reference or placeholder
+      controller.imageUrl.value = currentImage.isNotEmpty
+          ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/$currentImage/view?project=${AppwriteConstants.projectID}'
+          : 'https://via.placeholder.com/150';
+    }
+  }
 
   bool pageAuth = false;
   bool appointmentsAuth = false;
@@ -78,21 +105,42 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                       height: 40,
                     ),
                     Padding(
-                      padding:
-                          const EdgeInsets.only(left: 40, right: 50, bottom: 500),
+                      padding: const EdgeInsets.only(
+                          left: 40, right: 50, bottom: 500),
                       child: Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children:[
-                              Obx(() => controller.imagePath.value == ''
-                                ? const Text(
-                                  'Select Image from Gallery',
-                                  style: TextStyle(fontSize: 20),
-                                )
-                                : CircleAvatar(
-                                  radius: 80,
-                                  backgroundImage: FileImage(File(controller.imagePath.value)))),
+                            children: [
+                              Obx(() => !controller.isEdit.value
+                                  ? (controller.imagePath.value == ''
+                                      ? const Text(
+                                          'Select Image from Gallery',
+                                          style: TextStyle(fontSize: 20),
+                                        )
+                                      : CircleAvatar(
+                                          radius: 80,
+                                          backgroundImage: FileImage(
+                                            File(controller.imagePath.value),
+                                          ),
+                                        ))
+                                  : (controller.imagePath.value != ''
+                                      ? CircleAvatar(
+                                          radius: 80,
+                                          backgroundImage: FileImage(
+                                            File(controller.imagePath.value),
+                                          ),
+                                        )
+                                      : CachedNetworkImage(
+                                          imageUrl: controller
+                                                  .imageUrl.value.isNotEmpty
+                                              ? controller.imageUrl.value
+                                              : 'https://via.placeholder.com/150',
+                                          width: 100,
+                                          height: 100,
+                                          errorWidget: (context, url, error) =>
+                                              const Icon(Icons.error),
+                                        ))),
                               IconButton(
                                 icon: const Icon(Icons.image),
                                 onPressed: () {
@@ -120,28 +168,30 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                                     ),
                                   ),
                                   TextFormField(
-                                    decoration: InputDecoration(
-                                      hintText: 'ex. David Pogi',
-                                      labelStyle: const TextStyle(
-                                        color: Colors.black,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                          color:
-                                              Color.fromARGB(255, 81, 115, 153),
+                                      decoration: InputDecoration(
+                                        hintText: 'ex. David Pogi',
+                                        labelStyle: const TextStyle(
+                                          color: Colors.black,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          borderSide: const BorderSide(
+                                            color: Color.fromARGB(
+                                                255, 81, 115, 153),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    keyboardType: TextInputType.text,
-                                    controller: controller.nameEditingController,
-                                    validator: (value) {
-                                      return controller.validateName(value!);
-                                    }
-                                  ),
+                                      keyboardType: TextInputType.text,
+                                      controller:
+                                          controller.nameEditingController,
+                                      validator: (value) {
+                                        return controller.validateName(value!);
+                                      }),
                                 ],
                               ),
                             ),
@@ -165,33 +215,35 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                                     ),
                                   ),
                                   TextFormField(
-                                    decoration: InputDecoration(
-                                      hintText: 'ex. Veterinary',
-                                      labelStyle: const TextStyle(
-                                        color: Colors.black,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                          color:
-                                              Color.fromARGB(255, 81, 115, 153),
+                                      decoration: InputDecoration(
+                                        hintText: 'ex. Veterinary',
+                                        labelStyle: const TextStyle(
+                                          color: Colors.black,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          borderSide: const BorderSide(
+                                            color: Color.fromARGB(
+                                                255, 81, 115, 153),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    keyboardType: TextInputType.text,
-                                    controller: controller.departmentEditingController,
-                                    validator: (value) {
-                                      return controller.validateDepartment(value!);
-                                    }
-                                  ),
+                                      keyboardType: TextInputType.text,
+                                      controller: controller
+                                          .departmentEditingController,
+                                      validator: (value) {
+                                        return controller
+                                            .validateDepartment(value!);
+                                      }),
                                 ],
                               ),
                             ),
                           ),
-                          
                           const SizedBox(height: 32),
                           const Align(
                             alignment: Alignment.topLeft,
@@ -259,12 +311,18 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
                               foregroundColor: Colors.white,
                             ),
                             onPressed: () {
-                              controller.validateAndSave (
+                              controller.validateAndSave(
                                 name: controller.nameEditingController.text,
-                                department: controller.departmentEditingController.text,
+                                department:
+                                    controller.departmentEditingController.text,
+                                isEdit: controller.isEdit.value,
+                                documentId: staff?.documentId ?? '',
+                                currentImage: Get.arguments != null ? Get.arguments['currentImage'] : null,
+                                // staffId: widget.staff?.id, // pass ID if editing
                               );
                             },
-                            child: const Text('Create'),
+                            child: Text(
+                                controller.isEdit.value ? 'Update' : 'Create'),
                           )
                         ],
                       ),

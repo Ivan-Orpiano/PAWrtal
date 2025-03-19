@@ -8,6 +8,7 @@ abstract class Routes {
   static const adminHome = _Paths.adminHome;
   static const superAdminHome = _Paths.superAdminHome;
   static const login = _Paths.login;
+  static const createStaff = _Paths.createStaff;
 }
 
 abstract class _Paths {
@@ -17,4 +18,5 @@ abstract class _Paths {
   static const adminHome = '/adminHome';
   static const superAdminHome = '/superAdminHome';
   static const login = '/login';
+  static const createStaff = '/createStaff';
 }

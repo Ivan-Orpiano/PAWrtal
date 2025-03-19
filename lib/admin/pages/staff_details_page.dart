@@ -1,6 +1,8 @@
+import 'package:capstone_app/pages/admin_home/admin_home_controller.dart';
 import 'package:capstone_app/pages/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:get/get.dart';
 
 class StaffDetailsPage extends StatefulWidget {
   final dynamic staffData;
@@ -12,24 +14,45 @@ class StaffDetailsPage extends StatefulWidget {
 }
 
 class _StaffDetailsPageState extends State<StaffDetailsPage> {
+  final AdminHomeController controller = Get.find();
+
   bool pageAuth = false;
   bool appointmentsAuth = false;
   bool messagesAuth = false;
 
   @override
   Widget build(BuildContext context) {
+    String imageUrl = (widget.staffData.image != null &&
+            widget.staffData.image.isNotEmpty)
+        ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/${widget.staffData.image}/view?project=${AppwriteConstants.projectID}'
+        : ''; // trigger local placeholder
+
     return Material(
       color: const Color.fromARGB(255, 81, 115, 153),
       child: ListView(
         children: [
-          // close button
           Padding(
-            padding: const EdgeInsets.only(left: 10, top: 20),
+            padding: const EdgeInsets.only(left: 10, top: 30),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_downward_outlined, color: Colors.white),
+                  icon: const Icon(Icons.arrow_downward_outlined,
+                      color: Colors.white),
                   onPressed: () => Navigator.pop(context),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(),
+                  child: Column(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          controller.deleteStaff(widget.staffData);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -41,24 +64,33 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
             child: Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(70),
-                child: CachedNetworkImage(
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  imageUrl: widget.staffData.image.isNotEmpty
-                      ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/${widget.staffData.image}/view?project=${AppwriteConstants.projectID}'
-                      : 'https://via.placeholder.com/150', // Default image
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                  errorWidget: (context, url, error) =>
-                      const Icon(Icons.error, color: Colors.red),
-                ),
+                child: imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        imageUrl: imageUrl,
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        errorWidget: (context, url, error) => Image.asset(
+                          'assets/images/placeholder.png', // local placeholder
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/images/placeholder.png', // fallback for empty URL
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
           ),
 
-          // STAFF DETAILS CONTAINER
+          // Staff details
           Container(
             width: MediaQuery.of(context).size.width,
             decoration: const BoxDecoration(
@@ -73,12 +105,19 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
+                  // edit button
+                  Center(
+                    child: IconButton(
+                        onPressed: () {
+                          controller.moveToEditStaff(widget.staffData);
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.lightBlue)),
+                  ),
 
                   // name
                   Center(
                     child: Text(
-                      widget.staffData.name,
+                      widget.staffData.name ?? 'Unknown',
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 16,
@@ -90,16 +129,15 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                   // phone number
                   const Center(
                     child: Padding(
-                      padding:  EdgeInsets.only(top: 5, bottom: 10),
+                      padding: EdgeInsets.only(top: 5, bottom: 10),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                           Icon(Icons.phone, color: Colors.lightBlue, size: 20),
-                           SizedBox(width: 5),
+                          Icon(Icons.phone, color: Colors.lightBlue, size: 20),
+                          SizedBox(width: 5),
                           Text(
-                            // widget.staffData.phone,
                             "0995 123 4567",
-                            style:  TextStyle(fontSize: 13, color: Colors.black),
+                            style: TextStyle(fontSize: 13, color: Colors.black),
                           ),
                         ],
                       ),
@@ -109,15 +147,14 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                   const Divider(),
                   const SizedBox(height: 20),
 
-                  // email
-                  buildInfoRow("Email Address", "email" /*widget.staffData.email*/),
-                  
-                  // address
-                  buildInfoRow("Address", "address"/*widget.staffData.address*/),
-
+                  // email and password
+                  buildInfoRow(
+                      "Email Address", "email" /*widget.staffData.email*/),
+                  buildInfoRow(
+                      "Password", "*******" /*widget.staffData.address*/),
                   const SizedBox(height: 20),
 
-                  // authorities
+                  // authorities section
                   const Text(
                     'Authorities',
                     style: TextStyle(color: Colors.grey, fontSize: 14),
@@ -143,7 +180,8 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
         children: [
           Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14)),
           const SizedBox(height: 5),
-          Text(value, style: const TextStyle(color: Colors.black, fontSize: 14)),
+          Text(value,
+              style: const TextStyle(color: Colors.black, fontSize: 14)),
         ],
       ),
     );
@@ -166,6 +204,7 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
     );
   }
 }
+
 
 
 

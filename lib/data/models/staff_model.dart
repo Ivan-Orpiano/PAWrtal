@@ -4,6 +4,7 @@ class Staff {
   String? createdBy;
   late String image;
   late String createdAt;
+  late String documentId;
 
   Staff.fromMap(Map<String, dynamic> map) {
     
@@ -12,6 +13,7 @@ class Staff {
     createdBy = map["createdBy"]?.toString() ?? 'Unknown';
     image = map["image"] ?? '';
     createdAt = map["createdAt"] ?? '';
+    documentId = map["\$id"] ?? '';
   }
 
   Map<String, dynamic> toMap() {
@@ -20,7 +22,8 @@ class Staff {
       "department": department,
       "createdBy": createdBy ?? 'Unknown',
       "image": image,
-      "createdAt": createdAt
+      "createdAt": createdAt,
+      "documentId" : documentId
     };
   }
 }

@@ -1,5 +1,4 @@
 import 'package:capstone_app/admin/components/staff_account_tile.dart';
-import 'package:capstone_app/admin/pages/staff_account_creation/staff_account_creation_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/pages/admin_home/admin_home_controller.dart';
@@ -14,20 +13,13 @@ class StaffAccountsPage extends StatefulWidget {
 class _StaffAccountsPageState extends State<StaffAccountsPage> {
   final AdminHomeController controller = Get.find();
 
-  void _staffAccountCreationPopUp() {
-    showModalBottomSheet(
-      isScrollControlled: true,
-      context: context,
-      builder: (ctx) => const StaffAccountCreationPage(),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
       floatingActionButton: FloatingActionButton(
-        onPressed: _staffAccountCreationPopUp,
+        onPressed: () => controller.moveToCreateStaff(),
         child: const Icon(Icons.add),
       ),
       body: Column(
@@ -106,7 +98,12 @@ class _StaffAccountsPageState extends State<StaffAccountsPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 30),
                         itemCount: state!.length,
                         itemBuilder: (context, index) {
-                          return StaffAccountTile(staff: state[index]);
+                          return GestureDetector(
+                            onTap: () {
+                              controller.moveToEditStaff(state[index]);
+                            },
+                            child: StaffAccountTile(staff: state[index]),
+                          );
                         },
                       ),
                       onLoading: const Center(child: CircularProgressIndicator()),
