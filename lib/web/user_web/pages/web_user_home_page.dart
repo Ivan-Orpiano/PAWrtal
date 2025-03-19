@@ -19,7 +19,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
   bool _isExpanded = false;
 
     final List<Widget> _pages = const [
-    DashboardWebPage(),
+    WebDashboardPage(),
     AppointmentsWebPage(),
     MessagesWebPage(),
     PetsWebPage(),
@@ -39,7 +39,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                 });
               },
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 25),
             InkWell(
               onTap: () {},
               child: Image.asset(

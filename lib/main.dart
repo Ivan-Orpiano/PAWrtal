@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-void main() /*async*/ {
+void main() {
   runApp(kIsWeb ? const WebMain() : const MobileMain());
 }
 

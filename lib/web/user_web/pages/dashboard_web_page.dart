@@ -2,14 +2,14 @@ import 'package:capstone_app/mobile/user/components/dashboard_components/tags.da
 import 'package:capstone_app/web/user_web/components/dashboard_components/dashboard_tile_web.dart';
 import 'package:flutter/material.dart';
 
-class DashboardWebPage extends StatefulWidget {
-  const DashboardWebPage({super.key});
+class WebDashboardPage extends StatefulWidget {
+  const WebDashboardPage({super.key});
 
   @override
-  State<DashboardWebPage> createState() => _DashboardWebPageState();
+  State<WebDashboardPage> createState() => _WebDashboardPageState();
 }
 
-class _DashboardWebPageState extends State<DashboardWebPage> {
+class _WebDashboardPageState extends State<WebDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return ListView(
