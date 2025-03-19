@@ -1,16 +1,11 @@
-import 'package:capstone_app/data/provider/appwrite_provider.dart';
-import 'package:capstone_app/data/repository/auth.repository.dart';
-// import 'package:capstone_app/pages/user_home/user_home_page.dart';
-// import 'package:capstone_app/user_web/pages/web_user_home_page.dart';
+import 'package:capstone_app/mobile/mobile_main.dart';
+import 'package:capstone_app/web/web_main.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
-import 'pages/routes/app_pages.dart';
 
-void main() async {
-  await GetStorage.init();
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+void main() {
+  runApp(kIsWeb ? const WebMain() : const MobileMain());
 }
 
 class MyApp extends StatefulWidget {
@@ -21,19 +16,11 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    Get.lazyPut<AuthRepository>(() => AuthRepository(AppWriteProvider()));
-  }
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    return const GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      // home: UserHomePage(),
-      initialRoute: AppPages.initial,
-      getPages: AppPages.routes,
     );
   }
 }
