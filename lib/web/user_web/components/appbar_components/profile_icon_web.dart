@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/login_web/web_login_page.dart';
 import 'package:flutter/material.dart';
 
 class ProfileIconWeb extends StatefulWidget {
@@ -12,7 +13,7 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
 
   void _togglePopup(BuildContext context) {
     if (_overlayEntry == null) {
-      _overlayEntry = _createOverlayEntry();
+      _overlayEntry = _createOverlayEntry(context);
       Overlay.of(context).insert(_overlayEntry!);
     } else {
       _closePopup();
@@ -24,7 +25,7 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
     _overlayEntry = null;
   }
 
-  OverlayEntry _createOverlayEntry() {
+  OverlayEntry _createOverlayEntry(BuildContext context) {
     return OverlayEntry(
       builder: (context) => Stack(
         children: [
@@ -51,48 +52,42 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
                   children: [
                     const ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: AssetImage(
-                          'lib/images/pfp.jpg'
-                        ),
+                        backgroundImage: AssetImage('lib/images/pfp.jpg'),
                       ),
                       title: Text(
                         "Test",
-                        style: TextStyle(
-                          color: Colors.black87
-                        ),
+                        style: TextStyle(color: Colors.black87),
                       ),
                       subtitle: Text(
                         "test@gmail.com",
-                        style: TextStyle(
-                          color: Colors.black87
-                        ),
+                        style: TextStyle(color: Colors.black87),
                       ),
                     ),
-                    const Divider(
-                      color: Colors.black87
+                    const Divider(color: Colors.black87),
+                    _popupItem(
+                      "Settings",
+                      () {}
+                    ),
+                    _popupItem(
+                      "Help", 
+                      () {}
+                    ),
+                    _popupItem(
+                      "Send feedback",
+                      () {}
                     ),
                     SizedBox(
                       width: double.infinity,
                       child: _popupItem(
-                        "Settings"
-                      ),
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: _popupItem(
-                        "Help"
-                      ),
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: _popupItem(
-                        "Send feedback"
-                      ),
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: _popupItem(
-                        "Sign out"
+                        "Sign out", () {
+                          _closePopup();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const WebLoginPage()
+                            )
+                          );
+                        }
                       ),
                     ),
                   ],
@@ -105,10 +100,11 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
     );
   }
 
-  Widget _popupItem(String text) {
+  Widget _popupItem(String text, VoidCallback onTap) {
     return InkWell(
       onTap: () {
         _closePopup();
+        onTap();
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
