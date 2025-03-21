@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/> <!-- david input -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/> <!-- david input -->
+    <!-- david input =  android:usesCleartextTraffic -->
     <application
+        android:usesCleartextTraffic="true" 
         android:label="capstone_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
