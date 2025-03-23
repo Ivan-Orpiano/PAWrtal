@@ -29,6 +29,9 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        shadowColor: Colors.grey.shade400,
+        backgroundColor: const Color.fromARGB(192, 255, 255, 255),
+        elevation: 1,
         title: Row(
           children: [
             IconButton(
@@ -73,6 +76,8 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
       body: Row(
         children: [
           NavigationRail(
+            backgroundColor: const Color.fromARGB(192, 255, 255, 255),
+            elevation: 1,
             useIndicator: true,
             extended: _isExpanded,
             selectedIndex: _selectedIndex,
@@ -85,62 +90,166 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
             indicatorShape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            destinations: const [
+            destinations: [
               NavigationRailDestination(
-                icon: Icon(
-                  Icons.dashboard_rounded
+                icon: const Icon(
+                  Icons.home_rounded
                 ),
-                selectedIcon: Icon(
-                  Icons.dashboard,
+                selectedIcon: const Icon(
+                  Icons.home_rounded,
                   color: Colors.blue
                 ),
-                label: Text(
-                  "Dashboard"
+                label: DefaultTextStyle(
+                  style: TextStyle(
+                    color: _selectedIndex == 0 ? Colors.blue : Colors.black,
+                    fontWeight: _selectedIndex == 0 ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  child: const Text("Dashboard"),
                 ),
               ),
+
               NavigationRailDestination(
-                icon: Icon(Icons.calendar_today_rounded),
-                selectedIcon: Icon(
+                icon: const Icon(
+                  Icons.calendar_today_rounded
+                ),
+                selectedIcon: const Icon(
                   Icons.calendar_today, 
-                  color: Colors.blue
-                ),
-                label: Text(
-                  "Appointments"
+                  color: Colors.blue),
+                label: DefaultTextStyle(
+                  style: TextStyle(
+                    color: _selectedIndex == 1 ? Colors.blue : Colors.black,
+                    fontWeight: _selectedIndex == 1 ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  child: const Text("Appointments"),
                 ),
               ),
+
               NavigationRailDestination(
-                icon: Icon(
+                icon: const Icon(
                   Icons.message_rounded
                 ),
-                selectedIcon: Icon(
-                  Icons.message, color: Colors.blue
-                ),
-                label: Text(
-                  "Messages"
+                selectedIcon: const Icon(
+                  Icons.message, 
+                  color: Colors.blue),
+                label: DefaultTextStyle(
+                  style: TextStyle(
+                    color: _selectedIndex == 2 ? Colors.blue : Colors.black,
+                    fontWeight: _selectedIndex == 2 ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  child: const Text("Messages"),
                 ),
               ),
+
               NavigationRailDestination(
-                icon: Icon(
+                icon: const Icon(
                   Icons.pets_rounded
                 ),
-                selectedIcon: Icon(
+                selectedIcon: const Icon(
                   Icons.pets, 
-                  color: Colors.blue
-                ),
-                label: Text(
-                  "Pets"
+                  color: Colors.blue),
+                label: DefaultTextStyle(
+                  style: TextStyle(
+                    color: _selectedIndex == 3 ? Colors.blue : Colors.black,
+                    fontWeight: _selectedIndex == 3 ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  child: const Text("Pets"),
                 ),
               ),
             ],
           ),
           const VerticalDivider(
-            thickness: 1, width: 1,
+            thickness: 1, width: 1
           ),
           Expanded(
-            child: _pages[_selectedIndex],
+            child: _pages[_selectedIndex]
           ),
         ],
-      ),
+      )
     );
   }
 }
+//     return Scaffold(
+//       appBar: AppBar(
+//         shadowColor: Colors.grey.shade400,
+//         backgroundColor: const Color.fromARGB(192, 255, 255, 255),
+//         elevation: 1,
+//         title: Row(
+//           children: [
+//             InkWell(
+//               onTap: () {
+//                 setState(() {
+//                   _selectedIndex = 0;
+//                 });
+//               },
+//               child: Image.asset(
+//                 'lib/images/logo.png',
+//                 height: 50,
+//               ),
+//             ),
+//             SizedBox(
+//               width: 300,
+//               child: TextField(
+//                 decoration: InputDecoration(
+//                   prefixIcon: const Icon(Icons.search_rounded),
+//                   hintText: "Search",
+//                   border: OutlineInputBorder(
+//                     borderRadius: BorderRadius.circular(50),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//             const Spacer(),
+
+//             Expanded(
+//               child: Center(
+//                 child: Row(
+//                   children: [
+//                     IconButton(
+//                       icon: const Icon(Icons.home_rounded),
+//                       onPressed: () {
+//                         setState(() {
+//                           _selectedIndex = 0;
+//                         });
+//                       },
+//                     ),
+//                     IconButton(
+//                       icon: const Icon(Icons.calendar_month_rounded),
+//                       onPressed: () {
+//                         setState(() {
+//                           _selectedIndex = 1;
+//                         });
+//                       },
+//                     ),
+//                     IconButton(
+//                       icon: const Icon(Icons.message_rounded),
+//                       onPressed: () {
+//                         setState(() {
+//                           _selectedIndex = 2;
+//                         });
+//                       },
+//                     ),
+//                     IconButton(
+//                       icon: const Icon(Icons.pets_rounded),
+//                       onPressed: () {
+//                         setState(() {
+//                           _selectedIndex = 3;
+//                         });
+//                       },
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//             ),
+
+//             const Spacer()
+//           ],
+//         ),
+//         actions: const [
+//           NotificationIconWeb(),
+//           ProfileIconWeb()
+//         ],
+//       ),
+//       body: _pages[_selectedIndex],
+//     );
+//   }
+// }

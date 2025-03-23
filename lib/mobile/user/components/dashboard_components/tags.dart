@@ -8,6 +8,7 @@ class MyTags extends StatefulWidget {
 }
 
 class _MyTagsState extends State<MyTags> {
+  final bool _isSelected = false;
 
   int _selectedIndex = 0;
 
@@ -20,15 +21,17 @@ class _MyTagsState extends State<MyTags> {
           Padding(
             padding: const EdgeInsets.only(left:10, top: 10, right: 5, bottom: 10 ),
             child: ChoiceChip(
+              checkmarkColor: Colors.black,
               elevation: 5,
               selectedColor: const Color.fromARGB(255, 81, 115, 153),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)
               ),
-              label: const Text(
+              label: Text(
                 "All",
                 style: TextStyle(
-                  fontSize: 15
+                  fontSize: 15,
+                  color: _isSelected ? Colors.white : Colors.black 
                 ),
               ),
               selected: _selectedIndex == 0,
@@ -39,18 +42,20 @@ class _MyTagsState extends State<MyTags> {
               },
             ),
           ),
-                    Padding(
+          Padding(
             padding: const EdgeInsets.only(left:10, top: 10, right: 5, bottom: 10 ),
             child: ChoiceChip(
+              checkmarkColor: Colors.black,
               elevation: 5,
               selectedColor: const Color.fromARGB(255, 81, 115, 153),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)
               ),
-              label: const Text(
+              label: Text(
                 "Nearby",
                 style: TextStyle(
-                  fontSize: 15
+                  fontSize: 15,
+                  color: _isSelected ? Colors.white : Colors.black 
                 ),
               ),
               selected: _selectedIndex == 1,
@@ -64,15 +69,17 @@ class _MyTagsState extends State<MyTags> {
           Padding(
             padding: const EdgeInsets.only(left:10, top: 10, right: 5, bottom: 10 ),
             child: ChoiceChip(
+              checkmarkColor: Colors.black,
               elevation: 5,
               selectedColor: const Color.fromARGB(255, 81, 115, 153),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)
               ),
-              label: const Text(
+              label:  Text(
                 "Popular",
                 style: TextStyle(
-                  fontSize: 15
+                  fontSize: 15,
+                  color: _isSelected ? Colors.white : Colors.black 
                 ),
               ),
               selected: _selectedIndex == 2,
@@ -86,15 +93,17 @@ class _MyTagsState extends State<MyTags> {
           Padding(
             padding: const EdgeInsets.only(left:10, top: 10, right: 5, bottom: 10 ),
             child: ChoiceChip(
+              checkmarkColor: Colors.black,
               elevation: 5,
               selectedColor: const Color.fromARGB(255, 81, 115, 153),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20)
               ),
-              label: const Text(
+              label: Text(
                 "Reccomended",
                 style: TextStyle(
-                  fontSize: 15
+                  fontSize: 15,
+                  color: _isSelected ? Colors.white : Colors.black 
                 ),
               ),
               selected: _selectedIndex == 3,
