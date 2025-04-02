@@ -13,6 +13,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      padding: EdgeInsets.only(left: 60, right: 60),
       children: const [
         MyTags(),
         Padding(

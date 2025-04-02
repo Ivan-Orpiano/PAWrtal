@@ -29,20 +29,20 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        leadingWidth: 175,
-        toolbarHeight: 75,
+        leadingWidth: 220,
+        toolbarHeight: 80,
         shadowColor: Colors.grey.shade400,
         elevation: 1,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: GestureDetector(
+          padding: const EdgeInsets.only(left: 72),
+          child: InkWell(
             onTap: () {
               setState(() {
               _selectedIndex = 0;
               });
             },
             child: Image.asset(
-              'lib/images/PAWrtal_logo.png'
+              'lib/images/PAWrtal_logo.png',
             ),
           ),
         ),
@@ -63,7 +63,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Home",
                   style: TextStyle(
                     fontSize: 18,
-                    //fontWeight: _selectedIndex == 0 ? FontWeight.bold : FontWeight.normal,
+                    // fontWeight: _selectedIndex == 0 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 0 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -83,7 +83,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Appointments",
                   style: TextStyle(
                     fontSize: 18,
-                    //fontWeight: _selectedIndex == 1 ? FontWeight.bold : FontWeight.normal,
+                    // fontWeight: _selectedIndex == 1 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 1 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -103,7 +103,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Messages",
                   style: TextStyle(
                     fontSize: 18,
-                    //fontWeight: _selectedIndex == 2 ? FontWeight.bold : FontWeight.normal,
+                    // fontWeight: _selectedIndex == 2 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 2 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -123,7 +123,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Pets",
                   style: TextStyle(
                     fontSize: 18,
-                    //fontWeight: _selectedIndex == 3 ? FontWeight.bold : FontWeight.normal,
+                    // fontWeight: _selectedIndex == 3 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 3 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -132,8 +132,15 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
           ],
         ),
         actions: const [
-          NotificationIconWeb(),
-          ProfileIconWeb()
+          Padding(
+            padding: EdgeInsets.only(right: 60),
+            child: Row(
+              children: [
+                NotificationIconWeb(),
+                ProfileIconWeb(),
+              ],
+            ),
+          )
         ],
       ),
       body: _pages[_selectedIndex],

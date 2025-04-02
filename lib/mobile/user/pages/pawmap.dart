@@ -19,27 +19,27 @@ class _PawmapState extends State<Pawmap> {
   final PopupController _popupController = PopupController();
   LatLng? userLocation;
   List<LatLng> routePoints = [];
-  final Distance distance = Distance();
+  final Distance distance = const Distance();
   final TextEditingController _searchController = TextEditingController();
 
   final List<Map<String, dynamic>> markerData = [
     {
       "name": "Qualipaws Animal Clinic",
-      "location": LatLng(14.8131, 121.0453),
+      "location": const LatLng(14.8131, 121.0453),
       "description": "Affordable animal care services in SJDM.",
       "image": "lib/images/qualipaws.jpg",
       "status": "Open",
     },
     {
       "name": "SM San Jose Del Monte",
-      "location": LatLng(14.78569, 121.07577),
+      "location": const LatLng(14.78569, 121.07577),
       "description": "A shopping mall with pet-friendly facilities.",
       "image": "lib/images/sm_sjdm.jpg",
       "status": "Closed",
     },
     {
       "name": "Pet Health Center",
-      "location": LatLng(14.778830740347956, 121.07446884832339),
+      "location": const LatLng(14.778830740347956, 121.07446884832339),
       "description": "Expert pet health services in your neighborhood.",
       "image": "lib/images/pet_health.jpg",
       "status": "Full",
@@ -47,8 +47,8 @@ class _PawmapState extends State<Pawmap> {
   ];
 
   final sanJoseDelMonteBounds = LatLngBounds(
-    LatLng(14.7500, 121.0000),
-    LatLng(14.8700, 121.1000),
+    const LatLng(14.7500, 121.0000),
+    const LatLng(14.8700, 121.1000),
   );
 
   bool isWithinBounds(LatLng point) {
@@ -137,18 +137,18 @@ class _PawmapState extends State<Pawmap> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(Icons.location_on, color: Colors.red, size: 40),
+              const Icon(Icons.location_on, color: Colors.red, size: 40),
               Positioned(
                 top: 65,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
                     "${distanceInKm.toStringAsFixed(2)} km",
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -175,7 +175,7 @@ class _PawmapState extends State<Pawmap> {
       setState(() {
         routePoints = points;
         _popupController.hideAllPopups();
-        Future.delayed(Duration(milliseconds: 100), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           _popupController.showPopupsOnlyFor([
             getMarkers().firstWhere((marker) => marker.point == destination)
           ]);
@@ -190,7 +190,7 @@ class _PawmapState extends State<Pawmap> {
       body: Stack(
         children: [
           userLocation == null
-              ? Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
@@ -211,7 +211,7 @@ class _PawmapState extends State<Pawmap> {
                     TileLayer(
                       urlTemplate:
                           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                      subdomains: ['a', 'b', 'c'],
+                      subdomains: const ['a', 'b', 'c'],
                       maxZoom: 19,
                     ),
                     if (routePoints.isNotEmpty)
@@ -238,13 +238,13 @@ class _PawmapState extends State<Pawmap> {
                               children: [
                                 VetPopup(data: markerInfo),
                                 Container(
-                                  decoration: BoxDecoration(
+                                  decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Color.fromARGB(255, 39, 86, 139),
                                   ),
                                   child: IconButton(
                                     icon:
-                                        Icon(Icons.close, color: Colors.white),
+                                        const Icon(Icons.close, color: Colors.white),
                                     onPressed: () {
                                       _popupController.hideAllPopups();
                                     },
@@ -262,7 +262,7 @@ class _PawmapState extends State<Pawmap> {
                           point: userLocation!,
                           width: 40,
                           height: 40,
-                          child: Icon(Icons.my_location,
+                          child: const Icon(Icons.my_location,
                               color: Colors.blue, size: 40),
                         ),
                       ],
@@ -281,7 +281,7 @@ class _PawmapState extends State<Pawmap> {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.arrow_back),
+                        icon: const Icon(Icons.arrow_back),
                         onPressed: () {
                           Navigator.pop(context);
                         },
@@ -315,8 +315,8 @@ class _PawmapState extends State<Pawmap> {
                               onEditingComplete: onEditingComplete,
                               decoration: InputDecoration(
                                 hintText: "Search...",
-                                hintStyle: TextStyle(color: Colors.grey),
-                                contentPadding: EdgeInsets.symmetric(
+                                hintStyle: const TextStyle(color: Colors.grey),
+                                contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 15),
                                 fillColor: Colors.white,
                                 filled: true,
@@ -341,7 +341,7 @@ class _PawmapState extends State<Pawmap> {
                         backgroundColor: Colors.white,
                       ),
                       onPressed: moveToNearestMarker,
-                      child: Text("Nearest",
+                      child: const Text("Nearest",
                           style: TextStyle(color: Colors.black)),
                     ),
                     ElevatedButton(
@@ -350,7 +350,7 @@ class _PawmapState extends State<Pawmap> {
                       ),
                       onPressed: () {},
                       child:
-                          Text("Open", style: TextStyle(color: Colors.black)),
+                          const Text("Open", style: TextStyle(color: Colors.black)),
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -358,7 +358,7 @@ class _PawmapState extends State<Pawmap> {
                       ),
                       onPressed: () {},
                       child:
-                          Text("More", style: TextStyle(color: Colors.black)),
+                          const Text("More", style: TextStyle(color: Colors.black)),
                     ),
                   ],
                 ),

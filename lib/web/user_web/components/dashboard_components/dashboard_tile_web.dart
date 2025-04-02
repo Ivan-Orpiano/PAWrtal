@@ -22,7 +22,6 @@ class _DashboardTileWebState extends State<DashboardTileWeb> {
     return Container(
       width: 250,
       height: 355,
-      color: const Color.fromARGB(183, 255, 255, 255),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
