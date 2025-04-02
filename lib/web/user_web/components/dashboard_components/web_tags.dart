@@ -18,6 +18,15 @@ class _WebTagsState extends State<WebTags> {
     "Recommended"
   ];
 
+  double _getTextWidth(String text) {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout();
+  return textPainter.width;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -41,6 +50,7 @@ class _WebTagsState extends State<WebTags> {
                       Text(
                         tags[index],
                         style: TextStyle(
+                          fontSize: 16,
                           color: _selectedindex == index ? Colors.black : Colors.grey,
                           fontWeight: _selectedindex == index ? FontWeight.bold : FontWeight.normal
                         ),
@@ -49,7 +59,7 @@ class _WebTagsState extends State<WebTags> {
                       Container(
                         margin: const EdgeInsets.only(top: 4),
                         height: 2,
-                        width: 20,
+                        width: _getTextWidth(tags[index]),
                         color: Colors.black,
                       ),
                     ],
