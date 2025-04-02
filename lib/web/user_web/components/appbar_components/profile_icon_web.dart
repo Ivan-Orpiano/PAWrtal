@@ -117,14 +117,23 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: InkWell(
-        onTap: () => _togglePopup(context),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
-          child: Image.asset(
-            'lib/images/pfp.jpg',
-            width: 40,
-            height: 40,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.grey
+          )
+        ),
+        child: InkWell(
+          onTap: () => _togglePopup(context),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(50),
+            child: Image.asset(
+              'lib/images/pfp.jpg',
+              width: 40,
+              height: 40,
+            ),
           ),
         ),
       ),

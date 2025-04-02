@@ -1,3 +1,4 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 
 class DashboardTileWeb extends StatefulWidget {
@@ -8,45 +9,118 @@ class DashboardTileWeb extends StatefulWidget {
 }
 
 class _DashboardTileWebState extends State<DashboardTileWeb> {
+
+  final List <String> images = [
+    'lib/images/pfp.jpg',
+    'lib/images/pfp.jpg'
+  ];
+
+  bool _isClicked = false;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 430,
-      height: 325,
-      color: Colors.grey,
+      width: 250,
+      height: 355,
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          SizedBox(
-            height: 240,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                'lib/images/test_image.jpg',
-                fit: BoxFit.fill,
-                width: double.infinity,
+          Stack(
+            children: [
+              CarouselSlider(
+                options: CarouselOptions(
+                  height: 250,
+                  viewportFraction: 1.2,
+                  enableInfiniteScroll: false
+                ),
+                items: images.map((item) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage(item),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: _isClicked ? 
+                  const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.red,
+                    ) : 
+                    const Icon(
+                      Icons.favorite_border_rounded,
+                      color: Colors.white,                   
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isClicked = !_isClicked;
+                    });
+                  },
+                ),
+              )
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children:[
+                Text(
+                  "Qualipaws",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                    ),
+                    Text(
+                      "4.95",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold
+                      ),
+                    )
+                  ],
+                )
+              ]
             ),
           ),
-          Row(
+          const Row(
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(50),
-                    child: Image.asset(
-                      'lib/images/pfp.jpg',
-                      width: 40,
-                      height: 40,
-                    ),
-                  )
-                ],
+              Text(
+                "3 kilometers away",
+                style: TextStyle(
+                  color: Colors.grey
+                ),
+              )
+            ],
+          ),
+          const Row(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Text(
+                  "Services",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600
+                  ),
+                ),
               ),
-              const Column(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Text(
-                    "Qualipaws"
+                  Icon(
+                    Icons.health_and_safety_rounded,
+                  ),
+                  Icon(
+                    Icons.pets_rounded
                   )
                 ],
               )

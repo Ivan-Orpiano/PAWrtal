@@ -1,7 +1,6 @@
 import 'package:capstone_app/web/login_web/web_sign_up_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 
 class WebLoginPage extends StatefulWidget {
   const WebLoginPage({super.key});

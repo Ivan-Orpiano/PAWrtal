@@ -16,7 +16,6 @@ class WebUserHomePage extends StatefulWidget {
 class _WebUserHomePageState extends State<WebUserHomePage> {
 
   int _selectedIndex = 0;
-  bool _isExpanded = false;
 
     final List<Widget> _pages = const [
     WebDashboardPage(),
@@ -29,36 +28,103 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
+        leadingWidth: 220,
+        toolbarHeight: 80,
+        shadowColor: Colors.grey.shade400,
+        elevation: 1,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 72),
+          child: InkWell(
+            onTap: () {
+              setState(() {
+              _selectedIndex = 0;
+              });
+            },
+            child: Image.asset(
+              'lib/images/PAWrtal_logo.png',
+            ),
+          ),
+        ),
         title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(
-              icon: const Icon(Icons.menu_rounded),
-              onPressed: () {
+
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
                 setState(() {
-                  _isExpanded = !_isExpanded;
+                  _selectedIndex = 0;
                 });
               },
-            ),
-            const SizedBox(width: 25),
-            InkWell(
-              onTap: () {},
-              child: Image.asset(
-                'lib/images/PAWrtal_logo.png',
-                height: 50,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  "Home",
+                  style: TextStyle(
+                    fontSize: 18,
+                    // fontWeight: _selectedIndex == 0 ? FontWeight.bold : FontWeight.normal,
+                    color: _selectedIndex == 0 ? Colors.black : Colors.grey
+                  ),
+                ),
               ),
             ),
-            Expanded(
-              child: Center(
-                child: SizedBox(
-                  width: 400,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      hintText: "Search",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                    ),
+
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 1;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  "Appointments",
+                  style: TextStyle(
+                    fontSize: 18,
+                    // fontWeight: _selectedIndex == 1 ? FontWeight.bold : FontWeight.normal,
+                    color: _selectedIndex == 1 ? Colors.black : Colors.grey
+                  ),
+                ),
+              ),
+            ),
+
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 2;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  "Messages",
+                  style: TextStyle(
+                    fontSize: 18,
+                    // fontWeight: _selectedIndex == 2 ? FontWeight.bold : FontWeight.normal,
+                    color: _selectedIndex == 2 ? Colors.black : Colors.grey
+                  ),
+                ),
+              ),
+            ),
+
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 3;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  "Pets",
+                  style: TextStyle(
+                    fontSize: 18,
+                    // fontWeight: _selectedIndex == 3 ? FontWeight.bold : FontWeight.normal,
+                    color: _selectedIndex == 3 ? Colors.black : Colors.grey
                   ),
                 ),
               ),
@@ -66,81 +132,18 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
           ],
         ),
         actions: const [
-          NotificationIconWeb(),
-          ProfileIconWeb(),
-        ],
-      ),
-      body: Row(
-        children: [
-          NavigationRail(
-            useIndicator: true,
-            extended: _isExpanded,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            labelType: _isExpanded ? NavigationRailLabelType.none : NavigationRailLabelType.none,
-            indicatorShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+          Padding(
+            padding: EdgeInsets.only(right: 60),
+            child: Row(
+              children: [
+                NotificationIconWeb(),
+                ProfileIconWeb(),
+              ],
             ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(
-                  Icons.dashboard_rounded
-                ),
-                selectedIcon: Icon(
-                  Icons.dashboard,
-                  color: Colors.blue
-                ),
-                label: Text(
-                  "Dashboard"
-                ),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.calendar_today_rounded),
-                selectedIcon: Icon(
-                  Icons.calendar_today, 
-                  color: Colors.blue
-                ),
-                label: Text(
-                  "Appointments"
-                ),
-              ),
-              NavigationRailDestination(
-                icon: Icon(
-                  Icons.message_rounded
-                ),
-                selectedIcon: Icon(
-                  Icons.message, color: Colors.blue
-                ),
-                label: Text(
-                  "Messages"
-                ),
-              ),
-              NavigationRailDestination(
-                icon: Icon(
-                  Icons.pets_rounded
-                ),
-                selectedIcon: Icon(
-                  Icons.pets, 
-                  color: Colors.blue
-                ),
-                label: Text(
-                  "Pets"
-                ),
-              ),
-            ],
-          ),
-          const VerticalDivider(
-            thickness: 1, width: 1,
-          ),
-          Expanded(
-            child: _pages[_selectedIndex],
-          ),
+          )
         ],
       ),
+      body: _pages[_selectedIndex],
     );
   }
 }
