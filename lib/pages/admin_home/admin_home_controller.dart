@@ -36,29 +36,30 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
       FullScreenDialogLoader.showDialog();
       await authRepository.logout(_getStorage.read("sessionId")).then((value) {
         FullScreenDialogLoader.cancelDialog();
-
         _getStorage.erase();
         Get.offAllNamed(Routes.login);
       }).catchError((error) {
         FullScreenDialogLoader.cancelDialog();
+        debugPrint("Error details: $error");
         if (error is AppwriteException) {
+          final message = error.response != null
+              ? error.response['message']
+              : "An error occurred";
           CustomSnackBar.showErrorSnackBar(
-              context: Get.context,
-              title: "Error",
-              message: error.response['message']);
+              context: Get.overlayContext, title: "Error", message: message);
         } else {
           CustomSnackBar.showErrorSnackBar(
-              context: Get.context,
+              context: Get.overlayContext,
               title: "Error",
-              message: "Something went wrong");
+              message: "Something went wong");
         }
       });
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showErrorSnackBar(
-          context: Get.context,
+          context: Get.overlayContext,
           title: "Error",
-          message: "Something went wrong");
+          message: "Something went wong");
     }
   }
 

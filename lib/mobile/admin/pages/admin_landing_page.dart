@@ -1,4 +1,7 @@
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/pages/admin_home/admin_home_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AdminLandingPage extends StatefulWidget {
   const AdminLandingPage({super.key});
@@ -8,6 +11,9 @@ class AdminLandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<AdminLandingPage> {
+
+  final AdminHomeController controller = AdminHomeController(Get.find<AuthRepository>());
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,10 +23,25 @@ class _LandingPageState extends State<AdminLandingPage> {
             Image.asset('lib/images/PAWrtal_logo.png', width: 200, height: 200),
         elevation: 0,
       ),
-      drawer: const Drawer(
+      drawer: Drawer(
         backgroundColor: Color.fromARGB(255, 96, 139, 193),
         child: Column(
-          children: [],
+          children: [
+            ListTile(
+              onTap: () {
+                controller.logout();
+              },
+              leading: const Icon(Icons.door_back_door_rounded),
+              iconColor: const Color.fromARGB(255, 248, 253, 255),
+              title: const Text(
+                "Sign out",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color.fromARGB(255, 248, 253, 255)
+                ),
+              ),
+            )
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(

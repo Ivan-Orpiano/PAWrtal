@@ -3,6 +3,12 @@ import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/pages/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 
+enum AuthStatus {
+  uninitialized,
+  authenticated,
+  unauthenticated,
+}
+
 class AppWriteProvider {
   Client client = Client();
 
@@ -33,6 +39,11 @@ class AppWriteProvider {
           password: map["password"],
           name: map["name"]);
 
+    //   await account!.updatePrefs(prefs: {
+    //   "role": map["role"] ?? "customer",
+    //   "verified": false, // user must complete verification
+    // });
+
       // ignore: unnecessary_null_comparison
       if (response == null) {
         throw Exception('Signup failed: response is null');
@@ -46,13 +57,35 @@ class AppWriteProvider {
     }
   }
 
-  Future<models.Session> login(Map map) async {
-    final response = await account!.createEmailSession(
+  Future<Map<String, dynamic>> login(Map map) async {
+    final session = await account!.createEmailSession(
       email: map["email"],
       password: map["password"],
     );
-    return response;
+
+    final user = await account!.get();
+    final role = user.prefs.data["role"] ?? "customer";
+
+    return {
+      "session": session,
+      "role": role,
+    };
   }
+
+  Future<void> verifyUser() async {
+  try {
+    final user = await account!.get();
+    await account!.updatePrefs(prefs: {
+      "role": user.prefs.data["role"] ?? "customer",
+      "verified": true,
+    });
+    debugPrint("User verified successfully");
+  } catch (e) {
+    debugPrint("Verification error: $e");
+    rethrow;
+  }
+}
+
 
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
@@ -86,7 +119,7 @@ class AppWriteProvider {
         data: {
           "name": map["name"],
           "department": map["department"],
-          "createdBy": map["createdBy"],
+          "createdBy": map["createdBy"] ?? "unknown",
           "image": map["image"],
           "createdAt": map["createdAt"]
         });
@@ -111,7 +144,7 @@ class AppWriteProvider {
     final updatedData = {
       "name": map["name"],
       "department": map["department"],
-      "createdBy": map["createdBy"],
+      "createdBy": map["createdBy"] ?? "unknown",
       "image": map.containsKey("image") && map["image"].isNotEmpty
           ? map["image"]
           : currentImage, // use current image if no new one is uploaded
@@ -133,7 +166,7 @@ class AppWriteProvider {
       collectionId: AppwriteConstants.staffCollectionID,
       documentId: map["documentId"],
     );
-    
+
     return response;
   }
 }
