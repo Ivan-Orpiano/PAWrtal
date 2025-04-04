@@ -90,11 +90,12 @@ class SignUpController extends GetxController {
             "email": email,
             "password": password
           }).then((value){
-            debugPrint("Signup response: $value");
+            debugPrint("Signup successful: $value");
             FullScreenDialogLoader.cancelDialog();
             CustomSnackBar.showSuccessSnackBar(context: Get.overlayContext, title: "Success", message: "User account created");
             clearTextEditingControllers();
             Get.offAllNamed(Routes.login);
+            //Get.offAllNamed(Routes.verification);
           }).catchError((error){
             FullScreenDialogLoader.cancelDialog();
             debugPrint("Error details: $error");
