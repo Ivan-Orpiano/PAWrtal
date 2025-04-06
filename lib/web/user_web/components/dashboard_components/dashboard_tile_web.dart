@@ -27,21 +27,11 @@ class _DashboardTileWebState extends State<DashboardTileWeb> {
         children: [
           Stack(
             children: [
-              CarouselSlider(
-                options: CarouselOptions(
-                  height: 250,
-                  viewportFraction: 1.2,
-                  enableInfiniteScroll: false
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.asset(
+                  'lib/images/pfp.jpg',
                 ),
-                items: images.map((item) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(item),
-                      ),
-                    ),
-                  );
-                }).toList(),
               ),
               Positioned(
                 top: 10,

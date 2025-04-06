@@ -10,10 +10,7 @@ class MessagesWebPage extends StatefulWidget {
 class _MessagesWebPageState extends State<MessagesWebPage> {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        "Messages"
-      ),
+    return Scaffold(
     );
   }
 }
