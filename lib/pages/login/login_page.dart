@@ -1,5 +1,8 @@
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/login/login_controller.dart';
+import 'package:capstone_app/pages/routes/app_pages.dart';
+import 'package:capstone_app/pages/utils/custom_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -11,114 +14,91 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final LoginController controller =
+      LoginController(Get.find<AuthRepository>());
+  final AppWriteProvider appWriteProvider = AppWriteProvider();
 
-  final LoginController controller = LoginController(Get.find<AuthRepository>());
-
-  TextStyle defaultstyle = const TextStyle(
-    color: Colors.grey,
-    fontSize: 20
-  );
+  TextStyle defaultstyle = const TextStyle(color: Colors.grey, fontSize: 20);
   TextStyle linkStyle = const TextStyle(
-    color: Colors.grey,
-    fontWeight: FontWeight.bold,
-    fontSize: 20
-  );
+      color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 20);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Form(
-          key: controller.formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  "lib/images/logo.png"
-                ),
-                const SizedBox(height: 20),
-            
-                const Text(
-                  "Login",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22
+        body: Center(
+      child: Form(
+        key: controller.formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset("lib/images/logo.png"),
+              const SizedBox(height: 20),
+              const Text(
+                "Login",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 300,
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.email),
+                    hintText: "Email",
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20)),
                   ),
+                  keyboardType: TextInputType.emailAddress,
+                  controller: controller.emailEditingController,
+                  validator: (value) {
+                    return controller.validateEmail(value!);
+                  },
                 ),
-                const SizedBox(height: 20),
-            
-                SizedBox(
-                  width: 300,
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.email),
-                      hintText: "Email",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20)
-                      ),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    controller: controller.emailEditingController,
-                    validator: (value) { 
-                      return controller.validateEmail(value!);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 15),
-            
-                SizedBox(
-                  width: 300,
-                  child: TextFormField(
-                    obscureText: true,
-                    decoration: InputDecoration(
+              ),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: 300,
+                child: TextFormField(
+                  obscureText: true,
+                  decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock),
                       hintText: "Password",
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20)
-                      )
-                    ),
-                    keyboardType: TextInputType.visiblePassword,
-                    controller: controller.passwordEditingController,
-                    validator: (value) {
-                      return controller.validatePassword(value!);
-                    },
-                  ),
+                          borderRadius: BorderRadius.circular(20))),
+                  keyboardType: TextInputType.visiblePassword,
+                  controller: controller.passwordEditingController,
+                  validator: (value) {
+                    return controller.validatePassword(value!);
+                  },
                 ),
-            
-                const SizedBox(height: 20),
-            
-                SizedBox(
-                  width: 300,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      elevation: 5,
-                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                    ),
-                    onPressed: () {
-                      controller.validateAndLogin(
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 300,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    elevation: 5,
+                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  ),
+                  onPressed: () {
+                    controller.validateAndLogin(
                         email: controller.emailEditingController.text,
-                        password: controller.passwordEditingController.text
-                      );
-                    },
-                    child: const Text(
-                      "Sign In",
-                      style: TextStyle(
+                        password: controller.passwordEditingController.text);
+                  },
+                  child: const Text(
+                    "Sign In",
+                    style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
-                        color: Colors.white
-                      ) ,
-                    ),
+                        color: Colors.white),
                   ),
                 ),
-            
-                const SizedBox(height: 32),
-            
-                const Center(
-              child: Row(
-                children: [
+              ),
+              const SizedBox(height: 32),
+              const Center(
+                child: Row(children: [
                   Expanded(
                     child: Divider(
                       color: Colors.grey,
@@ -129,9 +109,7 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     "or",
                     style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey
-                    ),
+                        fontStyle: FontStyle.italic, color: Colors.grey),
                   ),
                   Expanded(
                     child: Divider(
@@ -140,45 +118,60 @@ class _LoginPageState extends State<LoginPage> {
                       endIndent: 60,
                     ),
                   )
-                ]
+                ]),
               ),
-            ),
-            
-                const SizedBox(
-                  height: 32,
-                ),
-            
-                Container(
+              const SizedBox(
+                height: 32,
+              ),
+              GestureDetector(
+                onTap: () {
+                appWriteProvider.signInWithGoogle()
+                .then((value) {
+                  if (value) {
+                    CustomSnackBar.showInfoSnackBar(
+                      context: Get.overlayContext,
+                      title: "Success",
+                      message: "Logged in with Google successfully",
+                    );
+                    Get.toNamed(Routes.userHome);
+                  } else {
+                    CustomSnackBar.showErrorSnackBar(
+                      context: Get.overlayContext,
+                      title: "Error",
+                      message: "Failed to login with Google",
+                    );
+                  }
+                });
+                },
+                child: Container(
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: Colors.black
+                      color: Colors.black,
                     ),
-                    borderRadius: BorderRadius.circular(10)
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Image.asset(
                     "lib/images/google_logo.png",
                     fit: BoxFit.cover,
                   ),
                 ),
-            
-                const SizedBox(height: 32),
-            
-                GestureDetector(
-                  onTap: () {
-                          controller.moveToSignUp();
-                        },
-                        child: const Text(
-                          "Don't have an account? Sign Up",
-                          style: TextStyle(fontSize: 20, color: Colors.black),
-                        ),
-                )
-              ],
-            ),
+              ),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () {
+                  controller.moveToSignUp();
+                },
+                child: const Text(
+                  "Don't have an account? Sign Up",
+                  style: TextStyle(fontSize: 20, color: Colors.black),
+                ),
+              )
+            ],
           ),
         ),
-      )
-    );
+      ),
+    ));
   }
 }

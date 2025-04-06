@@ -39,10 +39,10 @@ class AppWriteProvider {
           password: map["password"],
           name: map["name"]);
 
-    //   await account!.updatePrefs(prefs: {
-    //   "role": map["role"] ?? "customer",
-    //   "verified": false, // user must complete verification
-    // });
+      //   await account!.updatePrefs(prefs: {
+      //   "role": map["role"] ?? "customer",
+      //   "verified": false, // user must complete verification
+      // });
 
       // ignore: unnecessary_null_comparison
       if (response == null) {
@@ -72,20 +72,42 @@ class AppWriteProvider {
     };
   }
 
-  Future<void> verifyUser() async {
-  try {
-    final user = await account!.get();
-    await account!.updatePrefs(prefs: {
-      "role": user.prefs.data["role"] ?? "customer",
-      "verified": true,
-    });
-    debugPrint("User verified successfully");
-  } catch (e) {
-    debugPrint("Verification error: $e");
-    rethrow;
+  Future<bool> signInWithGoogle() async {
+    try{
+      final response = await account?.createOAuth2Session(provider: "google", scopes: [
+        "profile",
+        "email",
+      ]);
+      print(response);
+      return true;
+    } catch (e) {
+      print("error: ${e.toString()}");
+      return false;
+    }
   }
-}
 
+  Future<void> verifyUser() async {
+    try {
+      final user = await account!.get();
+      await account!.updatePrefs(prefs: {
+        "role": user.prefs.data["role"] ?? "customer",
+        "verified": true,
+      });
+      debugPrint("User verified successfully");
+    } catch (e) {
+      debugPrint("Verification error: $e");
+      rethrow;
+    }
+  }
+
+  Future<models.User?> getUser() async {
+    try {
+      final user = await account!.get();
+      return user;
+    } catch (e) {
+      return null;
+    }
+  }
 
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
