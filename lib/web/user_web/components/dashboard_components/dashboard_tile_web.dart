@@ -19,7 +19,7 @@ class _DashboardTileWebState extends State<DashboardTileWeb> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 250,
       height: 355,
       child: Column(

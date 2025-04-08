@@ -1,5 +1,7 @@
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/dashboard_tile_web.dart';
+import 'package:capstone_app/web/user_web/components/dashboard_components/web_filter.dart';
+import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_tags.dart';
 import 'package:flutter/material.dart';
 
@@ -17,7 +19,14 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       body: ListView(
         padding: const EdgeInsets.only(left: 60, right: 60, top: 16),
         children: const [
-          WebTags(),
+          Row(
+            children: [
+              WebTags(),
+              SizedBox(width: 12),
+              WebFilter(),
+              WebSearchBar(),
+            ],
+          ),
           Padding(
             padding: EdgeInsets.all(16.0),
             child: SingleChildScrollView(
