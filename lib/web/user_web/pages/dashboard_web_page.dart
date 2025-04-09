@@ -3,6 +3,7 @@ import 'package:capstone_app/web/user_web/components/dashboard_components/dashbo
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_filter.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_tags.dart';
+import 'package:capstone_app/web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 
 class WebDashboardPage extends StatefulWidget {
@@ -13,13 +14,20 @@ class WebDashboardPage extends StatefulWidget {
 }
 
 class _WebDashboardPageState extends State<WebDashboardPage> {
+
+  bool _showMap = false;
+
+  Widget _buildMapView() {
+    return WebMaps();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.only(left: 60, right: 60, top: 16),
-        children: const [
-          Row(
+        children:  [
+          const Row(
             children: [
               WebTags(),
               SizedBox(width: 12),
@@ -28,17 +36,18 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
             ],
           ),
           Padding(
-            padding: EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: _showMap ? _buildMapView() : 
+            const SingleChildScrollView(
               child: Wrap(
                 direction: Axis.horizontal,
                 spacing: 20,
                 runSpacing: 30,
                 children: [
-                  DashboardTileWeb(),
+                  DashboardTileWeb()
                 ],
               ),
-            ),
+            )
           ),
         ]
       ),
@@ -50,23 +59,15 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           width: 120,
           child: FloatingActionButton.extended(
             backgroundColor: Colors.white,
-            label: const Text(
-              "Show Map",
-              style: TextStyle(
-                color: Colors.black
-              ),
+            label: _showMap ? const Text("Show List", style: TextStyle(color: Colors.black),) 
+            : const Text("Show Map", style: TextStyle(color: Colors.black),
             ),
-            icon: const Icon(
-              Icons.map_rounded,
-              color: Colors.black,
-            ),
+            icon: _showMap ? const Icon(Icons.list_rounded, color: Colors.black) 
+            : const Icon(Icons.map_rounded, color: Colors.black,),
             onPressed: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const Pawmap(),
-              //   )
-              // );
+              setState(() {
+                _showMap = !_showMap;
+              });
             },
           ),
         ),
