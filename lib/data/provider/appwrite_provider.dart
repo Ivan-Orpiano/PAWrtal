@@ -86,6 +86,26 @@ class AppWriteProvider {
     }
   }
 
+  Future <bool> sendVerificationEmail() async {
+    try {
+      await account?.createVerification(url: 'http://localhost:3000/verify');
+      return true;
+    } catch (e) {
+      debugPrint("Error sending verification email: $e");
+      return false;
+    }
+  }
+
+Future <bool> sendRecoveryEmail(String email) async {
+  try{
+    await account?.createRecovery(email: email, url: "http://localhost:3000/recovery");
+    return true;
+  } catch (e) {
+    debugPrint("Error sending recovery email: $e");
+    return false;
+  }
+}
+
   Future<void> verifyUser() async {
     try {
       final user = await account!.get();

@@ -1,7 +1,7 @@
 class AppwriteConstants {
-  static String endPoint = "http://10.0.2.2:4003/v1";
-  static String projectID = "67ef97bf0010b6d11bc2";
-  static String dbID = "67ef98170003d5ce824c";
-  static String staffCollectionID = "67ef9820003059b88f13";
-  static String staffBucketID = "67ef9832000ae6207757";
+  static String endPoint = "https://cloud.appwrite.io/v1";
+  static String projectID = "67ef82500017dc404c6a";
+  static String dbID = "67ef839c00011ba4c465";
+  static String staffCollectionID = "67ef83a90017471edcd2";
+  static String staffBucketID = "67ef83bd0022c1e63789";
 }

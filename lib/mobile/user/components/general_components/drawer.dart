@@ -1,5 +1,6 @@
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/pages/utils/custom_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/pages/user_home/user_home_controller.dart';
 import 'package:get/get.dart';
@@ -75,13 +76,49 @@ class _MyDrawerState extends State<MyDrawer> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 320),
                     child: ListTile(
-                      title: Text(
-                        currentUser.emailVerification
-                            ? "Verified"
-                            : "Not Verified",
-                        style: const TextStyle(
-                            fontSize: 18,
-                            color: Color.fromARGB(255, 248, 253, 255)),
+                      title: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            currentUser.emailVerification
+                                ? "Verified"
+                                : "Not Verified",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Color.fromARGB(255, 248, 253, 255),
+                            ),
+                          ),
+                          if (!currentUser.emailVerification)
+                            TextButton(
+                              onPressed: () {
+                                appWriteProvider.sendVerificationEmail()
+                                    .then((value) {
+                                  if (value) {
+                                    CustomSnackBar.showSuccessSnackBar(
+                                      context: Get.overlayContext,
+                                      title: "Success",
+                                      message:
+                                          "Verification email sent successfully",
+                                    );
+                                  } else {
+                                    CustomSnackBar.showErrorSnackBar(
+                                      context: Get.overlayContext,
+                                      title: "Error",
+                                      message:
+                                          "Failed to send verification email",
+                                    );
+                                  }
+                                });
+                              },
+                              child: const Text(
+                                "Verify Now",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.blueAccent,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
