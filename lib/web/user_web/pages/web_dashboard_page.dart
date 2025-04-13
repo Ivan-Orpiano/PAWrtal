@@ -1,5 +1,5 @@
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/dashboard_tile_web.dart';
+import 'package:capstone_app/web/user_web/components/dashboard_components/web_dashboard_tile.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_filter.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_tags.dart';
@@ -44,7 +44,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
                 spacing: 20,
                 runSpacing: 30,
                 children: [
-                  DashboardTileWeb()
+                  WebDashboardTile()
                 ],
               ),
             )
@@ -60,7 +60,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           child: FloatingActionButton.extended(
             backgroundColor: Colors.white,
             label: _showMap ? const Text("Show List", style: TextStyle(color: Colors.black),) 
-            : const Text("Show Map", style: TextStyle(color: Colors.black),
+            : const Text("Don't Click!", style: TextStyle(color: Colors.black),
             ),
             icon: _showMap ? const Icon(Icons.list_rounded, color: Colors.black) 
             : const Icon(Icons.map_rounded, color: Colors.black,),
