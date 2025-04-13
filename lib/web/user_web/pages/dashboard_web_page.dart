@@ -18,7 +18,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   bool _showMap = false;
 
   Widget _buildMapView() {
-    return WebMaps();
+    return const WebMaps();
   }
 
   @override
