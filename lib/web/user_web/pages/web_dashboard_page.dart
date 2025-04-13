@@ -60,7 +60,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           child: FloatingActionButton.extended(
             backgroundColor: Colors.white,
             label: _showMap ? const Text("Show List", style: TextStyle(color: Colors.black),) 
-            : const Text("Don't Click!", style: TextStyle(color: Colors.black),
+            : const Text("View Maps", style: TextStyle(color: Colors.black),
             ),
             icon: _showMap ? const Icon(Icons.list_rounded, color: Colors.black) 
             : const Icon(Icons.map_rounded, color: Colors.black,),
