@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class WebSearchBar extends StatefulWidget {
-  const WebSearchBar({super.key});
+  final double width;
+
+  const WebSearchBar({
+    super.key,
+    this.width = 300
+    });
 
   @override
   State<WebSearchBar> createState() => _WebSearchBarState();
@@ -31,7 +36,7 @@ class _WebSearchBarState extends State<WebSearchBar> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 300,
+      width: widget.width,
       height: 50,
       child: TextField(
         controller: _controller,

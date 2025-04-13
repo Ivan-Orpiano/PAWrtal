@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
 class WebNotificationIcon extends StatefulWidget {
-  const WebNotificationIcon({super.key});
+  final double? right;
+  final double? top;
+  final double? width;
+
+  const WebNotificationIcon({
+    super.key,
+    this.right = 125,
+    this.top= 70,
+    this.width = 500
+    });
 
   @override
   State<WebNotificationIcon> createState() => _NotificationIconWebState();
@@ -37,9 +46,9 @@ class _NotificationIconWebState extends State<WebNotificationIcon> {
             ),
           ),
           Positioned(
-            right: 80,
-            top: 70,
-            width: 500,
+            right: widget.right,
+            top: widget.top,
+            width: widget.width,
             child: Material(
               elevation: 5,
               borderRadius: BorderRadius.circular(10),

@@ -1,3 +1,6 @@
+import 'package:capstone_app/web/user_web/components/appbar_components/web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/pages/web_user_home_page.dart';
 import 'package:flutter/material.dart';
 
@@ -34,6 +37,28 @@ class _WebClinicPageState extends State<WebClinicPage> {
             )
           ),
         ),
+        title: WebSearchBar(
+          width: 350,
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 380),
+            child: Row(
+              children: [
+                  WebNotificationIcon(
+                    right: 445,
+                    top: 70,
+                    width: 500,
+                  ),
+                  WebProfileIcon(
+                    right: 395,
+                    top: 70,
+                    width: 250,
+                  ),
+              ],
+            ),
+          )
+        ],
       ),
     );
   }

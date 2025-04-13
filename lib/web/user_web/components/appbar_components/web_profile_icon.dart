@@ -2,7 +2,16 @@ import 'package:capstone_app/web/login_web/web_login_page.dart';
 import 'package:flutter/material.dart';
 
 class WebProfileIcon extends StatefulWidget {
-  const WebProfileIcon({super.key});
+  final double? right;
+  final double? top;
+  final double? width;
+  
+  const WebProfileIcon({
+    super.key,
+    this.right = 75,
+    this.top = 70,
+    this.width = 250
+    });
 
   @override
   State<WebProfileIcon> createState() => _ProfileIconWebState();
@@ -37,9 +46,9 @@ class _ProfileIconWebState extends State<WebProfileIcon> {
             ),
           ),
           Positioned(
-            right: 20,
-            top: 70,
-            width: 250,
+            right: widget.right,
+            top: widget.top,
+            width: widget.width,
             child: Material(
               elevation: 5,
               borderRadius: BorderRadius.circular(10),
