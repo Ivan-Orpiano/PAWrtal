@@ -47,7 +47,6 @@ class _WebFilterState extends State<WebFilter> {
                               fontWeight: FontWeight.bold
                             ),
                           ),
-                          // Add other filter options here
                         ],
                       ),
                     ),
