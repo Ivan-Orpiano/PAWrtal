@@ -1,14 +1,14 @@
 import 'package:capstone_app/web/login_web/web_login_page.dart';
 import 'package:flutter/material.dart';
 
-class ProfileIconWeb extends StatefulWidget {
-  const ProfileIconWeb({super.key});
+class WebProfileIcon extends StatefulWidget {
+  const WebProfileIcon({super.key});
 
   @override
-  State<ProfileIconWeb> createState() => _ProfileIconWebState();
+  State<WebProfileIcon> createState() => _ProfileIconWebState();
 }
 
-class _ProfileIconWebState extends State<ProfileIconWeb> {
+class _ProfileIconWebState extends State<WebProfileIcon> {
   OverlayEntry? _overlayEntry;
 
   void _togglePopup(BuildContext context) {

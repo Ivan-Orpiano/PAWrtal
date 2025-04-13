@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class NotificationIconWeb extends StatefulWidget {
-  const NotificationIconWeb({super.key});
+class WebNotificationIcon extends StatefulWidget {
+  const WebNotificationIcon({super.key});
 
   @override
-  State<NotificationIconWeb> createState() => _NotificationIconWebState();
+  State<WebNotificationIcon> createState() => _NotificationIconWebState();
 }
 
-class _NotificationIconWebState extends State<NotificationIconWeb> {
+class _NotificationIconWebState extends State<WebNotificationIcon> {
 
   OverlayEntry? _overlayEntry;
 
