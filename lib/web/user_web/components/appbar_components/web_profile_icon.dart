@@ -73,17 +73,27 @@ class _ProfileIconWebState extends State<WebProfileIcon> {
                       ),
                     ),
                     const Divider(color: Colors.black87),
-                    _popupItem(
-                      "Settings",
-                      () {}
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: _popupItem(
+                        "Settings",
+                        () {}
+                      ),
                     ),
-                    _popupItem(
-                      "Help", 
-                      () {}
+                    SizedBox(
+                      width: double.infinity,
+                      child: _popupItem(
+                        "Help", 
+                        () {}
+                      ),
                     ),
-                    _popupItem(
-                      "Send feedback",
-                      () {}
+                    SizedBox(
+                      width: double.infinity,
+                      child: _popupItem(
+                        "Send feedback",
+                        () {}
+                      ),
                     ),
                     SizedBox(
                       width: double.infinity,
