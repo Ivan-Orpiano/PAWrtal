@@ -1,5 +1,7 @@
 import 'package:capstone_app/web/user_web/components/appbar_components/web_notification_icon.dart';
 import 'package:capstone_app/web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/components/clinic_page_components/web_like.dart';
+import 'package:capstone_app/web/user_web/components/clinic_page_components/web_share_button.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/pages/web_user_home_page.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +94,11 @@ class _WebClinicPageState extends State<WebClinicPage> {
                         fontWeight: FontWeight.bold
                       ),
                     ),
+                    Spacer(),
+
+                    WebShareButton(),
+                    SizedBox(width: 12),
+                    WebLike(),
                   ],
                 )
               ],
