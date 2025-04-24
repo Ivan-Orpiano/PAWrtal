@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 
-class NotificationIconWeb extends StatefulWidget {
-  const NotificationIconWeb({super.key});
+class WebNotificationIcon extends StatefulWidget {
+  final double? right;
+  final double? top;
+  final double? width;
+
+  const WebNotificationIcon({
+    super.key,
+    this.right = 125,
+    this.top= 70,
+    this.width = 500
+    });
 
   @override
-  State<NotificationIconWeb> createState() => _NotificationIconWebState();
+  State<WebNotificationIcon> createState() => _NotificationIconWebState();
 }
 
-class _NotificationIconWebState extends State<NotificationIconWeb> {
+class _NotificationIconWebState extends State<WebNotificationIcon> {
 
   OverlayEntry? _overlayEntry;
 
@@ -37,9 +46,9 @@ class _NotificationIconWebState extends State<NotificationIconWeb> {
             ),
           ),
           Positioned(
-            right: 80,
-            top: 70,
-            width: 500,
+            right: widget.right,
+            top: widget.top,
+            width: widget.width,
             child: Material(
               elevation: 5,
               borderRadius: BorderRadius.circular(10),

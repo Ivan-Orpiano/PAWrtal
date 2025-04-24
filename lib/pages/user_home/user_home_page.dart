@@ -44,7 +44,6 @@ class _UserHomePageState extends State<UserHomePage> {
           shape: const CircleBorder(),
           isExtended: true,
           onPressed: () {
-            debugPrint("gumagana");
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const Pawmap()),

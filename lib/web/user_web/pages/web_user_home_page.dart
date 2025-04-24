@@ -1,9 +1,9 @@
-import 'package:capstone_app/web/user_web/components/appbar_components/notification_icon_web.dart';
-import 'package:capstone_app/web/user_web/components/appbar_components/profile_icon_web.dart';
-import 'package:capstone_app/web/user_web/pages/appointments_web_page.dart';
-import 'package:capstone_app/web/user_web/pages/dashboard_web_page.dart';
-import 'package:capstone_app/web/user_web/pages/messages_web_page.dart';
-import 'package:capstone_app/web/user_web/pages/pets_web_page.dart';
+import 'package:capstone_app/web/user_web/components/appbar_components/web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/pages/web_appointments_page.dart';
+import 'package:capstone_app/web/user_web/pages/web_dashboard_page.dart';
+import 'package:capstone_app/web/user_web/pages/web_messages_page.dart';
+import 'package:capstone_app/web/user_web/pages/web_pets_page.dart';
 import 'package:flutter/material.dart';
 
 class WebUserHomePage extends StatefulWidget {
@@ -19,9 +19,9 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
 
     final List<Widget> _pages = const [
     WebDashboardPage(),
-    AppointmentsWebPage(),
-    MessagesWebPage(),
-    PetsWebPage(),
+    WebAppointmentsPage(),
+    WebMessagesPage(),
+    WebPetsPage(),
   ];
   
   @override
@@ -136,8 +136,8 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
             padding: EdgeInsets.only(right: 60),
             child: Row(
               children: [
-                NotificationIconWeb(),
-                ProfileIconWeb(),
+                WebNotificationIcon(),
+                WebProfileIcon(),
               ],
             ),
           )

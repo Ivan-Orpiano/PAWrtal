@@ -1,14 +1,23 @@
 import 'package:capstone_app/web/login_web/web_login_page.dart';
 import 'package:flutter/material.dart';
 
-class ProfileIconWeb extends StatefulWidget {
-  const ProfileIconWeb({super.key});
+class WebProfileIcon extends StatefulWidget {
+  final double? right;
+  final double? top;
+  final double? width;
+  
+  const WebProfileIcon({
+    super.key,
+    this.right = 75,
+    this.top = 70,
+    this.width = 250
+    });
 
   @override
-  State<ProfileIconWeb> createState() => _ProfileIconWebState();
+  State<WebProfileIcon> createState() => _ProfileIconWebState();
 }
 
-class _ProfileIconWebState extends State<ProfileIconWeb> {
+class _ProfileIconWebState extends State<WebProfileIcon> {
   OverlayEntry? _overlayEntry;
 
   void _togglePopup(BuildContext context) {
@@ -37,9 +46,9 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
             ),
           ),
           Positioned(
-            right: 20,
-            top: 70,
-            width: 250,
+            right: widget.right,
+            top: widget.top,
+            width: widget.width,
             child: Material(
               elevation: 5,
               borderRadius: BorderRadius.circular(10),
@@ -64,17 +73,27 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
                       ),
                     ),
                     const Divider(color: Colors.black87),
-                    _popupItem(
-                      "Settings",
-                      () {}
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: _popupItem(
+                        "Settings",
+                        () {}
+                      ),
                     ),
-                    _popupItem(
-                      "Help", 
-                      () {}
+                    SizedBox(
+                      width: double.infinity,
+                      child: _popupItem(
+                        "Help", 
+                        () {}
+                      ),
                     ),
-                    _popupItem(
-                      "Send feedback",
-                      () {}
+                    SizedBox(
+                      width: double.infinity,
+                      child: _popupItem(
+                        "Send feedback",
+                        () {}
+                      ),
                     ),
                     SizedBox(
                       width: double.infinity,
@@ -117,23 +136,14 @@ class _ProfileIconWebState extends State<ProfileIconWeb> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.grey
-          )
-        ),
-        child: InkWell(
-          onTap: () => _togglePopup(context),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(50),
-            child: Image.asset(
-              'lib/images/pfp.jpg',
-              width: 40,
-              height: 40,
-            ),
+      child: InkWell(
+        onTap: () => _togglePopup(context),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(50),
+          child: Image.asset(
+            'lib/images/pfp.jpg',
+            width: 35,
+            height: 35,
           ),
         ),
       ),
