@@ -25,7 +25,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
-        padding: const EdgeInsets.only(left: 60, right: 60, top: 16),
+        padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
         children:  [
           const Row(
             children: [
@@ -36,15 +36,27 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.only(left: 8, top: 16),
             child: _showMap ? _buildMapView() : 
             const SingleChildScrollView(
               child: Wrap(
                 direction: Axis.horizontal,
-                spacing: 20,
-                runSpacing: 30,
+                spacing: 25,
+                runSpacing: 40,
                 children: [
-                  WebDashboardTile()
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
+                  WebDashboardTile(),
                 ],
               ),
             )

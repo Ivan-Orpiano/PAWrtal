@@ -14,13 +14,16 @@ bool _isClicked = false;
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      customBorder: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10)
+      ),
       onTap: () {
         setState(() {
           _isClicked = !_isClicked;
         });
       },
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(8),
         child: Row(
           children: [
             Icon(
@@ -35,7 +38,8 @@ bool _isClicked = false;
               _isClicked ? "Saved": "Save",
               style: const TextStyle(
                 decoration: TextDecoration.underline,
-                fontWeight: FontWeight.w600
+                fontWeight: FontWeight.w600,
+                fontSize: 14
               ),
             ),
           ],

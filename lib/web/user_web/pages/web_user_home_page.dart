@@ -28,13 +28,14 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         centerTitle: true,
         leadingWidth: 220,
         toolbarHeight: 80,
-        shadowColor: Colors.grey.shade400,
         elevation: 1,
+        shadowColor: Colors.grey.shade400,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 72),
+          padding: const EdgeInsets.only(left: 75),
           child: InkWell(
             onTap: () {
               setState(() {
@@ -63,7 +64,6 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Home",
                   style: TextStyle(
                     fontSize: 18,
-                    // fontWeight: _selectedIndex == 0 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 0 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -83,7 +83,6 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Appointments",
                   style: TextStyle(
                     fontSize: 18,
-                    // fontWeight: _selectedIndex == 1 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 1 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -103,7 +102,6 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Messages",
                   style: TextStyle(
                     fontSize: 18,
-                    // fontWeight: _selectedIndex == 2 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 2 ? Colors.black : Colors.grey
                   ),
                 ),
@@ -123,7 +121,6 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                   "Pets",
                   style: TextStyle(
                     fontSize: 18,
-                    // fontWeight: _selectedIndex == 3 ? FontWeight.bold : FontWeight.normal,
                     color: _selectedIndex == 3 ? Colors.black : Colors.grey
                   ),
                 ),

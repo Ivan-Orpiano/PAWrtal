@@ -81,29 +81,124 @@ class _WebClinicPageState extends State<WebClinicPage> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Container(
+              padding: const EdgeInsets.only(left: 380, right: 380),
+              child: const Column(
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        "Qualipaws Animal Health Clinic",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+                      Spacer(),
+                      WebShareButton(),
+                      SizedBox(width: 12),
+                      WebLike(),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
           Container(
             padding: const EdgeInsets.only(left: 380, right: 380),
-            child: const Column(
+            child: Row(
               children: [
-                Row(
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 520,
+                        width: 565,
+                        decoration: const BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(20), bottomLeft: Radius.circular(20))
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          width: 280,
+                          height: 255,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Container(
+                        width: 280,
+                        height: 255,
+                        color: Colors.grey,
+                      )
+                    ],
+                  ),
+                ),
+                Column(
                   children: [
-                    Text(
-                      "Qualipaws Animal Health Clinic",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        width: 280,
+                        height: 255,
+                        decoration: const BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.only(topRight: Radius.circular(20))
+                        ),
                       ),
                     ),
-                    Spacer(),
-
-                    WebShareButton(),
-                    SizedBox(width: 12),
-                    WebLike(),
+                    Stack(
+                      children: [
+                        Container(
+                          width: 280,
+                          height: 255,
+                          decoration: const BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.only(bottomRight: Radius.circular(20))
+                          ),
+                        ),
+                        Positioned(
+                          left: 95,
+                            top: 200,
+                              child: Container(
+                                padding: const EdgeInsets.only(left: 12, right: 12, top: 4, bottom: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    width: 1
+                                  )
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.grid_view_rounded
+                                    ),
+                                    Text(
+                                  "Show all photos"
+                                )
+                              ],
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
                   ],
                 )
               ],
             ),
-          ),
+          )
         ],
       ),
     );
