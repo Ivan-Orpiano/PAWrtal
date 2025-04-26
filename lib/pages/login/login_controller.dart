@@ -18,6 +18,7 @@ class LoginController extends GetxController {
   //controllers
   TextEditingController emailEditingController = TextEditingController();
   TextEditingController passwordEditingController = TextEditingController();
+  TextEditingController emailForPasswordResetController = TextEditingController();
 
   //form validation
   bool isFormValid = false;
