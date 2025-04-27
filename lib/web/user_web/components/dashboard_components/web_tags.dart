@@ -147,7 +147,6 @@ class _WebTagsState extends State<WebTags> {
               top: 0,
               bottom: 0,
               child: Container(
-                width: 40,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -174,7 +173,7 @@ class _WebTagsState extends State<WebTags> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 0),
                     decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 254, 247, 255),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: const Color.fromARGB(255, 121, 116, 126)
@@ -237,7 +236,7 @@ class _WebTagsState extends State<WebTags> {
                   child: AnimatedContainer(
                     duration: const  Duration(microseconds: 0),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 254, 247, 255),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: const Color.fromARGB(255, 121, 116, 126)

@@ -28,12 +28,18 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         centerTitle: true,
         leadingWidth: 220,
         toolbarHeight: 80,
-        elevation: 1,
-        shadowColor: Colors.grey.shade400,
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(1.0),
+          child: Container(
+            color: Colors.grey.shade400,
+            height: 1,
+          ),
+        ),
         leading: Padding(
           padding: const EdgeInsets.only(left: 75),
           child: InkWell(
