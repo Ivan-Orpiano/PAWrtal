@@ -1,6 +1,6 @@
 import 'package:capstone_app/mobile/admin/pages/staff_details_page.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_app/pages/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 
@@ -20,7 +20,7 @@ class StaffAccountTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String imageUrl = (staff.image != null && staff.image.isNotEmpty)
-        ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/${staff.image}/view?project=${AppwriteConstants.projectID}'
+        ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${staff.image}/view?project=${AppwriteConstants.projectID}'
         : ''; // placeholder image
 
     return GestureDetector(

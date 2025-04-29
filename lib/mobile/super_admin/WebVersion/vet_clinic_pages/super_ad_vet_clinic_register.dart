@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart' as models;
+import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:get_storage/get_storage.dart';
 
 class VetClinicRegister extends StatefulWidget {
   const VetClinicRegister({super.key});
@@ -8,41 +12,58 @@ class VetClinicRegister extends StatefulWidget {
 }
 
 class _VetClinicRegisterState extends State<VetClinicRegister> {
+  final GetStorage _getStorage = GetStorage();
 
   final GlobalKey<FormState> inputForm = GlobalKey<FormState>();
 
   final TextEditingController vetName = TextEditingController();
   final TextEditingController vetLocation = TextEditingController();
+  final TextEditingController vetContact = TextEditingController();
   final TextEditingController vetEmail = TextEditingController();
   final TextEditingController vetPassword = TextEditingController();
 
   final int vetNameLimit = 59;
   final int vetLocationLimit = 19;
+  final int vetContactLimit = 11;
   final int vetEmailLimit = 29;
   final int vetPasswordLimit = 14;
 
   Color vetNameBorderColor = Colors.grey;
   Color vetLocationBorderColor = Colors.grey;
+  Color vetContactBorderColor = Colors.grey;
   Color vetEmailBorderColor = Colors.grey;
   Color vetPasswordBorderColor = Colors.grey;
 
+  bool isLoading = false;
+  bool isPasswordVisible = false;
+
   void _onVetNameChanged(String value) {
     setState(() {
-      vetNameBorderColor = value.length > vetNameLimit ? Colors.orange : Colors.grey;
+      vetNameBorderColor =
+          value.length > vetNameLimit ? Colors.orange : Colors.grey;
     });
   }
+
   void _onVetLocationChanged(String value) {
     setState(() {
-      vetLocationBorderColor = value.length > vetLocationLimit ? Colors.orange : Colors.grey;
+      vetLocationBorderColor =
+          value.length > vetLocationLimit ? Colors.orange : Colors.grey;
     });
   }
+
+  void _onVetContactChanged(String value) {
+    setState(() {
+      vetContactBorderColor =
+          value.length > vetContactLimit ? Colors.orange : Colors.grey;
+    });
+  }
+
   void _onVetEmailChanged(String value) {
     setState(() {
-      vetEmailBorderColor = value.length > vetEmailLimit ? Colors.orange : Colors.grey;
+      vetEmailBorderColor =
+          value.length > vetEmailLimit ? Colors.orange : Colors.grey;
     });
   }
-
-
 
   void _onPasswordChanged(String value) {
     setState(() {
@@ -53,7 +74,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
 
   @override
   Widget build(BuildContext context) {
-   // final screenWidth = MediaQuery.of(context).size.width;  
+    // final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: AppBar(
@@ -79,7 +100,6 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-           
               const SizedBox(height: 20),
               const Text(
                 "Veterinary Registration",
@@ -90,88 +110,176 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
                 key: inputForm,
                 child: Column(
                   children: [
-                    TextField(
+                    TextFormField(
                       controller: vetName,
                       maxLength: vetNameLimit + 1,
-                      obscureText: true,
+                      obscureText: false,
                       onChanged: _onVetNameChanged,
                       decoration: InputDecoration(
-                        labelText: "Veterinay Name: *",
-                        border: OutlineInputBorder(borderSide: BorderSide(color: vetNameBorderColor)),
-                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: vetNameBorderColor)),
-                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: vetNameBorderColor, width: 2)),
+                        labelText: "Veterinary Name: *",
+                        border: OutlineInputBorder(
+                            borderSide: BorderSide(color: vetNameBorderColor)),
+                        enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: vetNameBorderColor)),
+                        focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: vetNameBorderColor, width: 2)),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Veterinary Name is required.";
+                        }
+                        return null;
+                      },
                     ),
-
-                    TextField(
+                    TextFormField(
                       controller: vetLocation,
                       maxLength: vetLocationLimit + 1,
-                      obscureText: true,
+                      obscureText: false,
                       onChanged: _onVetLocationChanged,
                       decoration: InputDecoration(
                         labelText: "Location: *",
-                        border: OutlineInputBorder(borderSide: BorderSide(color: vetLocationBorderColor)),
-                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: vetLocationBorderColor)),
-                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: vetLocationBorderColor, width: 2)),
+                        border: OutlineInputBorder(
+                            borderSide:
+                                BorderSide(color: vetLocationBorderColor)),
+                        enabledBorder: OutlineInputBorder(
+                            borderSide:
+                                BorderSide(color: vetLocationBorderColor)),
+                        focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: vetLocationBorderColor, width: 2)),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Location is required.";
+                        }
+                        return null;
+                      },
                     ),
-                    TextField(
+                    TextFormField(
+                      controller: vetContact,
+                      maxLength: vetContactLimit + 1,
+                      obscureText: false,
+                      keyboardType: TextInputType.number,
+                      onChanged: _onVetContactChanged,
+                      decoration: InputDecoration(
+                        labelText: "Contact Number: *",
+                        border: OutlineInputBorder(
+                            borderSide:
+                                BorderSide(color: vetContactBorderColor)),
+                        enabledBorder: OutlineInputBorder(
+                            borderSide:
+                                BorderSide(color: vetContactBorderColor)),
+                        focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: vetContactBorderColor, width: 2)),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Contact Number is required';
+                        }
+                        if (!RegExp(r'^\d+$').hasMatch(value)) {
+                          return 'Contact Number must be numeric';
+                        }
+                        if (value.length != vetContactLimit) {
+                          return 'Contact Number must be exactly $vetContactLimit digits';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
                       keyboardType: TextInputType.emailAddress,
                       controller: vetEmail,
                       maxLength: vetEmailLimit + 1,
-                      obscureText: true,
+                      obscureText: false,
                       onChanged: _onVetEmailChanged,
                       decoration: InputDecoration(
                         labelText: "Email: *",
-                        border: OutlineInputBorder(borderSide: BorderSide(color: vetEmailBorderColor)),
-                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: vetEmailBorderColor)),
-                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: vetEmailBorderColor, width: 2)),
+                        border: OutlineInputBorder(
+                            borderSide: BorderSide(color: vetEmailBorderColor)),
+                        enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: vetEmailBorderColor)),
+                        focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: vetEmailBorderColor, width: 2)),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Email is required";
+                        }
+                        if (!value.contains("@") || !value.contains(".")) {
+                          return "Enter a valid email address";
+                        }
+                        return null;
+                      },
                     ),
-                    
-                    TextField(
+                    TextFormField(
                       controller: vetPassword,
-                      maxLength: vetPasswordLimit + 1,
-                      obscureText: true,
+                      maxLength: vetPasswordLimit,
+                      obscureText: !isPasswordVisible,
                       onChanged: _onPasswordChanged,
                       decoration: InputDecoration(
                         labelText: "Password: *",
-                        border: OutlineInputBorder(borderSide: BorderSide(color: vetPasswordBorderColor)),
-                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: vetPasswordBorderColor)),
-                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: vetPasswordBorderColor, width: 2))                        
+                        border: OutlineInputBorder(
+                            borderSide:
+                                BorderSide(color: vetPasswordBorderColor)),
+                        enabledBorder: OutlineInputBorder(
+                            borderSide:
+                                BorderSide(color: vetPasswordBorderColor)),
+                        focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: vetPasswordBorderColor, width: 2)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isPasswordVisible = !isPasswordVisible;
+                            });
+                          },
+                        ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Password is required";
+                        }
+                        if (value.length < 6) {
+                          return "Password must be at least 6 characters";
+                        }
+                        return null;
+                      },
                     ),
-                    // buildTextField("Veterinary Name *" ),
-                    // buildTextField("Location *"),
-                    // buildTextField("Email *",
-                    //     keyboardType: TextInputType.emailAddress),
-                    // buildTextField("Password *", adminPassword: true),
                   ],
                 ),
-              ),
+              ), // buildTextField("Veterinary Name *" ),
+              // buildTextField("Location *"),
+              // buildTextField("Email *",
+              //     keyboardType: TextInputType.emailAddress),
+              // buildTextField("Password *", adminPassword: true),
               const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 81, 115, 153),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: _registerClinic,
+                        child: const Text(
+                          "Register",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
                     ),
-                  ),
-                  onPressed: () {
-                    if (inputForm.currentState!.validate()) {
-                      //connect ba database dito?
-
-                    }
-                  },
-                  child: const Text(
-                    "Register",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -179,26 +287,56 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
     );
   }
 
-  Widget buildTextField(String label,
-      { bool adminPassword = false,
-      TextInputType keyboardType = TextInputType.text}) {
+  Future<void> _registerClinic() async {
+    if (!inputForm.currentState!.validate()) return;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        obscureText: adminPassword,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "This field is required";
-          }
-          return null;
+    setState(() => isLoading = true);
+
+    try {
+      Client client = Client()
+          .setEndpoint(AppwriteConstants.endPoint)
+          .setProject(AppwriteConstants.projectID);
+      final account = Account(client);
+      final databases = Databases(client);
+
+      final models.User newUser = await account.create(
+        userId: ID.unique(),
+        email: vetEmail.text.trim(),
+        password: vetPassword.text.trim(),
+        name: vetName.text.trim(),
+      );
+
+      await databases.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicsCollectionID,
+        documentId: ID.unique(),
+        data: {
+          'clinicName': vetName.text.trim(),
+          'address': vetLocation.text.trim(),
+          'contact': vetContact.text.trim(),
+          'adminId': newUser.$id,
+          'email': vetEmail.text.trim(),
+          'services': "",
+          'createdBy': _getStorage.read("userId") ?? "",
+          'createdAt': DateTime.now().toIso8601String(),
+          'role': "admin",
         },
-      ),
-    );
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veterinary Admin created successfully!')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      String errorMessage = "Failed to register.";
+      if (e is AppwriteException) {
+        errorMessage = e.message ?? errorMessage;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 }

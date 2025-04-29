@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:capstone_app/mobile/admin/pages/staff_account_creation/staff_account_controller.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/pages/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -39,7 +39,7 @@ class _StaffAccountCreationPageState extends State<StaffAccountCreationPage> {
 
       // use current image reference or placeholder
       controller.imageUrl.value = currentImage.isNotEmpty
-          ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/$currentImage/view?project=${AppwriteConstants.projectID}'
+          ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$currentImage/view?project=${AppwriteConstants.projectID}'
           : 'https://via.placeholder.com/150';
     }
   }

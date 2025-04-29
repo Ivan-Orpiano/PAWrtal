@@ -1,8 +1,8 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/pages/utils/custom_snack_bar.dart';
-import 'package:capstone_app/pages/utils/full_screen_dialog_loader.dart';
+import 'package:capstone_app/utils/custom_snack_bar.dart';
+import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
