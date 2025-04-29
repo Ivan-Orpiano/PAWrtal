@@ -1,5 +1,5 @@
 import 'package:capstone_app/pages/admin_home/admin_home_controller.dart';
-import 'package:capstone_app/pages/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
@@ -24,7 +24,7 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
   Widget build(BuildContext context) {
     String imageUrl = (widget.staffData.image != null &&
             widget.staffData.image.isNotEmpty)
-        ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.staffBucketID}/files/${widget.staffData.image}/view?project=${AppwriteConstants.projectID}'
+        ? '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${widget.staffData.image}/view?project=${AppwriteConstants.projectID}'
         : ''; // trigger local placeholder
 
     return Material(

@@ -8,11 +8,11 @@ class SplashController extends GetxController {
 
   final GetStorage _getStorage = GetStorage();
 
-
   @override
   void onReady() async {
     super.onReady();
-    // Future.delayed(const Duration(seconds: 3), () => Get.offAllNamed(Routes.login));
+
+    await Future.delayed(const Duration(seconds: 1));
 
     if (_getStorage.read("userId") != null) {
       Get.offAllNamed(Routes.userHome);
@@ -20,5 +20,4 @@ class SplashController extends GetxController {
       Get.offAllNamed(Routes.login);
     }
   }
-
 }

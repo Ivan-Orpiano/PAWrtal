@@ -47,6 +47,9 @@ class _WebSearchBarState extends State<WebSearchBar> {
         },
         decoration: InputDecoration(
           hintText: 'Search...',
+          hintStyle: const TextStyle(
+            fontSize: 14
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
           ),

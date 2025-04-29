@@ -2,8 +2,8 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/pages/utils/custom_snack_bar.dart';
-import 'package:capstone_app/pages/utils/full_screen_dialog_loader.dart';
+import 'package:capstone_app/utils/custom_snack_bar.dart';
+import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -18,6 +18,7 @@ class LoginController extends GetxController {
   //controllers
   TextEditingController emailEditingController = TextEditingController();
   TextEditingController passwordEditingController = TextEditingController();
+  TextEditingController emailForPasswordResetController = TextEditingController();
 
   //form validation
   bool isFormValid = false;

@@ -1,6 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
-import 'package:capstone_app/pages/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 
 enum AuthStatus {
@@ -19,8 +19,7 @@ class AppWriteProvider {
   AppWriteProvider() {
     client
         .setEndpoint(AppwriteConstants.endPoint)
-        .setProject(AppwriteConstants.projectID)
-        .setSelfSigned(status: true);
+        .setProject(AppwriteConstants.projectID);
 
     account = Account(client);
     storage = Storage(client);
@@ -139,7 +138,7 @@ Future <bool> sendRecoveryEmail(String email) async {
         "${DateTime.now().millisecondsSinceEpoch}.${imagePath.split('.').last}";
 
     final response = storage!.createFile(
-        bucketId: AppwriteConstants.staffBucketID,
+        bucketId: AppwriteConstants.imageBucketID,
         fileId: ID.unique(),
         file: InputFile.fromPath(path: imagePath, filename: fileName));
 
@@ -148,7 +147,7 @@ Future <bool> sendRecoveryEmail(String email) async {
 
   Future<dynamic> deleteStaffImage(String fileId) async {
     await storage!.deleteFile(
-      bucketId: AppwriteConstants.staffBucketID,
+      bucketId: AppwriteConstants.imageBucketID,
       fileId: fileId,
     );
   }

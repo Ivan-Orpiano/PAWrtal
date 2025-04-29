@@ -8,6 +8,20 @@ class WebClinicDescription extends StatelessWidget {
     return const Column(
       children: [
         Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Text(
+                'About this veterinary clinic',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 22
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
           padding: EdgeInsets.only(right: 500, bottom: 8),
           child: Text(
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam ullamcorper tempus nulla, non lobortis sem vulputate at. Nulla consequat dolor risus, quis auctor nisi rutrum at. Vestibulum ac urna sed erat sagittis blandit eget quis nunc. Morbi tristique fermentum nunc eget vehicula. Nulla ac volutpat ex, quis efficitur augue. Nulla sit amet risus sit amet erat feugiat blandit facilisis a libero. Duis ultrices enim sed libero commodo, vel luctus augue imperdiet. Praesent non orci sed augue cursus ultrices. Suspendisse et.",

@@ -1,0 +1,323 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'web_review_card.dart';
+
+class WebRatingsAndReviews extends StatefulWidget {
+  const WebRatingsAndReviews({super.key});
+
+  @override
+  State<WebRatingsAndReviews> createState() => _WebRatingsAndReviewsState();
+}
+
+class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
+  bool _showAllReviews = false;
+  final List <Review> reviews =[
+    Review(
+      userName: 'Mike',
+      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      rating: 5,
+      comment: 'Hindi na makalaya'
+    ),
+    Review(
+      userName: 'David',
+      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      rating: 4,
+      comment: 'Dinadalaw mo ''ko bawat gabi'
+    ),
+    Review(
+      userName: 'Ivan',
+      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      rating: 3,
+      comment: 'Wala mang nakikita'
+    ),
+    Review(
+      userName: 'Dave',
+      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      rating: 2,
+      comment: 'Haplos mo''y ramdam pa rin sa dilim'
+    ),
+    Review(
+      userName: 'Lenard',
+      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      rating: 1,
+      comment: 'Hindi na na-nanaginip'
+    ),
+    Review(
+      userName: 'Lenard',
+      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      rating: 1,
+      comment: 'Hindi na na-nanaginip'
+    ),
+  ];
+
+  Map<int, double> calculateRatingPercentages() {
+    Map <int, int> counts = {1:0, 2:0, 3:0, 4:0, 5:0};
+
+    for (var review in reviews) {
+      counts[review.rating.round()] = counts[review.rating.round()]! + 1;
+    }
+
+    final total = reviews.length;
+    if (total == 0) {
+      return {1:0, 2:0, 3:0, 4:0, 5:0 };
+    }
+    return counts.map((key, value) => MapEntry (key,value / total));
+  }
+  
+  double calculateAverageRating() {
+    if (reviews.isEmpty) return 0;
+    double total = reviews.fold (0, (sum, item) => sum + item.rating);
+    return total / reviews.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double averageRating = calculateAverageRating();
+    Map<int, double> ratingPercentages = calculateRatingPercentages();
+
+    return Column(
+      children: [
+        Row(
+          spacing: 360,
+          children: [
+            const Text(
+              "Ratings & Reviews",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600
+              ),
+            ),
+            Row(
+              children: [
+                Text(
+                  "${averageRating.toStringAsFixed(2)} / 5",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600
+                  ),
+                ),
+                const Icon(
+                  Icons.star_rate_rounded,
+                  color: Colors.yellow,
+                  size: 34,
+                  )
+              ],
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: (ratingPercentages.entries.toList()
+            ..sort((a, b) => b.key.compareTo(a.key)))
+            .map((entry)  {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      entry.key.toString(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          FractionallySizedBox(
+                            widthFactor: entry.value,
+                            child: Container(
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: reviews.length > 5 ? 5: reviews.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final review = reviews[index];
+            return WebReviewCard(review: review);
+          },
+        ),
+        const SizedBox(height: 32),
+        GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)
+                  ),
+                insetPadding: const EdgeInsets.symmetric(horizontal: 100, vertical: 60),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.54,
+                    height: 700,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20)
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 16),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          Container(
+                            padding: const EdgeInsets.only(left: 42),
+                            child: Row(
+                              children: [
+                                Column(
+                                  children: [
+                                    Text(
+                                      averageRating.toStringAsFixed(2)
+                                    ),
+                                    const SizedBox(
+                                      width: 50,
+                                      child: Divider(
+                                        height: 1,
+                                        thickness: 0.5,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 200,
+                                      width: 300,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 16.0), // Optional spacing from above elements
+                                        child: Column(
+                                          children: (ratingPercentages.entries.toList()
+                                            ..sort((a, b) => b.key.compareTo(a.key)))
+                                            .map((entry) {
+                                              return Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                                child: Row(
+                                                  children: [
+                                                    Text(
+                                                      entry.key.toString(),
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Stack(
+                                                        children: [
+                                                          Container(
+                                                            height: 8,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.grey[300],
+                                                              borderRadius: BorderRadius.circular(4),
+                                                            ),
+                                                          ),
+                                                          FractionallySizedBox(
+                                                            widthFactor: entry.value,
+                                                            child: Container(
+                                                              height: 8,
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.black,
+                                                                borderRadius: BorderRadius.circular(4),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(width: 48),
+
+                                SizedBox(
+                                  width: 610,
+                                  height: 600,
+                                  child: ListView.separated(
+                                    itemCount: reviews.length,
+                                    separatorBuilder: (_, ___) => const SizedBox (height: 12),
+                                    itemBuilder: (context, index) {
+                                      return WebReviewCard(review: reviews[index]);
+                                    },
+                                  ),
+                                )
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: Colors.black
+                  )
+                ),
+                child: Text(
+                  "Show all ${reviews.length} reviews",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )
+      ],
+    );
+  }
+}

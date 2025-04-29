@@ -2,7 +2,7 @@ import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/login/login_controller.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/pages/utils/custom_snack_bar.dart';
+import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -14,7 +14,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final GlobalKey<FormState> resetPasswordFormKey = GlobalKey<FormState>();
 
   final LoginController controller =
@@ -77,77 +76,83 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               Padding(
-  padding: const EdgeInsets.only(top: 8, bottom: 0, right: 60),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.end,
-    children: [
-      GestureDetector(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text("Reset Password"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                      "Please enter your email. We will send a recovery link."),
-                  const SizedBox(height: 10),
-                  Form(
-                    key: resetPasswordFormKey,
-                    child: TextFormField(
-                      controller: controller.emailEditingController,
-                      validator: (value) =>
-                          value == null || value.isEmpty
-                              ? "Please enter a valid email."
-                              : null,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        label: Text("Email"),
+                padding: const EdgeInsets.only(top: 8, bottom: 0, right: 60),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Reset Password"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                    "Please enter your email. We will send a recovery link."),
+                                const SizedBox(height: 10),
+                                Form(
+                                  key: resetPasswordFormKey,
+                                  child: TextFormField(
+                                    controller: controller
+                                        .emailForPasswordResetController,
+                                    validator: (value) =>
+                                        value == null || value.isEmpty
+                                            ? "Please enter a valid email."
+                                            : null,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      label: Text("Email"),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text("Cancel")),
+                              TextButton(
+                                  onPressed: () {
+                                    if (resetPasswordFormKey.currentState!
+                                        .validate()) {
+                                      appWriteProvider
+                                          .sendRecoveryEmail(controller
+                                              .emailForPasswordResetController
+                                              .text)
+                                          .then((value) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                          content: Text(
+                                            value
+                                                ? "Recovery Mail Sent"
+                                                : "Cannot Send Recovery Mail",
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                          backgroundColor:
+                                              value ? Colors.green : Colors.red,
+                                        ));
+                                      });
+                                    }
+                                  },
+                                  child: const Text("Send Link")),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "Forget Password",
+                        style: TextStyle(color: Colors.blue.shade700),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              actions: [
-                TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text("Cancel")),
-                TextButton(
-                    onPressed: () {
-                      if (resetPasswordFormKey.currentState!.validate()) {
-                        appWriteProvider
-                            .sendRecoveryEmail(controller.emailEditingController.text)
-                            .then((value) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(
-                              value
-                                  ? "Recovery Mail Sent"
-                                  : "Cannot Send Recovery Mail",
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            backgroundColor:
-                                value ? Colors.green : Colors.red,
-                          ));
-                        });
-                      }
-                    },
-                    child: const Text("Send Link")),
-              ],
-            ),
-          );
-        },
-        child: Text(
-          "Forget Password",
-          style: TextStyle(color: Colors.blue.shade700),
-        ),
-      ),
-    ],
-  ),
-),
               const SizedBox(height: 20),
               SizedBox(
                 width: 300,
