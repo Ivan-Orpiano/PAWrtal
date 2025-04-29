@@ -6,8 +6,8 @@ import 'package:capstone_app/web/user_web/components/clinic_page_components/web_
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_picture_gallery.dart';
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_services.dart';
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_share_button.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/web_hover_underline_text.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/web_ratings_and_reviews.dart';
+import 'package:capstone_app/web/user_web/components/clinic_page_components/web_hover_underline_text.dart';
+import 'package:capstone_app/web/user_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/pages/web_user_home_page.dart';
 import 'package:flutter/material.dart';
@@ -38,11 +38,11 @@ class _WebClinicPageState extends State<WebClinicPage> {
   @override
   void initState() {
     _scrollController.addListener((){
-      if (_scrollController.offset > 1 && !_showWidget) {
+      if (_scrollController.offset > 500 && !_showWidget) {
         setState(() {
           _showWidget = true;
         });
-      } else if (_scrollController.offset <= 1 && _showWidget) {
+      } else if (_scrollController.offset <= 500 && _showWidget) {
         setState(() {
           _showWidget = false;
         });
@@ -180,7 +180,9 @@ class _WebClinicPageState extends State<WebClinicPage> {
                           color: Colors.grey,
                         ),
                       ),
-                      const WebClinicDescription(),
+                      WebClinicDescription(
+                        key: servicesKey,
+                      ),
                       const Padding(
                         padding: EdgeInsets.only(top: 32, bottom: 32),
                         child: Divider(
@@ -188,27 +190,26 @@ class _WebClinicPageState extends State<WebClinicPage> {
                           height: 1,
                           thickness: 0.5,
                           color: Colors.grey,
+                          
                         ),
                       ),
                       const Padding(
                         padding: EdgeInsets.only(bottom: 12),
                         child: Row(
                           children: [
-                            Text(
-                              'Services offered',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 22
+                            KeyedSubtree(
+                              child: Text(
+                                'Services offered',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 22
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      KeyedSubtree(
-                        child: WebClinicServices(
-                          key: servicesKey,
-                        ),
-                      ),
+                      const WebClinicServices(),
                       const Padding(
                         padding: EdgeInsets.only(top: 32, bottom: 32),
                         child: Divider(

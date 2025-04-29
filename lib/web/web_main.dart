@@ -18,12 +18,8 @@ class WebMain extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-<<<<<<< HEAD
       scrollBehavior: MyCustomScrollBehavior(),
       home: const WebClinicPage(),
-=======
-      home: SuperAdminHomePage(),
->>>>>>> 314168a11147270be0e1b4e21826522b1ab71471
     );
   }
 }
