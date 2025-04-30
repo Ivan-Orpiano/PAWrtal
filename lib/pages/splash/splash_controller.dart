@@ -11,11 +11,28 @@ class SplashController extends GetxController {
   @override
   void onReady() async {
     super.onReady();
-
     await Future.delayed(const Duration(seconds: 1));
 
-    if (_getStorage.read("userId") != null) {
-      Get.offAllNamed(Routes.userHome);
+    final role = _getStorage.read("role");
+
+    if (role != null) {
+      switch (role) {
+        case "admin":
+          Get.offAllNamed(Routes.adminHome);
+          break;
+        case "staff":
+          Get.offAllNamed(Routes.adminHome);
+          break;
+        case "developer":
+          Get.offAllNamed(Routes.superAdminHome);
+          break;
+        case "user":
+          Get.offAllNamed(Routes.userHome);
+          break;
+        default:
+          Get.offAllNamed(Routes.login);
+          break;
+      }
     } else {
       Get.offAllNamed(Routes.login);
     }

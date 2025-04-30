@@ -18,7 +18,8 @@ class LoginController extends GetxController {
   //controllers
   TextEditingController emailEditingController = TextEditingController();
   TextEditingController passwordEditingController = TextEditingController();
-  TextEditingController emailForPasswordResetController = TextEditingController();
+  TextEditingController emailForPasswordResetController =
+      TextEditingController();
 
   //form validation
   bool isFormValid = false;
@@ -58,61 +59,100 @@ class LoginController extends GetxController {
     required String password,
   }) async {
     isFormValid = formKey.currentState!.validate();
-    if (!isFormValid) {
-      return;
-    } else {
+    if (!isFormValid) return;
+
+    try {
       formKey.currentState!.save();
-      try {
-        FullScreenDialogLoader.showDialog();
-        await authRepository
-            .login({"email": email, "password": password}).then((value) {
-          debugPrint("Login response: $value");
+      FullScreenDialogLoader.showDialog();
 
-          final session = value["session"] as models.Session;
-          final role = value["role"] as String;
+      final value = await authRepository.login({
+        "email": email,
+        "password": password,
+      });
 
-          FullScreenDialogLoader.cancelDialog();
-          CustomSnackBar.showSuccessSnackBar(
-              context: Get.overlayContext,
-              title: "Success",
-              message: "Login Success");
-          clearTextEditingControllers();
-
-          _getStorage.write("userId", session.userId);
-          _getStorage.write("sessionId", session.$id);
-          _getStorage.write("role", role);
-
-          if (role == "admin") {
-            Get.offAllNamed(Routes.adminHome);
-          } else if (role == "developer") {
-            Get.offAllNamed(Routes.superAdminHome);
-          } else {
-            Get.offAllNamed(Routes.userHome);
-          }
-        }).catchError((error) {
-          FullScreenDialogLoader.cancelDialog();
-          debugPrint("Error details: $error");
-
-          if (error is AppwriteException) {
-            final message = error.response != null
-                ? error.response['message']
-                : "An error occurred";
-            CustomSnackBar.showErrorSnackBar(
-                context: Get.overlayContext, title: "Error", message: message);
-          } else {
-            CustomSnackBar.showErrorSnackBar(
-                context: Get.overlayContext,
-                title: "Error",
-                message: "Something went wrong");
-          }
-        });
-      } catch (e) {
-        FullScreenDialogLoader.cancelDialog();
-        CustomSnackBar.showErrorSnackBar(
-            context: Get.overlayContext,
-            title: "Error",
-            message: "Something went wong");
+      final session = value["session"];
+      if (session == null) {
+        throw Exception("Login failed: Session data is missing");
       }
+      final userId = session.userId;
+
+      final user = value["user"];
+      if (user == null) {
+        throw Exception("Login failed: User data is missing");
+      }
+      final userEmail = user.email;
+
+      _getStorage.write("userId", userId);
+      _getStorage.write("sessionId", session.$id);
+
+      String role = "";
+      bool matched = false;
+
+      // check if account is admin
+      final clinicDoc = await authRepository.getClinicByAdminId(userId);
+      if (clinicDoc != null) {
+        role = clinicDoc.data["role"];
+        _getStorage.write("clinicId", clinicDoc.$id);
+        matched = true;
+      }
+
+      // check if account is staff
+      if (!matched) {
+        final staffDoc = await authRepository.getStaffByClinicId(userEmail);
+        if (staffDoc != null) {
+          role = staffDoc.data["role"];
+          _getStorage.write("staffId", staffDoc.$id);
+          _getStorage.write("clinicId", staffDoc.data["clinicId"]);
+          matched = true;
+        }
+      }
+
+      // check if user (customer)
+      if (!matched) {
+        final userDoc = await authRepository.getUserById(userId);
+        if (userDoc != null) {
+          role = userDoc.data["role"]; // role should be "user"
+          _getStorage.write("customerId", userDoc.$id);
+          matched = true;
+        }
+      }
+
+      // check if developer (super admin)
+      if (!matched && userEmail == "test.developer@gmail.com") {
+        role = "developer";
+        matched = true;
+      }
+
+      if (!matched) throw Exception("No role found for this account");
+
+      _getStorage.write("role", role);
+
+      FullScreenDialogLoader.cancelDialog();
+      CustomSnackBar.showSuccessSnackBar(
+          context: Get.overlayContext,
+          title: "Success",
+          message: "Login Success");
+
+      clearTextEditingControllers();
+
+      // route by role
+      if (role == "admin") {
+        Get.offAllNamed(Routes.adminHome);
+      } else if (role == "developer") {
+        Get.offAllNamed(Routes.superAdminHome);
+      } else if (role == "staff") {
+        Get.offAllNamed(Routes.adminHome);
+      } else {
+        Get.offAllNamed(Routes.userHome);
+      }
+    } catch (e) {
+      FullScreenDialogLoader.cancelDialog();
+      CustomSnackBar.showErrorSnackBar(
+          context: Get.overlayContext,
+          title: "Login Failed",
+          message: e is AppwriteException
+              ? e.response['message'] ?? "Appwrite error"
+              : e.toString());
     }
   }
 

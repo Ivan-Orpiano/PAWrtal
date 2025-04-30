@@ -17,19 +17,19 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
   final GlobalKey<FormState> inputForm = GlobalKey<FormState>();
 
   final TextEditingController vetName = TextEditingController();
-  final TextEditingController vetLocation = TextEditingController();
+  final TextEditingController vetAddress = TextEditingController();
   final TextEditingController vetContact = TextEditingController();
   final TextEditingController vetEmail = TextEditingController();
   final TextEditingController vetPassword = TextEditingController();
 
   final int vetNameLimit = 59;
-  final int vetLocationLimit = 19;
+  final int vetAddressLimit = 19;
   final int vetContactLimit = 11;
   final int vetEmailLimit = 29;
   final int vetPasswordLimit = 14;
 
   Color vetNameBorderColor = Colors.grey;
-  Color vetLocationBorderColor = Colors.grey;
+  Color vetAddressBorderColor = Colors.grey;
   Color vetContactBorderColor = Colors.grey;
   Color vetEmailBorderColor = Colors.grey;
   Color vetPasswordBorderColor = Colors.grey;
@@ -44,10 +44,10 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
     });
   }
 
-  void _onVetLocationChanged(String value) {
+  void _onVetAddressChanged(String value) {
     setState(() {
-      vetLocationBorderColor =
-          value.length > vetLocationLimit ? Colors.orange : Colors.grey;
+      vetAddressBorderColor =
+          value.length > vetAddressLimit ? Colors.orange : Colors.grey;
     });
   }
 
@@ -133,25 +133,25 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
                       },
                     ),
                     TextFormField(
-                      controller: vetLocation,
-                      maxLength: vetLocationLimit + 1,
+                      controller: vetAddress,
+                      maxLength: vetAddressLimit + 1,
                       obscureText: false,
-                      onChanged: _onVetLocationChanged,
+                      onChanged: _onVetAddressChanged,
                       decoration: InputDecoration(
-                        labelText: "Location: *",
+                        labelText: "Address: *",
                         border: OutlineInputBorder(
                             borderSide:
-                                BorderSide(color: vetLocationBorderColor)),
+                                BorderSide(color: vetAddressBorderColor)),
                         enabledBorder: OutlineInputBorder(
                             borderSide:
-                                BorderSide(color: vetLocationBorderColor)),
+                                BorderSide(color: vetAddressBorderColor)),
                         focusedBorder: OutlineInputBorder(
                             borderSide: BorderSide(
-                                color: vetLocationBorderColor, width: 2)),
+                                color: vetAddressBorderColor, width: 2)),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return "Location is required.";
+                          return "Address is required.";
                         }
                         return null;
                       },
@@ -255,7 +255,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
                   ],
                 ),
               ), // buildTextField("Veterinary Name *" ),
-              // buildTextField("Location *"),
+              // buildTextField("Address *"),
               // buildTextField("Email *",
               //     keyboardType: TextInputType.emailAddress),
               // buildTextField("Password *", adminPassword: true),
@@ -312,14 +312,16 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
         documentId: ID.unique(),
         data: {
           'clinicName': vetName.text.trim(),
-          'address': vetLocation.text.trim(),
+          'address': vetAddress.text.trim(),
           'contact': vetContact.text.trim(),
+          'createdAt': DateTime.now().toIso8601String(),
           'adminId': newUser.$id,
+          'createdBy': _getStorage.read("userId") ?? "",
+          'role': "admin",
           'email': vetEmail.text.trim(),
           'services': "",
-          'createdBy': _getStorage.read("userId") ?? "",
-          'createdAt': DateTime.now().toIso8601String(),
-          'role': "admin",
+          'description': "",
+          'image': "",
         },
       );
 
