@@ -6,9 +6,13 @@ class AuthRepository {
   AuthRepository(this.appWriteProvider);
 
   Future<models.User> signup(Map map) => appWriteProvider.signup(map);
+  Future<models.Document> createUser(Map map) =>
+      appWriteProvider.createUser(map);
   Future<Map<String, dynamic>> login(Map map) => appWriteProvider.login(map);
   Future<dynamic> logout(String sessionId) =>
       appWriteProvider.logout(sessionId);
+
+  Future<models.User?> getUser() => appWriteProvider.getUser();
 
   Future<models.File> uploadStaffImage(String imagePath) =>
       appWriteProvider.uploadStaffImage(imagePath);
@@ -22,4 +26,13 @@ class AuthRepository {
   }
 
   Future<dynamic> deleteStaff(Map map) => appWriteProvider.deleteStaff(map);
+
+  Future<models.Document?> getClinicByAdminId(String adminId) =>
+      appWriteProvider.getClinicByAdminId(adminId);
+
+  Future<models.Document?> getStaffByClinicId(String clinicId) =>
+      appWriteProvider.getStaffByClinicId(clinicId);
+
+  Future<models.Document?> getUserById(String userId) =>
+      appWriteProvider.getUserById(userId);
 }
