@@ -22,7 +22,7 @@ class WebClinicDescription extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(right: 500, bottom: 8),
+          padding: EdgeInsets.only( bottom: 8),
           child: Text(
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam ullamcorper tempus nulla, non lobortis sem vulputate at. Nulla consequat dolor risus, quis auctor nisi rutrum at. Vestibulum ac urna sed erat sagittis blandit eget quis nunc. Morbi tristique fermentum nunc eget vehicula. Nulla ac volutpat ex, quis efficitur augue. Nulla sit amet risus sit amet erat feugiat blandit facilisis a libero. Duis ultrices enim sed libero commodo, vel luctus augue imperdiet. Praesent non orci sed augue cursus ultrices. Suspendisse et.",
             textAlign: TextAlign.justify,

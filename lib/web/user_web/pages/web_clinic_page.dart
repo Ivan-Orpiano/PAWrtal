@@ -1,6 +1,8 @@
 import 'package:capstone_app/web/user_web/components/appbar_components/web_notification_icon.dart';
 import 'package:capstone_app/web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/components/clinic_page_components/web_appointment_panel.dart';
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_clinic_description.dart';
+import 'package:capstone_app/web/user_web/components/clinic_page_components/web_clinic_location.dart';
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_clinic_services.dart';
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_like.dart';
 import 'package:capstone_app/web/user_web/components/clinic_page_components/web_picture_gallery.dart';
@@ -19,6 +21,9 @@ class WebClinicPage extends StatefulWidget {
   State<WebClinicPage> createState() => _WebClinicPageState();
 }
 
+enum PanelState { scrollable, positioned, static }
+PanelState _panelState = PanelState.scrollable;
+
 class _WebClinicPageState extends State<WebClinicPage> {
   final ScrollController _scrollController = ScrollController();
   bool _showWidget = false;
@@ -27,27 +32,43 @@ class _WebClinicPageState extends State<WebClinicPage> {
   final locationKey = GlobalKey();
   final reviewsKey = GlobalKey();
 
-  void _scrollToSection(GlobalKey key) {
-  Scrollable.ensureVisible(
-    key.currentContext!,
-    duration: const Duration(milliseconds: 500),
-    curve: Curves.easeInOut,
-  );
+void _scrollToSection(GlobalKey key) {
+  final context = key.currentContext;
+  if (context != null) {
+    Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+      alignment: 0.6, 
+    );
+  }
 }
 
-  @override
-  void initState() {
-    _scrollController.addListener((){
-      if (_scrollController.offset > 500 && !_showWidget) {
-        setState(() {
-          _showWidget = true;
-        });
-      } else if (_scrollController.offset <= 500 && _showWidget) {
-        setState(() {
-          _showWidget = false;
-        });
-      }
-    });
+@override
+void initState() {
+  super.initState();
+
+  _scrollController.addListener(() {
+    final offset = _scrollController.offset;
+
+    if (offset > 500 && !_showWidget) {
+      setState(() {
+        _showWidget = true;
+      });
+    } else if (offset <= 500 && _showWidget) {
+      setState(() {
+        _showWidget = false;
+      });
+    }
+
+    if (offset <= 550 && _panelState != PanelState.scrollable) {
+      setState(() => _panelState = PanelState.scrollable);
+    } else if (offset > 550 && offset <= 1550 && _panelState != PanelState.positioned) {
+      setState(() => _panelState = PanelState.positioned);
+    } else if (offset > 1550 && _panelState != PanelState.static) {
+      setState(() => _panelState = PanelState.static);
+    }
+  });
     super.initState();
   }
 
@@ -79,7 +100,7 @@ class _WebClinicPageState extends State<WebClinicPage> {
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.only(left: 380, right: 380),
+                      padding: const EdgeInsets.symmetric(horizontal: 380),
                       child: SizedBox(
                         height: 80,
                         child: Row(
@@ -123,11 +144,11 @@ class _WebClinicPageState extends State<WebClinicPage> {
                   ],
                 ),
               ),
-
+          
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Container(
-                  padding: const EdgeInsets.only(left: 380, right: 380),
+                  padding: const EdgeInsets.symmetric(horizontal: 380),
                   child: Column(
                     children: [
                       const Row(
@@ -145,97 +166,144 @@ class _WebClinicPageState extends State<WebClinicPage> {
                           WebLike(),
                         ],
                       ),
-                      KeyedSubtree(
+                      WebPictureGallery(
                         key: galleryKey,
-                        child: const WebPictureGallery()
                       ),
-                      Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
-                              'lib/images/pfp.jpg',
-                              height: 40,
-                              width: 40,
-                            ),
-                          ),
-
-                          const SizedBox(width: 18),
-
-                          const Text(
-                            "Qualipaws Veterinary Clinic",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(top: 32, bottom: 32),
-                        child: Divider(
-                          endIndent: 500,
-                          height: 1,
-                          thickness: 0.5,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      WebClinicDescription(
-                        key: servicesKey,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(top: 32, bottom: 32),
-                        child: Divider(
-                          endIndent: 500,
-                          height: 1,
-                          thickness: 0.5,
-                          color: Colors.grey,
-                          
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            KeyedSubtree(
-                              child: Text(
-                                'Services offered',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 22
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const WebClinicServices(),
-                      const Padding(
-                        padding: EdgeInsets.only(top: 32, bottom: 32),
-                        child: Divider(
-                          endIndent: 500,
-                          height: 1,
-                          thickness: 0.5,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.only(right: 500),
-                        child: Column(
-                          children: [
-                            KeyedSubtree(
-                              child: WebRatingsAndReviews(
-                                key: reviewsKey,
-                              ),
-                            )
-                          ],
-                        ),
-                      )
                     ],
                   ),
                 ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 380),
+                child: Row(
+                  children: [
+                    //left side
+                    SizedBox(
+                      width: 650,
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Image.asset(
+                                  'lib/images/pfp.jpg',
+                                  height: 40,
+                                  width: 40,
+                                ),
+                              ),
+                              const SizedBox(width: 18),
+                              const Text(
+                                "Qualipaws Veterinary Clinic",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16
+                                ),
+                              )
+                            ],
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          const WebClinicDescription(),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Services offered',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 22
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                          WebClinicServices(
+                            key: servicesKey
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          WebRatingsAndReviews(
+                            key: reviewsKey
+                          ),
+                        ]
+                      ),
+                    ),
+                    const SizedBox(width: 125),
+                    //right side
+                    Stack(
+                      children: [
+                        Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 925),
+                              child: Visibility(
+                                visible: _panelState == PanelState.scrollable,
+                                child: const WebAppointmentPanel(),
+                              ),
+                            ),
+                            Visibility(
+                              visible: _panelState == PanelState. static,
+                              child: const WebAppointmentPanel(),
+                            )
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 380),
+                child: const Padding(
+                  padding: EdgeInsets.only(top: 64, bottom: 64),
+                  child: Divider(
+                    height: 1,
+                    thickness: 0.5,
+                  ),
+                ),
+              ),
+              WebClinicLocation(
+                key: locationKey,
+              ),
+              const SizedBox(height: 64)
             ],
+          ),
+          if (_panelState == PanelState.positioned)
+          const Positioned(
+            top: 120,
+            right: 382, 
+            child: WebAppointmentPanel()
           ),
           if (_showWidget)
           Positioned(
@@ -266,7 +334,10 @@ class _WebClinicPageState extends State<WebClinicPage> {
                     text: "Reviews & Ratings",
                     onTap: () => _scrollToSection(reviewsKey),
                   ),
-                  const WebHoverUnderlineText(text: "Location")
+                  WebHoverUnderlineText(
+                    text: "Location",
+                    onTap: () => _scrollToSection(locationKey),
+                  )
                 ],
               ),
             )

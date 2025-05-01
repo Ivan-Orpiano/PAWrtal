@@ -11,26 +11,23 @@ class WebClinicServices extends StatefulWidget {
 class _WebClinicServicesState extends State<WebClinicServices> {
   @override
   Widget build(BuildContext context) {
-    return  Padding(
-      padding: const EdgeInsets.only(right: 500),
-      child: GridView.count(
-        crossAxisCount: 2, 
-        mainAxisSpacing: 12, 
-        crossAxisSpacing: 12, 
-        shrinkWrap: true, 
-        physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 10,
-        children: const [
-          WebServices(),
-          WebServices(),
-          WebServices(),
-          WebServices(),
-          WebServices(),
-          WebServices(),
-          WebServices(),
-          WebServices(),
-        ],
-      ),
+    return  GridView.count(
+      crossAxisCount: 2, 
+      mainAxisSpacing: 12, 
+      crossAxisSpacing: 12, 
+      shrinkWrap: true, 
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 10,
+      children: const [
+        WebServices(),
+        WebServices(),
+        WebServices(),
+        WebServices(),
+        WebServices(),
+        WebServices(),
+        WebServices(),
+        WebServices(),
+      ],
     );
   }
 }

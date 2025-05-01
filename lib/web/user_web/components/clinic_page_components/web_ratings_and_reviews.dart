@@ -209,7 +209,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: reviews.length > 5 ? 5: reviews.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
+          separatorBuilder: (context, index) => const SizedBox(height: 24),
           itemBuilder: (context, index) {
             final review = reviews[index];
             return WebReviewCard(review: review);
