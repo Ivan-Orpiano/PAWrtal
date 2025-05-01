@@ -1,138 +1,112 @@
-import 'package:appwrite/appwrite.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
-
-import 'package:capstone_app/data/models/staff_model.dart';
+import 'package:appwrite/appwrite.dart';
 
 class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
-  AuthRepository authRepository;
+  final AuthRepository authRepository;
+  final GetStorage _getStorage = GetStorage();
+
   AdminHomeController(this.authRepository);
 
-  final GetStorage _getStorage = GetStorage();
+  final Rxn<Clinic> clinic = Rxn<Clinic>();
   late List<Staff> staffList = [];
 
   @override
-  void onInit() {
-    super.onInit();
-  }
-
-  @override
   void onReady() {
+    super.onReady();
+    fetchClinicInfo();
     getStaff();
   }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
-
-  logout() async {
+  Future<void> fetchClinicInfo() async {
     try {
-      FullScreenDialogLoader.showDialog();
-      await authRepository.logout(_getStorage.read("sessionId")).then((value) {
-        FullScreenDialogLoader.cancelDialog();
-        _getStorage.erase();
-        Get.offAllNamed(Routes.login);
-      }).catchError((error) {
-        FullScreenDialogLoader.cancelDialog();
-        debugPrint("Error details: $error");
-        if (error is AppwriteException) {
-          final message = error.response != null
-              ? error.response['message']
-              : "An error occurred";
-          CustomSnackBar.showErrorSnackBar(
-              context: Get.overlayContext, title: "Error", message: message);
-        } else {
-          CustomSnackBar.showErrorSnackBar(
-              context: Get.overlayContext,
-              title: "Error",
-              message: "Something went wong");
-        }
-      });
+      final user = await authRepository.getUser();
+      final clinicDoc = await authRepository.getClinicByAdminId(user!.$id);
+
+      if (clinicDoc != null) {
+        clinic.value = Clinic.fromMap(clinicDoc.data);
+        print("Clinic name: ${clinic.value!.clinicName}");
+      } else {
+        print("No clinic found for this admin.");
+      }
     } catch (e) {
-      FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
-          context: Get.overlayContext,
-          title: "Error",
-          message: "Something went wong");
+      print("Failed to fetch clinic: $e");
     }
   }
 
-  moveToCreateStaff() {
+  Future<void> getStaff() async {
+    try {
+      change(null, status: RxStatus.loading());
+
+      final clinicId = clinic.value?.documentId ?? _getStorage.read("clinicId");
+      final value = await authRepository.getStaffByClinicId(clinicId!);
+
+      List documents = value!.toMap()['documents'];
+      staffList = documents.map((e) => Staff.fromMap(e['data'])).toList();
+
+      change(staffList, status: RxStatus.success());
+    } catch (e) {
+      debugPrint("Error fetching staff: $e");
+      change(null, status: RxStatus.error("Failed to fetch staff"));
+    }
+  }
+
+  void logout() async {
+    try {
+      FullScreenDialogLoader.showDialog();
+      await authRepository.logout(_getStorage.read("sessionId"));
+      _getStorage.erase();
+      FullScreenDialogLoader.cancelDialog();
+      Get.offAllNamed(Routes.login);
+    } catch (e) {
+      FullScreenDialogLoader.cancelDialog();
+      CustomSnackBar.showErrorSnackBar(
+        context: Get.overlayContext,
+        title: "Logout Failed",
+        message: e.toString(),
+      );
+    }
+  }
+
+  void moveToCreateStaff() {
     Get.toNamed(Routes.createStaff);
   }
 
-  moveToEditStaff(Staff staff) {
+  void moveToEditStaff(Staff staff) {
     Get.toNamed(Routes.createStaff, arguments: {
       'staff': staff,
       'currentImage': staff.image,
     });
   }
 
-  getStaff() async {
-    try {
-      change(null, status: RxStatus.loading());
-      await authRepository.getStaff().then((value) {
-        Map<String, dynamic> data = value.toMap();
-        List d = data['documents'].toList();
-
-        staffList = d.map((e) {
-          return Staff.fromMap(e['data']);
-        }).toList();
-
-        change(staffList, status: RxStatus.success());
-      }).catchError((error) {
-        debugPrint("Error fetching staff: $error");
-        if (error is AppwriteException) {
-          change(null, status: RxStatus.error(error.response['message']));
-        } else {
-          change(null, status: RxStatus.error("Something went wrong"));
-        }
-      });
-    } catch (e) {
-      change(null, status: RxStatus.error("Something went wrong"));
-    }
-  }
-
-  deleteStaff(Staff staff) async {
+  Future<void> deleteStaff(Staff staff) async {
     try {
       FullScreenDialogLoader.showDialog();
-      await authRepository.deleteStaff({
-        "documentId": staff.documentId,
-      }).then((value) async {
-        await authRepository.deleteStaffImage(staff.image);
-        FullScreenDialogLoader.cancelDialog();
-        CustomSnackBar.showSuccessSnackBar(
-            context: Get.context,
-            title: "Success",
-            message: "Staff deleted successfully");
-        Get.find<AdminHomeController>().getStaff();
-        Get.offNamedUntil(Routes.adminHome, (route) => route.isFirst);
-      }).catchError((error) async {
-        FullScreenDialogLoader.cancelDialog();
-        if (error is AppwriteException) {
-          CustomSnackBar.showErrorSnackBar(
-              context: Get.context,
-              title: "Error",
-              message: error.response['message']);
-        } else {
-          CustomSnackBar.showErrorSnackBar(
-              context: Get.context,
-              title: "Error",
-              message: "Something went wrong");
-        }
-      });
+      await authRepository.deleteStaff({"documentId": staff.documentId});
+      await authRepository.deleteStaffImage(staff.image);
+
+      FullScreenDialogLoader.cancelDialog();
+      CustomSnackBar.showSuccessSnackBar(
+        context: Get.context,
+        title: "Success",
+        message: "Staff deleted",
+      );
+
+      getStaff();
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showErrorSnackBar(
-          context: Get.context,
-          title: "Error",
-          message: "Something went wrong");
+        context: Get.context,
+        title: "Error",
+        message: e.toString(),
+      );
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:appwrite/models.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 
@@ -28,32 +29,25 @@ class AppWriteProvider {
 
   Future<models.User> signup(Map map) async {
     try {
-      debugPrint('Calling signup with user data: $map');
-
-      if (account == null) throw Exception('Account is not initialized');
-
       final response = await account!.create(
-          userId: map["userId"],
-          email: map["email"],
-          password: map["password"],
-          name: map["name"]);
-
-      //   await account!.updatePrefs(prefs: {
-      //   "role": map["role"] ?? "customer",
-      //   "verified": false, // user must complete verification
-      // });
-
-      // ignore: unnecessary_null_comparison
-      if (response == null) {
-        throw Exception('Signup failed: response is null');
-      }
-
-      debugPrint('Signup response: $response');
+        userId: map["userId"],
+        email: map["email"],
+        password: map["password"],
+        name: map["name"],
+      );
       return response;
     } catch (e) {
-      debugPrint('Signup error: $e');
       rethrow;
     }
+  }
+
+  Future<models.Document> createUser(Map map) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.usersCollectionID,
+      documentId: ID.unique(),
+      data: map,
+    );
   }
 
   Future<Map<String, dynamic>> login(Map map) async {
@@ -67,13 +61,15 @@ class AppWriteProvider {
 
     return {
       "session": session,
+      "user": user,
       "role": role,
     };
   }
 
   Future<bool> signInWithGoogle() async {
-    try{
-      final response = await account?.createOAuth2Session(provider: "google", scopes: [
+    try {
+      final response =
+          await account?.createOAuth2Session(provider: "google", scopes: [
         "profile",
         "email",
       ]);
@@ -85,7 +81,7 @@ class AppWriteProvider {
     }
   }
 
-  Future <bool> sendVerificationEmail() async {
+  Future<bool> sendVerificationEmail() async {
     try {
       await account?.createVerification(url: 'http://localhost:3000/verify');
       return true;
@@ -95,15 +91,16 @@ class AppWriteProvider {
     }
   }
 
-Future <bool> sendRecoveryEmail(String email) async {
-  try{
-    await account?.createRecovery(email: email, url: "http://localhost:3000/recovery");
-    return true;
-  } catch (e) {
-    debugPrint("Error sending recovery email: $e");
-    return false;
+  Future<bool> sendRecoveryEmail(String email) async {
+    try {
+      await account?.createRecovery(
+          email: email, url: "http://localhost:3000/recovery");
+      return true;
+    } catch (e) {
+      debugPrint("Error sending recovery email: $e");
+      return false;
+    }
   }
-}
 
   Future<void> verifyUser() async {
     try {
@@ -131,6 +128,33 @@ Future <bool> sendRecoveryEmail(String email) async {
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;
+  }
+
+  Future<Document?> getClinicByAdminId(String adminId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+      queries: [Query.equal("adminId", adminId)],
+    );
+    return result.documents.isNotEmpty ? result.documents.first : null;
+  }
+
+  Future<Document?> getStaffByClinicId(String clinicId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.staffCollectionID,
+      queries: [Query.equal("clinicId", clinicId)],
+    );
+    return result.documents.isNotEmpty ? result.documents.first : null;
+  }
+
+  Future<Document?> getUserById(String userId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.usersCollectionID,
+      queries: [Query.equal("userId", userId)],
+    );
+    return result.documents.isNotEmpty ? result.documents.first : null;
   }
 
   Future<models.File> uploadStaffImage(String imagePath) {
