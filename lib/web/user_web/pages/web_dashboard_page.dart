@@ -18,7 +18,10 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   bool _showMap = false;
 
   Widget _buildMapView() {
-    return const WebMaps();
+    return const SizedBox(
+      height: 770,
+      child: WebMaps()
+    );
   }
 
   @override

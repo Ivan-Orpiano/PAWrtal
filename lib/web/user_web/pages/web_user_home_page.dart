@@ -34,7 +34,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
         leadingWidth: 220,
         toolbarHeight: 80,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(1.0),
+          preferredSize: const Size.fromHeight(1.0),
           child: Container(
             color: Colors.grey.shade400,
             height: 1,

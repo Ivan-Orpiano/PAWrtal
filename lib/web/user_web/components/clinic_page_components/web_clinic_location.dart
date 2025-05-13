@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 
 class WebClinicLocation extends StatefulWidget {
@@ -42,8 +43,9 @@ class _WebClinicLocationState extends State<WebClinicLocation> {
             height: 700,
             decoration: BoxDecoration(
               color: Colors.grey,
-              borderRadius: BorderRadius.circular(20)
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: const WebMaps(),
           )
         ],
       ),

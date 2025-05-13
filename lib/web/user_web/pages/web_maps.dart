@@ -186,12 +186,16 @@ class _WebMapsState extends State<WebMaps> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Stack(
-          children: [
-            userLocation == null
-                ? const Center(child: CircularProgressIndicator())
-                : FlutterMap(
+    if (userLocation == null || !isWithinBounds(userLocation!)) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Stack(
+        children: [
+          userLocation == null
+              ? const Center(child: CircularProgressIndicator())
+              : ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
                       initialCenter: userLocation!,
@@ -269,8 +273,8 @@ class _WebMapsState extends State<WebMaps> {
                       ),
                     ],
                   ),
-          ],
-        ),
-    );
+              ),
+        ],
+      );
   }
 }

@@ -19,7 +19,7 @@ class WebMain extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       scrollBehavior: MyCustomScrollBehavior(),
-      home: const WebClinicPage(),
+      home: const WebUserHomePage(),
     );
   }
 }
