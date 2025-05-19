@@ -26,7 +26,7 @@ class _DashboardTileWebState extends State<WebDashboardTile> {
         );
       },
       child: SizedBox(
-        width: 250,
+        width: 274,
         height: 355,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,

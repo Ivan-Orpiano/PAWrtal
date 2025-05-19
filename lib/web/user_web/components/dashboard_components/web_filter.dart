@@ -87,7 +87,11 @@ class _WebFilterState extends State<WebFilter> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Text(
-                  "Filters"
+                  "Filters",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600
+                  ),
                 ),
                 Icon(
                   Icons.filter_list_rounded
