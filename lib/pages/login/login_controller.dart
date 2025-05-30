@@ -151,7 +151,7 @@ class LoginController extends GetxController {
           context: Get.overlayContext,
           title: "Login Failed",
           message: e is AppwriteException
-              ? e.response['message'] ?? "Appwrite error"
+              ? e.response ?? "Appwrite error"
               : e.toString());
     }
   }

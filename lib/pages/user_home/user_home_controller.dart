@@ -22,9 +22,7 @@ class UserHomeController extends GetxController {
       }).catchError((error) {
         FullScreenDialogLoader.cancelDialog();
         if (error is AppwriteException) {
-          final message = error.response != null
-              ? error.response['message']
-              : "An error occurred";
+          final message = error.response ?? "An error occurred";
           CustomSnackBar.showErrorSnackBar(
               context: Get.overlayContext, title: "Error", message: message);
         } else {

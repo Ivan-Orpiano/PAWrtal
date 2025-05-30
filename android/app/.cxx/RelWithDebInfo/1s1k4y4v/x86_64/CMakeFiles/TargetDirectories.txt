@@ -1,0 +1,2 @@
+C:/Users/Dave/Documents/VS Code/github/pawrtal/android/app/.cxx/RelWithDebInfo/1s1k4y4v/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/Dave/Documents/VS Code/github/pawrtal/android/app/.cxx/RelWithDebInfo/1s1k4y4v/x86_64/CMakeFiles/rebuild_cache.dir
