@@ -30,10 +30,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_auth_2: ^4.1.0
   google_nav_bar:
   flutter_rating_bar: ^4.0.1
   flutter_floating_bottom_bar: ^1.2.0
-  appwrite: ^11.0.1
+  appwrite: ^17.0.0
   get_storage: ^2.0.3
 
   table_calendar: ^3.2.0

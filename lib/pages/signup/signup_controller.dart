@@ -116,7 +116,7 @@ class SignUpController extends GetxController {
           CustomSnackBar.showErrorSnackBar(
               context: Get.overlayContext,
               title: "Error",
-              message: error.response?['message'] ?? "An error occurred");
+              message: error.response ?? "An error occurred");
         }
       } else {
         CustomSnackBar.showErrorSnackBar(

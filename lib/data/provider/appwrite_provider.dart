@@ -3,6 +3,7 @@ import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
+import 'package:appwrite/enums.dart';
 
 enum AuthStatus {
   uninitialized,
@@ -51,7 +52,7 @@ class AppWriteProvider {
   }
 
   Future<Map<String, dynamic>> login(Map map) async {
-    final session = await account!.createEmailSession(
+    final session = await account!.createEmailPasswordSession(
       email: map["email"],
       password: map["password"],
     );
@@ -69,7 +70,7 @@ class AppWriteProvider {
   Future<bool> signInWithGoogle() async {
     try {
       final response =
-          await account?.createOAuth2Session(provider: "google", scopes: [
+          await account?.createOAuth2Session(provider: OAuthProvider.google, scopes: [
         "profile",
         "email",
       ]);
