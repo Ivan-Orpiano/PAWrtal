@@ -1,6 +1,6 @@
-import 'package:admin_website/components/appointments/web_accepted_tile.dart';
-import 'package:admin_website/components/appointments/web_declined_tile.dart';
-import 'package:admin_website/components/appointments/web_pending_tile.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/web_accepted_tile.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/web_declined_tile.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/web_pending_tile.dart';
 import 'package:flutter/material.dart';
 
 class AdminWebAppointments extends StatefulWidget {

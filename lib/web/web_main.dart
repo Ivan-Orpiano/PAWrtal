@@ -1,7 +1,4 @@
-import 'package:capstone_app/pages/super_admin_home/super_admin_home_page.dart';
-import 'package:capstone_app/web/login_web/web_login_page.dart';
-import 'package:capstone_app/web/user_web/pages/web_clinic_page.dart';
-import 'package:capstone_app/web/user_web/pages/web_user_home_page.dart';
+import 'package:capstone_app/web/web_home.dart';
 import 'package:flutter/material.dart';
 
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
@@ -19,7 +16,7 @@ class WebMain extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       scrollBehavior: MyCustomScrollBehavior(),
-      home: const WebUserHomePage(),
+      home: const WebHome(),
     );
   }
 }

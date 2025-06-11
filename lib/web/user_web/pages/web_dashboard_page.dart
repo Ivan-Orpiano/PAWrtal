@@ -5,6 +5,7 @@ import 'package:capstone_app/web/user_web/components/dashboard_components/web_se
 import 'package:capstone_app/web/user_web/components/dashboard_components/web_tags.dart';
 import 'package:capstone_app/web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 class WebDashboardPage extends StatefulWidget {
   const WebDashboardPage({super.key});
@@ -29,43 +30,36 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: ListView(
-        padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
+      padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
         children:  [
-          const Row(
-            children: [
-              WebTags(),
-              SizedBox(width: 12),
-              WebFilter(),
-              WebSearchBar(),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8, top: 16),
-            child: _showMap ? _buildMapView() : 
-            const SingleChildScrollView(
-              child: Wrap(
-                direction: Axis.horizontal,
-                spacing: 25,
-                runSpacing: 40,
-                children: [
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                  WebDashboardTile(),
-                ],
-              ),
-            )
-          ),
-        ]
+        const Row(
+          children: [
+            WebTags(),
+            SizedBox(width: 12),
+            WebFilter(),
+            WebSearchBar(),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 8, top: 16),
+          child: _showMap ? _buildMapView() : 
+          const SingleChildScrollView(
+            child: Wrap(
+              direction: Axis.horizontal,
+              spacing: 25,
+              runSpacing: 40,
+              children: [
+                WebDashboardTile(),
+                WebDashboardTile(),
+                WebDashboardTile(),
+                WebDashboardTile(),
+                WebDashboardTile(),
+                WebDashboardTile(),
+              ],
+            ),
+          )
+        ),
+      ]
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
