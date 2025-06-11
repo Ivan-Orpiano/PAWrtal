@@ -29,11 +29,11 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            buildColumn(0, "Accepted", WebAcceptedTile()),
+            buildColumn(0, "Accepted", const WebAcceptedTile()),
             const SizedBox(width: 1),
-            buildColumn(1, "Pending", WebPendingTile()),
+            buildColumn(1, "Pending", const WebPendingTile()),
             const SizedBox(width: 1),
-            buildColumn(2, "Declined", WebDeclinedTile()),
+            buildColumn(2, "Declined", const WebDeclinedTile()),
           ],
         ),
       ),
@@ -48,7 +48,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
         margin: const EdgeInsets.symmetric(horizontal: 0),
         decoration: BoxDecoration(
           border: Border.all(
-              color: isSelected ? Color(0xff517399) : Colors.grey, width: 1),
+              color: isSelected ? const Color(0xff517399) : Colors.grey, width: 1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -57,7 +57,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
               onTap: () => selectColumn(index),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? Color(0xff517399) : Colors.grey,
+                  color: isSelected ? const Color(0xff517399) : Colors.grey,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
