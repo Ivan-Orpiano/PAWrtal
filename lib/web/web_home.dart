@@ -1,5 +1,5 @@
-import 'package:capstone_app/web/desktop_body.dart';
-import 'package:capstone_app/web/mobile_body.dart';
+import 'package:capstone_app/web/desktop_web/desktop_body.dart';
+import 'package:capstone_app/web/mobile_web/mobile_body.dart';
 import 'package:capstone_app/web/responsive_layout.dart';
 import 'package:flutter/material.dart';
 

@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/user_web/pages/web_maps.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 
 class WebClinicLocation extends StatefulWidget {

@@ -1,9 +1,9 @@
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/web_dashboard_tile.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/web_filter.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/web_search_bar.dart';
-import 'package:capstone_app/web/user_web/components/dashboard_components/web_tags.dart';
-import 'package:capstone_app/web/user_web/pages/web_maps.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_dashboard_tile.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_filter.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_search_bar.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_tags.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
