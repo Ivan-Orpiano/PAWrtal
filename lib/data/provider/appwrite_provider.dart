@@ -69,8 +69,8 @@ class AppWriteProvider {
 
   Future<bool> signInWithGoogle() async {
     try {
-      final response =
-          await account?.createOAuth2Session(provider: OAuthProvider.google, scopes: [
+      final response = await account
+          ?.createOAuth2Session(provider: OAuthProvider.google, scopes: [
         "profile",
         "email",
       ]);
@@ -115,6 +115,14 @@ class AppWriteProvider {
       debugPrint("Verification error: $e");
       rethrow;
     }
+  }
+
+  Future<List<Document>> getClinics() async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+    );
+    return result.documents;
   }
 
   Future<models.User?> getUser() async {
