@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/user_web/components/clinic_page_components/web_services.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_services.dart';
 import 'package:flutter/material.dart';
 
 class WebClinicServices extends StatefulWidget {

@@ -1,10 +1,10 @@
-import 'package:admin_website/components/dashboard%20appbar/admin_web_notif.dart';
-import 'package:admin_website/components/dashboard%20appbar/admin_web_profile.dart';
-import 'package:admin_website/pages/admin_web_appointments.dart';
-import 'package:admin_website/pages/admin_web_clinicpage.dart';
-import 'package:admin_website/pages/admin_web_dashboard.dart';
-import 'package:admin_website/pages/admin_web_messages.dart';
-import 'package:admin_website/pages/admin_web_staffs.dart';
+import 'package:capstone_app/web/admin_web/components/dashboard%20appbar/admin_web_notif.dart';
+import 'package:capstone_app/web/admin_web/components/dashboard%20appbar/admin_web_profile.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_clinicpage.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_dashboard.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_messages.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_staffs.dart';
 import 'package:flutter/material.dart';
 
 class AdminWeb extends StatefulWidget {

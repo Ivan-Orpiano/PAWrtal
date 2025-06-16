@@ -1,9 +1,9 @@
-import 'package:capstone_app/web/user_web/components/appbar_components/web_notification_icon.dart';
-import 'package:capstone_app/web/user_web/components/appbar_components/web_profile_icon.dart';
-import 'package:capstone_app/web/user_web/pages/web_appointments_page.dart';
-import 'package:capstone_app/web/user_web/pages/web_dashboard_page.dart';
-import 'package:capstone_app/web/user_web/pages/web_messages_page.dart';
-import 'package:capstone_app/web/user_web/pages/web_pets_page.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/appbar_components/web_notification_icon.dart';
+import 'package:capstone_app/web/desktop_web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_appointments_page.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_dashboard_page.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_messages_page.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_pets_page.dart';
 import 'package:flutter/material.dart';
 
 class WebUserHomePage extends StatefulWidget {
@@ -41,7 +41,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
           ),
         ),
         leading: Padding(
-          padding: const EdgeInsets.only(left: 75),
+          padding: EdgeInsets.only(left:75),
           child: InkWell(
             onTap: () {
               setState(() {

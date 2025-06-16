@@ -1,5 +1,5 @@
-import 'package:admin_website/components/staffs/new_staff_tile.dart';
-import 'package:admin_website/components/staffs/staff_tile.dart';
+import 'package:capstone_app/web/admin_web/components/staffs/new_staff_tile.dart';
+import 'package:capstone_app/web/admin_web/components/staffs/staff_tile.dart';
 import 'package:flutter/material.dart';
 
 class AdminWebStaffs extends StatefulWidget {
