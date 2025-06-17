@@ -21,7 +21,6 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
-        
       ),
     );
   }
