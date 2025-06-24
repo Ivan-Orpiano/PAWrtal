@@ -3,6 +3,7 @@ class AppwriteConstants {
   static String projectID = "67ef82500017dc404c6a";
   static String dbID = "67ef839c00011ba4c465";
   static String usersCollectionID = "680f7517002e572514bc";
+  static String petsCollectionID = "6810de7e001ee11cbe60";
   static String staffCollectionID = "67ef83a90017471edcd2";
   static String imageBucketID = "67ef83bd0022c1e63789";
   static String clinicsCollectionID = "680c91b500000a2cdf0d";

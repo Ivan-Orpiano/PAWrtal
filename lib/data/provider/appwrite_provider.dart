@@ -134,6 +134,24 @@ class AppWriteProvider {
     }
   }
 
+  Future<Document> createPet(Map map) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.petsCollectionID,
+      documentId: ID.unique(),
+      data: map,
+    );
+  }
+
+  Future<List<Document>> getUserPets(String userId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.petsCollectionID,
+      queries: [Query.equal("userId", userId)],
+    );
+    return result.documents;
+  }
+
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;
@@ -166,7 +184,7 @@ class AppWriteProvider {
     return result.documents.isNotEmpty ? result.documents.first : null;
   }
 
-  Future<models.File> uploadStaffImage(String imagePath) {
+  Future<models.File> uploadImage(String imagePath) {
     String fileName =
         "${DateTime.now().millisecondsSinceEpoch}.${imagePath.split('.').last}";
 
@@ -178,7 +196,7 @@ class AppWriteProvider {
     return response;
   }
 
-  Future<dynamic> deleteStaffImage(String fileId) async {
+  Future<dynamic> deleteImage(String fileId) async {
     await storage!.deleteFile(
       bucketId: AppwriteConstants.imageBucketID,
       fileId: fileId,

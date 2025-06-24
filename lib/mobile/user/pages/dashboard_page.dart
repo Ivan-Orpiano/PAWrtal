@@ -7,9 +7,8 @@ import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 
-
 class DashboardPage extends StatefulWidget {
-const DashboardPage({super.key});
+  const DashboardPage({super.key});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -33,14 +32,17 @@ class _DashboardPageState extends State<DashboardPage> {
         collectionId: AppwriteConstants.clinicsCollectionID,
       );
 
+      if (!mounted) return;
+
       setState(() {
-        clinics = result.documents
-            .map((doc) => Clinic.fromMap(doc.data))
-            .toList();
+        clinics =
+            result.documents.map((doc) => Clinic.fromMap(doc.data)).toList();
         isLoading = false;
       });
     } catch (e) {
       print("Error fetching clinics: $e");
+
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -48,17 +50,32 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Vet Clinics")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : clinics.isEmpty
-              ? const Center(child: Text("No clinics available."))
-              : ListView.builder(
-  itemCount: clinics.length,
-  itemBuilder: (context, index) {
-    return MyDashboardTile(clinic: clinics[index]);
-  },
-)
-    );
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : clinics.isEmpty
+                ? const Center(child: Text("No clinics available."))
+                : ListView(children: [
+                    const Padding(
+                      padding: EdgeInsets.only(
+                          left: 16, top: 16, bottom: 5, right: 16),
+                      child: Row(
+                        children: [
+                          MySearchBar(),
+                          SizedBox(width: 12),
+                          MySortButton(),
+                        ],
+                      ),
+                    ),
+
+                    // tags
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: MyTags(),
+                    ),
+
+                    const SizedBox(height: 10),
+                    ...clinics.map((clinic) => MyDashboardTile(clinic: clinic)),
+                  ]));
   }
 }

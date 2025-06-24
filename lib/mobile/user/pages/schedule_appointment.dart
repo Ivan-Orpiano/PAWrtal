@@ -46,6 +46,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
       body: Column(
         children: [
@@ -71,122 +72,123 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
           ),
           Expanded(
             child: Container(
-              width: double.maxFinite,
-              height: double.maxFinite,
+              width: double.infinity,
               decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 230, 230, 230),
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20))),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: TableCalendar(
-                      focusedDay: today,
-                      firstDay: DateTime.utc(2025, 1, 1),
-                      lastDay: DateTime.utc(2030, 12, 31),
-                      headerStyle: const HeaderStyle(
-                          formatButtonVisible: false, titleCentered: true),
-                      availableGestures: AvailableGestures.all,
-                      onDaySelected: _onDaySelected,
-                      selectedDayPredicate: (day) => isSameDay(day, today),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: DropdownMenu(
-                      width: double.infinity,
-                      label: const Text("Select a Time"),
-                      inputDecorationTheme: InputDecorationTheme(
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                color: Color.fromARGB(255, 230, 230, 230),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                      bottom: 30), // Prevent clipping on bottom
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: TableCalendar(
+                          focusedDay: today,
+                          firstDay: DateTime.utc(2025, 1, 1),
+                          lastDay: DateTime.utc(2030, 12, 31),
+                          headerStyle: const HeaderStyle(
+                            formatButtonVisible: false,
+                            titleCentered: true,
+                          ),
+                          availableGestures: AvailableGestures.all,
+                          onDaySelected: _onDaySelected,
+                          selectedDayPredicate: (day) => isSameDay(day, today),
+                        ),
                       ),
-                      onSelected: (value) =>
-                          setState(() => selectedTime = value),
-                      dropdownMenuEntries: availableTimes
-                          .map((time) =>
-                              DropdownMenuEntry(value: time, label: time))
-                          .toList(),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: DropdownMenu(
-                      width: double.infinity,
-                      label: const Text("Service"),
-                      inputDecorationTheme: InputDecorationTheme(
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: DropdownMenu(
+                          width: double.infinity,
+                          label: const Text("Select a Time"),
+                          inputDecorationTheme: InputDecorationTheme(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onSelected: (value) =>
+                              setState(() => selectedTime = value),
+                          dropdownMenuEntries: availableTimes
+                              .map((time) =>
+                                  DropdownMenuEntry(value: time, label: time))
+                              .toList(),
+                        ),
                       ),
-                      onSelected: (value) =>
-                          setState(() => selectedService = value),
-                      dropdownMenuEntries: services.isNotEmpty
-                          ? services
-                              .map((service) => DropdownMenuEntry(
-                                  value: service, label: service))
-                              .toList()
-                          : [
-                              const DropdownMenuEntry(
-                                  value: "none", label: "No services available")
-                            ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: DropdownMenu(
-                      width: double.infinity,
-                      label: const Text("Pet"),
-                      inputDecorationTheme: InputDecorationTheme(
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: DropdownMenu(
+                          width: double.infinity,
+                          label: const Text("Service"),
+                          inputDecorationTheme: InputDecorationTheme(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onSelected: (value) =>
+                              setState(() => selectedService = value),
+                          dropdownMenuEntries: services.isNotEmpty
+                              ? services
+                                  .map((service) => DropdownMenuEntry(
+                                      value: service, label: service))
+                                  .toList()
+                              : [
+                                  const DropdownMenuEntry(
+                                      value: "none",
+                                      label: "No services available")
+                                ],
+                        ),
                       ),
-                      onSelected: (value) =>
-                          setState(() => selectedPet = value),
-                      dropdownMenuEntries: pets
-                          .map((pet) =>
-                              DropdownMenuEntry(value: pet, label: pet))
-                          .toList(),
-                    ),
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                left: 20, top: 20, bottom: 20, right: 10),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 75, vertical: 15),
-                                  backgroundColor:
-                                      const Color.fromARGB(255, 81, 115, 153),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20))),
-                              onPressed: () {
-                                // Fluttertoast.showToast(
-                                //   msg: "You have scheduled an appointment",
-                                //   toastLength: Toast.LENGTH_SHORT,
-                                //   gravity: ToastGravity.CENTER,
-                                //   timeInSecForIosWeb: 1,
-                                //   backgroundColor: Colors.red,
-                                //   textColor: Colors.white,
-                                //   fontSize: 16.0
-                                // );
-                              },
-                              child: const Text(
-                                "Continue",
-                                style: TextStyle(color: Colors.white),
-                              ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: DropdownMenu(
+                          width: double.infinity,
+                          label: const Text("Pet"),
+                          inputDecorationTheme: InputDecorationTheme(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onSelected: (value) =>
+                              setState(() => selectedPet = value),
+                          dropdownMenuEntries: pets
+                              .map((pet) =>
+                                  DropdownMenuEntry(value: pet, label: pet))
+                              .toList(),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 20),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 75, vertical: 15),
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                            ),
+                            onPressed: () {
+                              // Handle appointment
+                            },
+                            child: const Text(
+                              "Continue",
+                              style: TextStyle(color: Colors.white),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
