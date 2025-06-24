@@ -90,7 +90,7 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
     try {
       FullScreenDialogLoader.showDialog();
       await authRepository.deleteStaff({"documentId": staff.documentId});
-      await authRepository.deleteStaffImage(staff.image);
+      await authRepository.deleteImage(staff.image);
 
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showSuccessSnackBar(

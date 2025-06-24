@@ -122,13 +122,13 @@ class CreateStaffController extends GetxController {
 
       // upload new image only if selected
       if (imagePath.isNotEmpty) {
-        final imageResponse = await authRepository.uploadStaffImage(imagePath.value);
+        final imageResponse = await authRepository.uploadImage(imagePath.value);
         newImageId = imageResponse.$id;
       }
 
       // delete the old image only if editing and new image is uploaded
       if (isEdit && newImageId != null && staff != null && staff!.image.isNotEmpty) {
-        await authRepository.deleteStaffImage(staff!.image);
+        await authRepository.deleteImage(staff!.image);
       }
 
       // use current image reference if no new image is uploaded

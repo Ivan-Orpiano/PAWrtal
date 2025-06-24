@@ -14,10 +14,10 @@ class AuthRepository {
 
   Future<models.User?> getUser() => appWriteProvider.getUser();
 
-  Future<models.File> uploadStaffImage(String imagePath) =>
-      appWriteProvider.uploadStaffImage(imagePath);
-  Future<dynamic> deleteStaffImage(String fileID) =>
-      appWriteProvider.deleteStaffImage(fileID);
+  Future<models.File> uploadImage(String imagePath) =>
+      appWriteProvider.uploadImage(imagePath);
+  Future<dynamic> deleteImage(String fileID) =>
+      appWriteProvider.deleteImage(fileID);
   Future<models.Document> createStaff(Map map) =>
       appWriteProvider.createStaff(map);
   Future<models.DocumentList> getStaff() => appWriteProvider.getStaff();
@@ -35,4 +35,9 @@ class AuthRepository {
 
   Future<models.Document?> getUserById(String userId) =>
       appWriteProvider.getUserById(userId);
+
+  Future<models.Document> createPet(Map map) => appWriteProvider.createPet(map);
+
+  Future<List<models.Document>> getUserPets(String userId) =>
+      appWriteProvider.getUserPets(userId);
 }
