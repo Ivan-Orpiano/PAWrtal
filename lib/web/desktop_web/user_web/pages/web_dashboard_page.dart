@@ -43,21 +43,22 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         Padding(
           padding: const EdgeInsets.only(left: 8, top: 16),
           child: _showMap ? _buildMapView() : 
-          const SingleChildScrollView(
-            child: Wrap(
-              direction: Axis.horizontal,
-              spacing: 25,
-              runSpacing: 40,
-              children: [
-                WebDashboardTile(),
-                WebDashboardTile(),
-                WebDashboardTile(),
-                WebDashboardTile(),
-                WebDashboardTile(),
-                WebDashboardTile(),
-              ],
-            ),
-          )
+          LayoutBuilder(
+              builder: (context, constraints) {
+              double screenWidth = constraints.maxWidth;
+              const double spacing = 25;
+              const double minTileWidth = 180;
+              int tilesPerRow = (screenWidth / (minTileWidth + spacing)).floor();
+              tilesPerRow = tilesPerRow.clamp(1, 7); 
+              double tileWidth = (screenWidth - (spacing * (tilesPerRow - 1))) / tilesPerRow;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: 10,
+                children: List.generate(20, (index) => WebDashboardTile(tileWidth: tileWidth),
+                ),
+              );
+            },
+          ),
         ),
       ]
       ),

@@ -41,7 +41,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
           ),
         ),
         leading: Padding(
-          padding: EdgeInsets.only(left:75),
+          padding: const EdgeInsets.only(left:75),
           child: InkWell(
             onTap: () {
               setState(() {
@@ -65,7 +65,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12, right: 12),
                 child: Text(
                   "Home",
                   style: TextStyle(
@@ -122,7 +122,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12, right: 12),
                 child: Text(
                   "Pets",
                   style: TextStyle(

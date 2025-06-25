@@ -13,7 +13,6 @@ import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_com
 import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/desktop_web/user_web/pages/web_user_home_page.dart';
 import 'package:flutter/material.dart';
-import 'dart:math';
 
 class WebClinicPage extends StatefulWidget {
   const WebClinicPage({super.key});
@@ -79,22 +78,8 @@ void initState() {
     super.dispose();
   }
 
-    double getResponsivePadding(double screenWidth) {
-    const double minScreen = 1100;
-    const double maxScreen = 1920;
-    const double minPadding = 16;
-    const double maxPadding = 380;
-
-    if (screenWidth <= minScreen) return minPadding;
-    if (screenWidth >= maxScreen) return maxPadding;
-
-    double t = (screenWidth - minScreen) / (maxScreen - minScreen);
-    return minPadding + t * (maxPadding - minPadding);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -115,7 +100,7 @@ void initState() {
                 child: Column(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+                      padding: const EdgeInsets.symmetric(horizontal: 380),
                       child: SizedBox(
                         height: 80,
                         child: Row(
@@ -135,19 +120,12 @@ void initState() {
                                 height: 100,
                               ),
                             ),
-                            const Spacer(
-                              flex: 1,
-                            ),
+                            const Spacer(),
                             
-                            const Expanded(
-                              flex: 2,
-                              child: WebSearchBar(
-                                width: 380,
-                              ),
+                            const WebSearchBar(
+                              width: 350,
                             ),
-                            const Spacer(
-                              flex: 1,
-                            ),
+                            const Spacer(),
               
                             const WebNotificationIcon(
                               right: 445,
@@ -166,11 +144,11 @@ void initState() {
                   ],
                 ),
               ),
-
+          
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+                  padding: const EdgeInsets.symmetric(horizontal: 380),
                   child: Column(
                     children: [
                       const Row(
@@ -195,16 +173,13 @@ void initState() {
                   ),
                 ),
               ),
-              
               Container(
-                padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+                padding: const EdgeInsets.symmetric(horizontal: 380),
                 child: Row(
                   children: [
                     //left side
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: 700,
-                      ),
+                    SizedBox(
+                      width: 650,
                       child: Column(
                         children: [
                           Row(
@@ -284,14 +259,7 @@ void initState() {
                         ]
                       ),
                     ),
-                    //box that seperates left and right
-                    const Flexible(
-                      flex: 1,
-                      child: SizedBox(
-                        width: 125
-                        ),
-                    ),
-
+                    const SizedBox(width: 125),
                     //right side
                     Stack(
                       children: [
@@ -305,7 +273,7 @@ void initState() {
                               ),
                             ),
                             Visibility(
-                              visible: _panelState == PanelState.static,
+                              visible: _panelState == PanelState. static,
                               child: const WebAppointmentPanel(),
                             )
                           ],
@@ -316,7 +284,7 @@ void initState() {
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+                padding: const EdgeInsets.symmetric(horizontal: 380),
                 child: const Padding(
                   padding: EdgeInsets.only(top: 64, bottom: 64),
                   child: Divider(
@@ -332,16 +300,15 @@ void initState() {
             ],
           ),
           if (_panelState == PanelState.positioned)
-          Positioned(
+          const Positioned(
             top: 120,
-            right: getResponsivePadding(screenWidth),
-            child: const WebAppointmentPanel(
-            )
+            right: 382, 
+            child: WebAppointmentPanel()
           ),
           if (_showWidget)
           Positioned(
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+              padding: const EdgeInsets.symmetric(horizontal: 380),
               height: 80,
               decoration:  const BoxDecoration(
                 color: Colors.white,

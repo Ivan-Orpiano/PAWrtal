@@ -130,7 +130,6 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
     return Column(
       children: [
         Row(
-          spacing: 360,
           children: [
             const Text(
               "Ratings & Reviews",
@@ -139,6 +138,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
                 fontWeight: FontWeight.w600
               ),
             ),
+            Spacer(),
             Row(
               children: [
                 Text(
@@ -225,9 +225,9 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)
                   ),
-                insetPadding: const EdgeInsets.symmetric(horizontal: 100, vertical: 60),
+                insetPadding: const EdgeInsets.symmetric(vertical: 60),
                   child: Container(
-                    width: MediaQuery.of(context).size.width * 0.54,
+                    width: 1020,
                     height: 700,
                     decoration: BoxDecoration(
                       color: Colors.white,

@@ -8,7 +8,7 @@ class DesktopBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: WebUserHomePage(),
+      body: WebClinicPage(),
     );
   }
 }
