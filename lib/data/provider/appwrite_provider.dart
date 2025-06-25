@@ -69,8 +69,8 @@ class AppWriteProvider {
 
   Future<bool> signInWithGoogle() async {
     try {
-      final response =
-          await account?.createOAuth2Session(provider: OAuthProvider.google, scopes: [
+      final response = await account
+          ?.createOAuth2Session(provider: OAuthProvider.google, scopes: [
         "profile",
         "email",
       ]);
@@ -117,6 +117,14 @@ class AppWriteProvider {
     }
   }
 
+  Future<List<Document>> getClinics() async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+    );
+    return result.documents;
+  }
+
   Future<models.User?> getUser() async {
     try {
       final user = await account!.get();
@@ -124,6 +132,24 @@ class AppWriteProvider {
     } catch (e) {
       return null;
     }
+  }
+
+  Future<Document> createPet(Map map) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.petsCollectionID,
+      documentId: ID.unique(),
+      data: map,
+    );
+  }
+
+  Future<List<Document>> getUserPets(String userId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.petsCollectionID,
+      queries: [Query.equal("userId", userId)],
+    );
+    return result.documents;
   }
 
   Future<dynamic> logout(String sessionId) async {
@@ -158,7 +184,7 @@ class AppWriteProvider {
     return result.documents.isNotEmpty ? result.documents.first : null;
   }
 
-  Future<models.File> uploadStaffImage(String imagePath) {
+  Future<models.File> uploadImage(String imagePath) {
     String fileName =
         "${DateTime.now().millisecondsSinceEpoch}.${imagePath.split('.').last}";
 
@@ -170,7 +196,7 @@ class AppWriteProvider {
     return response;
   }
 
-  Future<dynamic> deleteStaffImage(String fileId) async {
+  Future<dynamic> deleteImage(String fileId) async {
     await storage!.deleteFile(
       bucketId: AppwriteConstants.imageBucketID,
       fileId: fileId,
