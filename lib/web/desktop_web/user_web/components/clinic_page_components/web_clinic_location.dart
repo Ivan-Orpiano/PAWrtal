@@ -1,5 +1,6 @@
 import 'package:capstone_app/web/desktop_web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone_app/web/desktop_web/user_web/pages/web_clinic_page.dart';
 
 class WebClinicLocation extends StatefulWidget {
   const WebClinicLocation({super.key});
@@ -8,11 +9,26 @@ class WebClinicLocation extends StatefulWidget {
   State<WebClinicLocation> createState() => _WebClinicLocationState();
 }
 
+    double getResponsivePadding(double screenWidth) {
+    const double minScreen = 1100;
+    const double maxScreen = 1920;
+    const double minPadding = 16;
+    const double maxPadding = 380;
+
+    if (screenWidth <= minScreen) return minPadding;
+    if (screenWidth >= maxScreen) return maxPadding;
+
+    double t = (screenWidth - minScreen) / (maxScreen - minScreen);
+    return minPadding + t * (maxPadding - minPadding);
+  }
+
 class _WebClinicLocationState extends State<WebClinicLocation> {
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 380),
+      padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
       child: Column(
         children: [
           const Row(

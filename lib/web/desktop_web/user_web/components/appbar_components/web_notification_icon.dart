@@ -113,23 +113,6 @@ class _NotificationIconWebState extends State<WebNotificationIcon> {
       ),
     );
   }
-
-  // Widget _popupItem(String text) {
-  //   return InkWell(
-  //     onTap: () { 
-  //       _togglePopup(context);
-  //     },
-  //     child: Padding(
-  //       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
-  //       child: Text(
-  //         text, style: const TextStyle(
-  //           color: Colors.black87
-  //         )
-  //       ),
-  //     ),
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Padding(

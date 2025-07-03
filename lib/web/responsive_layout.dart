@@ -15,9 +15,10 @@ class ResponsiveLayout extends StatelessWidget {
       builder: (context, constraints) {
         if (constraints.maxWidth < mobileWidth) {
           return mobileBody;
-        } else if (constraints.maxWidth < tabletWidth){
+        } else if (constraints.maxWidth < tabletWidth) {
           return tabletBody;
-        } else {
+        }
+        else {
           return desktopBody;
         }
       },
