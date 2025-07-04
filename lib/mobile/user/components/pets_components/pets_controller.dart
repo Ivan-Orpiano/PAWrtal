@@ -25,7 +25,6 @@ class PetsController extends GetxController {
     try {
       final userId = session.userId;
       if (userId == null) {
-        // Show error or navigate to login
         CustomSnackBar.showErrorSnackBar(
           context: Get.overlayContext,
           title: "Error",
@@ -44,5 +43,9 @@ class PetsController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void fetchPets() {
+    fetchUserPets();
   }
 }

@@ -6,7 +6,7 @@ class Pet {
   late String breed;
   String? color;
   String? image;
-  String? notes;    
+  String? notes;
   double? weight;
   String? createdAt;
   String? documentId;
@@ -32,7 +32,7 @@ class Pet {
     type = map['type'] ?? '';
     breed = map['breed'] ?? '';
     color = map['color'] ?? '';
-    image = map['imageUrl'];
+    image = map['image'] ?? '';
     notes = map['notes'];
     weight = (map['weight'] as num?)?.toDouble() ?? 0.0;
     createdAt = map['\$createdAt'] ?? '';
@@ -51,5 +51,33 @@ class Pet {
       'notes': notes,
       'weight': weight,
     };
+  }
+
+  Pet copyWith({
+    String? petId,
+    String? userId,
+    String? name,
+    String? type,
+    String? breed,
+    String? color,
+    String? image,
+    String? notes,
+    double? weight,
+    String? createdAt,
+    String? documentId,
+  }) {
+    return Pet(
+      petId: petId ?? this.petId,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      breed: breed ?? this.breed,
+      color: color ?? this.color,
+      image: image ?? this.image,
+      notes: notes ?? this.notes,
+      weight: weight ?? this.weight,
+      createdAt: createdAt ?? this.createdAt,
+      documentId: documentId ?? this.documentId,
+    );
   }
 }

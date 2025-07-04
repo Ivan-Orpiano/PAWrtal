@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
 
@@ -40,4 +41,10 @@ class AuthRepository {
 
   Future<List<models.Document>> getUserPets(String userId) =>
       appWriteProvider.getUserPets(userId);
+
+  Future<models.Document> updatePet(Pet pet) =>
+      appWriteProvider.updatePet(pet.toMap(), pet.documentId!);
+
+  Future<void> deletePet(String documentId) =>
+      appWriteProvider.deletePet(documentId);
 }

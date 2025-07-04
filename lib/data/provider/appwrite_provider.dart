@@ -152,6 +152,23 @@ class AppWriteProvider {
     return result.documents;
   }
 
+  Future<Document> updatePet(Map map, String documentId) async {
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.petsCollectionID,
+      documentId: documentId,
+      data: map,
+    );
+  }
+
+  Future<void> deletePet(String documentId) async {
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.petsCollectionID,
+      documentId: documentId,
+    );
+  }
+
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;
