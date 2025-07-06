@@ -1,6 +1,7 @@
 import 'package:capstone_app/mobile/user/components/pets_components/floating_action_button.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_tile.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
+import 'package:capstone_app/mobile/user/pages/pets_next_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -135,9 +136,23 @@ class _PetsPageState extends State<PetsPage> {
                         child: Wrap(
                           spacing: 20,
                           runSpacing: 30,
-                          children: petsController.pets
-                              .map((pet) => MyPetTile(pet: pet))
-                              .toList(),
+                          children: petsController.pets.map((pet) {
+                            return GestureDetector(
+                              onTap: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PetsNextPage(pet: pet),
+                                  ),
+                                );
+
+                                if (result == true) {
+                                  Get.find<PetsController>().fetchPets();
+                                }
+                              },
+                              child: MyPetTile(pet: pet),
+                            );
+                          }).toList(),
                         ),
                       ),
                     );

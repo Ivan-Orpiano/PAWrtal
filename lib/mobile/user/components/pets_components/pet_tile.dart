@@ -1,6 +1,8 @@
+import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/mobile/user/pages/pets_next_page.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:get/get.dart';
 
 class MyPetTile extends StatelessWidget {
   final Pet pet;
@@ -9,13 +11,18 @@ class MyPetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => PetsNextPage(pet: pet),
           ),
         );
+
+        if (result == true) {
+          // Refresh the pet list after deletion or edit
+          Get.find<PetsController>().fetchPets();
+        }
       },
       child: SizedBox(
         height: 200,

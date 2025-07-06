@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
@@ -11,10 +12,11 @@ import 'package:uuid/uuid.dart';
 
 class PetCreationController extends GetxController {
   final AuthRepository authRepository;
-  PetCreationController(this.authRepository);
+  final Pet? existingPet;
+  PetCreationController(this.authRepository, {this.existingPet});
 
   final formKey = GlobalKey<FormState>();
-  final GetStorage _getStorage = GetStorage();
+  final _getStorage = GetStorage();
 
   final nameController = TextEditingController();
   final typeController = TextEditingController();
@@ -27,6 +29,20 @@ class PetCreationController extends GetxController {
   var imageUrl = ''.obs;
   var isLoading = false.obs;
 
+  @override
+  void onInit() {
+    super.onInit();
+    if (existingPet != null) {
+      nameController.text = existingPet!.name;
+      typeController.text = existingPet!.type;
+      breedController.text = existingPet!.breed;
+      colorController.text = existingPet!.color ?? '';
+      notesController.text = existingPet!.notes ?? '';
+      weightController.text = existingPet!.weight?.toString() ?? '';
+      imageUrl.value = existingPet!.image ?? '';
+    }
+  }
+
   void pickImage(File file) {
     imageFile.value = file;
   }
@@ -36,11 +52,9 @@ class PetCreationController extends GetxController {
 
     try {
       FullScreenDialogLoader.showDialog();
-
       String? imageId;
       String? finalImageUrl;
 
-      // Upload image if available
       if (imageFile.value != null) {
         final imageResponse = await authRepository.uploadImage(imageFile.value!.path);
         imageId = imageResponse.$id;
@@ -72,7 +86,9 @@ class PetCreationController extends GetxController {
         message: "Pet created successfully",
       );
 
-      Get.back(); // or refresh pet list
+      // Navigate to root and refresh pets list
+      Get.until((route) => route.isFirst);
+      Get.find<PetsController>().fetchPets();
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showErrorSnackBar(
@@ -81,6 +97,79 @@ class PetCreationController extends GetxController {
         message: "Failed to create pet: $e",
       );
     }
+  }
+
+  Future<void> updatePet() async {
+    if (!formKey.currentState!.validate() || existingPet == null) return;
+
+    try {
+      FullScreenDialogLoader.showDialog();
+
+      String? newImageId;
+      String? finalImageUrl = existingPet!.image;
+
+      // Upload new image if one was picked
+      if (imageFile.value != null) {
+        final imageResponse = await authRepository.uploadImage(imageFile.value!.path);
+        newImageId = imageResponse.$id;
+        finalImageUrl =
+            '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$newImageId/view?project=${AppwriteConstants.projectID}';
+
+        // Delete old image
+        if ((existingPet!.image ?? '').isNotEmpty) {
+          final oldFileId = _extractFileIdFromUrl(existingPet!.image!);
+          if (oldFileId != null) {
+            await authRepository.deleteImage(oldFileId);
+          }
+        }
+      }
+
+      final updatedPet = Pet(
+        petId: existingPet!.petId,
+        userId: existingPet!.userId,
+        name: nameController.text.trim(),
+        type: typeController.text.trim(),
+        breed: breedController.text.trim(),
+        color: colorController.text.trim(),
+        notes: notesController.text.trim(),
+        weight: double.tryParse(weightController.text.trim()),
+        image: finalImageUrl,
+        createdAt: existingPet!.createdAt,
+        documentId: existingPet!.documentId,
+      );
+
+      await authRepository.updatePet(updatedPet);
+
+      FullScreenDialogLoader.cancelDialog();
+      CustomSnackBar.showSuccessSnackBar(
+        context: Get.overlayContext,
+        title: "Success",
+        message: "Pet updated successfully",
+      );
+
+      // Navigate to root and refresh pets list
+      Get.until((route) => route.isFirst);
+      Get.find<PetsController>().fetchPets();
+    } catch (e) {
+      FullScreenDialogLoader.cancelDialog();
+      CustomSnackBar.showErrorSnackBar(
+        context: Get.overlayContext,
+        title: "Error",
+        message: "Failed to update pet: $e",
+      );
+    }
+  }
+
+  String? _extractFileIdFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final segments = uri.pathSegments;
+      final index = segments.indexOf('files');
+      if (index != -1 && index + 1 < segments.length) {
+        return segments[index + 1];
+      }
+    } catch (_) {}
+    return null;
   }
 
   @override
