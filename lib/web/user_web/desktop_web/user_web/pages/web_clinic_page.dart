@@ -1,17 +1,17 @@
-import 'package:capstone_app/web/desktop_web/user_web/components/appbar_components/web_notification_icon.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/appbar_components/web_profile_icon.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_appointment_panel.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_clinic_description.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_clinic_location.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_clinic_services.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_like.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_picture_gallery.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_services.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_share_button.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_hover_underline_text.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/clinic_page_components/web_ratings_and_reviews.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_search_bar.dart';
-import 'package:capstone_app/web/desktop_web/user_web/pages/web_user_home_page.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/appbar_components/web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_appointment_panel.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_clinic_description.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_clinic_location.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_clinic_services.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_like.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_picture_gallery.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_services.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_share_button.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_hover_underline_text.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/clinic_page_components/web_ratings_and_reviews.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/dashboard_components/web_search_bar.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/pages/web_user_home_page.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 
@@ -92,9 +92,37 @@ void initState() {
     return minPadding + t * (maxPadding - minPadding);
   }
 
+  double responsiveRight({
+    required double screenWidth,
+    required double desiredMaxRight,
+    required double desiredMinRight
+  }) {
+    const double minScreen = 1100;
+    const double maxScreen = 1920;
+
+    if (screenWidth <= minScreen) return desiredMinRight;
+    if (screenWidth >= maxScreen) return desiredMaxRight;
+
+    double t = (screenWidth - minScreen) / (maxScreen - minScreen);
+    return desiredMinRight + t * (desiredMaxRight - desiredMinRight);
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    double iconRight = responsiveRight(
+      screenWidth: screenWidth,
+      desiredMaxRight: 395,
+      desiredMinRight: 30
+  );
+
+      double notifRight = responsiveRight(
+      screenWidth: screenWidth,
+      desiredMaxRight: 445,
+      desiredMinRight: 80
+  );
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -122,12 +150,7 @@ void initState() {
                           children: [
                             InkWell(
                               onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const WebUserHomePage(),
-                                  )
-                                );
+                                Navigator.pop(context);
                               },
                               child: Image.asset(
                                 'lib/images/PAWrtal_logo.png',
@@ -149,13 +172,13 @@ void initState() {
                               flex: 1,
                             ),
               
-                            const WebNotificationIcon(
-                              right: 445,
+                            WebNotificationIcon(
+                              right: notifRight,
                               top: 70,
                               width: 500,
                             ),
-                            const WebProfileIcon(
-                              right: 395,
+                            WebProfileIcon(
+                              right: iconRight,
                               top: 70,
                               width: 250,
                             )

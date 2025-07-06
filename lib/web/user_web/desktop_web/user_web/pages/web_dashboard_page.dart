@@ -1,9 +1,9 @@
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_dashboard_tile.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_filter.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_search_bar.dart';
-import 'package:capstone_app/web/desktop_web/user_web/components/dashboard_components/web_tags.dart';
-import 'package:capstone_app/web/desktop_web/user_web/pages/web_maps.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/dashboard_components/web_dashboard_tile.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/dashboard_components/web_filter.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/dashboard_components/web_search_bar.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/components/dashboard_components/web_tags.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -47,7 +47,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
               builder: (context, constraints) {
               double screenWidth = constraints.maxWidth;
               const double spacing = 25;
-              const double minTileWidth = 180;
+              const double minTileWidth = 200;
               int tilesPerRow = (screenWidth / (minTileWidth + spacing)).floor();
               tilesPerRow = tilesPerRow.clamp(1, 7); 
               double tileWidth = (screenWidth - (spacing * (tilesPerRow - 1))) / tilesPerRow;

@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/desktop_web/user_web/pages/web_clinic_page.dart';
+import 'package:capstone_app/web/user_web/desktop_web/user_web/pages/web_clinic_page.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 
