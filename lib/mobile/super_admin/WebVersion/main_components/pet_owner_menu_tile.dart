@@ -1,4 +1,4 @@
-import 'package:capstone_app/mobile/super_admin/WebVersion/pet_owners_pages/verification_owner.dart';
+import 'package:capstone_app/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:flutter/material.dart';
 
 class PetOwnerTile extends StatelessWidget {
@@ -15,7 +15,7 @@ class PetOwnerTile extends StatelessWidget {
         onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const VerificationOwner(),
+                builder: (context) => const UserManagementScreen(),
               ),
             ),
         child: Padding(
