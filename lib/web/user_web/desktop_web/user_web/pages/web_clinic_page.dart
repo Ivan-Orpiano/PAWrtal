@@ -123,6 +123,18 @@ void initState() {
       desiredMinRight: 80
   );
 
+double getLeftSideWidth(double screenWidth) {
+  if (screenWidth >= 1550) {
+    return 700;
+  } else if (screenWidth >= 1100) {
+    // Gradually reduce from 700 to 600 as screen width goes from 1300 -> 1100
+    double factor = (screenWidth - 1100) / (1550 - 1100); // 0 to 1
+    return 600 + (100 * factor); // 600 to 700
+  } else {
+    return 600;
+  }
+}
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -225,8 +237,8 @@ void initState() {
                   children: [
                     //left side
                     ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: 700,
+                      constraints: BoxConstraints(
+                        maxWidth: getLeftSideWidth(screenWidth)
                       ),
                       child: Column(
                         children: [
@@ -309,12 +321,10 @@ void initState() {
                     ),
                     //box that seperates left and right
                     const Flexible(
-                      flex: 1,
-                      child: SizedBox(
-                        width: 125
-                        ),
+                      flex: 2,
+                      child: SizedBox(width: 125),
                     ),
-
+              
                     //right side
                     Stack(
                       children: [

@@ -1,4 +1,5 @@
 import 'package:capstone_app/web/user_web/desktop_web/user_web/pages/web_clinic_page.dart';
+import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 
@@ -24,7 +25,7 @@ class _DashboardTileWebState extends State<WebDashboardTile> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const WebClinicPage(),
+              builder: (context) => const WebClinicPageHandler(),
             )
           );
         },

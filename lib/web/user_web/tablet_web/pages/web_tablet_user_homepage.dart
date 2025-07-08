@@ -61,7 +61,7 @@ class _WebTabletUserHomepageState extends State<WebTabletUserHomepage> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _navButton("Home", 0),
+            _navButton("Tablet", 0),
             _navButton("Appointments", 1),
             _navButton("Messages", 2),
             _navButton("Pets", 3),
