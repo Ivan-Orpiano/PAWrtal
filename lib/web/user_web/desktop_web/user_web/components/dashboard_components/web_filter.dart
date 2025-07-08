@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
 
 class WebFilter extends StatefulWidget {
@@ -21,37 +22,45 @@ class _WebFilterState extends State<WebFilter> {
             context: context,
             barrierDismissible: true,
             builder: (BuildContext context) {
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                insetPadding: const EdgeInsets.symmetric(horizontal: 100, vertical: 60),
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.3,
-                  height: 1000,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: const SingleChildScrollView(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          SizedBox(height: 16),
-                          Text(
-                            'Filters',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold
-                            ),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < mobileWidth) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
+                    });
+                  }
+                  return Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Container(
+                      width: 550,
+                      height: 1000,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      clipBehavior: Clip.hardEdge,
+                      child: const SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              SizedBox(height: 16),
+                              Text(
+                                'Filters',
+                                style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           );

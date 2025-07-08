@@ -3,23 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 class ResponsiveLayout extends StatelessWidget {
-  final Widget mobileBody;
-  final Widget desktopBody;
-  final Widget tabletBody;
+  final Widget Function() desktopBody;
+  final Widget Function() tabletBody;
+  final Widget Function() mobileBody;
 
-  const ResponsiveLayout({required this. mobileBody, required this.desktopBody, required this.tabletBody, super.key});
+  const ResponsiveLayout({required this. desktopBody, required this.tabletBody, required this.mobileBody, super.key});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < mobileWidth) {
-          return mobileBody;
+          return mobileBody();
         } else if (constraints.maxWidth < tabletWidth) {
-          return tabletBody;
+          return tabletBody();
         }
         else {
-          return desktopBody;
+          return desktopBody();
         }
       },
     );

@@ -1,7 +1,6 @@
-import 'package:capstone_app/super_admin/WebVersion/components/vet_clinic_menu_tile.dart';
-import 'package:capstone_app/super_admin/WebVersion/components/pet_owner_menu_tile.dart';
-import 'package:capstone_app/super_admin/WebVersion/components/view_report_menu_tile.dart';
-import 'package:capstone_app/super_admin/WebVersion/view_report/super_admin_feedback_manager.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdMainPage extends StatefulWidget {

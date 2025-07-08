@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/desktop_web/login_web/web_login_page.dart';
+import 'package:capstone_app/web/user_web/desktop_web/login_web/web_login_page.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
