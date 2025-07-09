@@ -30,7 +30,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: ListView(
-      padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
+        padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
         children:  [
         const Row(
           children: [
