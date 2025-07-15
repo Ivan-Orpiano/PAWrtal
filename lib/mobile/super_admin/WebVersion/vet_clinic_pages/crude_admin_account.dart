@@ -217,6 +217,7 @@ class _CrudeAdminAccountState extends State<CrudeAdminAccount> {
             child: Image.asset(
               "lib/images/PAWrtal_logo.png",
               height: double.infinity,
+              width: double.infinity,
               fit: BoxFit.contain,
             ),
           ),

@@ -49,38 +49,6 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
     );
   }
 
-  void _deleteStaff(int index) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Confirm Delete",
-              style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
-          backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-          content: const Text(
-              "Are you sure you want to delete this staff account?",
-              style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel",
-                  style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  staffAccount.removeAt(index);
-                });
-                Navigator.pop(context);
-              },
-              child: const Text("Delete",
-                  style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +65,8 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
           child: Center(
             child: Image.asset(
               "lib/images/PAWrtal_logo.png",
-              height: screenHeight * 0.08,
+              height: double.infinity,
+              width: double.infinity,
               fit: BoxFit.contain,
             ),
           ),
@@ -116,16 +85,6 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                 subtitle: Text(staffAccount[index]['email']!,
                     style: const TextStyle(color: Colors.white)),
                 onTap: () => _viewStaff(index),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.delete,
-                          color: Color.fromARGB(255, 248, 253, 255)),
-                      onPressed: () => _deleteStaff(index),
-                    ),
-                  ],
-                ),
               ),
             );
           },
