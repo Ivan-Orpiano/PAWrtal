@@ -1,8 +1,13 @@
-import 'package:flutter/material.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_album.dart';
+
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_description.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_location.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_services_manager.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_hover_underline_text.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_rating_reviews.dart';
 import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/crude_admin_account.dart';
 import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/crude_staff_account.dart';
-
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:flutter/material.dart';
 
 class SuperAdminVetClinicPage extends StatefulWidget {
   const SuperAdminVetClinicPage({super.key});
@@ -12,137 +17,384 @@ class SuperAdminVetClinicPage extends StatefulWidget {
       _SuperAdminVetClinicPageState();
 }
 
-class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
-  // int _selectedIndex = 0;
+enum PanelState { scrollable, positioned, static }
 
-  // void _onItemTapped(int index) {
-  //   setState(() {
-  //     _selectedIndex = index;
-  //   });
-  // }
+PanelState _panelState = PanelState.scrollable;
+
+bool isEditing = false;
+
+class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showWidget = false;
+  final galleryKeySA = GlobalKey();
+  final servicesKeySA = GlobalKey();
+  final locationKeySA = GlobalKey();
+  final reviewsKeySA = GlobalKey();
+
+  void _scrollToSection(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.6,
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _scrollController.addListener(() {
+      final offset = _scrollController.offset;
+
+      if (offset > 500 && !_showWidget) {
+        setState(() {
+          _showWidget = true;
+        });
+      } else if (offset <= 500 && _showWidget) {
+        setState(() {
+          _showWidget = false;
+        });
+      }
+
+      if (offset <= 550 && _panelState != PanelState.scrollable) {
+        setState(() => _panelState = PanelState.scrollable);
+      } else if (offset > 550 &&
+          offset <= 1550 &&
+          _panelState != PanelState.positioned) {
+        setState(() => _panelState = PanelState.positioned);
+      } else if (offset > 1550 && _panelState != PanelState.static) {
+        setState(() => _panelState = PanelState.static);
+      }
+    });
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  double getResponsivePadding(double screenWidth) {
+    const double minScreen = 1100;
+    const double maxScreen = 1920;
+    const double minPadding = 16;
+    const double maxPadding = 380;
+
+    if (screenWidth <= minScreen) return minPadding;
+    if (screenWidth >= maxScreen) return maxPadding;
+
+    double t = (screenWidth - minScreen) / (maxScreen - minScreen);
+    return minPadding + t * (maxPadding - minPadding);
+  }
+
+  double responsiveRight(
+      {required double screenWidth,
+      required double desiredMaxRight,
+      required double desiredMinRight}) {
+    const double minScreen = 1100;
+    const double maxScreen = 1920;
+
+    if (screenWidth <= minScreen) return desiredMinRight;
+    if (screenWidth >= maxScreen) return desiredMaxRight;
+
+    double t = (screenWidth - minScreen) / (maxScreen - minScreen);
+    return desiredMinRight + t * (desiredMaxRight - desiredMinRight);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    //final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // double iconRight = responsiveRight(
+    //     screenWidth: screenWidth, desiredMaxRight: 395, desiredMinRight: 30);
+
+    // double notifRight = responsiveRight(
+    //     screenWidth: screenWidth, desiredMaxRight: 445, desiredMinRight: 80);
+
+    double getLeftSideWidth(double screenWidth) {
+      if (screenWidth >= 1550) {
+        return 700;
+      } else if (screenWidth >= 1100) {
+        double factor = (screenWidth - 1100) / (1550 - 1100); // 0 to 1
+        return 600 + (100 * factor); // 600 to 700
+      } else {
+        return 600;
+      }
+    }
+
+    bool isEditing = false;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-      appBar: AppBar(
-        surfaceTintColor: Colors.transparent,
-        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        centerTitle: true,
-        toolbarHeight: screenHeight * 0.1,
-        flexibleSpace: Container(
-          margin: const EdgeInsets.only(top: 15.0),
-          child: Center(
-            child: Image.asset(
-              "lib/images/PAWrtal_logo.png",
-              height: screenHeight * 0.08,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: constraints.maxWidth > 600 ? 300 : 200,
-                    child: Image.asset(
-                      'lib/images/sample_vet.png',
-                      width: double.infinity,
-                      height: constraints.maxWidth > 600 ? 300 : 200,
-                      fit: BoxFit.cover,
+      // appBar: AppBar(
+      //   actions: [
+      //     IconButton(
+      //       icon: Icon(isEditing ? Icons.check : Icons.edit),
+      //       onPressed: () {
+      //         setState(() {
+      //           if (isEditing) {
+      //             //BACKEND     //palitan lahat ng Text() widgets for future purposes
+      //           } else {
+      //             isEditing = !isEditing;
+      //           }
+      //         });
+      //       },
+      //     ),
+      //   ],
+      // ),
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          ListView(
+            controller: _scrollController,
+            children: [
+              Container(
+                height: 81,
+                decoration: const BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: Colors.black26, width: 1))),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: getResponsivePadding(screenWidth)),
+                      child: SizedBox(
+                        height: 80,
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                Navigator.pop(context);
+                              },
+                              child: Image.asset(
+                                'lib/images/PAWrtal_logo.png',
+                                width: 150,
+                                height: 100,
+                              ),
+                            ),
+                            const Spacer(
+                              flex: 1,
+                            ),
+                            const Spacer(
+                              flex: 1,
+                            )
+                          ],
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: getResponsivePadding(screenWidth)),
+                  child: Column(
+                    children: [
+                      const Row(
+                        children: [
+                          Text(
+                            "Qualipaws Animal Health Clinic",
+                            style: TextStyle(
+                                fontSize: 24, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      VetProfileAlbum(
+                        key: galleryKeySA,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Vet Clinic ni Kap Kalbs',
-                      style:
-                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Providing the best care for your pets with top-notch facilities and experienced veterinarians.',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  RatingBarIndicator(
-                    rating: 4.5,
-                    itemBuilder: (context, index) =>
-                        const Icon(Icons.star, color: Colors.amber),
-                    itemCount: 5,
-                    itemSize: 24.0,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: constraints.maxWidth > 600 ? 300 : 200,
-                    child: Stack(
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: getResponsivePadding(screenWidth)),
+                child: Row(
+                  children: [
+                    //left side
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                          maxWidth: getLeftSideWidth(screenWidth)),
+                      child: Column(children: [
+                        Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                'lib/images/pfp.jpg',
+                                height: 40,
+                                width: 40,
+                              ),
+                            ),
+                            const SizedBox(width: 18),
+                            const Text(
+                              "Qualipaws Veterinary Clinic",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 16),
+                            )
+                          ],
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Divider(
+                              height: 1,
+                              thickness: 0.5,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        const VetProfileDescription(),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Divider(
+                              height: 1,
+                              thickness: 0.5,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Text(
+                                'Services offered',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 22),
+                              )
+                            ],
+                          ),
+                        ),
+                        VetProfileServices(key: servicesKeySA),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Divider(
+                              height: 1,
+                              thickness: 0.5,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        VetProfileRatingReview(key: reviewsKeySA),
+                      ]),
+                    ),
+                    //box that seperates left and right
+                    const Flexible(
+                      flex: 2,
+                      child: SizedBox(width: 125),
+                    ),
+                    Stack(
                       children: [
-                        Image.asset(
-                          'lib/images/sample_location.png',
-                          width: double.infinity,
-                          height: constraints.maxWidth > 600 ? 300 : 200,
-                          fit: BoxFit.cover,
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 1100),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  const CrudeAdminAccount();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(220, 50),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.zero,
+                                  ),
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                                child: const Text(
+                                  "Manage Admin Accounts",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  const CrudeStaffAccount();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(220, 50),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.zero,
+                                  ),
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                                child: const Text(
+                                  "Manage Staff Accounts",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
+                    //right side
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: getResponsivePadding(screenWidth)),
+                child: const Padding(
+                  padding: EdgeInsets.only(top: 64, bottom: 64),
+                  child: Divider(
+                    height: 1,
+                    thickness: 0.5,
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(top: 50),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildAccountButton(
-                            context,
-                            'Admin Account',
-                            Icons.admin_panel_settings,
-                            const CrudeAdminAccount()),
-                        _buildAccountButton(context, 'Staff Account',
-                            Icons.people, const CrudeStaffAccount()),
-                      ],
-                    ),
+                ),
+              ),
+              VetProfileLocation(
+                key: locationKeySA,
+              ),
+              const SizedBox(height: 64)
+            ],
+          ),
+          if (_showWidget)
+            Positioned(
+                child: Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: getResponsivePadding(screenWidth)),
+              height: 80,
+              decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                      bottom: BorderSide(color: Colors.black26, width: 1))),
+              child: Row(
+                spacing: 18,
+                children: [
+                  VetHoverUnderlineText(
+                    text: "Gallery",
+                    onTap: () => _scrollToSection(galleryKeySA),
                   ),
+                  VetHoverUnderlineText(
+                    text: "Services",
+                    onTap: () => _scrollToSection(servicesKeySA),
+                  ),
+                  VetHoverUnderlineText(
+                    text: "Reviews & Ratings",
+                    onTap: () => _scrollToSection(reviewsKeySA),
+                  ),
+                  VetHoverUnderlineText(
+                    text: "Location",
+                    onTap: () => _scrollToSection(locationKeySA),
+                  )
                 ],
               ),
-            );
-          },
-        ),
-      ),
-      floatingActionButton: Align(
-        alignment: Alignment.centerRight,
-        child: FloatingActionButton(
-          onPressed: () {},
-          backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-          child: const Icon(
-            Icons.edit,
-            color: Color.fromARGB(255, 248, 253, 255),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccountButton(
-      BuildContext context, String title, IconData icon, Widget screen) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => screen),
-        );
-      },
-      child: Column(
-        children: [
-          Icon(icon, size: 40, color: const Color.fromARGB(255, 81, 115, 153)),
-          const SizedBox(height: 4),
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            )),
         ],
       ),
     );
