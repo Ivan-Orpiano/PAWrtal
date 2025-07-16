@@ -1,5 +1,5 @@
-import 'package:capstone_app/web/user_web/desktop_web/user_web/components/appbar_components/web_notification_icon.dart';
-import 'package:capstone_app/web/user_web/desktop_web/user_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_profile_icon.dart';
 import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_appointments_page.dart';
 import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_dashboard_page.dart';
 import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_messages_page.dart';
