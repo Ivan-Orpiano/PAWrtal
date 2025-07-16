@@ -1,4 +1,4 @@
-import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_maps/vet_map.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 // import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 
