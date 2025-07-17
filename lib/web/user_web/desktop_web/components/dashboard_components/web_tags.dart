@@ -171,6 +171,8 @@ class _WebTagsState extends State<WebTags> {
                     }
                   },
                   child: AnimatedContainer(
+                    height: 35,
+                    width: 35,
                     duration: const Duration(milliseconds: 0),
                     decoration: BoxDecoration(
                         color: Colors.white,
@@ -192,7 +194,7 @@ class _WebTagsState extends State<WebTags> {
                       onPressed: _scrollLeft,
                       icon: const Icon(
                         Icons.arrow_back_ios_rounded,
-                        size: 16,
+                        size: 14,
                       ),
                     ),
                   ),
@@ -234,6 +236,8 @@ class _WebTagsState extends State<WebTags> {
                     }
                   },
                   child: AnimatedContainer(
+                    height: 35,
+                    width: 35,
                     duration: const  Duration(microseconds: 0),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -255,7 +259,7 @@ class _WebTagsState extends State<WebTags> {
                       onPressed: _scrollRight,
                       icon: const Icon(
                         Icons.arrow_forward_ios_rounded,
-                        size: 16,
+                        size: 14,
                       ),
                     ),
                   ),

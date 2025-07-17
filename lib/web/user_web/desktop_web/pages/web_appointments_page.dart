@@ -10,9 +10,10 @@ class WebAppointmentsPage extends StatefulWidget {
 class _AppointmentsWebPageState extends State<WebAppointmentsPage> {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        "Appointments"
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: ListView(
+        padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
       ),
     );
   }

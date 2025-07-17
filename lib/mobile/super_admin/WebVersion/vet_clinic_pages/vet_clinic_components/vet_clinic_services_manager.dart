@@ -1,4 +1,4 @@
-import 'package:capstone_app/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_services.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_services.dart';
 import 'package:flutter/material.dart';
 
 class VetProfileServices extends StatefulWidget {

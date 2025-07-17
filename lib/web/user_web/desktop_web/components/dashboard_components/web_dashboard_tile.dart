@@ -1,11 +1,17 @@
-import 'package:capstone_app/web/user_web/desktop_web/user_web/pages/web_clinic_page.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_clinic_page.dart';
 import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 
 class WebDashboardTile extends StatefulWidget {
-  final double tileWidth ;
-  const WebDashboardTile({super.key, required this.tileWidth});
+  final double tileWidth;
+  final double tileHeight;
+
+  const WebDashboardTile({
+    super.key, 
+    required this.tileWidth, 
+    double ? tileHeight,
+    }) : tileHeight = tileHeight ?? tileWidth * 1.4;
 
   @override
   State<WebDashboardTile> createState() => _DashboardTileWebState();
@@ -20,6 +26,7 @@ class _DashboardTileWebState extends State<WebDashboardTile> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 30),
       child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         hoverColor: const Color((0x00000000)),
         onTap: () {
           Navigator.push(
@@ -31,7 +38,7 @@ class _DashboardTileWebState extends State<WebDashboardTile> {
         },
         child: SizedBox(
           width: widget.tileWidth,
-          height: widget.tileWidth * 1.4,
+          height: widget.tileHeight,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [

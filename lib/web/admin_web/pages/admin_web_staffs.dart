@@ -1,6 +1,7 @@
 import 'package:capstone_app/web/admin_web/components/staffs/new_staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/staff_tile.dart';
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 
 class AdminWebStaffs extends StatefulWidget {
   const AdminWebStaffs({super.key});
@@ -13,7 +14,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs> {
   final TextEditingController _searchController = TextEditingController();
   String? selectedTag;
 
-  final List<String> tags = ['Clinic', 'Appointments', 'Staffs'];
+  final List<String> tags = ['Clinic', 'Appointments', 'Staffs', 'Messages'];
 
   final List<String> allStaffs = [
     'Staff 1',
@@ -44,6 +45,23 @@ class _AdminWebStaffsState extends State<AdminWebStaffs> {
     'Staff 6': 'lib/images/user_profile.png',
     'Staff 7': 'lib/images/user_profile.png',
   };
+
+  void _addNewStaff(String name, String role, Uint8List? imageBytes) {
+    setState(() {
+      allStaffs.add(name);
+      authorityMap[name] = _parseAuthorities(role);
+      staffImages[name] =
+          imageBytes != null ? 'memory' : 'lib/images/user_profile.png';
+    });
+  }
+
+  List<String> _parseAuthorities(String roleText) {
+    final lines = roleText.split('\n');
+    return lines
+        .where((line) => line.startsWith('-'))
+        .map((line) => line.replaceFirst('- ', '').trim())
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +106,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search Staff',
-                      hintStyle: TextStyle(
+                      hintStyle: const TextStyle(
                         fontSize: 14,
                         color: Colors.grey,
                       ),
@@ -110,26 +128,42 @@ class _AdminWebStaffsState extends State<AdminWebStaffs> {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 200,
                   mainAxisSpacing: 6,
                   crossAxisSpacing: 6,
-                  childAspectRatio: 3 / 4.4,
+                  childAspectRatio: 3 / 4.5,
                 ),
                 itemCount: filteredStaffs.length + 1,
                 itemBuilder: (context, index) {
                   if (index == filteredStaffs.length) {
-                    return const NewStaffTile();
+                    return NewStaffTile(onStaffCreated: _addNewStaff);
                   }
                   final staffName = filteredStaffs[index];
                   final imagePath =
-                      staffImages[staffName] ?? 'lib/images/kapitankalbo.png';
+                      staffImages[staffName] ?? 'lib/images/kapitankalbo1.png';
+                  final authorities = authorityMap[staffName] ?? [];
+
                   return StaffTile(
-                    name: staffName,
-                    imagePath: imagePath,
-                    authorities: authorityMap[staffName] ?? [],
+                    staff: Staff(
+                      name: staffName,
+                      authorities: authorities,
+                      imagePath: imagePath,
+                    ),
+                    onUpdate: (updatedAuthorities) {
+                      setState(() {
+                        authorityMap[staffName] = updatedAuthorities;
+                      });
+                    },
+                    onRemove: () {
+                      setState(() {
+                        allStaffs.remove(staffName);
+                        authorityMap.remove(staffName);
+                        staffImages.remove(staffName);
+                      });
+                    },
                   );
                 },
               ),

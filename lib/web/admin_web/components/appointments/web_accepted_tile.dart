@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'web_appointment_details.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
 
 class WebAcceptedTile extends StatefulWidget {
-  const WebAcceptedTile({super.key});
+  final Appointment appointment;
+  final bool showDate;
+  final VoidCallback onComplete;
+
+  const WebAcceptedTile({
+    super.key,
+    required this.appointment,
+    required this.showDate,
+    required this.onComplete,
+  });
 
   @override
   State<WebAcceptedTile> createState() => _WebAcceptedTileState();
@@ -10,6 +21,7 @@ class WebAcceptedTile extends StatefulWidget {
 
 class _WebAcceptedTileState extends State<WebAcceptedTile> {
   void _showPopup(BuildContext context) {
+    final a = widget.appointment;
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -19,7 +31,19 @@ class _WebAcceptedTileState extends State<WebAcceptedTile> {
         child: SizedBox(
           height: 800,
           width: 800,
-          child: const WebAppointmentDetails(),
+          child: WebAppointmentDetails(
+            appointmentData: {
+              'owner': a.owner,
+              'petName': a.petName,
+              'breed': a.breed,
+              'service': a.service,
+              'time': a.time,
+              'date': a.date.toIso8601String(),
+              'status': 'accepted',
+              'imageUrl': a.imageUrl,
+            },
+            onComplete: widget.onComplete,
+          ),
         ),
       ),
     );
@@ -27,6 +51,8 @@ class _WebAcceptedTileState extends State<WebAcceptedTile> {
 
   @override
   Widget build(BuildContext context) {
+    final a = widget.appointment;
+
     return Padding(
       padding: const EdgeInsets.all(10),
       child: InkWell(
@@ -46,7 +72,7 @@ class _WebAcceptedTileState extends State<WebAcceptedTile> {
                   padding: const EdgeInsets.only(right: 10),
                   child: CircleAvatar(
                     radius: 30.0,
-                    backgroundImage: AssetImage("lib/images/pfp.jpg"),
+                    backgroundImage: AssetImage(a.imageUrl),
                   ),
                 ),
                 Expanded(
@@ -55,13 +81,15 @@ class _WebAcceptedTileState extends State<WebAcceptedTile> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "Pet Owner",
+                        a.owner,
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      Text("Pet Name: Cerberus"),
-                      Text("Breed: Chihuahua"),
-                      Text("Service: Grooming"),
-                      Text("Time: 10:00 AM - 10:30 AM"),
+                      Text("Pet Name: ${a.petName}"),
+                      Text("Breed: ${a.breed}"),
+                      Text("Service: ${a.service}"),
+                      Text("Time: ${a.time}"),
+                      if (widget.showDate)
+                        Text("Date: ${DateFormat('MMMM d, y').format(a.date)}"),
                     ],
                   ),
                 ),
