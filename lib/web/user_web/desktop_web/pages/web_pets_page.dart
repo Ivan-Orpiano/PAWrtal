@@ -5,6 +5,10 @@ import 'package:multi_split_view/multi_split_view.dart';
 
 final ValueNotifier<Widget?> rightPanelContent = ValueNotifier(null);
 
+  final List<Pet> pets = [
+    Pet(name: "Cat", type: "Dog")
+  ];
+
 class WebPetsPage extends StatefulWidget {
   const WebPetsPage({super.key});
 
@@ -51,8 +55,6 @@ class LeftSidePanel extends StatefulWidget {
 }
 
 class _LeftSidePanelState extends State<LeftSidePanel> {
-
-  final List<Pet> pets = [];
   
   @override
   Widget build(BuildContext context) {
@@ -86,8 +88,8 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
             Flexible(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 12,
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 16,
                   mainAxisSpacing: 12,
                   childAspectRatio: 0.8, 
                 ),
@@ -124,28 +126,14 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
                       onTap: () {
                         rightPanelContent.value = Text(pets[index].name);
                       },
-                      child: Container(
+                      child: //LeftSideTile()
+                      Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.indigo),
                         ),
-                        child: Column(
-                          children: [
-                            Center(
-                              child: Text(
-                                pets[index].name,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            Center(
-                              child: Text(
-                                pets[index].type,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: LeftSideTile()
                       ),
                     );
                   }
@@ -180,6 +168,94 @@ class _RightSidePanelState extends State<RightSidePanel> {
         builder: (context, value, child){ 
           return value ?? const SizedBox.shrink();
         },
+      ),
+    );
+  }
+}
+
+class LeftSideTile extends StatefulWidget {
+  const LeftSideTile({super.key});
+
+  @override
+  State<LeftSideTile> createState() => _LeftSideTileState();
+}
+
+class _LeftSideTileState extends State<LeftSideTile> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.indigo),
+      ),
+      child: Flexible(
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Flexible(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16, left: 16, bottom: 16, right: 5),
+                    child: Container(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 16, right: 16, left: 5),
+                    child: Container(
+                      color: Colors.grey,
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 16, bottom: 4),
+                              child: Text(
+                                "Name",
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Text(
+                                pets[0].name,
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 16,
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                "Pet Type"
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Text(
+                                pets[0].type
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Flexible(
+              flex: 2,
+              child: Container(
+                color: Colors.grey,
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
