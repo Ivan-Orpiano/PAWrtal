@@ -1,5 +1,4 @@
 import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_album.dart';
-
 import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_description.dart';
 import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_location.dart';
 import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_services_manager.dart';
@@ -196,12 +195,20 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                       horizontal: getResponsivePadding(screenWidth)),
                   child: Column(
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Text(
+                          const Text(
                             "Qualipaws Animal Health Clinic",
                             style: TextStyle(
                                 fontSize: 24, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            //edit icon
+                            icon: const Icon(Icons.edit),
+                            onPressed: () {
+                              // backend 'to sa edit
+                            },
                           ),
                         ],
                       ),
@@ -360,7 +367,35 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
               VetProfileLocation(
                 key: locationKeySA,
               ),
-              const SizedBox(height: 64)
+              const SizedBox(height: 40),
+              // delete admin button
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: getResponsivePadding(screenWidth),
+                  vertical: 24,
+                ),
+                child: Align(
+                  alignment: Alignment.center,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(180, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete),
+                    label: const Text(
+                      "Delete Admin",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      //backend delete
+                    },
+                  ),
+                ),
+              ),
             ],
           ),
           if (_showWidget)
