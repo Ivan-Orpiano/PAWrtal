@@ -169,6 +169,15 @@ class AppWriteProvider {
     );
   }
 
+  Future<void> createAppointment(Map<String, dynamic> data) async {
+    await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.appointmentCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;

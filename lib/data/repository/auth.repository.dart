@@ -2,6 +2,8 @@ import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
 
+import '../models/appointment_model.dart';
+
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
   AuthRepository(this.appWriteProvider);
@@ -47,4 +49,8 @@ class AuthRepository {
 
   Future<void> deletePet(String documentId) =>
       appWriteProvider.deletePet(documentId);
+
+  Future<void> createAppointment(Appointment appointment) {
+    return appWriteProvider.createAppointment(appointment.toMap());
+  }
 }
