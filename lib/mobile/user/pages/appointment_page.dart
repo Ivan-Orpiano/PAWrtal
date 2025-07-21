@@ -1,8 +1,12 @@
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_1st_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_2nd_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_3rd_tab.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; 
+import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppointmentPage extends StatefulWidget {
   const AppointmentPage({super.key});
@@ -11,14 +15,25 @@ class AppointmentPage extends StatefulWidget {
   State<AppointmentPage> createState() => _AppointmentPageState();
 }
 
-class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProviderStateMixin {
-
+class _AppointmentPageState extends State<AppointmentPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(length: 3, vsync: this);
+
+    if (!Get.isRegistered<AppointmentController>()) {
+      Get.put(AppointmentController(
+        authRepository: Get.find<AuthRepository>(),
+        session: Get.find<UserSessionService>(),
+      ));
+    } else {
+      Get.find<AppointmentController>()
+          .fetchAppointments();
+    }
   }
 
   @override
@@ -39,9 +54,7 @@ class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProv
               child: Text(
                 "Appointments",
                 style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20
-                ),
+                    fontWeight: FontWeight.bold, fontSize: 20),
               ),
             ),
           ),
@@ -50,18 +63,19 @@ class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProv
               width: double.maxFinite,
               height: double.maxFinite,
               decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 230, 230, 230),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20))
-              ),
+                  color: Color.fromARGB(255, 230, 230, 230),
+                  borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20))),
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    margin: const EdgeInsets.only(top:20, left: 10, right: 10),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(top: 20, left: 10, right: 10),
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(20)
-                    ),
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(20)),
                     child: TabBar(
                       controller: _tabController,
                       dividerColor: Colors.transparent,
@@ -84,9 +98,7 @@ class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProv
                                   Icons.pending_rounded,
                                 ),
                               ),
-                              Text(
-                                "Pending"
-                              )
+                              Text("Pending")
                             ],
                           ),
                         ),
@@ -100,9 +112,7 @@ class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProv
                                   Icons.check_rounded,
                                 ),
                               ),
-                              Text(
-                                "Accepted"
-                              )
+                              Text("Accepted")
                             ],
                           ),
                         ),
@@ -116,9 +126,7 @@ class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProv
                                   Icons.cancel_rounded,
                                 ),
                               ),
-                              Text(
-                                "Declined"
-                              )
+                              Text("Declined")
                             ],
                           ),
                         ),
@@ -140,7 +148,7 @@ class _AppointmentPageState extends State<AppointmentPage> with SingleTickerProv
             ),
           )
         ],
-      ),    
+      ),
     );
   }
 }

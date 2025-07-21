@@ -53,4 +53,22 @@ class AuthRepository {
   Future<void> createAppointment(Appointment appointment) {
     return appWriteProvider.createAppointment(appointment.toMap());
   }
+
+  Future<List<Appointment>> getUserAppointments(String userId) async {
+  final rawAppointments = await appWriteProvider.getUserAppointments(userId);
+  return rawAppointments.map((data) {
+    return Appointment(
+      userId: data['userId'],
+      clinicId: data['clinicId'],
+      petId: data['petId'],
+      service: data['service'],
+      dateTime: DateTime.parse(data['dateTime']),
+      status: data['status'] ?? 'pending',
+      notes: data['notes'],
+      createdAt: DateTime.parse(data['createdAt']),
+      updatedAt: DateTime.parse(data['updatedAt']),
+    );
+  }).toList();
+}
+
 }

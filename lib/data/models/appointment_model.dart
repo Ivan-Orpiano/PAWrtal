@@ -1,31 +1,38 @@
 class Appointment {
   final String userId;
   final String clinicId;
-  final String petName;
+  final String petId;
   final String service;
-  final String time;
-  final DateTime date;
+  final DateTime dateTime;
   final String status;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   Appointment({
     required this.userId,
     required this.clinicId,
-    required this.petName,
+    required this.petId,
     required this.service,
-    required this.time,
-    required this.date,
+    required this.dateTime,
     this.status = 'pending',
-  });
+    this.notes,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
       'clinicId': clinicId,
-      'petName': petName,
+      'petId': petId,
       'service': service,
-      'time': time,
-      'date': date.toIso8601String(),
+      'dateTime': dateTime.toIso8601String(),
       'status': status,
+      'notes': notes,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 }
