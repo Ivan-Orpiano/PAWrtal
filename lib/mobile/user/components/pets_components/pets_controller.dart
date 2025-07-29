@@ -20,7 +20,7 @@ class PetsController extends GetxController {
     fetchUserPets();
   }
 
-  void fetchUserPets() async {
+  Future<void> fetchUserPets() async {
     isLoading.value = true;
     try {
       final userId = session.userId;

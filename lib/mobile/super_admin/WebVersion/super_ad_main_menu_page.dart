@@ -33,6 +33,25 @@ class _MySuperAdMainPage extends State<SuperAdMainPage> {
             ),
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 20.0),
+            child: TextButton.icon(
+              onPressed: () {
+                //log out backend
+              },
+              icon: const Icon(Icons.logout,
+                  color: Color.fromRGBO(81, 115, 153, 0.8)),
+              label: const Text(
+                'Log Out',
+                style: TextStyle(color: Color.fromRGBO(81, 115, 153, 0.8)),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color.fromRGBO(81, 115, 153, 0.8),
+              ),
+            ),
+          ),
+        ],
       ),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: LayoutBuilder(
@@ -50,16 +69,16 @@ class _MySuperAdMainPage extends State<SuperAdMainPage> {
                         Expanded(child: ViewReportTile()),
                       ],
                     )
-                  : const SingleChildScrollView( 
-                      scrollDirection: Axis.vertical, 
+                  : const SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
                       child: Column(
                         children: [
                           VetClinicTile(),
                           PetOwnerTile(),
                           ViewReportTile(),
-                      ],
+                        ],
+                      ),
                     ),
-            ),
             ),
           );
         },

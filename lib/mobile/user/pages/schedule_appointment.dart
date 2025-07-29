@@ -1,6 +1,12 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:get/get.dart';
+import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
+
+import '../../../data/models/appointment_model.dart';
 
 class ScheduleAppointment extends StatefulWidget {
   final Clinic clinic;
@@ -26,10 +32,27 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     '2:00 PM',
   ];
 
-  final List<String> pets = [
-    'Aki',
-    'Mochi',
-  ]; // Replace with user's pets from database
+  PetsController? petsController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (!Get.isRegistered<PetsController>()) {
+      petsController = Get.put(
+        PetsController(
+          authRepository: Get.find(),
+          session: Get.find(),
+        ),
+      );
+    } else {
+      petsController = Get.find();
+      // In case pets were not fetched yet due to a previous lazy load:
+      if (petsController?.pets.isEmpty ?? true) {
+        petsController?.fetchUserPets();
+      }
+    }
+  }
 
   final List<String> services = [
     'Vaccination',
@@ -146,21 +169,33 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                       ),
                       Padding(
                         padding: const EdgeInsets.all(16),
-                        child: DropdownMenu(
-                          width: double.infinity,
-                          label: const Text("Pet"),
-                          inputDecorationTheme: InputDecorationTheme(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          onSelected: (value) =>
-                              setState(() => selectedPet = value),
-                          dropdownMenuEntries: pets
-                              .map((pet) =>
-                                  DropdownMenuEntry(value: pet, label: pet))
-                              .toList(),
-                        ),
+                        child: Obx(() {
+                                if (petsController!.isLoading.value) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                }
+
+                                if (petsController!.pets.isEmpty) {
+                                  return const Center(
+                                      child: Text("No pets found."));
+                                }
+
+                                return DropdownMenu(
+                                  width: double.infinity,
+                                  label: const Text("Pet"),
+                                  inputDecorationTheme: InputDecorationTheme(
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                  onSelected: (value) =>
+                                      setState(() => selectedPet = value),
+                                  dropdownMenuEntries: petsController!.pets
+                                      .map((pet) => DropdownMenuEntry(
+                                          value: pet.name, label: pet.name))
+                                      .toList(),
+                                );
+                              }),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -176,8 +211,53 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20)),
                             ),
-                            onPressed: () {
-                              // Handle appointment
+                            onPressed: () async {
+                              if (selectedPet == null ||
+                                  selectedService == null ||
+                                  selectedTime == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text("Please complete all fields")),
+                                );
+                                return;
+                              }
+
+                              final userId =
+                                  Get.find<UserSessionService>().userId;
+                              if (userId == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("User not logged in")),
+                                );
+                                return;
+                              }
+
+                              final appointment = Appointment(
+                                userId: userId,
+                                clinicId: widget.clinic.documentId ?? '',
+                                petName: selectedPet!,
+                                service: selectedService!,
+                                time: selectedTime!,
+                                date: today,
+                              );
+
+                              try {
+                                await Get.find<AuthRepository>()
+                                    .createAppointment(appointment);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          "Appointment booked successfully!")),
+                                );
+                                Navigator.pop(
+                                    context); // Return to previous page
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          "Failed to book appointment: $e")),
+                                );
+                              }
                             },
                             child: const Text(
                               "Continue",
