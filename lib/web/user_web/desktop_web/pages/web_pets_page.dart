@@ -124,7 +124,7 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
                   } else {
                     return GestureDetector(
                       onTap: () {
-                        rightPanelContent.value = Text(pets[index].name);
+                        rightPanelContent.value = const RightPanelDisplayTile();
                       },
                       child: //LeftSideTile()
                       Container(
@@ -133,7 +133,7 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.indigo),
                         ),
-                        child: LeftSideTile()
+                        child: const LeftSideTile()
                       ),
                     );
                   }
@@ -189,73 +189,92 @@ class _LeftSideTileState extends State<LeftSideTile> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.indigo),
       ),
-      child: Flexible(
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 16, left: 16, bottom: 16, right: 5),
-                    child: Container(
-                      color: Colors.grey,
-                    ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16, left: 16, bottom: 16, right: 5),
+                  child: Container(
+                    color: Colors.grey,
                   ),
                 ),
-                Flexible(
-                  flex: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 16, right: 16, left: 5),
-                    child: Container(
-                      color: Colors.grey,
-                      child: Center(
-                        child: Column(
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 16, bottom: 4),
-                              child: Text(
-                                "Name",
-                              ),
+              ),
+              Flexible(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16, bottom: 16, right: 16, left: 5),
+                  child: Container(
+                    color: Colors.grey,
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 16, bottom: 4),
+                            child: Text(
+                              "Name",
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Text(
-                                pets[0].name,
-                              ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(
+                              pets[0].name,
                             ),
-                            const SizedBox(
-                              height: 16,
+                          ),
+                          const SizedBox(
+                            height: 16,
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              "Pet Type"
                             ),
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                "Pet Type"
-                              ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(
+                              pets[0].type
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Text(
-                                pets[0].type
-                              ),
-                            )
-                          ],
-                        ),
+                          )
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
-            Flexible(
-              flex: 2,
+              ),
+            ],
+          ),
+          Flexible(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               child: Container(
                 color: Colors.grey,
               ),
-            )
-          ],
-        ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class RightPanelDisplayTile extends StatefulWidget {
+  const RightPanelDisplayTile({super.key});
+
+  @override
+  State<RightPanelDisplayTile> createState() => _RightPanelDisplayTileState();
+}
+
+class _RightPanelDisplayTileState extends State<RightPanelDisplayTile> {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        "Pet"
       ),
     );
   }
