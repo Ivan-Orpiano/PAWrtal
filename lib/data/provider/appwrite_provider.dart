@@ -143,6 +143,37 @@ class AppWriteProvider {
     );
   }
 
+  Future<Document?> getPetById(String petId) async {
+    try {
+      final result = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.petsCollectionID,
+        documentId: petId,
+      );
+      return result;
+    } catch (e) {
+      print('Error fetching pet by ID: $e');
+      return null;
+    }
+  }
+
+  Future<Document?> getPetByName(String userId, String petName) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.petsCollectionID,
+        queries: [
+          Query.equal("userId", userId),
+          Query.equal("name", petName),
+        ],
+      );
+      return result.documents.isNotEmpty ? result.documents.first : null;
+    } catch (e) {
+      print('Error fetching pet by name: $e');
+      return null;
+    }
+  }
+
   Future<List<Document>> getUserPets(String userId) async {
     final result = await databases!.listDocuments(
       databaseId: AppwriteConstants.dbID,
@@ -179,14 +210,14 @@ class AppWriteProvider {
   }
 
   Future<List<Map<String, dynamic>>> getUserAppointments(String userId) async {
-  final res = await databases!.listDocuments(
-    databaseId: AppwriteConstants.dbID,
-    collectionId: AppwriteConstants.appointmentCollectionID,
-    queries: [Query.equal("userId", userId)],
-  );
+    final res = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.appointmentCollectionID,
+      queries: [Query.equal("userId", userId)],
+    );
 
-  return res.documents.map((doc) => doc.data).toList();
-}
+    return res.documents.map((doc) => doc.data).toList();
+  }
 
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
@@ -200,6 +231,58 @@ class AppWriteProvider {
       queries: [Query.equal("adminId", adminId)],
     );
     return result.documents.isNotEmpty ? result.documents.first : null;
+  }
+
+  Future<Document?> getClinicById(String clinicId) async {
+    try {
+      final result = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicsCollectionID,
+        documentId: clinicId,
+      );
+      return result;
+    } catch (e) {
+      print('Error fetching clinic by ID: $e');
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getClinicAppointments(
+      String clinicId) async {
+    final res = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.appointmentCollectionID,
+      queries: [Query.equal("clinicId", clinicId)],
+    );
+
+    return res.documents
+        .map((doc) => {
+              ...doc.data,
+              'documentId': doc.$id, // Include document ID for updates
+            })
+        .toList();
+  }
+
+  Future<void> updateAppointmentStatus(String documentId, String status,
+      {String? notes}) async {
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.appointmentCollectionID,
+      documentId: documentId,
+      data: {
+        'status': status,
+        'updatedAt': DateTime.now().toIso8601String(),
+        if (notes != null) 'notes': notes,
+      },
+    );
+  }
+
+  Future<List<Document>> getAllClinics() async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+    );
+    return result.documents;
   }
 
   Future<Document?> getStaffByClinicId(String clinicId) async {

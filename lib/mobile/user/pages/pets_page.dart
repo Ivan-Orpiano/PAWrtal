@@ -2,10 +2,8 @@ import 'package:capstone_app/mobile/user/components/pets_components/floating_act
 import 'package:capstone_app/mobile/user/components/pets_components/pet_tile.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/mobile/user/pages/pets_next_page.dart';
-import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PetsPage extends StatefulWidget {

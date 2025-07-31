@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -7,13 +8,13 @@ import 'package:intl/intl.dart';
 class AppointmentDetailsPage extends StatelessWidget {
   final Appointment appointment;
   final Clinic? clinic;
-  final String? petName;
+  final Pet? pet;
 
   const AppointmentDetailsPage({
     super.key,
     required this.appointment,
     this.clinic,
-    this.petName,
+    this.pet,
   });
 
   Color _getStatusColor() {
@@ -217,8 +218,22 @@ class AppointmentDetailsPage extends StatelessWidget {
                   _buildDetailRow(
                     Icons.pets,
                     'Pet',
-                    petName ?? 'Unknown Pet',
+                    pet?.name ?? appointment.petId, // Fallback to stored petId
                   ),
+                  
+                  if (pet != null) ...[
+                    _buildDetailRow(
+                      Icons.category,
+                      'Pet Type',
+                      '${pet!.type} • ${pet!.breed}',
+                    ),
+                    if (pet!.color != null && pet!.color!.isNotEmpty)
+                      _buildDetailRow(
+                        Icons.palette,
+                        'Pet Color',
+                        pet!.color!,
+                      ),
+                  ],
                   
                   _buildDetailRow(
                     Icons.calendar_today,
