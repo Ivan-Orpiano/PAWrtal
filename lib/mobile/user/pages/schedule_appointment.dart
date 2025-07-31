@@ -170,32 +170,31 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Obx(() {
-                                if (petsController!.isLoading.value) {
-                                  return const Center(
-                                      child: CircularProgressIndicator());
-                                }
+                          if (petsController!.isLoading.value) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
 
-                                if (petsController!.pets.isEmpty) {
-                                  return const Center(
-                                      child: Text("No pets found."));
-                                }
+                          if (petsController!.pets.isEmpty) {
+                            return const Center(child: Text("No pets found."));
+                          }
 
-                                return DropdownMenu(
-                                  width: double.infinity,
-                                  label: const Text("Pet"),
-                                  inputDecorationTheme: InputDecorationTheme(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onSelected: (value) =>
-                                      setState(() => selectedPet = value),
-                                  dropdownMenuEntries: petsController!.pets
-                                      .map((pet) => DropdownMenuEntry(
-                                          value: pet.name, label: pet.name))
-                                      .toList(),
-                                );
-                              }),
+                          return DropdownMenu(
+                            width: double.infinity,
+                            label: const Text("Pet"),
+                            inputDecorationTheme: InputDecorationTheme(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            onSelected: (value) =>
+                                setState(() => selectedPet = value),
+                            dropdownMenuEntries: petsController!.pets
+                                .map((pet) => DropdownMenuEntry(
+                                    value: pet.name, label: pet.name))
+                                .toList(),
+                          );
+                        }),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -232,13 +231,35 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                 return;
                               }
 
+                              DateTime parseTimeStringToDateTime(
+                                  DateTime date, String timeString) {
+                                // example timeString: "1:30 PM"
+                                final timeParts = timeString.split(" ");
+                                final hourMinute = timeParts[0].split(":");
+                                int hour = int.parse(hourMinute[0]);
+                                final int minute = int.parse(hourMinute[1]);
+                                final meridian = timeParts[1].toUpperCase();
+
+                                if (meridian == 'PM' && hour != 12) {
+                                  hour += 12;
+                                } else if (meridian == 'AM' && hour == 12) {
+                                  hour = 0;
+                                }
+
+                                return DateTime(date.year, date.month, date.day,
+                                    hour, minute);
+                              }
+
+                              final selectedDateTime =
+                                  parseTimeStringToDateTime(
+                                      today, selectedTime!);
+
                               final appointment = Appointment(
                                 userId: userId,
                                 clinicId: widget.clinic.documentId ?? '',
-                                petName: selectedPet!,
+                                petId: selectedPet!,
                                 service: selectedService!,
-                                time: selectedTime!,
-                                date: today,
+                                dateTime: selectedDateTime,
                               );
 
                               try {

@@ -178,6 +178,16 @@ class AppWriteProvider {
     );
   }
 
+  Future<List<Map<String, dynamic>>> getUserAppointments(String userId) async {
+  final res = await databases!.listDocuments(
+    databaseId: AppwriteConstants.dbID,
+    collectionId: AppwriteConstants.appointmentCollectionID,
+    queries: [Query.equal("userId", userId)],
+  );
+
+  return res.documents.map((doc) => doc.data).toList();
+}
+
   Future<dynamic> logout(String sessionId) async {
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;
