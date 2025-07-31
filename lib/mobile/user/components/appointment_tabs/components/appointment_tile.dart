@@ -1,5 +1,5 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
-import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
 import 'package:capstone_app/mobile/user/pages/appointment_details_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -7,14 +7,10 @@ import 'package:intl/intl.dart';
 
 class AppointmentTile extends StatelessWidget {
   final Appointment appointment;
-  final Clinic? clinic; // You'll need to fetch this data
-  final String? petName; // You'll need to fetch this data
 
   const AppointmentTile({
     super.key,
     required this.appointment,
-    this.clinic,
-    this.petName,
   });
 
   Color _getStatusColor() {
@@ -54,10 +50,15 @@ class AppointmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<AppointmentController>();
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
         onTap: () {
+          final clinic = controller.getClinicForAppointment(appointment);
+          final pet = controller.getPetForAppointment(appointment);
+          
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -65,7 +66,7 @@ class AppointmentTile extends StatelessWidget {
             builder: (context) => AppointmentDetailsPage(
               appointment: appointment,
               clinic: clinic,
-              petName: petName,
+              pet: pet,
             ),
           );
         },
@@ -153,7 +154,7 @@ class AppointmentTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          clinic?.clinicName ?? 'Unknown Clinic',
+                          controller.getClinicNameForAppointment(appointment),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -168,11 +169,13 @@ class AppointmentTile extends StatelessWidget {
                               color: Colors.grey[600],
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              appointment.service,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
+                            Expanded(
+                              child: Text(
+                                appointment.service,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ],
@@ -186,11 +189,13 @@ class AppointmentTile extends StatelessWidget {
                               color: Colors.grey[600],
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              petName ?? 'Unknown Pet',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
+                            Expanded(
+                              child: Text(
+                                controller.getPetNameForAppointment(appointment),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ],

@@ -72,11 +72,7 @@ class APThirdTab extends StatelessWidget {
           itemCount: appointments.length,
           itemBuilder: (context, index) {
             final appointment = appointments[index];
-            return AppointmentTile(
-              appointment: appointment,
-              // clinic: null, // Fetch clinic data using appointment.clinicId
-              // petName: null, // Fetch pet name using appointment.petId
-            );
+            return AppointmentTile(appointment: appointment);
           },
         ),
       );

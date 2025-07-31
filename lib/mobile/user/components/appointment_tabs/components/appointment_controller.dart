@@ -17,7 +17,7 @@ class AppointmentController extends GetxController {
   var isLoading = false.obs;
   var appointments = <Appointment>[].obs;
   var clinics = <String, Clinic>{}.obs; // Cache clinics by ID
-  var pets = <String, Pet>{}.obs; // Cache pets by ID
+  var pets = <String, Pet>{}.obs; // Cache pets by name (current system)
 
   @override
   void onInit() {
@@ -50,18 +50,18 @@ class AppointmentController extends GetxController {
   }
 
   Future<void> _fetchRelatedData() async {
-    // Get unique clinic and pet IDs
+    final userId = session.userId;
+    
+    // Get unique clinic IDs and pet names
     final clinicIds = appointments.map((a) => a.clinicId).toSet();
-    final petIds = appointments.map((a) => a.petId).toSet();
+    final petNames = appointments.map((a) => a.petId).toSet(); // petId currently stores pet names
 
     // Fetch clinics
     for (final clinicId in clinicIds) {
-      if (!clinics.containsKey(clinicId)) {
+      if (!clinics.containsKey(clinicId) && clinicId.isNotEmpty) {
         try {
-          final clinicDoc = await authRepository.getClinicByAdminId(clinicId);
-          if (clinicDoc != null) {
-            final clinic = Clinic.fromMap(clinicDoc.data);
-            clinic.documentId = clinicDoc.$id;
+          final clinic = await authRepository.getClinicById(clinicId);
+          if (clinic != null) {
             clinics[clinicId] = clinic;
           }
         } catch (e) {
@@ -70,18 +70,17 @@ class AppointmentController extends GetxController {
       }
     }
 
-    // Fetch pets
-    final userId = session.userId;
-    if (userId.isNotEmpty) {
-      try {
-        final userPets = await authRepository.getUserPets(userId);
-        for (final petDoc in userPets) {
-          final pet = Pet.fromMap(petDoc.data);
-          pet.documentId = petDoc.$id;
-          pets[pet.name] = pet; // Using name as key since that's what's stored in appointment
+    // Fetch pets by name (since your current system stores pet names in appointments)
+    for (final petName in petNames) {
+      if (!pets.containsKey(petName) && petName.isNotEmpty) {
+        try {
+          final pet = await authRepository.getPetByName(userId, petName);
+          if (pet != null) {
+            pets[petName] = pet;
+          }
+        } catch (e) {
+          print('Error fetching pet $petName: $e');
         }
-      } catch (e) {
-        print('Error fetching pets: $e');
       }
     }
   }
@@ -90,8 +89,8 @@ class AppointmentController extends GetxController {
     try {
       isLoading.value = true;
       
-      // TODO: Implement cancel appointment in your AppWrite provider and repository
-      // await authRepository.cancelAppointment(appointmentId);
+      // TODO: Implement cancel appointment method in your repository
+      // await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
       
       // For now, just refresh the appointments
       await fetchAppointments();
@@ -128,11 +127,16 @@ class AppointmentController extends GetxController {
   }
 
   Pet? getPetForAppointment(Appointment appointment) {
-    return pets[appointment.petId];
+    return pets[appointment.petId]; // petId currently stores pet name
   }
 
   String getPetNameForAppointment(Appointment appointment) {
     final pet = pets[appointment.petId];
-    return pet?.name ?? appointment.petId; // Fallback to stored petId
+    return pet?.name ?? appointment.petId; // Fallback to stored petId (which is the name)
+  }
+
+  String getClinicNameForAppointment(Appointment appointment) {
+    final clinic = clinics[appointment.clinicId];
+    return clinic?.clinicName ?? 'Unknown Clinic';
   }
 }

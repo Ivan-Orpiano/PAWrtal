@@ -72,12 +72,7 @@ class APFirstTab extends StatelessWidget {
           itemCount: appointments.length,
           itemBuilder: (context, index) {
             final appointment = appointments[index];
-            // TODO: You'll need to fetch clinic and pet data based on IDs
-            return AppointmentTile(
-              appointment: appointment,
-              // clinic: null, // Fetch clinic data using appointment.clinicId
-              // petName: null, // Fetch pet name using appointment.petId
-            );
+            return AppointmentTile(appointment: appointment);
           },
         ),
       );
