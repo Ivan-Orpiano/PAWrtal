@@ -62,7 +62,7 @@ class AppointmentController extends GetxController {
         try {
           final clinic = await authRepository.getClinicById(clinicId);
           if (clinic != null) {
-            clinics[clinicId] = clinic;
+            clinics[clinicId] = clinic as Clinic;
           }
         } catch (e) {
           print('Error fetching clinic $clinicId: $e');
@@ -74,9 +74,9 @@ class AppointmentController extends GetxController {
     for (final petName in petNames) {
       if (!pets.containsKey(petName) && petName.isNotEmpty) {
         try {
-          final pet = await authRepository.getPetByName(userId, petName);
+          final pet = await authRepository.getPetByName(petName);
           if (pet != null) {
-            pets[petName] = pet;
+            pets[petName] = pet as Pet;
           }
         } catch (e) {
           print('Error fetching pet $petName: $e');
