@@ -1,17 +1,81 @@
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-class APSecondTab extends StatefulWidget {
+class APSecondTab extends StatelessWidget {
   const APSecondTab({super.key});
 
   @override
-  State<APSecondTab> createState() => _APSecondTabState();
-}
-
-class _APSecondTabState extends State<APSecondTab> {
-  @override
   Widget build(BuildContext context) {
-    return ListView(
-      
-    );
+    final controller = Get.find<AppointmentController>();
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: Color.fromARGB(255, 81, 115, 153),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Loading appointments...',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final appointments = controller.accepted;
+
+      if (appointments.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "No accepted appointments",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Your confirmed appointments will appear here",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: controller.fetchAppointments,
+        color: const Color.fromARGB(255, 81, 115, 153),
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(top: 8, bottom: 16),
+          itemCount: appointments.length,
+          itemBuilder: (context, index) {
+            final appointment = appointments[index];
+            return AppointmentTile(appointment: appointment);
+          },
+        ),
+      );
+    });
   }
 }
