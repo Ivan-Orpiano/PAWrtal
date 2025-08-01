@@ -52,7 +52,7 @@ class _WebTabletDashboardPageState extends State<WebTabletDashboardPage> {
               return Wrap(
                 spacing: spacing,
                 runSpacing: 10,
-                children: List.generate(20, (index) => WebDashboardTile(tileWidth: tileWidth),
+                children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth),
                 ),
               );
             },

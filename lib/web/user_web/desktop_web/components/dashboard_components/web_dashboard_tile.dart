@@ -44,10 +44,14 @@ class _DashboardTileWebState extends State<WebDashboardTile> {
             children: [
               Stack(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: Image.asset(
-                      'lib/images/pfp.jpg',
+                  SizedBox(
+                    height: widget.tileHeight * 0.7,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Image.asset(
+                        fit: BoxFit.fitHeight,
+                        'lib/images/test_image.jpg',
+                      ),
                     ),
                   ),
                   Positioned(
@@ -132,7 +136,7 @@ class _DashboardTileWebState extends State<WebDashboardTile> {
                     ],
                   )
                 ],
-              )
+              ),
             ],
           ),
         ),

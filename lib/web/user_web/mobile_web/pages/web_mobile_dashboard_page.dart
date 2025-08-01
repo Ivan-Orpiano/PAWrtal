@@ -35,12 +35,12 @@ class _WebMobileDashboardPageState extends State<WebMobileDashboardPage> {
               const double spacing = 25;
               const double minTileWidth = 200;
               int tilesPerRow = (screenWidth / (minTileWidth + spacing)).floor();
-              tilesPerRow = tilesPerRow.clamp(1, 7); 
+              tilesPerRow = tilesPerRow.clamp(1, 1); 
               double tileWidth = (screenWidth - (spacing * (tilesPerRow - 1))) / tilesPerRow;
               return Wrap(
                 spacing: spacing,
                 runSpacing: 10,
-                children: List.generate(20, (index) => WebDashboardTile(tileWidth: tileWidth, tileHeight: tileWidth * 1.4,),
+                children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth, tileHeight: tileWidth * 0.9,),
                 ),
               );
             },

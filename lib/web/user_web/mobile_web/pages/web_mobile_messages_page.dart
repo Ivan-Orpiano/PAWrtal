@@ -254,6 +254,7 @@ class _RightPanelState extends State<RightPanel> {
         borderRadius: BorderRadius.circular(10)
       ),
       child: IconButton(
+        color: Colors.white,
         icon: const Icon(Icons.arrow_left_rounded),
         onPressed: () {
           Navigator.pop(context);

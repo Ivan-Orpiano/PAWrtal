@@ -41,7 +41,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 8, top: 16),
+          padding: const EdgeInsets.only(top: 16),
           child: _showMap ? _buildMapView() : 
           LayoutBuilder(
               builder: (context, constraints) {
@@ -54,7 +54,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
               return Wrap(
                 spacing: spacing,
                 runSpacing: 10,
-                children: List.generate(20, (index) => WebDashboardTile(tileWidth: tileWidth),
+                children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth),
                 ),
               );
             },
