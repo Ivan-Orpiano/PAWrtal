@@ -152,24 +152,21 @@ class AppWriteProvider {
       );
       return result;
     } catch (e) {
-      print('Error fetching pet by ID: $e');
+      print("Error fetching pet: $e");
       return null;
     }
   }
 
-  Future<Document?> getPetByName(String userId, String petName) async {
+  Future<Document?> getPetByName(String petName) async {
     try {
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.petsCollectionID,
-        queries: [
-          Query.equal("userId", userId),
-          Query.equal("name", petName),
-        ],
+        queries: [Query.equal("name", petName)],
       );
       return result.documents.isNotEmpty ? result.documents.first : null;
     } catch (e) {
-      print('Error fetching pet by name: $e');
+      print("Error fetching pet by name: $e");
       return null;
     }
   }
@@ -242,7 +239,7 @@ class AppWriteProvider {
       );
       return result;
     } catch (e) {
-      print('Error fetching clinic by ID: $e');
+      print("Error fetching clinic: $e");
       return null;
     }
   }
@@ -258,13 +255,69 @@ class AppWriteProvider {
     return res.documents
         .map((doc) => {
               ...doc.data,
-              'documentId': doc.$id, // Include document ID for updates
+              '\$id': doc.$id, // Include document ID for updates
             })
         .toList();
   }
 
-  Future<void> updateAppointmentStatus(String documentId, String status,
-      {String? notes}) async {
+  Future<Map<String, int>> getClinicAppointmentStats(String clinicId) async {
+    try {
+      final allAppointments = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [Query.equal("clinicId", clinicId)],
+      );
+
+      final now = DateTime.now();
+      final thisMonth = DateTime(now.year, now.month, 1);
+
+      int totalAppointments = allAppointments.documents.length;
+      int pendingCount = 0;
+      int acceptedCount = 0;
+      int declinedCount = 0;
+      int thisMonthCount = 0;
+
+      for (var doc in allAppointments.documents) {
+        final status = doc.data['status'] ?? 'pending';
+        final createdAt = DateTime.parse(doc.data['createdAt']);
+
+        switch (status) {
+          case 'pending':
+            pendingCount++;
+            break;
+          case 'accepted':
+            acceptedCount++;
+            break;
+          case 'declined':
+            declinedCount++;
+            break;
+        }
+
+        if (createdAt.isAfter(thisMonth)) {
+          thisMonthCount++;
+        }
+      }
+
+      return {
+        'total': totalAppointments,
+        'pending': pendingCount,
+        'accepted': acceptedCount,
+        'declined': declinedCount,
+        'thisMonth': thisMonthCount,
+      };
+    } catch (e) {
+      print("Error getting appointment stats: $e");
+      return {
+        'total': 0,
+        'pending': 0,
+        'accepted': 0,
+        'declined': 0,
+        'thisMonth': 0,
+      };
+    }
+  }
+
+  Future<void> updateAppointmentStatus(String documentId, String status) async {
     await databases!.updateDocument(
       databaseId: AppwriteConstants.dbID,
       collectionId: AppwriteConstants.appointmentCollectionID,
@@ -272,8 +325,17 @@ class AppWriteProvider {
       data: {
         'status': status,
         'updatedAt': DateTime.now().toIso8601String(),
-        if (notes != null) 'notes': notes,
       },
+    );
+  }
+
+  Future<Document> updateClinic(
+      String documentId, Map<String, dynamic> data) async {
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+      documentId: documentId,
+      data: data,
     );
   }
 

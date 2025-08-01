@@ -34,15 +34,12 @@ class AuthRepository {
   Future<models.Document?> getClinicByAdminId(String adminId) =>
       appWriteProvider.getClinicByAdminId(adminId);
 
-  Future<Clinic?> getClinicById(String clinicId) async {
-    final doc = await appWriteProvider.getClinicById(clinicId);
-    if (doc != null) {
-      final clinic = Clinic.fromMap(doc.data);
-      clinic.documentId = doc.$id;
-      return clinic;
-    }
-    return null;
-  }
+  Future<models.Document?> getClinicById(String clinicId) =>
+      appWriteProvider.getClinicById(clinicId);
+
+  Future<models.Document> updateClinic(
+          String documentId, Map<String, dynamic> data) =>
+      appWriteProvider.updateClinic(documentId, data);
 
   Future<List<Clinic>> getAllClinics() async {
     final docs = await appWriteProvider.getAllClinics();
@@ -56,25 +53,14 @@ class AuthRepository {
   Future<List<Appointment>> getClinicAppointments(String clinicId) async {
     final rawAppointments =
         await appWriteProvider.getClinicAppointments(clinicId);
-    return rawAppointments.map((data) {
-      return Appointment(
-        userId: data['userId'],
-        clinicId: data['clinicId'],
-        petId: data['petId'],
-        service: data['service'],
-        dateTime: DateTime.parse(data['dateTime']),
-        status: data['status'] ?? 'pending',
-        notes: data['notes'],
-        createdAt: DateTime.parse(data['createdAt']),
-        updatedAt: DateTime.parse(data['updatedAt']),
-      );
-    }).toList();
+    return rawAppointments.map((data) => Appointment.fromMap(data)).toList();
   }
 
-  Future<void> updateAppointmentStatus(String documentId, String status,
-      {String? notes}) {
-    return appWriteProvider.updateAppointmentStatus(documentId, status,
-        notes: notes);
+  Future<Map<String, int>> getClinicAppointmentStats(String clinicId) =>
+      appWriteProvider.getClinicAppointmentStats(clinicId);
+
+  Future<void> updateAppointmentStatus(String documentId, String status) {
+    return appWriteProvider.updateAppointmentStatus(documentId, status);
   }
 
   Future<models.Document?> getStaffByClinicId(String clinicId) =>
@@ -85,21 +71,11 @@ class AuthRepository {
 
   Future<models.Document> createPet(Map map) => appWriteProvider.createPet(map);
 
-  Future<Pet?> getPetById(String petId) async {
-    final doc = await appWriteProvider.getPetById(petId);
-    if (doc != null) {
-      return Pet.fromMap(doc.data);
-    }
-    return null;
-  }
+  Future<models.Document?> getPetById(String petId) =>
+      appWriteProvider.getPetById(petId);
 
-  Future<Pet?> getPetByName(String userId, String petName) async {
-    final doc = await appWriteProvider.getPetByName(userId, petName);
-    if (doc != null) {
-      return Pet.fromMap(doc.data);
-    }
-    return null;
-  }
+  Future<models.Document?> getPetByName(String petName) =>
+      appWriteProvider.getPetByName(petName);
 
   Future<List<models.Document>> getUserPets(String userId) =>
       appWriteProvider.getUserPets(userId);
@@ -116,18 +92,6 @@ class AuthRepository {
 
   Future<List<Appointment>> getUserAppointments(String userId) async {
     final rawAppointments = await appWriteProvider.getUserAppointments(userId);
-    return rawAppointments.map((data) {
-      return Appointment(
-        userId: data['userId'],
-        clinicId: data['clinicId'],
-        petId: data['petId'],
-        service: data['service'],
-        dateTime: DateTime.parse(data['dateTime']),
-        status: data['status'] ?? 'pending',
-        notes: data['notes'],
-        createdAt: DateTime.parse(data['createdAt']),
-        updatedAt: DateTime.parse(data['updatedAt']),
-      );
-    }).toList();
+    return rawAppointments.map((data) => Appointment.fromMap(data)).toList();
   }
 }
