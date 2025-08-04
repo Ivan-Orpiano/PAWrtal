@@ -172,7 +172,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
                             ),
                             child: Column(
                               children: [
-                                const TabHeader(title: 'Accepted'),
+                                const TabHeader(
+                                    title: 'Accepted',
+                                    backgroundColor: Colors.green),
                                 Expanded(
                                   child: ListView.builder(
                                     itemCount: accepted.where((a) {
@@ -232,7 +234,10 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
                             ),
                             child: Column(
                               children: [
-                                const TabHeader(title: 'Pending'),
+                                const TabHeader(
+                                    title: 'Pending',
+                                    backgroundColor: Colors.yellow,
+                                    textColor: Colors.black),
                                 Expanded(
                                   child: ListView.builder(
                                     itemCount: pending.where((a) {
@@ -279,7 +284,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
                             ),
                             child: Column(
                               children: [
-                                const TabHeader(title: 'Declined'),
+                                const TabHeader(
+                                    title: 'Declined',
+                                    backgroundColor: Colors.red),
                                 Expanded(
                                   child: ListView.builder(
                                     itemCount: declined.where((a) {
@@ -325,25 +332,31 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
 
 class TabHeader extends StatelessWidget {
   final String title;
-  const TabHeader({super.key, required this.title});
+  final Color backgroundColor;
+  final Color textColor;
+  const TabHeader(
+      {super.key,
+      required this.title,
+      this.backgroundColor = const Color(0xFF628BBE),
+      this.textColor = Colors.white});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 50,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: Color(0xFF628BBE),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
         ),
       ),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: textColor,
         ),
       ),
     );

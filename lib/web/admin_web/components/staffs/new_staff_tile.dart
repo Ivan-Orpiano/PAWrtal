@@ -1,5 +1,5 @@
 // import 'package:flutter/material.dart';
-// import 'package:file_picker/file_picker.dart';
+// //import 'package:file_picker/file_picker.dart';
 // import 'dart:typed_data';
 
 // class NewStaffTile extends StatelessWidget {
@@ -79,15 +79,15 @@
 //                 children: [
 //                   InkWell(
 //                     onTap: () async {
-//                       final result = await FilePicker.platform.pickFiles(
-//                         type: FileType.image,
-//                         withData: true,
-//                       );
-//                       if (result != null && result.files.single.bytes != null) {
-//                         setState(() {
-//                           selectedImageBytes = result.files.single.bytes;
-//                         });
-//                       }
+//                       // final result = await FilePicker.platform.pickFiles(
+//                       //   type: FileType.image,
+//                       //   withData: true,
+//                       // );
+//                       // if (result != null && result.files.single.bytes != null) {
+//                       //   setState(() {
+//                       //     selectedImageBytes = result.files.single.bytes;
+//                       //   });
+//                       // }
 //                     },
 //                     child: CircleAvatar(
 //                       radius: 40,

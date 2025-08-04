@@ -41,9 +41,23 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
     );
   }
 
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'declined':
+        return Colors.red;
+      case 'accepted':
+        return Colors.green;
+      case 'pending':
+        return Colors.yellow;
+      default:
+        return const Color(0xff517399);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = widget.appointmentData;
+    debugPrint("Appointment Status: ${data['status']}");
 
     return Container(
       decoration: BoxDecoration(
@@ -55,9 +69,9 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: const BoxDecoration(
-              color: Color(0xff517399),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: _getStatusColor(data['status']),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
