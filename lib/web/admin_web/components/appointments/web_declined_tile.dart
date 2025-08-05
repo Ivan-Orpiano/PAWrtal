@@ -25,7 +25,7 @@ class _WebDeclinedTileState extends State<WebDeclinedTile> {
         ),
         child: SizedBox(
           height: 800,
-          width: 800,
+          width: 500,
           child: WebAppointmentDetails(
             appointmentData: {
               'owner': a.owner,

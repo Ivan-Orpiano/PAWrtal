@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_accepted_tile.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_pending_tile.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_declined_tile.dart';
-import 'package:capstone_app/web/admin_web/components/appointments/web_completed_appointments.dart';
 
 class Appointment {
   final String owner;
@@ -39,6 +38,41 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
   String selectedTag = 'Today';
 
   final List<String> tags = ['Today', 'Date', 'Completed'];
+
+  final List<Map<String, String>> completedAppointments = [
+    {
+      'owner': 'Pet Owner A',
+      'petName': 'Kobe',
+      'breed': 'Shih Tzu',
+      'service': 'Nail Trimming',
+      'time': '3:00 PM - 3:30 PM',
+      'imageUrl': 'assets/profile.png',
+    },
+    {
+      'owner': 'Pet Owner B',
+      'petName': 'Bella',
+      'breed': 'Pug',
+      'service': 'Vaccination',
+      'time': '2:00 PM - 2:30 PM',
+      'imageUrl': 'assets/profile.png',
+    },
+    {
+      'owner': 'Pet Owner C',
+      'petName': 'Charlie',
+      'breed': 'Labrador',
+      'service': 'Deworming',
+      'time': '1:00 PM - 1:30 PM',
+      'imageUrl': 'assets/profile.png',
+    },
+    {
+      'owner': 'Pet Owner D',
+      'petName': 'Max',
+      'breed': 'Husky',
+      'service': 'Check-up',
+      'time': '11:00 AM - 11:30 AM',
+      'imageUrl': 'assets/profile.png',
+    },
+  ];
 
   List<Appointment> accepted = [
     Appointment(
@@ -160,7 +194,58 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> {
             ),
             Expanded(
               child: selectedTag == 'Completed'
-                  ? WebCompletedAppointments()
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: GridView.count(
+                        crossAxisCount: 4,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 2.8,
+                        children: completedAppointments.map((appointment) {
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey, width: 1),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  backgroundImage: AssetImage(
+                                    appointment['imageUrl'] ??
+                                        'lib/images/pfp.jpg',
+                                  ),
+                                  radius: 30,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        appointment['owner']!,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                          'Pet Name: ${appointment['petName']}'),
+                                      Text('Breed: ${appointment['breed']}'),
+                                      Text(
+                                          'Service: ${appointment['service']}'),
+                                      Text('Time: ${appointment['time']}'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    )
                   : Row(
                       children: [
                         Expanded(

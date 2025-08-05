@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 void showAppointmentDetailsPopup(
     BuildContext context, Map<String, dynamic> appointmentData,
-    {VoidCallback? onComplete}) {
+    {VoidCallback? onComplete,
+    VoidCallback? onAccept,
+    VoidCallback? onDecline}) {
   showDialog(
     context: context,
     builder: (context) => Dialog(
@@ -11,6 +13,8 @@ void showAppointmentDetailsPopup(
       child: WebAppointmentDetails(
         appointmentData: appointmentData,
         onComplete: onComplete,
+        onAccept: onAccept,
+        onDecline: onDecline,
       ),
     ),
   );
@@ -19,11 +23,15 @@ void showAppointmentDetailsPopup(
 class WebAppointmentDetails extends StatefulWidget {
   final Map<String, dynamic> appointmentData;
   final VoidCallback? onComplete;
+  final VoidCallback? onAccept;
+  final VoidCallback? onDecline;
 
   const WebAppointmentDetails({
     super.key,
     required this.appointmentData,
     this.onComplete,
+    this.onAccept,
+    this.onDecline,
   });
 
   @override
@@ -79,20 +87,25 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const Center(
+                Center(
                   child: Text(
                     "Appointment Details",
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 19,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: data['status']?.toLowerCase() == 'pending'
+                          ? Colors.black
+                          : Colors.white,
                     ),
                   ),
                 ),
                 Positioned(
                   right: 0,
                   child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close,
+                        color: data['status']?.toLowerCase() == 'pending'
+                            ? Colors.black
+                            : Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -112,7 +125,8 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
                         children: [
                           CircleAvatar(
                             radius: 30,
-                            backgroundImage: AssetImage("lib/images/pfp.jpg"),
+                            backgroundImage: AssetImage(
+                                data['imageUrl'] ?? 'lib/images/pfp.jpg'),
                           ),
                           const SizedBox(width: 12),
                           Text(
@@ -160,13 +174,6 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
                             ),
                           ),
                         ),
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 8, left: 8),
-                          child: Text(
-                            "Pet/s: ",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
                         GestureDetector(
                           onTap: () => _showPetDetails({
                             'name': data['petName'],
@@ -195,8 +202,7 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
               padding: const EdgeInsets.fromLTRB(25, 0, 25, 25),
               child: ElevatedButton(
                 onPressed: () {
-                  widget.onComplete
-                      ?.call(); // This handles removal from accepted[]
+                  widget.onComplete?.call();
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
@@ -211,6 +217,55 @@ class _WebAppointmentDetailsState extends State<WebAppointmentDetails> {
                   'Complete',
                   style: TextStyle(fontSize: 16),
                 ),
+              ),
+            ),
+          if (data['status'] == 'pending')
+            Padding(
+              padding: const EdgeInsets.fromLTRB(25, 0, 25, 25),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onAccept?.call();
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Accept',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onDecline?.call();
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Decline',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
