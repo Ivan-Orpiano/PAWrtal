@@ -1,3 +1,5 @@
+import 'package:capstone_app/mobile/user/pages/pawmap.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_appointments_page.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_dashboard_page.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_messages_page.dart';
@@ -92,7 +94,14 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
                   backgroundColor: Colors.white,
                   heroTag: "webMobLoc",
                   shape: const CircleBorder(),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Pawmap(),
+                      )
+                    );
+                  },
                   child: const Icon(
                     Icons.location_pin,
                     color: Colors.black,

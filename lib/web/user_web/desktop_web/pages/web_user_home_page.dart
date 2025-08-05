@@ -34,7 +34,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey.shade50,
         centerTitle: true,
         leadingWidth: 220,
         toolbarHeight: 80,

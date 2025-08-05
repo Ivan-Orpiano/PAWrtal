@@ -7,14 +7,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 // import 'vet_popup.dart';
 
-class WebMaps extends StatefulWidget {
-  const WebMaps({super.key});
+class SuperAdminWebMaps extends StatefulWidget {
+  const SuperAdminWebMaps({super.key});
 
   @override
-  State<WebMaps> createState() => _WebMapsState();
+  State<SuperAdminWebMaps> createState() => _SuperAdminWebMapsState();
 }
 
-class _WebMapsState extends State<WebMaps> {
+class _SuperAdminWebMapsState extends State<SuperAdminWebMaps> {
   final MapController _mapController = MapController();
   final PopupController _popupController = PopupController();
   LatLng? userLocation;
