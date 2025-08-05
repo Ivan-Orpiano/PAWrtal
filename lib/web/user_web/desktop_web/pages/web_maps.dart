@@ -1,3 +1,6 @@
+import 'package:capstone_app/web/dimensions.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
@@ -189,92 +192,97 @@ class _WebMapsState extends State<WebMaps> {
     if (userLocation == null || !isWithinBounds(userLocation!)) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Stack(
-        children: [
-          userLocation == null
-              ? const Center(child: CircularProgressIndicator())
-              : ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: userLocation!,
-                      initialZoom: 15,
-                      maxZoom: 19,
-                      cameraConstraint: CameraConstraint.contain(
-                        bounds: sanJoseDelMonteBounds,
-                      ),
-                      onTap: (_, __) {
-                        setState(() {
-                          routePoints.clear();
-                          _popupController.hideAllPopups();
-                        });
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        subdomains: const ['a', 'b', 'c'],
-                        maxZoom: 19,
-                      ),
-                      if (routePoints.isNotEmpty)
-                        PolylineLayer(
-                          polylines: [
-                            Polyline(
-                              points: routePoints,
-                              color: Colors.blue,
-                              strokeWidth: 5.0,
-                            ),
-                          ],
-                        ),
-                      PopupMarkerLayer(
-                        options: PopupMarkerLayerOptions(
-                          popupController: _popupController,
-                          markers: getMarkers(),
-                          popupDisplayOptions: PopupDisplayOptions(
-                            builder: (BuildContext context, Marker marker) {
-                              final markerInfo = markerData.firstWhere(
-                                  (element) =>
-                                      element["location"] == marker.point);
-                              return Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  VetPopup(data: markerInfo),
-                                  Container(
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Color.fromARGB(255, 39, 86, 139),
-                                    ),
-                                    child: IconButton(
-                                      icon:
-                                          const Icon(Icons.close, color: Colors.white),
-                                      onPressed: () {
-                                        _popupController.hideAllPopups();
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isMobile = constraints.maxWidth < mobileWidth;
+        return Stack(
+            children: [
+              userLocation == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: userLocation!,
+                          initialZoom: 15,
+                          maxZoom: 19,
+                          cameraConstraint: CameraConstraint.contain(
+                            bounds: sanJoseDelMonteBounds,
                           ),
+                          onTap: (_, __) {
+                            setState(() {
+                              routePoints.clear();
+                              _popupController.hideAllPopups();
+                            });
+                          },
                         ),
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: userLocation!,
-                            width: 40,
-                            height: 40,
-                            child: const Icon(Icons.my_location,
-                                color: Colors.blue, size: 40),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            subdomains: const ['a', 'b', 'c'],
+                            maxZoom: 19,
+                          ),
+                          if (routePoints.isNotEmpty)
+                            PolylineLayer(
+                              polylines: [
+                                Polyline(
+                                  points: routePoints,
+                                  color: Colors.blue,
+                                  strokeWidth: 5.0,
+                                ),
+                              ],
+                            ),
+                          PopupMarkerLayer(
+                            options: PopupMarkerLayerOptions(
+                              popupController: _popupController,
+                              markers: getMarkers(),
+                              popupDisplayOptions: PopupDisplayOptions(
+                                builder: (BuildContext context, Marker marker) {
+                                  final markerInfo = markerData.firstWhere(
+                                      (element) =>
+                                          element["location"] == marker.point);
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      VetPopup(data: markerInfo),
+                                      Container(
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Color.fromARGB(255, 39, 86, 139),
+                                        ),
+                                        child: IconButton(
+                                          icon:
+                                              const Icon(Icons.close, color: Colors.white),
+                                          onPressed: () {
+                                            _popupController.hideAllPopups();
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: userLocation!,
+                                width: 40,
+                                height: 40,
+                                child: const Icon(Icons.my_location,
+                                    color: Colors.blue, size: 40),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
                   ),
-              ),
-        ],
-      );
+            ],
+          );
+      }
+    );
   }
 }

@@ -192,7 +192,7 @@ void initState() {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
                                 child: Image.asset(
-                                  'lib/images/pfp.jpg',
+                                  'lib/images/test_image.jpg',
                                   height: 40,
                                   width: 40,
                                 ),

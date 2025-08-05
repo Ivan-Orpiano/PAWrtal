@@ -100,7 +100,7 @@ class _NotificationIconWebState extends State<WebNotificationIcon> {
                             child: ListTile(
                               leading: CircleAvatar(
                                 backgroundImage: AssetImage(
-                                  'lib/images/pfp.jpg',
+                                  'lib/images/test_image.jpg',
                                 ),
                               ),
                               title: Text(

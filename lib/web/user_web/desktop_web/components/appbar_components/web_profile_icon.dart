@@ -69,7 +69,7 @@ class _ProfileIconWebState extends State<WebProfileIcon> {
                       children: [
                         const ListTile(
                           leading: CircleAvatar(
-                            backgroundImage: AssetImage('lib/images/pfp.jpg'),
+                            backgroundImage: AssetImage('lib/images/blackguy.png'),
                           ),
                           title: Text(
                             "Test",
@@ -152,7 +152,7 @@ class _ProfileIconWebState extends State<WebProfileIcon> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(50),
           child: Image.asset(
-            'lib/images/pfp.jpg',
+            'lib/images/blackguy.png',
             width: 35,
             height: 35,
           ),

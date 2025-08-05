@@ -183,7 +183,6 @@ double getLeftSideWidth(double screenWidth) {
                             const Spacer(
                               flex: 1,
                             ),
-              
                             WebNotificationIcon(
                               right: notifRight,
                               top: 70,
@@ -247,7 +246,7 @@ double getLeftSideWidth(double screenWidth) {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
                                 child: Image.asset(
-                                  'lib/images/pfp.jpg',
+                                  'lib/images/test_image.jpg',
                                   height: 40,
                                   width: 40,
                                 ),

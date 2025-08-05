@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/user_web/components/data.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_filter.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
@@ -41,22 +42,7 @@ class _WebTabletDashboardPageState extends State<WebTabletDashboardPage> {
         Padding(
           padding: const EdgeInsets.only(left: 8, top: 16),
           child: _showMap ? _buildMapView() : 
-          LayoutBuilder(
-              builder: (context, constraints) {
-              double screenWidth = constraints.maxWidth;
-              const double spacing = 25;
-              const double minTileWidth = 200;
-              int tilesPerRow = (screenWidth / (minTileWidth + spacing)).floor();
-              tilesPerRow = tilesPerRow.clamp(1, 7); 
-              double tileWidth = (screenWidth - (spacing * (tilesPerRow - 1))) / tilesPerRow;
-              return Wrap(
-                spacing: spacing,
-                runSpacing: 10,
-                children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth),
-                ),
-              );
-            },
-          ),
+          const DashboardTiles()
         ),
       ]
       ),
