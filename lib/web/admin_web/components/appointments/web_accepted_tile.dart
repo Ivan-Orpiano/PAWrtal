@@ -30,7 +30,7 @@ class _WebAcceptedTileState extends State<WebAcceptedTile> {
         ),
         child: SizedBox(
           height: 800,
-          width: 800,
+          width: 600,
           child: WebAppointmentDetails(
             appointmentData: {
               'owner': a.owner,
