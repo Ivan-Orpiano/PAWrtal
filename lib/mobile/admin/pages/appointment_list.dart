@@ -1,37 +1,40 @@
+// enhanced_appointment_list.dart
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/mobile/admin/components/appointment_tabs/clinic_appointment_controller.dart';
-import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/accepted_page.dart';
+import 'package:capstone_app/mobile/admin/components/appointment_tabs/enhanced_clinic_appointment_controller.dart';
+import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/completed_page.dart';
+import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/in_progress_page.dart';
 import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/pending_page.dart';
-import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/rejected_page.dart';
+import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/scheduled_page.dart';
+import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/today_overview_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AppointmentListPage extends StatefulWidget {
-  const AppointmentListPage({super.key});
+class EnhancedAppointmentListPage extends StatefulWidget {
+  const EnhancedAppointmentListPage({super.key});
 
   @override
-  State<AppointmentListPage> createState() => _AppointmentListPageState();
+  State<EnhancedAppointmentListPage> createState() => _EnhancedAppointmentListPageState();
 }
 
-class _AppointmentListPageState extends State<AppointmentListPage>
+class _EnhancedAppointmentListPageState extends State<EnhancedAppointmentListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
-    // Initialize or get the controller
-    if (!Get.isRegistered<ClinicAppointmentController>()) {
-      Get.put(ClinicAppointmentController(
+    // Initialize controller
+    if (!Get.isRegistered<EnhancedClinicAppointmentController>()) {
+      Get.put(EnhancedClinicAppointmentController(
         authRepository: Get.find<AuthRepository>(),
         session: Get.find<UserSessionService>(),
       ));
     } else {
-      Get.find<ClinicAppointmentController>().fetchClinicData();
+      Get.find<EnhancedClinicAppointmentController>().fetchClinicData();
     }
   }
 
@@ -43,61 +46,95 @@ class _AppointmentListPageState extends State<AppointmentListPage>
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ClinicAppointmentController>();
+    final controller = Get.find<EnhancedClinicAppointmentController>();
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
       body: Column(
         children: [
-          // Header
+          // Enhanced Header with Stats
           Container(
             padding: const EdgeInsets.only(top: 50, bottom: 20, left: 20, right: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "Appointments",
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Obx(() {
-                      final totalAppointments = controller.appointments.length;
-                      final pendingCount = controller.pending.length;
-                      return Text(
-                        "$totalAppointments total • $pendingCount pending",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Patient Care",
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 28,
+                            color: Colors.white,
+                          ),
                         ),
-                      );
-                    }),
-                  ],
-                ),
-                // Refresh Button
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: () => controller.refreshAppointments(),
-                    icon: const Icon(
-                      Icons.refresh,
-                      color: Colors.white,
+                        const SizedBox(height: 4),
+                        Obx(() {
+                          final stats = controller.appointmentStats;
+                          return Text(
+                            "${stats['today']} today • ${stats['in_progress']} in progress",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.8),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                  ),
+                    // Stats & Refresh
+                    Row(
+                      children: [
+                        // Today's Revenue
+                        Obx(() => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                "₱${controller.todayRevenue.toStringAsFixed(0)}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                "Today's Revenue",
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                        const SizedBox(width: 12),
+                        // Refresh Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            onPressed: () => controller.refreshAppointments(),
+                            icon: const Icon(Icons.refresh, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          // Tab Bar and Content
+          
+          // Enhanced Tab Bar and Content
           Expanded(
             child: Container(
               width: double.infinity,
@@ -110,7 +147,7 @@ class _AppointmentListPageState extends State<AppointmentListPage>
               ),
               child: Column(
                 children: [
-                  // Tab Bar
+                  // Enhanced Tab Bar
                   Container(
                     margin: const EdgeInsets.only(top: 20, left: 16, right: 16),
                     padding: const EdgeInsets.all(4),
@@ -142,132 +179,27 @@ class _AppointmentListPageState extends State<AppointmentListPage>
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      isScrollable: true,
                       tabs: [
-                        Tab(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.pending, size: 18),
-                                const SizedBox(width: 6),
-                                const Text("Pending"),
-                                const SizedBox(width: 4),
-                                Obx(() {
-                                  final count = controller.pending.length;
-                                  if (count > 0) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        count.toString(),
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Tab(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.check_circle, size: 18),
-                                const SizedBox(width: 6),
-                                const Text("Accepted"),
-                                const SizedBox(width: 4),
-                                Obx(() {
-                                  final count = controller.accepted.length;
-                                  if (count > 0) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        count.toString(),
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Tab(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.cancel, size: 18),
-                                const SizedBox(width: 6),
-                                const Text("Declined"),
-                                const SizedBox(width: 4),
-                                Obx(() {
-                                  final count = controller.declined.length;
-                                  if (count > 0) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        count.toString(),
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
+                        _buildTab(Icons.today, "Today", controller.appointmentStats['today'] ?? 0),
+                        _buildTab(Icons.pending, "Pending", controller.appointmentStats['pending'] ?? 0),
+                        _buildTab(Icons.schedule, "Scheduled", controller.appointmentStats['scheduled'] ?? 0),
+                        _buildTab(Icons.medical_services, "In Progress", controller.appointmentStats['in_progress'] ?? 0),
+                        _buildTab(Icons.check_circle, "Completed", controller.appointmentStats['completed'] ?? 0),
                       ],
                     ),
                   ),
+                  
                   // Tab Content
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
                       children: const [
+                        TodayOverviewPage(),
                         PendingPage(),
-                        AcceptedPage(),
-                        RejectedPage(),
+                        ScheduledPage(),
+                        InProgressPage(),
+                        CompletedPage(),
                       ],
                     ),
                   ),
@@ -278,5 +210,56 @@ class _AppointmentListPageState extends State<AppointmentListPage>
         ],
       ),
     );
+  }
+
+  Widget _buildTab(IconData icon, String text, int count) {
+    return Tab(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 6),
+            Text(text, style: const TextStyle(fontSize: 12)),
+            if (count > 0) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _getCountColor(text),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getCountColor(String tabName) {
+    switch (tabName) {
+      case 'Today':
+        return Colors.blue;
+      case 'Pending':
+        return Colors.orange;
+      case 'Scheduled':
+        return Colors.green;
+      case 'In Progress':
+        return Colors.purple;
+      case 'Completed':
+        return Colors.teal;
+      default:
+        return Colors.grey;
+    }
   }
 }

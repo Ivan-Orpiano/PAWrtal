@@ -1,5 +1,5 @@
-import 'package:capstone_app/mobile/admin/components/appointment_tabs/clinic_appointment_controller.dart';
-import 'package:capstone_app/mobile/admin/components/appointment_tiles/clinic_appointment_tile.dart';
+import 'package:capstone_app/mobile/admin/components/appointment_tabs/enhanced_clinic_appointment_controller.dart';
+import 'package:capstone_app/mobile/admin/components/appointment_tiles/enhanced_clinic_appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -8,7 +8,7 @@ class AcceptedPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ClinicAppointmentController>();
+    final controller = Get.find<EnhancedClinicAppointmentController>();
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 230, 230, 230),
@@ -17,7 +17,7 @@ class AcceptedPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final acceptedAppointments = controller.accepted;
+        final acceptedAppointments = controller.accepted; // Now this getter exists
 
         if (acceptedAppointments.isEmpty) {
           return _buildEmptyState();
@@ -30,9 +30,9 @@ class AcceptedPage extends StatelessWidget {
             itemCount: acceptedAppointments.length,
             itemBuilder: (context, index) {
               final appointment = acceptedAppointments[index];
-              return ClinicAppointmentTile(
+              return PatientWorkflowTile(
                 appointment: appointment,
-                showActions: false, // No actions needed, just show status
+                workflowStage: 'accepted',
               );
             },
           ),
@@ -47,7 +47,7 @@ class AcceptedPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.check_circle_outline,
+            Icons.schedule,
             size: 80,
             color: Colors.grey[400],
           ),
@@ -62,7 +62,7 @@ class AcceptedPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Accepted appointments will appear here.',
+            'Accepted appointments will appear here.\nPatients are waiting for their scheduled time.',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[500],
