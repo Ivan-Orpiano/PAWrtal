@@ -9,4 +9,5 @@ class AppwriteConstants {
   static String clinicsCollectionID = "680c91b500000a2cdf0d";
   static String clinicSettingsCollectionID = "6808d8c80020d54ae6ac";
   static String appointmentCollectionID = "6808d79c0026493948d1";
+  static String medicalRecordsCollectionID = "68940e0f00334b37ff25";
 }

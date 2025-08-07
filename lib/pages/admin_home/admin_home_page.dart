@@ -23,7 +23,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
   final List _pages = [
     const AdminLandingPage(),
-    const AppointmentListPage(),
+    const EnhancedAppointmentListPage(),
     const MessagesPage(),
     const StaffAccountsPage(),
   ];

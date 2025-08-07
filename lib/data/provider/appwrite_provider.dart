@@ -329,6 +329,57 @@ class AppWriteProvider {
     );
   }
 
+  Future<void> updateFullAppointment(
+      String documentId, Map<String, dynamic> data) async {
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.appointmentCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<models.Document> createMedicalRecord(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants
+          .medicalRecordsCollectionID, // You'll need to add this constant
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPetMedicalRecords(String petId) async {
+    final res = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.medicalRecordsCollectionID,
+      queries: [Query.equal("petId", petId)],
+    );
+
+    return res.documents
+        .map((doc) => {
+              ...doc.data,
+              '\$id': doc.$id,
+            })
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getClinicMedicalRecords(
+      String clinicId) async {
+    final res = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.medicalRecordsCollectionID,
+      queries: [Query.equal("clinicId", clinicId)],
+    );
+
+    return res.documents
+        .map((doc) => {
+              ...doc.data,
+              '\$id': doc.$id,
+            })
+        .toList();
+  }
+
   Future<Document> updateClinic(
       String documentId, Map<String, dynamic> data) async {
     return await databases!.updateDocument(
