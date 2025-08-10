@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:capstone_app/mobile/super_admin/WebVersion/super_ad_main_menu_page.dart';
 
 void main() {
   runApp(const VetClinicFeedbackApp());
@@ -79,6 +80,14 @@ class _VetClinicFeedbackManagerState extends State<VetClinicFeedbackManager> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromRGBO(248, 253, 255, 0.8),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const SuperAdMainPage()),
+            );
+          },
+        ),
         title: const Text('View Reports'),
       ),
       body: Row(
