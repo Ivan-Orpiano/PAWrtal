@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
@@ -63,6 +64,11 @@ class AuthRepository {
     return appWriteProvider.updateAppointmentStatus(documentId, status);
   }
 
+  Future<void> updateFullAppointment(
+      String documentId, Map<String, dynamic> data) {
+    return appWriteProvider.updateFullAppointment(documentId, data);
+  }
+
   Future<models.Document?> getStaffByClinicId(String clinicId) =>
       appWriteProvider.getStaffByClinicId(clinicId);
 
@@ -93,5 +99,19 @@ class AuthRepository {
   Future<List<Appointment>> getUserAppointments(String userId) async {
     final rawAppointments = await appWriteProvider.getUserAppointments(userId);
     return rawAppointments.map((data) => Appointment.fromMap(data)).toList();
+  }
+
+  Future<models.Document> createMedicalRecord(MedicalRecord medicalRecord) {
+    return appWriteProvider.createMedicalRecord(medicalRecord.toMap());
+  }
+
+  Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
+    final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
+    return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+  }
+
+  Future<List<MedicalRecord>> getClinicMedicalRecords(String clinicId) async {
+    final rawRecords = await appWriteProvider.getClinicMedicalRecords(clinicId);
+    return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
   }
 }

@@ -23,7 +23,7 @@ class _FirstPageState extends State<FirstPage> {
 
   final List _pages = [
     const AdminLandingPage(),
-    const AppointmentListPage(),
+    const EnhancedAppointmentListPage(),
     const MessagesPage(),
     const StaffAccountsPage(),
   ];

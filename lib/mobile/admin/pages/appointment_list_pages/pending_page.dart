@@ -1,5 +1,5 @@
-import 'package:capstone_app/mobile/admin/components/appointment_tabs/clinic_appointment_controller.dart';
-import 'package:capstone_app/mobile/admin/components/appointment_tiles/clinic_appointment_tile.dart';
+import 'package:capstone_app/mobile/admin/components/appointment_tabs/enhanced_clinic_appointment_controller.dart';
+import 'package:capstone_app/mobile/admin/components/appointment_tiles/enhanced_clinic_appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -8,7 +8,7 @@ class PendingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ClinicAppointmentController>();
+    final controller = Get.find<EnhancedClinicAppointmentController>();
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 230, 230, 230),
@@ -30,9 +30,9 @@ class PendingPage extends StatelessWidget {
             itemCount: pendingAppointments.length,
             itemBuilder: (context, index) {
               final appointment = pendingAppointments[index];
-              return ClinicAppointmentTile(
+              return PatientWorkflowTile(
                 appointment: appointment,
-                showActions: true, // Show accept/decline buttons
+                workflowStage: 'pending',
               );
             },
           ),

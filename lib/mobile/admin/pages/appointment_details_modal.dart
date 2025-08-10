@@ -1,5 +1,5 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
-import 'package:capstone_app/mobile/admin/components/appointment_tabs/clinic_appointment_controller.dart';
+import 'package:capstone_app/mobile/admin/components/appointment_tabs/enhanced_clinic_appointment_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +14,7 @@ class AppointmentDetailsModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ClinicAppointmentController>();
+    final controller = Get.find<EnhancedClinicAppointmentController>();
     
     return Container(
       height: MediaQuery.of(context).size.height * 0.8,

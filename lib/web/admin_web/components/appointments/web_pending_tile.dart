@@ -32,7 +32,7 @@ class _WebPendingTileState extends State<WebPendingTile> {
         ),
         child: SizedBox(
           height: 800,
-          width: 800,
+          width: 600,
           child: WebAppointmentDetails(
             appointmentData: {
               'owner': a.owner,
@@ -44,6 +44,8 @@ class _WebPendingTileState extends State<WebPendingTile> {
               'status': 'pending',
               'imageUrl': a.imageUrl,
             },
+            onAccept: widget.onAccept,
+            onDecline: widget.onDecline,
           ),
         ),
       ),

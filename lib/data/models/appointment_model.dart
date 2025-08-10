@@ -5,10 +5,26 @@ class Appointment {
   final String petId;
   final String service;
   final DateTime dateTime;
-  final String status;
-  final String? notes;
+  final String status; // pending, accepted, in_progress, completed, no_show, cancelled
+  final String? notes; // Initial booking notes
   final DateTime createdAt;
   final DateTime updatedAt;
+  
+  // New fields for medical records
+  final DateTime? checkedInAt;
+  final DateTime? serviceStartedAt;
+  final DateTime? serviceCompletedAt;
+  final String? diagnosis;
+  final String? treatment;
+  final String? prescription;
+  final String? vetNotes;
+  final List<String>? attachments; // For photos, documents
+  final double? totalCost;
+  final bool isPaid;
+  final String? paymentMethod;
+  final String? followUpInstructions;
+  final DateTime? nextAppointmentDate;
+  final Map<String, dynamic>? vitals; // Temperature, weight, etc.
 
   Appointment({
     this.documentId,
@@ -21,12 +37,26 @@ class Appointment {
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.checkedInAt,
+    this.serviceStartedAt,
+    this.serviceCompletedAt,
+    this.diagnosis,
+    this.treatment,
+    this.prescription,
+    this.vetNotes,
+    this.attachments,
+    this.totalCost,
+    this.isPaid = false,
+    this.paymentMethod,
+    this.followUpInstructions,
+    this.nextAppointmentDate,
+    this.vitals,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
   factory Appointment.fromMap(Map<String, dynamic> map) {
     return Appointment(
-      documentId: map['\$id'], // Get document ID from AppWrite
+      documentId: map['\$id'],
       userId: map['userId'] ?? '',
       clinicId: map['clinicId'] ?? '',
       petId: map['petId'] ?? '',
@@ -36,6 +66,20 @@ class Appointment {
       notes: map['notes'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      checkedInAt: map['checkedInAt'] != null ? DateTime.parse(map['checkedInAt']) : null,
+      serviceStartedAt: map['serviceStartedAt'] != null ? DateTime.parse(map['serviceStartedAt']) : null,
+      serviceCompletedAt: map['serviceCompletedAt'] != null ? DateTime.parse(map['serviceCompletedAt']) : null,
+      diagnosis: map['diagnosis'],
+      treatment: map['treatment'],
+      prescription: map['prescription'],
+      vetNotes: map['vetNotes'],
+      attachments: map['attachments'] != null ? List<String>.from(map['attachments']) : null,
+      totalCost: map['totalCost']?.toDouble(),
+      isPaid: map['isPaid'] ?? false,
+      paymentMethod: map['paymentMethod'],
+      followUpInstructions: map['followUpInstructions'],
+      nextAppointmentDate: map['nextAppointmentDate'] != null ? DateTime.parse(map['nextAppointmentDate']) : null,
+      vitals: map['vitals'],
     );
   }
 
@@ -50,6 +94,20 @@ class Appointment {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'checkedInAt': checkedInAt?.toIso8601String(),
+      'serviceStartedAt': serviceStartedAt?.toIso8601String(),
+      'serviceCompletedAt': serviceCompletedAt?.toIso8601String(),
+      'diagnosis': diagnosis,
+      'treatment': treatment,
+      'prescription': prescription,
+      'vetNotes': vetNotes,
+      'attachments': attachments,
+      'totalCost': totalCost,
+      'isPaid': isPaid,
+      'paymentMethod': paymentMethod,
+      'followUpInstructions': followUpInstructions,
+      'nextAppointmentDate': nextAppointmentDate?.toIso8601String(),
+      'vitals': vitals,
     };
   }
 
@@ -64,6 +122,20 @@ class Appointment {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? checkedInAt,
+    DateTime? serviceStartedAt,
+    DateTime? serviceCompletedAt,
+    String? diagnosis,
+    String? treatment,
+    String? prescription,
+    String? vetNotes,
+    List<String>? attachments,
+    double? totalCost,
+    bool? isPaid,
+    String? paymentMethod,
+    String? followUpInstructions,
+    DateTime? nextAppointmentDate,
+    Map<String, dynamic>? vitals,
   }) {
     return Appointment(
       documentId: documentId ?? this.documentId,
@@ -76,6 +148,46 @@ class Appointment {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      checkedInAt: checkedInAt ?? this.checkedInAt,
+      serviceStartedAt: serviceStartedAt ?? this.serviceStartedAt,
+      serviceCompletedAt: serviceCompletedAt ?? this.serviceCompletedAt,
+      diagnosis: diagnosis ?? this.diagnosis,
+      treatment: treatment ?? this.treatment,
+      prescription: prescription ?? this.prescription,
+      vetNotes: vetNotes ?? this.vetNotes,
+      attachments: attachments ?? this.attachments,
+      totalCost: totalCost ?? this.totalCost,
+      isPaid: isPaid ?? this.isPaid,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      followUpInstructions: followUpInstructions ?? this.followUpInstructions,
+      nextAppointmentDate: nextAppointmentDate ?? this.nextAppointmentDate,
+      vitals: vitals ?? this.vitals,
     );
+  }
+
+  // Helper methods for status checking
+  bool get isCompleted => status == 'completed';
+  bool get isInProgress => status == 'in_progress';
+  bool get isAccepted => status == 'accepted';
+  bool get isPending => status == 'pending';
+  bool get hasArrived => checkedInAt != null;
+  bool get hasServiceStarted => serviceStartedAt != null;
+  bool get hasServiceCompleted => serviceCompletedAt != null;
+  bool get hasMedicalRecord => diagnosis != null || treatment != null || prescription != null;
+
+  // Get service duration
+  Duration? get serviceDuration {
+    if (serviceStartedAt != null && serviceCompletedAt != null) {
+      return serviceCompletedAt!.difference(serviceStartedAt!);
+    }
+    return null;
+  }
+
+  // Get waiting time
+  Duration? get waitingTime {
+    if (checkedInAt != null && serviceStartedAt != null) {
+      return serviceStartedAt!.difference(checkedInAt!);
+    }
+    return null;
   }
 }

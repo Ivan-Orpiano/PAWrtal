@@ -6,27 +6,23 @@ class VetClinicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     return InkWell(
-
         highlightColor: Colors.transparent,
         splashColor: Colors.transparent,
         hoverColor: Colors.transparent,
-
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const SuperAdminVetClinic(),
-            )
-          ),
+            )),
         child: Padding(
-          padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(5),
             child: SizedBox(
-                height: 650,
-                width: 450,
-                  child: Container(
+                height: MediaQuery.of(context).size.height * 0.75,
+                width: MediaQuery.of(context).size.width * 0.8,
+                child: Container(
                     decoration: BoxDecoration(
                       color: const Color.fromRGBO(81, 115, 153, 0.8),
                       borderRadius: BorderRadius.circular(15),
@@ -37,23 +33,17 @@ class VetClinicTile extends StatelessWidget {
                       children: [
                         Image.asset(
                           'lib/images/vet_clinic_icon.png',
-                          height: screenHeight * 0.5,
-                          width: screenWidth * 0.3,
                           fit: BoxFit.cover,
                         ),
-                        const SizedBox(height: 10),
+                        //const SizedBox(height: 10),
                         const Text(
                           'Veterinary Clinic',
                           style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
-                    )
-            )
-         )
-       )
-    );
+                    )))));
   }
 }

@@ -73,28 +73,35 @@ class _WebAppointmentPetDetailsState extends State<WebAppointmentPetDetails> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 100, 124, 151),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.black),
         ),
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 45,
-                backgroundImage: AssetImage("lib/images/kapitankalbo1.png"),
+                backgroundImage:
+                    AssetImage(pet['imageUrl'] ?? 'lib/images/pfp.jpg'),
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 15),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Name: ${pet['name'] ?? ''}",
-                        style: const TextStyle(color: Colors.white)),
+                    Text(
+                      "${pet['name'] ?? ''}",
+                      style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                    ),
                     Text("Breed: ${pet['breed'] ?? ''}",
-                        style: const TextStyle(color: Colors.white)),
+                        style: const TextStyle(color: Colors.black)),
                     Text("Service: ${pet['service'] ?? ''}",
-                        style: const TextStyle(color: Colors.white)),
+                        style: const TextStyle(color: Colors.black)),
                   ],
                 ),
               ),
