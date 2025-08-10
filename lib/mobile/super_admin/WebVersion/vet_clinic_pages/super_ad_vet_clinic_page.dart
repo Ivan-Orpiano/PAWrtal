@@ -311,7 +311,12 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                             children: [
                               ElevatedButton(
                                 onPressed: () {
-                                  const CrudeAdminAccount();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const CrudeAdminAccount(),
+                                    ),
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size(220, 50),
@@ -329,7 +334,12 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () {
-                                  const CrudeStaffAccount();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const CrudeStaffAccount(),
+                                    ),
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size(220, 50),
