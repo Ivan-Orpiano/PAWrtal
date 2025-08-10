@@ -33,9 +33,9 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: Colors.grey.shade50,
-        centerTitle: true,
         leadingWidth: 220,
         toolbarHeight: 80,
         bottom: PreferredSize(
