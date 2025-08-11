@@ -1,4 +1,5 @@
-import 'package:capstone_app/mobile/super_admin/WebVersion/super_ad_main_menu_page.dart';
+
+import 'package:capstone_app/pages/user_home/user_home_page.dart';
 import 'package:capstone_app/web/web_home.dart';
 import 'package:flutter/material.dart';
 
@@ -17,8 +18,7 @@ class WebMain extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       scrollBehavior: MyCustomScrollBehavior(),
-      //home: const WebHome(),
-      home: const SuperAdMainPage(),
+      home: const WebHome(),
     );
   }
 }
