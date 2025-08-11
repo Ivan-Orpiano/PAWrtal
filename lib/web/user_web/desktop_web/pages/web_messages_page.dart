@@ -159,9 +159,13 @@ class _MessageTileState extends State<MessageTile> {
           padding: const EdgeInsets.all(8.0),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(50),
-                child: Image.asset("lib/images/pfp.jpg"),
+              SizedBox(
+                width: 50,
+                height: 50,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: Image.asset("lib/images/test_image.jpg", fit: BoxFit.fitHeight,),
+                ),
               ),
               const SizedBox(width: 8),
               const Column(
@@ -169,11 +173,11 @@ class _MessageTileState extends State<MessageTile> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Name ng fyne shyt"
+                    "Name"
                   ),
                   SizedBox(height: 8),
                   Text(
-                    "Last message ng fine shyt"
+                    "Latest message"
                   )
                 ],
               )
@@ -294,13 +298,17 @@ class _MiddlePanelState extends State<MiddlePanel> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: Image.asset("lib/images/pfp.jpg"),
+                SizedBox(
+                  width: 40,
+                  height: 50,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(50),
+                    child: Image.asset("lib/images/test_image.jpg", fit: BoxFit.fitHeight,),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
-                  "Name ng fine shyt",
+                  "Name",
                 ),
                 const Spacer(),
                 Row(
@@ -321,7 +329,7 @@ class _MiddlePanelState extends State<MiddlePanel> {
               ],
             ),
           ),
-          //dito yung messages
+          //dito yung messages, create ng .dart file para iiisang code lng
           Expanded(
             child: Container(
               height: 707,
