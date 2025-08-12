@@ -1,11 +1,11 @@
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_album.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_description.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_location.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_services_manager.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_hover_underline_text.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_rating_reviews.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/crude_admin_account.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/crude_staff_account.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/crude_admin_account.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/crude_staff_account.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_album.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_description.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_location.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_services_manager.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_hover_underline_text.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_rating_reviews.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdminVetClinicPage extends StatefulWidget {
