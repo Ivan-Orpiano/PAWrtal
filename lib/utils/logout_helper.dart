@@ -10,16 +10,12 @@ class LogoutHelper {
 
   static Future<void> logout() async {
     try {
-      // Logout from Appwrite - use the method that exists in your AppWriteProvider
-      // If you don't have a webLogout method, just use account.deleteSession
       try {
         await _appWriteProvider.account?.deleteSession(sessionId: 'current');
       } catch (e) {
-        // Even if logout fails, we should clear local storage
         print('Logout error: $e');
       }
       
-      // Clear all stored user data
       await _getStorage.remove("userId");
       await _getStorage.remove("sessionId");
       await _getStorage.remove("role");
@@ -29,7 +25,6 @@ class LogoutHelper {
       await _getStorage.remove("staffId");
       await _getStorage.remove("customerId");
       
-      // Navigate to login page
       Get.offAllNamed(Routes.login);
       
       Get.snackbar(

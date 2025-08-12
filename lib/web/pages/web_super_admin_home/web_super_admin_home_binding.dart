@@ -6,12 +6,10 @@ import 'package:get/get.dart';
 class WebSuperAdminHomeBinding extends Bindings {
   @override
   void dependencies() {
-    // Register AuthRepository if not already registered
     if (!Get.isRegistered<AuthRepository>()) {
       Get.lazyPut<AuthRepository>(() => AuthRepository(AppWriteProvider()));
     }
 
-    // Register WebSuperAdminHomeController
     Get.lazyPut<WebSuperAdminHomeController>(
       () => WebSuperAdminHomeController(Get.find<AuthRepository>()),
     );

@@ -40,12 +40,10 @@ class WebAdminHomeController extends GetxController {
     final role = _getStorage.read("role") as String?;
     userRole.value = role ?? '';
     
-    // Only admins can access staff management, not regular staff
     canAccessStaffs.value = role == "admin";
   }
 
   void setSelectedIndex(int index) {
-    // Validate index bounds based on available pages
     final maxIndex = canAccessStaffs.value ? 4 : 3;
     if (index >= 0 && index <= maxIndex) {
       selectedIndex.value = index;
