@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class WebAppointmentsPage extends StatefulWidget {
@@ -270,90 +271,168 @@ class AppointmentTile extends StatefulWidget {
 class _AppointmentTileState extends State<AppointmentTile> {
   @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        height: 200,
-        decoration: BoxDecoration(
-          color: widget.color,
-          borderRadius: BorderRadius.circular(20)
-        ),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'lib/images/test_image.jpg',
-                    width: 85,
-                    height: 85,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(
-                  width: 16,
-                ),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 7,
-                  children: [
-                    Text(
-                      "Clinic name",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => _buildWebAppointmentDialog()
+        );
+      },
+      child: Flexible(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          height: 200,
+          decoration: BoxDecoration(
+            color: widget.color,
+            borderRadius: BorderRadius.circular(20)
+          ),
+          child: Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(
+                    flex: 4,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        'lib/images/test_image.jpg',
+                        width: 85,
+                        height: 85,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.medical_services_outlined,
-                          size: 22,
+                  ),
+                  const SizedBox(
+                    width: 10,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 7,
+                    children: [
+                      const Text(
+                        "Clinic name",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18
                         ),
-                        SizedBox(width: 5,),
-                        Text(
-                          "Purpose of appointment", 
-                          style: TextStyle(
-                            fontSize: 14
+                      ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.medical_services_outlined,
+                            size: 22,
+                            color: Colors.grey.shade700
                           ),
-                        )
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.pets_rounded,
-                          size: 22,
-                        ),
-                        SizedBox(width: 5,),
-                        Text(
-                          "Name of pet", 
-                          style: TextStyle(
-                            fontSize: 14
+                          const SizedBox(width: 5,),
+                          Text(
+                            "Purpose of appointment", 
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700
+                            ),
+                          )
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.pets_rounded,
+                            size: 22,
+                            color: Colors.grey.shade700
                           ),
-                        )
-                      ],
-                    )
-                  ],
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 16,
-            ),
-            Container(
-              height: 67,
-              decoration: BoxDecoration(
-
+                          const SizedBox(width: 5,),
+                          Text(
+                            "Name of pet", 
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700
+                            ),
+                          )
+                        ],
+                      )
+                    ],
+                  )
+                ],
               ),
-              child: Row(
+              const SizedBox(
+                height: 16,
               ),
-            )
-          ],
+              Container(
+                height: 67,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    width: 2,
+                    color: Colors.black,
+                  )
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: const Row(
+                    spacing: 8,
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "December 1 2025",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            "3 :00 AM - 4 : 00 AM",
+                            style: TextStyle(
+                              fontSize: 12
+                            ),
+                          )
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+Widget _buildWebAppointmentDialog() {
+  return Dialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Container(
+      width: 550,
+      height: 700,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: const SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(
+                'Appointment Details',
+                style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
