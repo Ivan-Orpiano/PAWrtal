@@ -33,52 +33,67 @@ class _MySuperAdMainPage extends State<SuperAdMainPage> {
             ),
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: TextButton.icon(
-              onPressed: () {
-                //log out backend
-              },
-              icon: const Icon(Icons.logout,
-                  color: Color.fromRGBO(81, 115, 153, 0.8)),
-              label: const Text(
-                'Log Out',
-                style: TextStyle(color: Color.fromRGBO(81, 115, 153, 0.8)),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color.fromRGBO(81, 115, 153, 0.8),
-              ),
-            ),
-          ),
-        ],
       ),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
+          Widget tiles;
+          if (constraints.maxWidth > 800) {
+            tiles = const Padding(
+              padding: EdgeInsets.only(left: 20, right: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(child: VetClinicTile()),
+                  Expanded(child: PetOwnerTile()),
+                  Expanded(child: ViewReportTile()),
+                ],
+              ),
+            );
+          } else {
+            tiles = const Padding(
+              padding: EdgeInsets.only(left: 20, right: 20),
+              child: Column(
+                children: [
+                  VetClinicTile(),
+                  PetOwnerTile(),
+                  ViewReportTile(),
+                ],
+              ),
+            );
+          }
           return SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.only(top: 20, bottom: 60),
-              child: constraints.maxWidth > 800
-                  ? const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(child: VetClinicTile()),
-                        Expanded(child: PetOwnerTile()),
-                        Expanded(child: ViewReportTile()),
-                      ],
-                    )
-                  : const SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: Column(
-                        children: [
-                          VetClinicTile(),
-                          PetOwnerTile(),
-                          ViewReportTile(),
-                        ],
+              child: Column(
+                children: [
+                  tiles,
+                  const SizedBox(height: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          // log out backend
+                        },
+                        icon: const Icon(Icons.logout,
+                            color: Color.fromRGBO(81, 115, 153, 0.8)),
+                        label: const Text(
+                          'Log Out',
+                          style: TextStyle(
+                              color: Color.fromRGBO(81, 115, 153, 0.8)),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor:
+                              const Color.fromRGBO(81, 115, 153, 0.8),
+                        ),
                       ),
                     ),
+                  ),
+                ],
+              ),
             ),
           );
         },

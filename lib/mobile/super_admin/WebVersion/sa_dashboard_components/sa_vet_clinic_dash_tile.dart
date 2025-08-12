@@ -27,16 +27,26 @@ class SuperAdminVetClinicTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  decoration: const BoxDecoration(),
-                  width: double.infinity,
-                  height: constraints.maxWidth > 400 ? 230 : 180,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                Expanded(
+                    child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
                   child: Image.asset(
                     'lib/images/test_image.jpg',
                     fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: constraints.maxWidth > 400 ? 230 : 180,
                   ),
-                ),
+                )),
+                // Container(
+                //   decoration: const BoxDecoration(),
+                //   width: double.infinity,
+                //   height: constraints.maxWidth > 400 ? 230 : 180,
+                //   padding: const EdgeInsets.symmetric(horizontal: 10),
+                //   child: Image.asset(
+                //     'lib/images/test_image.jpg',
+                //     fit: BoxFit.cover,
+                //   ),
+                // ),
                 Padding(
                   padding: const EdgeInsets.only(top: 5, left: 10, bottom: 5),
                   child: Text(
