@@ -12,20 +12,35 @@ class WebLoginController extends GetxController {
 
   final GetStorage _getStorage = GetStorage();
   
-  // Form controllers
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  late TextEditingController emailController;
+  late TextEditingController passwordController;
   
-  // Reactive variables
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    emailController = TextEditingController();
+    passwordController = TextEditingController();
+  }
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
 
   void navigateToSignUp() {
-    Get.toNamed(Routes.signup);
+    _clearControllersBeforeNavigation();
+    Get.offAllNamed(Routes.signup); 
+  }
+
+  void _clearControllersBeforeNavigation() {
+    try {
+      emailController.clear();
+      passwordController.clear();
+    } catch (e) {
+      print('Controller clear error: $e');
+    }
   }
 
   Future<void> signIn() async {
@@ -42,7 +57,6 @@ class WebLoginController extends GetxController {
     try {
       isLoading.value = true;
       
-      // Use the same method as your mobile login controller
       final value = await _authRepository.login({
         "email": emailController.text.trim(),
         "password": passwordController.text,
@@ -62,42 +76,43 @@ class WebLoginController extends GetxController {
 
       _getStorage.write("userId", userId);
       _getStorage.write("sessionId", session.$id);
+      _getStorage.write("email", userEmail);
 
       String role = "";
       bool matched = false;
 
-      // Check if account is admin
       final clinicDoc = await _authRepository.getClinicByAdminId(userId);
       if (clinicDoc != null) {
         role = clinicDoc.data["role"];
         _getStorage.write("clinicId", clinicDoc.$id);
+        _getStorage.write("userName", clinicDoc.data["clinicName"] ?? "Admin");
         matched = true;
       }
 
-      // Check if account is staff
       if (!matched) {
         final staffDoc = await _authRepository.getStaffByClinicId(userEmail);
         if (staffDoc != null) {
           role = staffDoc.data["role"];
           _getStorage.write("staffId", staffDoc.$id);
           _getStorage.write("clinicId", staffDoc.data["clinicId"]);
+          _getStorage.write("userName", staffDoc.data["name"] ?? "Staff");
           matched = true;
         }
       }
 
-      // Check if user (customer)
       if (!matched) {
         final userDoc = await _authRepository.getUserById(userId);
         if (userDoc != null) {
           role = userDoc.data["role"]; // role should be "user"
           _getStorage.write("customerId", userDoc.$id);
+          _getStorage.write("userName", userDoc.data["name"] ?? "User");
           matched = true;
         }
       }
 
-      // Check if developer (super admin)
       if (!matched && userEmail == "test.developer@gmail.com") {
         role = "developer";
+        _getStorage.write("userName", "Developer");
         matched = true;
       }
 
@@ -105,19 +120,19 @@ class WebLoginController extends GetxController {
 
       _getStorage.write("role", role);
 
-      // Navigate based on role
-      _navigateBasedOnRole(role);
-      
       Get.snackbar(
         'Success',
         'Login successful',
         backgroundColor: Colors.green,
         colorText: Colors.white,
+        duration: const Duration(seconds: 2),
       );
 
-      // Clear controllers
-      emailController.clear();
-      passwordController.clear();
+      _clearControllersBeforeNavigation();
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      _navigateBasedOnRole(role);
       
     } catch (e) {
       Get.snackbar(
@@ -135,13 +150,10 @@ class WebLoginController extends GetxController {
     try {
       isLoading.value = true;
       
-      // Use AppWriteProvider directly for Google sign-in like in mobile
       final appWriteProvider = AppWriteProvider();
       final success = await appWriteProvider.signInWithGoogle();
       
       if (success) {
-        // For Google sign-in, typically redirects to user home
-        // You may need to implement additional role checking here
         _navigateBasedOnRole("user");
         
         Get.snackbar(
@@ -195,8 +207,12 @@ class WebLoginController extends GetxController {
 
   @override
   void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
+    try {
+      emailController.dispose();
+      passwordController.dispose();
+    } catch (e) {
+      print('Controller disposal error: $e');
+    }
     super.onClose();
   }
 }

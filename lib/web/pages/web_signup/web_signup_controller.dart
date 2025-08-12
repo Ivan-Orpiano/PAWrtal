@@ -12,16 +12,23 @@ class WebSignUpController extends GetxController {
 
   final GetStorage _getStorage = GetStorage();
   
-  // Form controllers
-  final emailController = TextEditingController();
-  final nameController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
+  late TextEditingController emailController;
+  late TextEditingController nameController;
+  late TextEditingController passwordController;
+  late TextEditingController confirmPasswordController;
   
-  // Reactive variables
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
   final isConfirmPasswordVisible = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    emailController = TextEditingController();
+    nameController = TextEditingController();
+    passwordController = TextEditingController();
+    confirmPasswordController = TextEditingController();
+  }
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
@@ -32,7 +39,19 @@ class WebSignUpController extends GetxController {
   }
 
   void navigateToLogin() {
-    Get.toNamed(Routes.login);
+    _clearControllersBeforeNavigation();
+    Get.offAllNamed(Routes.login); 
+  }
+
+  void _clearControllersBeforeNavigation() {
+    try {
+      emailController.clear();
+      nameController.clear();
+      passwordController.clear();
+      confirmPasswordController.clear();
+    } catch (e) {
+      print('Controller clear error: $e');
+    }
   }
 
   Future<void> signUp() async {
@@ -41,7 +60,6 @@ class WebSignUpController extends GetxController {
     try {
       isLoading.value = true;
       
-      // Use the same method as your mobile signup controller
       final user = await _authRepository.signup({
         "userId": ID.unique(),
         "name": nameController.text.trim(),
@@ -51,7 +69,6 @@ class WebSignUpController extends GetxController {
 
       final userId = user.$id;
 
-      // Create user document in database
       await _authRepository.createUser({
         "userId": userId,
         "name": nameController.text.trim(),
@@ -64,15 +81,13 @@ class WebSignUpController extends GetxController {
         'User account created successfully!',
         backgroundColor: Colors.green,
         colorText: Colors.white,
+        duration: const Duration(seconds: 3),
       );
 
-      // Clear controllers
-      emailController.clear();
-      nameController.clear();
-      passwordController.clear();
-      confirmPasswordController.clear();
+      _clearControllersBeforeNavigation();
 
-      // Navigate to login page
+      await Future.delayed(const Duration(milliseconds: 300));
+
       Get.offAllNamed(Routes.login);
       
     } catch (error) {
@@ -101,8 +116,6 @@ class WebSignUpController extends GetxController {
     try {
       isLoading.value = true;
       
-      // For Google signup, you might want to handle this differently
-      // This is a simplified version - you may need additional logic
       final appWriteProvider = AppWriteProvider();
       final success = await appWriteProvider.signInWithGoogle();
       
@@ -114,7 +127,6 @@ class WebSignUpController extends GetxController {
           colorText: Colors.white,
         );
         
-        // Navigate to user home for Google signup
         Get.offAllNamed(Routes.userHome);
       } else {
         Get.snackbar(
@@ -196,17 +208,21 @@ class WebSignUpController extends GetxController {
         Get.offAllNamed(Routes.userHome);
         break;
       default:
-        Get.offAllNamed(Routes.userHome); // Default to user home
+        Get.offAllNamed(Routes.userHome);
         break;
     }
   }
 
   @override
   void onClose() {
-    emailController.dispose();
-    nameController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
+    try {
+      emailController.dispose();
+      nameController.dispose();
+      passwordController.dispose();
+      confirmPasswordController.dispose();
+    } catch (e) {
+      print('Controller disposal error: $e');
+    }
     super.onClose();
   }
 }

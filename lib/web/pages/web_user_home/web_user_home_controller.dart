@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -21,5 +20,16 @@ class WebUserHomeController extends GetxController {
 
   String get userId {
     return _getStorage.read("userId") ?? "";
+  }
+
+  String get userRole {
+    return _getStorage.read("role") ?? "user";
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Ensure selectedIndex starts at 0
+    selectedIndex.value = 0;
   }
 }

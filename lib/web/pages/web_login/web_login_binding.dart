@@ -6,12 +6,10 @@ import 'package:get/get.dart';
 class WebLoginBinding extends Bindings {
   @override
   void dependencies() {
-    // Register AuthRepository if not already registered
     if (!Get.isRegistered<AuthRepository>()) {
       Get.lazyPut<AuthRepository>(() => AuthRepository(AppWriteProvider()));
     }
 
-    // Register WebLoginController
     Get.lazyPut<WebLoginController>(
       () => WebLoginController(Get.find<AuthRepository>()),
     );

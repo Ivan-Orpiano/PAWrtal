@@ -135,14 +135,12 @@ class NotchedNavbarPainter extends CustomPainter {
 
     final Rect host = Rect.fromLTWH(0, 0, size.width, size.height);
 
-    // Position the notch at the top center for a floating notch
     const double notchRadius = 35;
     final Offset notchCenter = Offset(size.width / 2, 0);
     final Rect guest = Rect.fromCircle(center: notchCenter, radius: notchRadius);
 
     final Path path = shape.getOuterPath(host, guest);
 
-    // Optionally add rounded top corners
     final RRect rounded = RRect.fromRectAndCorners(
       host,
       topLeft: const Radius.circular(16),
@@ -152,7 +150,6 @@ class NotchedNavbarPainter extends CustomPainter {
     );
     final Path roundedPath = Path()..addRRect(rounded);
 
-    // Combine notch path with rounded rectangle
     final Path combined = Path.combine(PathOperation.intersect, path, roundedPath);
 
     canvas.drawShadow(
