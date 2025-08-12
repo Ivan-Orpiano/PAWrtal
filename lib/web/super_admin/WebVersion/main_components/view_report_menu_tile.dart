@@ -1,13 +1,11 @@
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/super_admin_feedback_manager.dart';
 import 'package:flutter/material.dart';
 
-class VetClinicTile extends StatelessWidget {
-  const VetClinicTile({super.key});
+class ViewReportTile extends StatelessWidget {
+  const ViewReportTile({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return InkWell(
         highlightColor: Colors.transparent,
         splashColor: Colors.transparent,
@@ -15,7 +13,7 @@ class VetClinicTile extends StatelessWidget {
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const SuperAdminVetClinic(),
+              builder: (context) => const VetClinicFeedbackApp(),
             )),
         child: Padding(
             padding: const EdgeInsets.all(5),
@@ -32,12 +30,12 @@ class VetClinicTile extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset(
-                          'lib/images/vet_clinic_icon.png',
+                          'lib/images/view_report_icon.png',
                           fit: BoxFit.cover,
                         ),
                         //const SizedBox(height: 10),
                         const Text(
-                          'Veterinary Clinic',
+                          'View Reports',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
