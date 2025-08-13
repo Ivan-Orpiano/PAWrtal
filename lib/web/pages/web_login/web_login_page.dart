@@ -1,19 +1,11 @@
-import 'package:capstone_app/web/user_web/desktop_web/login_web/web_sign_up_page.dart';
+import 'package:capstone_app/web/pages/web_login/web_login_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:get/get.dart';
 
-class WebLoginPage extends StatefulWidget {
+class WebLoginPage extends GetView<WebLoginController> {
   const WebLoginPage({super.key});
 
-  @override
-  State<WebLoginPage> createState() => _WebLoginPageState();
-}
-
-class _WebLoginPageState extends State<WebLoginPage> {
-
-  TextStyle linkStyle = const TextStyle(
-  fontWeight: FontWeight.bold,
-);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,22 +54,19 @@ class _WebLoginPageState extends State<WebLoginPage> {
                         ),
                         RichText(
                           text: TextSpan(
+                            style: const TextStyle(color: Colors.black),
                             children: <TextSpan> [
                               const TextSpan(
-                                text: "Don't have an account?"
+                                text: "Don't have an account? "
                               ),
                               TextSpan(
-                                style: linkStyle,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromARGB(255, 81, 115, 153),
+                                ),
                                 text: "Sign up",
                                 recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const WebSignUpPage(),
-                                    )
-                                  );
-                                }
+                                ..onTap = controller.navigateToSignUp,
                               )
                             ]
                           ),
@@ -103,9 +92,10 @@ class _WebLoginPageState extends State<WebLoginPage> {
                             Padding(
                               padding: EdgeInsets.only(top: 64, left: 16, bottom: 16),
                               child: Text(
-                                "Sign up",
+                                "Sign In",
                                 style: TextStyle(
-                                  fontSize: 22
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
@@ -114,6 +104,8 @@ class _WebLoginPageState extends State<WebLoginPage> {
                         SizedBox(
                           width: 400,
                           child: TextFormField(
+                            controller: controller.emailController,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.email_rounded),
                               hintText: "Email",
@@ -128,15 +120,25 @@ class _WebLoginPageState extends State<WebLoginPage> {
                         ),
                         SizedBox(
                           width: 400,
-                          child: TextFormField(
+                          child: Obx(() => TextFormField(
+                            controller: controller.passwordController,
+                            obscureText: !controller.isPasswordVisible.value,
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.lock_rounded),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  controller.isPasswordVisible.value
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                ),
+                                onPressed: controller.togglePasswordVisibility,
+                              ),
                               hintText: "Password",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20)
                               ),
                             ),
-                          )
+                          ))
                         ),
                         const SizedBox(
                           height: 32,
@@ -144,19 +146,21 @@ class _WebLoginPageState extends State<WebLoginPage> {
                         SizedBox(
                           width: 400,
                           height: 50,
-                          child: ElevatedButton(
+                          child: Obx(() => ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                             ),
-                            onPressed: () {},
-                            child: const Text(
-                              "Sign In",
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Colors.white
-                              ),
-                            ),
-                          ),
+                            onPressed: controller.isLoading.value ? null : controller.signIn,
+                            child: controller.isLoading.value
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text(
+                                  "Sign In",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white
+                                  ),
+                                ),
+                          )),
                         ),
                         const SizedBox(
                           height: 32,
@@ -185,8 +189,8 @@ class _WebLoginPageState extends State<WebLoginPage> {
                         const SizedBox(
                           height: 16,
                         ),
-                        InkWell(
-                          onTap: () {},
+                        Obx(() => InkWell(
+                          onTap: controller.isLoading.value ? null : controller.signInWithGoogle,
                           child: Container(
                             width: 50,
                             height: 50,
@@ -201,11 +205,11 @@ class _WebLoginPageState extends State<WebLoginPage> {
                                 )
                               ]
                             ),
-                            child: Image.asset(
-                              'lib/images/google_logo.png'
-                            ),
+                            child: controller.isLoading.value
+                              ? const Center(child: CircularProgressIndicator())
+                              : Image.asset('lib/images/google_logo.png'),
                           ),
-                        ),
+                        )),
                       ]
                     ),
                   ),

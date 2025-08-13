@@ -26,11 +26,29 @@ class _DashboardTilesState extends State<DashboardTiles> {
               return Wrap(
                 spacing: spacing,
                 runSpacing: 10,
-                children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth, tileHeight: tileWidth * 0.9,),
+                children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth, tileHeight: tileWidth * 0.8,),
                 ),
               );
             },
           );
+        //tablet body para mas smooth ewan ko kung paano diyan lang yan
+        // } else if (constraints.maxWidth < tabletWidth){
+        //   return LayoutBuilder(
+        //       builder: (context, constraints) {
+        //       double screenWidth = constraints.maxWidth;
+        //       const double spacing = 25;
+        //       const double minTileWidth = 200;
+        //       int tilesPerRow = (screenWidth / (minTileWidth + spacing)).floor();
+        //       tilesPerRow = tilesPerRow.clamp(1, 7); 
+        //       double tileWidth = (screenWidth - (spacing * (tilesPerRow - 1))) / tilesPerRow;
+        //       return Wrap(
+        //         spacing: spacing,
+        //         runSpacing: 10,
+        //         children: List.generate(7, (index) => WebDashboardTile(tileWidth: tileWidth),
+        //         ),
+        //       );
+        //     },
+        //   );
         } else {
           return LayoutBuilder(
               builder: (context, constraints) {

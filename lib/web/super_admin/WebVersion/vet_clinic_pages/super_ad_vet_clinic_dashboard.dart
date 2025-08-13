@@ -1,9 +1,18 @@
-//import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_my_tags.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_search_bar.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_sort_button.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
+// <<<<<<< HEAD:lib/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart
+// //import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_my_tags.dart';
+// import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_search_bar.dart';
+// import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_sort_button.dart';
+// import 'package:capstone_app/mobile/super_admin/WebVersion/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
+// import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
+// import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
+// =======
+import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_sort_button.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_my_tags.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_search_bar.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
+// >>>>>>> a04275dbd2d053555f819a711a0582ae7f1e8cfb:lib/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart
 // import 'package:capstone_app/super_admin/WebVersion/super_ad_main_menu_page.dart';
 import 'package:flutter/material.dart';
 

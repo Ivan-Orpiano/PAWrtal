@@ -221,6 +221,16 @@ class AppWriteProvider {
     return response;
   }
 
+  Future<bool> webLogout() async {
+    try {
+      await account?.deleteSession(sessionId: 'current');
+      return true;
+    } catch (e) {
+      print('Logout error: $e');
+      return false;
+    }
+  }
+
   Future<Document?> getClinicByAdminId(String adminId) async {
     final result = await databases!.listDocuments(
       databaseId: AppwriteConstants.dbID,

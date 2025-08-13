@@ -1,0 +1,185 @@
+import 'package:capstone_app/web/pages/web_signup/web_signup_controller.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+class WebSignUpPage extends GetView<WebSignUpController> {
+  const WebSignUpPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Center(
+            child: Container(
+              width: 500,
+              height: 700,
+              decoration: BoxDecoration(color: Colors.white, boxShadow: [
+                BoxShadow(
+                    spreadRadius: 1,
+                    blurRadius: 1,
+                    color: Colors.grey.shade400,
+                    offset: const Offset(0, 2))
+              ]),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Image.asset(
+                        'lib/images/PAWrtal_logo.png',
+                        height: 50,
+                        width: 300,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                        width: 400,
+                        child: TextFormField(
+                          controller: controller.emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.email_rounded),
+                              hintText: "Email",
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20))),
+                        )),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                        width: 400,
+                        child: TextFormField(
+                          controller: controller.nameController,
+                          decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.person_rounded),
+                              hintText: "Full Name",
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20))),
+                        )),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                        width: 400,
+                        child: Obx(() => TextFormField(
+                              controller: controller.passwordController,
+                              obscureText: !controller.isPasswordVisible.value,
+                              decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.lock_rounded),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      controller.isPasswordVisible.value
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                    ),
+                                    onPressed:
+                                        controller.togglePasswordVisibility,
+                                  ),
+                                  hintText: "Password",
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20))),
+                            ))),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                        width: 400,
+                        child: Obx(() => TextFormField(
+                              controller: controller.confirmPasswordController,
+                              obscureText:
+                                  !controller.isConfirmPasswordVisible.value,
+                              decoration: InputDecoration(
+                                  prefixIcon:
+                                      const Icon(Icons.lock_outline_rounded),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      controller.isConfirmPasswordVisible.value
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                    ),
+                                    onPressed: controller
+                                        .toggleConfirmPasswordVisibility,
+                                  ),
+                                  hintText: "Confirm Password",
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20))),
+                            ))),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: 400,
+                      height: 50,
+                      child: Obx(() => ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                            ),
+                            onPressed: controller.isLoading.value
+                                ? null
+                                : controller.signUp,
+                            child: controller.isLoading.value
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white)
+                                : const Text(
+                                    "Sign Up",
+                                    style: TextStyle(
+                                        fontSize: 20, color: Colors.white),
+                                  ),
+                          )),
+                    ),
+                    const SizedBox(height: 16),
+                    RichText(
+                      text: TextSpan(
+                          style: const TextStyle(color: Colors.black),
+                          children: <TextSpan>[
+                            const TextSpan(text: "Already have an account? "),
+                            TextSpan(
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 81, 115, 153),
+                              ),
+                              text: "Sign in",
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = controller.navigateToLogin,
+                            )
+                          ]),
+                    ),
+                    const SizedBox(height: 32),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider(indent: 10)),
+                        Text("  or  "),
+                        Expanded(child: Divider(endIndent: 10)),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    const Text("Sign up with"),
+                    const SizedBox(height: 16),
+                    Obx(() => InkWell(
+                          onTap: controller.isLoading.value
+                              ? null
+                              : controller.signUpWithGoogle,
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration:
+                                BoxDecoration(color: Colors.white, boxShadow: [
+                              BoxShadow(
+                                  spreadRadius: 1,
+                                  blurRadius: 1,
+                                  color: Colors.grey.shade400,
+                                  offset: const Offset(0, 2))
+                            ]),
+                            child: controller.isLoading.value
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : Image.asset('lib/images/google_logo.png'),
+                          ),
+                        )),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}

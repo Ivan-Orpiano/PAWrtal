@@ -1,5 +1,6 @@
+import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/super_ad_main_menu_page.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_app/mobile/super_admin/WebVersion/super_ad_main_menu_page.dart';
 
 void main() {
   runApp(const VetClinicFeedbackApp());
@@ -84,7 +85,7 @@ class _VetClinicFeedbackManagerState extends State<VetClinicFeedbackManager> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const SuperAdMainPage()),
+              MaterialPageRoute(builder: (context) => const WebSuperAdminHomePage()),
             );
           },
         ),

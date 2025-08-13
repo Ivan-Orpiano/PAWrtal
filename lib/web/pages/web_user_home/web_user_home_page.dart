@@ -1,0 +1,33 @@
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
+import 'package:capstone_app/web/responsive_layout.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_user_home_page.dart';
+import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_user_homepage.dart';
+import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_user_homepage.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+class WebUserHomePageWrapper extends GetView<WebUserHomeController> {
+  const WebUserHomePageWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Obx(() {
+        return ResponsiveLayout(
+          mobileBody: () => WebMobileUserHomepage(
+            selectedIndex: controller.selectedIndex.value,
+            onItemSelected: controller.onItemSelected,
+          ),
+          tabletBody: () => WebTabletUserHomepage(
+            selectedIndex: controller.selectedIndex.value,
+            onItemSelected: controller.onItemSelected,
+          ),
+          desktopBody: () => WebUserHomePage(
+            selectedIndex: controller.selectedIndex.value,
+            onItemSelected: controller.onItemSelected,
+          ),
+        );
+      }),
+    );
+  }
+}

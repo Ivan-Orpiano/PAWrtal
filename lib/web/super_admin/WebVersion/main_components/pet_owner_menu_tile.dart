@@ -1,4 +1,4 @@
-import 'package:capstone_app/mobile/super_admin/WebVersion/pet_owners_pages/user_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:flutter/material.dart';
 
 class PetOwnerTile extends StatelessWidget {
