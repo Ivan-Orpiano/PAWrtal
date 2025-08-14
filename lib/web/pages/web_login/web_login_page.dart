@@ -1,6 +1,7 @@
+import 'package:capstone_app/utils/web_loading_helper.dart';
 import 'package:capstone_app/web/pages/web_login/web_login_controller.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class WebLoginPage extends GetView<WebLoginController> {
@@ -29,6 +30,7 @@ class WebLoginPage extends GetView<WebLoginController> {
               ),
               child: Row(
                 children: [
+                  // Left side - Welcome section
                   SizedBox(
                     width: 495,
                     height: 700,
@@ -40,9 +42,7 @@ class WebLoginPage extends GetView<WebLoginController> {
                               padding: EdgeInsets.only(top: 200, left: 16, bottom: 16),
                               child: Text(
                                 "Welcome to",
-                                style: TextStyle(
-                                  fontSize: 22
-                                ),
+                                style: TextStyle(fontSize: 22),
                               ),
                             ),
                           ],
@@ -55,10 +55,8 @@ class WebLoginPage extends GetView<WebLoginController> {
                         RichText(
                           text: TextSpan(
                             style: const TextStyle(color: Colors.black),
-                            children: <TextSpan> [
-                              const TextSpan(
-                                text: "Don't have an account? "
-                              ),
+                            children: <TextSpan>[
+                              const TextSpan(text: "Don't have an account? "),
                               TextSpan(
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
@@ -66,14 +64,15 @@ class WebLoginPage extends GetView<WebLoginController> {
                                 ),
                                 text: "Sign up",
                                 recognizer: TapGestureRecognizer()
-                                ..onTap = controller.navigateToSignUp,
+                                  ..onTap = controller.navigateToSignUp,
                               )
-                            ]
+                            ],
                           ),
                         )
                       ],
                     ),
                   ),
+                  // Divider
                   const SizedBox(
                     width: 10,
                     height: 700,
@@ -82,135 +81,149 @@ class WebLoginPage extends GetView<WebLoginController> {
                       endIndent: 20,
                     ),
                   ),
+                  // Right side - Login form
                   SizedBox(
                     width: 495,
                     height: 700,
-                    child: Column(
-                      children: [
-                        const Row(
+                    child: SingleChildScrollView(
+                      child: Form(
+                        key: controller.formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
                           children: [
-                            Padding(
-                              padding: EdgeInsets.only(top: 64, left: 16, bottom: 16),
-                              child: Text(
-                                "Sign In",
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(
-                          width: 400,
-                          child: TextFormField(
-                            controller: controller.emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.email_rounded),
-                              hintText: "Email",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20)
-                              )
-                            ),
-                          )
-                        ),
-                        const SizedBox(
-                          height: 32
-                        ),
-                        SizedBox(
-                          width: 400,
-                          child: Obx(() => TextFormField(
-                            controller: controller.passwordController,
-                            obscureText: !controller.isPasswordVisible.value,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.lock_rounded),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  controller.isPasswordVisible.value
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                ),
-                                onPressed: controller.togglePasswordVisibility,
-                              ),
-                              hintText: "Password",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20)
-                              ),
-                            ),
-                          ))
-                        ),
-                        const SizedBox(
-                          height: 32,
-                        ),
-                        SizedBox(
-                          width: 400,
-                          height: 50,
-                          child: Obx(() => ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                            ),
-                            onPressed: controller.isLoading.value ? null : controller.signIn,
-                            child: controller.isLoading.value
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text(
-                                  "Sign In",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    color: Colors.white
+                            const Row(
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(top: 64, left: 16, bottom: 16),
+                                  child: Text(
+                                    "Sign In",
+                                    style: TextStyle(fontSize: 22),
                                   ),
                                 ),
-                          )),
-                        ),
-                        const SizedBox(
-                          height: 32,
-                        ),
-                        const Row(
-                          children: [
-                            Expanded(
-                              child: Divider(
-                                indent: 10,
+                              ],
+                            ),
+                            // Email Field
+                            SizedBox(
+                              width: 400,
+                              child: TextFormField(
+                                controller: controller.emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.email_rounded),
+                                  hintText: "Email",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(20)
+                                  )
+                                ),
+                                validator: controller.validateEmail,
                               ),
                             ),
-                            Text("  or  "),
-                            Expanded(
-                              child: Divider(
-                                endIndent: 10,
-                              )
-                            )
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 32,
-                        ),
-                        const Text(
-                          "Sign in with"
-                        ),
-                        const SizedBox(
-                          height: 16,
-                        ),
-                        Obx(() => InkWell(
-                          onTap: controller.isLoading.value ? null : controller.signInWithGoogle,
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  spreadRadius: 1,
-                                  blurRadius: 1,
-                                  color: Colors.grey.shade400,
-                                  offset: const Offset(0, 2)
-                                )
-                              ]
+                            const SizedBox(height: 32),
+                            // Password Field
+                            SizedBox(
+                              width: 400,
+                              child: Obx(() => TextFormField(
+                                controller: controller.passwordController,
+                                obscureText: !controller.isPasswordVisible.value,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.lock_rounded),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      controller.isPasswordVisible.value
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    ),
+                                    onPressed: controller.togglePasswordVisibility,
+                                  ),
+                                  hintText: "Password",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(20)
+                                  ),
+                                ),
+                                validator: controller.validatePassword,
+                              )),
                             ),
-                            child: controller.isLoading.value
-                              ? const Center(child: CircularProgressIndicator())
-                              : Image.asset('lib/images/google_logo.png'),
-                          ),
-                        )),
-                      ]
+                            // Forgot Password
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8, bottom: 0, right: 60),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => _showResetPasswordDialog(context),
+                                    child: Text(
+                                      "Forgot Password?",
+                                      style: TextStyle(color: Colors.blue.shade700),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            // Sign In Button
+                            SizedBox(
+                              width: 400,
+                              child: Obx(() => WebLoadingHelper.buildLoadingButton(
+                                text: "Sign In",
+                                isLoading: controller.isLoading.value,
+                                onPressed: controller.signIn,
+                              )),
+                            ),
+                            const SizedBox(height: 32),
+                            // Divider
+                            const Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    indent: 10,
+                                  ),
+                                ),
+                                Text("  or  "),
+                                Expanded(
+                                  child: Divider(
+                                    endIndent: 10,
+                                  )
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+                            const Text("Sign in with"),
+                            const SizedBox(height: 16),
+                            // Google Sign In Button
+                            Obx(() => InkWell(
+                              onTap: controller.isLoading.value 
+                                ? null 
+                                : controller.signInWithGoogle,
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      spreadRadius: 1,
+                                      blurRadius: 1,
+                                      color: Colors.grey.shade400,
+                                      offset: const Offset(0, 2)
+                                    )
+                                  ]
+                                ),
+                                child: controller.isLoading.value
+                                  ? const Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                  : Image.asset('lib/images/google_logo.png'),
+                              ),
+                            )),
+                          ]
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -219,6 +232,50 @@ class WebLoginPage extends GetView<WebLoginController> {
           )
         ],
       )
+    );
+  }
+
+  void _showResetPasswordDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Reset Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Please enter your email. We will send a recovery link."),
+            const SizedBox(height: 10),
+            Form(
+              key: controller.resetPasswordFormKey,
+              child: TextFormField(
+                controller: controller.emailForPasswordResetController,
+                keyboardType: TextInputType.emailAddress,
+                validator: controller.validateEmail,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: "Email",
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.emailForPasswordResetController.clear();
+            },
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              controller.sendPasswordResetEmail();
+              Navigator.pop(context);
+            },
+            child: const Text("Send Link"),
+          ),
+        ],
+      ),
     );
   }
 }

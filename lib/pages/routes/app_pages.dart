@@ -53,7 +53,7 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.userHome,
-      page: () => kIsWeb ? const WebUserHomePageWrapper() : const UserHomePage(),
+      page: () => kIsWeb ? const WebUserHomePage() : const UserHomePage(),
       binding: kIsWeb ? WebUserHomeBinding() : UserHomeBinding(),
     ),
     GetPage(

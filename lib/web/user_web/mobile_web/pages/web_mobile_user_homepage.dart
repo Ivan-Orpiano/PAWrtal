@@ -1,5 +1,4 @@
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
-import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_appointments_page.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_dashboard_page.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_messages_page.dart';
@@ -45,6 +44,10 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
           ),
         ),
         title: InkWell(
+          onTap: () {
+            // Fixed: Call onItemSelected(0) to go to home
+            widget.onItemSelected(0);
+          },
           child: Image.asset(
             'lib/images/PAWrtal_logo.png',
             scale: 2.5,
@@ -52,7 +55,9 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              // TODO: Implement notifications
+            },
             icon: const Icon(Icons.notifications),
           ),
           const SizedBox(width: 8)
@@ -113,10 +118,11 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
         ],
       ),
     );
-  }
-  Widget _navButton (Icon icon, int index) {
+  }  
+
+  Widget _navButton(Icon icon, int index) {
     return IconButton(
-      onPressed:  () => {widget.onItemSelected(index)},
+      onPressed: () => widget.onItemSelected(index),
       icon: icon,
       iconSize: 30,
       color: widget.selectedIndex == index ? Colors.black : Colors.grey,
@@ -132,34 +138,34 @@ class NotchedNavbarPainter extends CustomPainter {
     final Paint paint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-
-    final Rect host = Rect.fromLTWH(0, 0, size.width, size.height);
-
-    const double notchRadius = 35;
-    final Offset notchCenter = Offset(size.width / 2, 0);
-    final Rect guest = Rect.fromCircle(center: notchCenter, radius: notchRadius);
-
-    final Path path = shape.getOuterPath(host, guest);
-
-    final RRect rounded = RRect.fromRectAndCorners(
-      host,
-      topLeft: const Radius.circular(16),
-      topRight: const Radius.circular(16),
-      bottomLeft: const Radius.circular(16),
-      bottomRight: const Radius.circular(16)
+    
+    final Path path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        const Radius.circular(35),
+      ));
+    
+    // Create notch
+    final double notchRadius = 28;
+    final double notchCenter = size.width / 2;
+    final double notchTop = -5;
+    
+    final Path notchPath = Path()
+      ..addOval(Rect.fromCircle(
+        center: Offset(notchCenter, notchTop + notchRadius),
+        radius: notchRadius,
+      ));
+    
+    final Path finalPath = Path.combine(
+      PathOperation.difference,
+      path,
+      notchPath,
     );
-    final Path roundedPath = Path()..addRRect(rounded);
-
-    final Path combined = Path.combine(PathOperation.intersect, path, roundedPath);
-
-    canvas.drawShadow(
-      combined,
-      Colors.grey.shade400,
-      8.0,
-      true,
-    );
-
-    canvas.drawPath(combined, paint);
+    
+    canvas.drawPath(finalPath, paint);
+    
+    // Add shadow
+    canvas.drawShadow(finalPath, Colors.black26, 4.0, true);
   }
 
   @override
