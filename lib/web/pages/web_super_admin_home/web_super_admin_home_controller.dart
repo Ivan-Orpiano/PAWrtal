@@ -12,6 +12,7 @@ class WebSuperAdminHomeController extends GetxController {
 
   final GetStorage _getStorage = GetStorage();
   final isLoggingOut = false.obs;
+  final selectedMenuIndex = 0.obs;
 
   String get userName {
     return _getStorage.read("userName") ?? "Developer";
@@ -39,15 +40,41 @@ class WebSuperAdminHomeController extends GetxController {
 
   // Navigation methods for super admin features
   void navigateToVetClinics() {
-    // Navigate to vet clinic management
-    // You can implement this based on your existing super admin pages
+    selectedMenuIndex.value = 0;
+    Get.snackbar(
+      'Info',
+      'Vet Clinics Management',
+      backgroundColor: Colors.blue,
+      colorText: Colors.white,
+    );
   }
 
   void navigateToPetOwners() {
-    // Navigate to pet owner management
+    selectedMenuIndex.value = 1;
+    Get.snackbar(
+      'Info',
+      'Pet Owners Management',
+      backgroundColor: Colors.blue,
+      colorText: Colors.white,
+    );
   }
 
   void navigateToReports() {
-    // Navigate to reports and analytics
+    selectedMenuIndex.value = 2;
+    Get.snackbar(
+      'Info',
+      'Reports and Analytics',
+      backgroundColor: Colors.blue,
+      colorText: Colors.white,
+    );
+  }
+
+  void navigateToSettings() {
+    Get.snackbar(
+      'Info',
+      'System Settings',
+      backgroundColor: Colors.blue,
+      colorText: Colors.white,
+    );
   }
 }

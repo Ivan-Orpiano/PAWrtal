@@ -10,20 +10,25 @@ class LogoutHelper {
 
   static Future<void> logout() async {
     try {
+      // Show loading indicator
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(),
+        ),
+        barrierDismissible: false,
+      );
+
       try {
-        await _appWriteProvider.account?.deleteSession(sessionId: 'current');
+        await _appWriteProvider.webLogout();
       } catch (e) {
-        print('Logout error: $e');
+        print('Server logout failed: $e');
       }
       
-      await _getStorage.remove("userId");
-      await _getStorage.remove("sessionId");
-      await _getStorage.remove("role");
-      await _getStorage.remove("email");
-      await _getStorage.remove("userName");
-      await _getStorage.remove("clinicId");
-      await _getStorage.remove("staffId");
-      await _getStorage.remove("customerId");
+      await _clearAllUserData();
+      
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
       
       Get.offAllNamed(Routes.login);
       
@@ -32,14 +37,62 @@ class LogoutHelper {
         'Logged out successfully',
         backgroundColor: Colors.green,
         colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
       );
     } catch (e) {
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+      
       Get.snackbar(
         'Error',
         'An error occurred during logout: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
       );
     }
+  }
+
+  static Future<void> _clearAllUserData() async {
+    final keys = [
+      "userId",
+      "sessionId", 
+      "role",
+      "email",
+      "userName",
+      "clinicId",
+      "staffId",
+      "customerId",
+      "userProfile",
+      "lastLogin",
+      "preferences"
+    ];
+    
+    for (String key in keys) {
+      await _getStorage.remove(key);
+    }
+  }
+
+  static bool get isLoggedIn {
+    final userId = _getStorage.read("userId");
+    final role = _getStorage.read("role");
+    return userId != null && role != null;
+  }
+
+  static String? get currentUserRole {
+    return _getStorage.read("role");
+  }
+
+  static String? get currentUserId {
+    return _getStorage.read("userId");
+  }
+
+  static String? get currentUserEmail {
+    return _getStorage.read("email");
+  }
+
+  static String? get currentUserName {
+    return _getStorage.read("userName");
   }
 }

@@ -231,6 +231,15 @@ class AppWriteProvider {
     }
   }
 
+  Future<bool> isSessionValid() async {
+    try {
+      await account?.get();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<Document?> getClinicByAdminId(String adminId) async {
     final result = await databases!.listDocuments(
       databaseId: AppwriteConstants.dbID,

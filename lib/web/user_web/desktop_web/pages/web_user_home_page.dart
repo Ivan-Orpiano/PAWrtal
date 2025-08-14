@@ -46,12 +46,11 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
           ),
         ),
         leading: Padding(
-          padding: const EdgeInsets.only(left:75),
+          padding: const EdgeInsets.only(left: 75),
           child: InkWell(
             onTap: () {
-              setState(() {
-              widget.onItemSelected;
-              });
+              // Fixed: Call onItemSelected(0) to go to home
+              widget.onItemSelected(0);
             },
             child: Image.asset(
               'lib/images/PAWrtal_logo.png',
@@ -82,7 +81,8 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
       body: _pages[widget.selectedIndex],
     );
   }
-  Widget _navButton (String label, int index) {
+
+  Widget _navButton(String label, int index) {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => widget.onItemSelected(index),
@@ -92,10 +92,10 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
           label,
           style: TextStyle(
             fontSize: 18,
-            color: widget.selectedIndex == index ? Colors.black : Colors.grey
+            color: widget.selectedIndex == index ? Colors.black : Colors.grey,
           ),
         ),
       ),
     );
   }
-}   
+}
