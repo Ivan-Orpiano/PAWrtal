@@ -94,7 +94,7 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
                 ),
               ),
               Positioned(
-                bottom: 24 + 73 - 28,
+                bottom: 24 + 60 - 28,
                 child: FloatingActionButton(  
                   backgroundColor: Colors.white,
                   heroTag: "webMobLoc",
@@ -131,41 +131,39 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
 }
 
 class NotchedNavbarPainter extends CustomPainter {
-  final NotchedShape shape = const CircularNotchedRectangle();
-
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = Colors.white
+      ..color = Colors.grey.shade100
       ..style = PaintingStyle.fill;
-    
+
+    // Main rounded rectangle background
     final Path path = Path()
       ..addRRect(RRect.fromRectAndRadius(
         Rect.fromLTWH(0, 0, size.width, size.height),
         const Radius.circular(35),
       ));
-    
-    // Create notch
-    final double notchRadius = 28;
+
+    // Circular notch in the center
+    const double notchRadius = 35;
     final double notchCenter = size.width / 2;
-    final double notchTop = -5;
-    
+    const double notchTop = -25;
+
     final Path notchPath = Path()
       ..addOval(Rect.fromCircle(
         center: Offset(notchCenter, notchTop + notchRadius),
         radius: notchRadius,
       ));
-    
+
+    // Cut the notch out of the rectangle
     final Path finalPath = Path.combine(
       PathOperation.difference,
       path,
       notchPath,
     );
-    
+
+    // Draw the plain white navbar (no shadow)
     canvas.drawPath(finalPath, paint);
-    
-    // Add shadow
-    canvas.drawShadow(finalPath, Colors.black26, 4.0, true);
   }
 
   @override

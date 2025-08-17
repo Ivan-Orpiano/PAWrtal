@@ -121,7 +121,11 @@ class _AppointmentPendingState extends State<AppointmentPending> {
                 text: "Pending",
                 color: Colors.grey.shade200
               ),
-              AppointmentTile(color: Colors.grey.shade200)
+              const AppointmentTile(
+                color: Color.fromARGB(255, 224, 224, 224),
+                icon: Icons.pending_actions_rounded,
+                text: "PENDING",
+              )
             ],
           ),
         ),
@@ -156,7 +160,11 @@ class _AppointmentAcceptedState extends State<AppointmentAccepted> {
                 text: "Accepted",
                 color: Colors.green.shade100
               ),
-              AppointmentTile(color: Colors.green.shade100)
+              AppointmentTile(
+                color: Colors.green.shade200,
+                icon: Icons.check_circle_outline,
+                text: "ACCEPTED",
+              )
             ],
           ),
         ),
@@ -191,7 +199,11 @@ class _AppointmentDeclinedState extends State<AppointmentDeclined> {
                 text: "Declined",
                 color: Colors.red.shade100
               ),
-              AppointmentTile(color: Colors.red.shade100)
+              AppointmentTile(
+                color: Colors.red.shade200,
+                icon: Icons.cancel_outlined,
+                text: "DECLINED",
+              )
             ],
           ),
         ),
@@ -257,11 +269,15 @@ class _AppointmentTabTitleState extends State<AppointmentTabTitle> {
 }
 
 class AppointmentTile extends StatefulWidget {
+  final String text;
+  final IconData icon;
   final Color color;
 
   const AppointmentTile({
     super.key,
-    required this.color
+    required this.text,
+    required this.icon,
+    required this.color,
   });
 
   @override
@@ -271,23 +287,59 @@ class AppointmentTile extends StatefulWidget {
 class _AppointmentTileState extends State<AppointmentTile> {
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (context) => _buildWebAppointmentDialog()
-        );
-      },
-      child: Flexible(
+    return Flexible(
+      child: InkWell(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => const WebAppointmentDialog()
+          );
+        },
         child: Container(
           padding: const EdgeInsets.all(16),
-          height: 200,
+          height: 250,
           decoration: BoxDecoration(
-            color: widget.color,
+            color: Colors.grey.shade200,
             borderRadius: BorderRadius.circular(20)
           ),
           child: Column(
+            spacing: 12,
             children: [
+              SizedBox(
+                height: 40,
+                child: Row(
+                  children: [
+                    Container(
+                      height: 40,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        borderRadius: BorderRadius.circular(10)
+                      ),
+                      child: Row(
+                        spacing: 4,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            widget.icon
+                          ),
+                          Text(
+                            widget.text,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    const Spacer(
+                    ),
+                    const Icon(
+                      Icons.keyboard_arrow_right_rounded
+                    )
+                  ],
+                ),
+              ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -355,17 +407,11 @@ class _AppointmentTileState extends State<AppointmentTile> {
                   )
                 ],
               ),
-              const SizedBox(
-                height: 16,
-              ),
               Container(
                 height: 67,
                 decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    width: 2,
-                    color: Colors.black,
-                  )
                 ),
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -405,34 +451,55 @@ class _AppointmentTileState extends State<AppointmentTile> {
   }
 }
 
-Widget _buildWebAppointmentDialog() {
-  return Dialog(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Container(
-      width: 550,
-      height: 700,
-      decoration: BoxDecoration(
-        color: Colors.white,
+class WebAppointmentDialog extends StatefulWidget {
+  const WebAppointmentDialog({super.key});
+
+  @override
+  State<WebAppointmentDialog> createState() => _WebAppointmentDialogState();
+}
+
+class _WebAppointmentDialogState extends State<WebAppointmentDialog> {
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      clipBehavior: Clip.hardEdge,
-      child: const SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Text(
-                'Appointment Details',
-                style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold
+      child: Container(
+        width: 550,
+        height: 700,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              spacing: 16,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.keyboard_arrow_left_rounded)
+                    ),
+                    const Text(
+                      'Appointment Details',
+                      style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
