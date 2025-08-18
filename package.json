@@ -1,0 +1,7 @@
+{
+  "name": "pawrtal",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "./.vercel-build.sh"
+  }
+}
