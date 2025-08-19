@@ -42,6 +42,17 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   void initState() {
     super.initState();
     _initializePetsController();
+
+    // Add focus listener to refresh pets when page regains focus
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final focusNode = FocusNode();
+      focusNode.addListener(() {
+        if (focusNode.hasFocus) {
+          petsController?.fetchUserPets();
+        }
+      });
+      FocusScope.of(context).requestFocus(focusNode);
+    });
   }
 
   void _initializePetsController() {
@@ -54,10 +65,10 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       );
     } else {
       petsController = Get.find();
-      if (petsController?.pets.isEmpty ?? true) {
-        petsController?.fetchUserPets();
-      }
     }
+
+    // Always refresh pets when page is initialized
+    petsController?.fetchUserPets();
   }
 
   List<String> get services {
@@ -98,7 +109,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   }
 
   Future<void> _bookAppointment() async {
-    if (selectedPet == null || selectedService == null || selectedTime == null) {
+    if (selectedPet == null ||
+        selectedService == null ||
+        selectedTime == null) {
       _showSnackBar("Please complete all fields", isError: true);
       return;
     }
@@ -125,10 +138,10 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       );
 
       await Get.find<AuthRepository>().createAppointment(appointment);
-      
+
       // Refresh appointments if controller exists
-      if (Get.isRegistered<AppointmentController>()) {
-        Get.find<AppointmentController>().fetchAppointments();
+      if (Get.isRegistered<EnhancedUserAppointmentController>()) {
+        Get.find<EnhancedUserAppointmentController>().fetchAppointments();
       }
 
       _showSuccessDialog();
@@ -164,7 +177,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
             Text('Success!'),
           ],
         ),
-        content: const Text('Your appointment has been booked successfully. You will receive a confirmation once the clinic reviews your request.'),
+        content: const Text(
+            'Your appointment has been booked successfully. You will receive a confirmation once the clinic reviews your request.'),
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -173,7 +187,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
@@ -204,11 +219,11 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         margin: const EdgeInsets.only(right: 8, bottom: 8),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? const Color.fromARGB(255, 81, 115, 153)
               : Colors.white,
           border: Border.all(
-            color: isSelected 
+            color: isSelected
                 ? const Color.fromARGB(255, 81, 115, 153)
                 : Colors.grey[300]!,
           ),
@@ -272,7 +287,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
               ),
             ),
           ),
-          
+
           // Content
           Expanded(
             child: Container(
@@ -288,7 +303,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    
+
                     // Calendar
                     _buildSectionTitle('Select Date'),
                     Container(
@@ -311,7 +326,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                         ),
                         calendarStyle: CalendarStyle(
                           todayDecoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.3),
+                            color: const Color.fromARGB(255, 81, 115, 153)
+                                .withOpacity(0.3),
                             shape: BoxShape.circle,
                           ),
                           selectedDecoration: const BoxDecoration(
@@ -326,7 +342,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                         selectedDayPredicate: (day) => isSameDay(day, today),
                       ),
                     ),
-                    
+
                     // Time slots
                     _buildSectionTitle('Available Times'),
                     Padding(
@@ -335,7 +351,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                         children: availableTimes.map(_buildTimeSlot).toList(),
                       ),
                     ),
-                    
+
                     // Service selection
                     _buildSectionTitle('Select Service'),
                     Padding(
@@ -369,10 +385,11 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                   child: Text(service),
                                 ))
                             .toList(),
-                        onChanged: (value) => setState(() => selectedService = value),
+                        onChanged: (value) =>
+                            setState(() => selectedService = value),
                       ),
                     ),
-                    
+
                     // Pet selection
                     _buildSectionTitle('Select Pet'),
                     Padding(
@@ -390,7 +407,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                 SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                                 SizedBox(width: 12),
                                 Text('Loading pets...'),
@@ -406,7 +424,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                               border: Border.all(color: Colors.grey[300]!),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text('No pets found. Please add a pet first.'),
+                            child: const Text(
+                                'No pets found. Please add a pet first.'),
                           );
                         }
 
@@ -438,18 +457,20 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                     value: pet.name,
                                     child: Row(
                                       children: [
-                                        Icon(Icons.pets, size: 20, color: Colors.grey[600]),
+                                        Icon(Icons.pets,
+                                            size: 20, color: Colors.grey[600]),
                                         const SizedBox(width: 8),
                                         Text(pet.name),
                                       ],
                                     ),
                                   ))
                               .toList(),
-                          onChanged: (value) => setState(() => selectedPet = value),
+                          onChanged: (value) =>
+                              setState(() => selectedPet = value),
                         );
                       }),
                     ),
-                    
+
                     // Book button
                     Padding(
                       padding: const EdgeInsets.all(24),
@@ -458,7 +479,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                         child: ElevatedButton(
                           onPressed: isBooking ? null : _bookAppointment,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -474,7 +496,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
                                       ),
                                     ),
                                     SizedBox(width: 12),

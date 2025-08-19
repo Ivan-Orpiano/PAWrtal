@@ -26,7 +26,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
   final List<Widget> _pages = const [
     DashboardPage(),
-    AppointmentPage(),
+    EnhancedAppointmentPage(),
     Messages(),
     PetsPage()
   ];
