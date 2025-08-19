@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-class AppointmentTile extends StatelessWidget {
+class EnhancedUserAppointmentTile extends StatelessWidget {
   final Appointment appointment;
 
-  const AppointmentTile({
+  const EnhancedUserAppointmentTile({
     super.key,
     required this.appointment,
   });
@@ -18,8 +18,13 @@ class AppointmentTile extends StatelessWidget {
       case 'pending':
         return Colors.orange;
       case 'accepted':
+        return Colors.blue;
+      case 'in_progress':
+        return Colors.purple;
+      case 'completed':
         return Colors.green;
       case 'declined':
+      case 'no_show':
         return Colors.red;
       default:
         return Colors.grey;
@@ -31,9 +36,15 @@ class AppointmentTile extends StatelessWidget {
       case 'pending':
         return Icons.pending_actions;
       case 'accepted':
+        return Icons.event_available;
+      case 'in_progress':
+        return Icons.medical_services;
+      case 'completed':
         return Icons.check_circle;
       case 'declined':
         return Icons.cancel;
+      case 'no_show':
+        return Icons.person_off;
       default:
         return Icons.help_outline;
     }
@@ -43,14 +54,9 @@ class AppointmentTile extends StatelessWidget {
     return DateFormat('MMM dd, yyyy • h:mm a').format(dateTime);
   }
 
-  String _getTimeRange(DateTime dateTime) {
-    final endTime = dateTime.add(const Duration(hours: 1));
-    return '${DateFormat('h:mm a').format(dateTime)} - ${DateFormat('h:mm a').format(endTime)}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AppointmentController>();
+    final controller = Get.find<EnhancedUserAppointmentController>();
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -63,7 +69,7 @@ class AppointmentTile extends StatelessWidget {
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
-            builder: (context) => AppointmentDetailsPage(
+            builder: (context) => EnhancedAppointmentDetailsPage(
               appointment: appointment,
               clinic: clinic,
               pet: pet,
@@ -85,13 +91,13 @@ class AppointmentTile extends StatelessWidget {
             ],
             border: Border.all(
               color: _getStatusColor().withOpacity(0.3),
-              width: 1,
+              width: 1.5,
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with status
+              // Header with status and progress
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -111,7 +117,7 @@ class AppointmentTile extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          appointment.status.toUpperCase(),
+                          controller.getUserFriendlyStatus(appointment),
                           style: TextStyle(
                             color: _getStatusColor(),
                             fontWeight: FontWeight.bold,
@@ -127,23 +133,57 @@ class AppointmentTile extends StatelessWidget {
                   ),
                 ],
               ),
+              
               const SizedBox(height: 12),
+              
+              // Progress bar for active appointments
+              if (appointment.status != 'declined' && appointment.status != 'no_show')
+                Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: controller.getAppointmentProgress(appointment),
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor()),
+                      minHeight: 3,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      controller.getAppointmentStage(appointment),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
               
               // Main content
               Row(
                 children: [
-                  // Clinic image placeholder
+                  // Clinic image placeholder with enhanced styling
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [
+                          _getStatusColor().withOpacity(0.1),
+                          _getStatusColor().withOpacity(0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _getStatusColor().withOpacity(0.2),
+                      ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.local_hospital,
-                      color: Color.fromARGB(255, 81, 115, 153),
-                      size: 30,
+                      color: _getStatusColor(),
+                      size: 32,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -160,7 +200,7 @@ class AppointmentTile extends StatelessWidget {
                             fontSize: 18,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             Icon(
@@ -175,6 +215,7 @@ class AppointmentTile extends StatelessWidget {
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -206,49 +247,150 @@ class AppointmentTile extends StatelessWidget {
                 ],
               ),
               
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               
-              // Date and time
+              // Date, time, and additional info
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 18,
-                      color: Colors.grey[700],
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text(
-                          _formatDateTime(appointment.dateTime),
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
+                        Icon(
+                          Icons.access_time,
+                          size: 18,
+                          color: Colors.grey[700],
                         ),
-                        Text(
-                          _getTimeRange(appointment.dateTime),
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _formatDateTime(appointment.dateTime),
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ],
                     ),
+                    
+                    // Show additional info for in-progress/completed appointments
+                    if (appointment.status == 'in_progress' && appointment.checkedInAt != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.login,
+                            size: 16,
+                            color: Colors.green[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Checked in at ${DateFormat('h:mm a').format(appointment.checkedInAt!)}',
+                            style: TextStyle(
+                              color: Colors.green[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    
+                    if (appointment.status == 'completed' && appointment.totalCost != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.payment,
+                            size: 16,
+                            color: Colors.blue[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Cost: ₱${appointment.totalCost!.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: Colors.blue[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (appointment.isPaid)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'PAID',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
+              
+              // Action buttons for certain statuses
+              if (controller.canCancelAppointment(appointment)) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showCancelDialog(context, controller, appointment),
+                    icon: const Icon(Icons.cancel_outlined, size: 16),
+                    label: const Text('Cancel Appointment'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red[700],
+                      side: BorderSide(color: Colors.red[300]!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showCancelDialog(BuildContext context, EnhancedUserAppointmentController controller, Appointment appointment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel Appointment'),
+        content: const Text('Are you sure you want to cancel this appointment? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Keep Appointment'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.cancelAppointment(appointment.documentId!);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Cancel Appointment', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
