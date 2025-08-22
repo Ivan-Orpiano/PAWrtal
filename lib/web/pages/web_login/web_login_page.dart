@@ -34,7 +34,7 @@ class WebLoginPage extends GetView<WebLoginController> {
                 width: 1000,
                 height: 700,
                 decoration:  BoxDecoration(
-                  color: Colors.white,
+                  color: const Color.fromARGB(223, 255, 255, 255),
                   borderRadius: BorderRadius.circular(20)
                 ),
                 child: Row(
@@ -44,14 +44,17 @@ class WebLoginPage extends GetView<WebLoginController> {
                       width: 495,
                       height: 700,
                       child: Column(
+                        spacing: 20,
                         children: [
+                          Spacer(flex: 1,),
                           const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Padding(
-                                padding: EdgeInsets.only(top: 200, left: 16, bottom: 16),
-                                child: Text(
-                                  "Welcome to",
-                                  style: TextStyle(fontSize: 22),
+                              Text(
+                                "WELCOME TO",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold
                                 ),
                               ),
                             ],
@@ -77,7 +80,8 @@ class WebLoginPage extends GetView<WebLoginController> {
                                 )
                               ],
                             ),
-                          )
+                          ),
+                          Spacer(flex: 2,)
                         ],
                       ),
                     ),
@@ -94,145 +98,159 @@ class WebLoginPage extends GetView<WebLoginController> {
                     SizedBox(
                       width: 495,
                       height: 700,
-                      child: SingleChildScrollView(
-                        child: Form(
-                          key: controller.formKey,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          child: Column(
-                            children: [
-                              const Row(
+                      child: Column(
+                        children: [
+                          const Spacer(flex: 1,),
+                          SingleChildScrollView(
+                            child: Form(
+                              key: controller.formKey,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              child: Column(
                                 children: [
-                                  Padding(
-                                    padding: EdgeInsets.only(top: 64, left: 16, bottom: 16),
-                                    child: Text(
-                                      "Sign In",
-                                      style: TextStyle(fontSize: 22),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              // Email Field
-                              SizedBox(
-                                width: 400,
-                                child: TextFormField(
-                                  controller: controller.emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.email_rounded),
-                                    hintText: "Email",
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(20)
-                                    )
-                                  ),
-                                  validator: controller.validateEmail,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              // Password Field
-                              SizedBox(
-                                width: 400,
-                                child: Obx(() => TextFormField(
-                                  controller: controller.passwordController,
-                                  obscureText: !controller.isPasswordVisible.value,
-                                  decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.lock_rounded),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        controller.isPasswordVisible.value
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      ),
-                                      onPressed: controller.togglePasswordVisibility,
-                                    ),
-                                    hintText: "Password",
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(20)
-                                    ),
-                                  ),
-                                  validator: controller.validatePassword,
-                                )),
-                              ),
-                              // Forgot Password
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8, bottom: 0, right: 60),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => _showResetPasswordDialog(context),
-                                      child: Text(
-                                        "Forgot Password?",
-                                        style: TextStyle(color: Colors.blue.shade700),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              // Sign In Button
-                              SizedBox(
-                                width: 400,
-                                child: Obx(() => WebLoadingHelper.buildLoadingButton(
-                                  text: "Sign In",
-                                  isLoading: controller.isLoading.value,
-                                  onPressed: controller.signIn,
-                                )),
-                              ),
-                              const SizedBox(height: 32),
-                              // Divider
-                              const Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(
-                                      indent: 10,
-                                    ),
-                                  ),
-                                  Text("  or  "),
-                                  Expanded(
-                                    child: Divider(
-                                      endIndent: 10,
-                                    )
-                                  )
-                                ],
-                              ),
-                              const SizedBox(height: 32),
-                              const Text("Sign in with"),
-                              const SizedBox(height: 16),
-                              // Google Sign In Button
-                              Obx(() => InkWell(
-                                onTap: controller.isLoading.value 
-                                  ? null 
-                                  : controller.signInWithGoogle,
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        spreadRadius: 1,
-                                        blurRadius: 1,
-                                        color: Colors.grey.shade400,
-                                        offset: const Offset(0, 2)
-                                      )
-                                    ]
-                                  ),
-                                  child: controller.isLoading.value
-                                    ? const Center(
-                                        child: SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
+                                  const Row(
+                                    children: [
+                                      Padding(
+                                        padding: EdgeInsets.only(top: 64, left: 16, bottom: 16),
+                                        child: Text(
+                                          "Sign In",
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold
                                           ),
                                         ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Email Field
+                                  SizedBox(
+                                    width: 400,
+                                    child: TextFormField(
+                                      controller: controller.emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(Icons.email_rounded),
+                                        hintText: "Email",
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(20)
+                                        )
+                                      ),
+                                      validator: controller.validateEmail,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  // Password Field
+                                  SizedBox(
+                                    width: 400,
+                                    child: Obx(() => TextFormField(
+                                      controller: controller.passwordController,
+                                      obscureText: !controller.isPasswordVisible.value,
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(Icons.lock_rounded),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            controller.isPasswordVisible.value
+                                              ? Icons.visibility
+                                              : Icons.visibility_off,
+                                          ),
+                                          onPressed: controller.togglePasswordVisibility,
+                                        ),
+                                        hintText: "Password",
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(20)
+                                        ),
+                                      ),
+                                      validator: controller.validatePassword,
+                                    )),
+                                  ),
+                                  // Forgot Password
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8, bottom: 0, right: 60),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => _showResetPasswordDialog(context),
+                                          child: Text(
+                                            "Forgot Password?",
+                                            style: TextStyle(color: Colors.blue.shade700),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  // Sign In Button
+                                  SizedBox(
+                                    width: 400,
+                                    child: Obx(() => WebLoadingHelper.buildLoadingButton(
+                                      text: "Sign In",
+                                      isLoading: controller.isLoading.value,
+                                      onPressed: controller.signIn,
+                                    )),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  // Divider
+                                  const Row(
+                                    children: [
+                                      Expanded(
+                                        child: Divider(
+                                          indent: 10,
+                                        ),
+                                      ),
+                                      Text(
+                                        "  or  ",
+                                        style: TextStyle(
+                                          fontStyle: FontStyle.italic
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Divider(
+                                          endIndent: 10,
+                                        )
                                       )
-                                    : Image.asset('lib/images/google_logo.png'),
-                                ),
-                              )),
-                            ]
+                                    ],
+                                  ),
+                                  const SizedBox(height: 32),
+                                  const Text("Sign in with"),
+                                  const SizedBox(height: 16),
+                                  // Google Sign In Button
+                                  Obx(() => InkWell(
+                                    onTap: controller.isLoading.value 
+                                      ? null 
+                                      : controller.signInWithGoogle,
+                                    child: Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            spreadRadius: 1,
+                                            blurRadius: 1,
+                                            color: Colors.grey.shade400,
+                                            offset: const Offset(0, 2)
+                                          )
+                                        ]
+                                      ),
+                                      child: controller.isLoading.value
+                                        ? const Center(
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          )
+                                        : Image.asset('lib/images/google_logo.png'),
+                                    ),
+                                  )),
+                                ]
+                              ),
+                            ),
                           ),
-                        ),
+                          const Spacer(flex: 2,)
+                        ],
                       ),
                     ),
                   ],
