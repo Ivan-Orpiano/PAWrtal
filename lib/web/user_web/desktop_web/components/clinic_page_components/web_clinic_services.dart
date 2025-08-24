@@ -1,33 +1,63 @@
-import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_services.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_services_updated.dart';
+import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:flutter/material.dart';
 
-class WebClinicServices extends StatefulWidget {
-  const WebClinicServices({super.key});
+class WebClinicServicesUpdated extends StatefulWidget {
+  final Clinic clinic;
+  
+  const WebClinicServicesUpdated({super.key, required this.clinic});
 
   @override
-  State<WebClinicServices> createState() => _WebClinicServicesState();
+  State<WebClinicServicesUpdated> createState() => _WebClinicServicesUpdatedState();
 }
 
-class _WebClinicServicesState extends State<WebClinicServices> {
+class _WebClinicServicesUpdatedState extends State<WebClinicServicesUpdated> {
+  List<String> _parseServices() {
+    if (widget.clinic.services.isEmpty) {
+      return [
+        'General Checkup',
+        'Vaccination',
+        'Surgery',
+        'Dental Care',
+        'Emergency Care',
+        'Laboratory Tests',
+        'Pet Grooming',
+        'Microchipping'
+      ];
+    }
+    
+    // Split services by common delimiters and clean them up
+    List<String> services = widget.clinic.services
+        .split(RegExp(r'[,;|\n•]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    
+    // If still empty or too few, add some defaults
+    if (services.isEmpty) {
+      services = ['General Pet Care'];
+    }
+    
+    return services;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return  GridView.count(
-      crossAxisCount: 2, 
-      mainAxisSpacing: 12, 
-      crossAxisSpacing: 12, 
-      shrinkWrap: true, 
+    final services = _parseServices();
+    
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 10,
+      ),
+      shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 10,
-      children: const [
-        WebServices(),
-        WebServices(),
-        WebServices(),
-        WebServices(),
-        WebServices(),
-        WebServices(),
-        WebServices(),
-        WebServices(),
-      ],
+      itemCount: services.length,
+      itemBuilder: (context, index) {
+        return WebServicesUpdated(serviceName: services[index]);
+      },
     );
   }
 }

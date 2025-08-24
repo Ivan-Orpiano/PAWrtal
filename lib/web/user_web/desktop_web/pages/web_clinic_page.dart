@@ -6,26 +6,26 @@ import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_com
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_services.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_like.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_picture_gallery.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_services.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_share_button.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_hover_underline_text.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
-import 'package:capstone_app/web/user_web/desktop_web/pages/web_user_home_page.dart';
+import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:flutter/material.dart';
-import 'dart:math';
 
-class WebClinicPage extends StatefulWidget {
-  const WebClinicPage({super.key});
+class WebClinicPageUpdated extends StatefulWidget {
+  final Clinic clinic;
+  
+  const WebClinicPageUpdated({super.key, required this.clinic});
 
   @override
-  State<WebClinicPage> createState() => _WebClinicPageState();
+  State<WebClinicPageUpdated> createState() => _WebClinicPageUpdatedState();
 }
 
 enum PanelState { scrollable, positioned, static }
 PanelState _panelState = PanelState.scrollable;
 
-class _WebClinicPageState extends State<WebClinicPage> {
+class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final ScrollController _scrollController = ScrollController();
   bool _showWidget = false;
   final galleryKey = GlobalKey();
@@ -33,44 +33,43 @@ class _WebClinicPageState extends State<WebClinicPage> {
   final locationKey = GlobalKey();
   final reviewsKey = GlobalKey();
 
-void _scrollToSection(GlobalKey key) {
-  final context = key.currentContext;
-  if (context != null) {
-    Scrollable.ensureVisible(
-      context,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-      alignment: 0.6, 
-    );
+  void _scrollToSection(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.6, 
+      );
+    }
   }
-}
 
-@override
-void initState() {
-  super.initState();
-
-  _scrollController.addListener(() {
-    final offset = _scrollController.offset;
-
-    if (offset > 500 && !_showWidget) {
-      setState(() {
-        _showWidget = true;
-      });
-    } else if (offset <= 500 && _showWidget) {
-      setState(() {
-        _showWidget = false;
-      });
-    }
-
-    if (offset <= 550 && _panelState != PanelState.scrollable) {
-      setState(() => _panelState = PanelState.scrollable);
-    } else if (offset > 550 && offset <= 1550 && _panelState != PanelState.positioned) {
-      setState(() => _panelState = PanelState.positioned);
-    } else if (offset > 1550 && _panelState != PanelState.static) {
-      setState(() => _panelState = PanelState.static);
-    }
-  });
+  @override
+  void initState() {
     super.initState();
+
+    _scrollController.addListener(() {
+      final offset = _scrollController.offset;
+
+      if (offset > 500 && !_showWidget) {
+        setState(() {
+          _showWidget = true;
+        });
+      } else if (offset <= 500 && _showWidget) {
+        setState(() {
+          _showWidget = false;
+        });
+      }
+
+      if (offset <= 550 && _panelState != PanelState.scrollable) {
+        setState(() => _panelState = PanelState.scrollable);
+      } else if (offset > 550 && offset <= 1550 && _panelState != PanelState.positioned) {
+        setState(() => _panelState = PanelState.positioned);
+      } else if (offset > 1550 && _panelState != PanelState.static) {
+        setState(() => _panelState = PanelState.static);
+      }
+    });
   }
 
   @override
@@ -79,7 +78,7 @@ void initState() {
     super.dispose();
   }
 
-    double getResponsivePadding(double screenWidth) {
+  double getResponsivePadding(double screenWidth) {
     const double minScreen = 1100;
     const double maxScreen = 1920;
     const double minPadding = 16;
@@ -107,6 +106,17 @@ void initState() {
     return desiredMinRight + t * (desiredMaxRight - desiredMinRight);
   }
 
+  double getLeftSideWidth(double screenWidth) {
+    if (screenWidth >= 1550) {
+      return 700;
+    } else if (screenWidth >= 1100) {
+      double factor = (screenWidth - 1100) / (1550 - 1100);
+      return 600 + (100 * factor);
+    } else {
+      return 600;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -115,25 +125,13 @@ void initState() {
       screenWidth: screenWidth,
       desiredMaxRight: 395,
       desiredMinRight: 30
-  );
+    );
 
-      double notifRight = responsiveRight(
+    double notifRight = responsiveRight(
       screenWidth: screenWidth,
       desiredMaxRight: 445,
       desiredMinRight: 80
-  );
-
-double getLeftSideWidth(double screenWidth) {
-  if (screenWidth >= 1550) {
-    return 700;
-  } else if (screenWidth >= 1100) {
-    // Gradually reduce from 700 to 600 as screen width goes from 1300 -> 1100
-    double factor = (screenWidth - 1100) / (1550 - 1100); // 0 to 1
-    return 600 + (100 * factor); // 600 to 700
-  } else {
-    return 600;
-  }
-}
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -170,19 +168,12 @@ double getLeftSideWidth(double screenWidth) {
                                 height: 100,
                               ),
                             ),
-                            const Spacer(
-                              flex: 1,
-                            ),
-                            
+                            const Spacer(flex: 1),
                             const Expanded(
                               flex: 2,
-                              child: WebSearchBar(
-                                width: 380,
-                              ),
+                              child: WebSearchBar(width: 380),
                             ),
-                            const Spacer(
-                              flex: 1,
-                            ),
+                            const Spacer(flex: 1),
                             WebNotificationIcon(
                               right: notifRight,
                               top: 70,
@@ -207,23 +198,25 @@ double getLeftSideWidth(double screenWidth) {
                   padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
                   child: Column(
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Text(
-                            "Qualipaws Animal Health Clinic",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold
+                          Expanded(
+                            child: Text(
+                              widget.clinic.clinicName,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold
+                              ),
                             ),
                           ),
-                          Spacer(),
-                          WebShareButton(),
-                          SizedBox(width: 12),
-                          WebLike(),
+                          const WebShareButton(),
+                          const SizedBox(width: 12),
+                          const WebLike(),
                         ],
                       ),
-                      WebPictureGallery(
+                      WebPictureGalleryUpdated(
                         key: galleryKey,
+                        clinic: widget.clinic,
                       ),
                     ],
                   ),
@@ -234,7 +227,6 @@ double getLeftSideWidth(double screenWidth) {
                 padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
                 child: Row(
                   children: [
-                    //left side
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: getLeftSideWidth(screenWidth)
@@ -245,18 +237,36 @@ double getLeftSideWidth(double screenWidth) {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
-                                child: Image.asset(
-                                  'lib/images/test_image.jpg',
-                                  height: 40,
-                                  width: 40,
-                                ),
+                                child: widget.clinic.image.isNotEmpty
+                                  ? Image.network(
+                                      widget.clinic.image,
+                                      height: 40,
+                                      width: 40,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Image.asset(
+                                          'lib/images/test_image.jpg',
+                                          height: 40,
+                                          width: 40,
+                                          fit: BoxFit.cover,
+                                        );
+                                      },
+                                    )
+                                  : Image.asset(
+                                      'lib/images/test_image.jpg',
+                                      height: 40,
+                                      width: 40,
+                                      fit: BoxFit.cover,
+                                    ),
                               ),
                               const SizedBox(width: 18),
-                              const Text(
-                                "Qualipaws Veterinary Clinic",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16
+                              Expanded(
+                                child: Text(
+                                  widget.clinic.clinicName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16
+                                  ),
                                 ),
                               )
                             ],
@@ -272,7 +282,7 @@ double getLeftSideWidth(double screenWidth) {
                               ),
                             ),
                           ),
-                          const WebClinicDescription(),
+                          WebClinicDescriptionUpdated(clinic: widget.clinic),
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: SizedBox(
@@ -298,8 +308,9 @@ double getLeftSideWidth(double screenWidth) {
                               ],
                             ),
                           ),
-                          WebClinicServices(
-                            key: servicesKey
+                          WebClinicServicesUpdated(
+                            key: servicesKey,
+                            clinic: widget.clinic,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
@@ -312,19 +323,15 @@ double getLeftSideWidth(double screenWidth) {
                               ),
                             ),
                           ),
-                          WebRatingsAndReviews(
-                            key: reviewsKey
-                          ),
+                          WebRatingsAndReviews(key: reviewsKey),
                         ]
                       ),
                     ),
-                    //box that seperates left and right
                     const Flexible(
                       flex: 2,
                       child: SizedBox(width: 125),
                     ),
               
-                    //right side
                     Stack(
                       children: [
                         Column(
@@ -357,8 +364,9 @@ double getLeftSideWidth(double screenWidth) {
                   ),
                 ),
               ),
-              WebClinicLocation(
+              WebClinicLocationUpdated(
                 key: locationKey,
+                clinic: widget.clinic,
               ),
               const SizedBox(height: 64)
             ],
@@ -367,15 +375,14 @@ double getLeftSideWidth(double screenWidth) {
           Positioned(
             top: 120,
             right: getResponsivePadding(screenWidth),
-            child: const WebAppointmentPanel(
-            )
+            child: const WebAppointmentPanel()
           ),
           if (_showWidget)
           Positioned(
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
               height: 80,
-              decoration:  const BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(
                   bottom: BorderSide(
