@@ -1,4 +1,5 @@
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
+import 'package:capstone_app/web/user_web/mobile_web/components/web_mobile_drawer.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_appointments_page.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_dashboard_page.dart';
 import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_messages_page.dart';
@@ -12,7 +13,7 @@ class WebMobileUserHomepage extends StatefulWidget {
   const WebMobileUserHomepage({
     super.key,
     required this.selectedIndex,
-    required this.onItemSelected
+    required this.onItemSelected,
   });
 
   @override
@@ -53,17 +54,32 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
             scale: 2.5,
           ),
         ),
+        leading: Builder(
+          builder: (context) {
+            return IconButton(
+              icon: const Icon(Icons.menu_outlined),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          }
+        ),
         actions: [
           IconButton(
             onPressed: () {
               // TODO: Implement notifications
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Notifications coming soon!"),
+                ),
+              );
             },
             icon: const Icon(Icons.notifications),
           ),
           const SizedBox(width: 8)
         ],
       ),
-      drawer: const Drawer(),
+      drawer: WebMobileDrawer(),
       body: Stack(
         children: [
           Scaffold(
