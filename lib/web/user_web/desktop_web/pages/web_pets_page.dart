@@ -100,171 +100,16 @@ class _WebPetsPageState extends State<WebPetsPage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Row(
-        children: [
-          // Left Panel - Pet Cards
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 3,
-                    offset: const Offset(2, 0),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'My Pets',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 0.8,
-                      ),
-                      itemCount: pets.length + 1, // +1 for add button
-                      itemBuilder: (context, index) {
-                        if (index == pets.length) {
-                          // Add Pet Card
-                          return _buildAddPetCard();
-                        }
-                        return _buildPetCard(pets[index]);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // Right Panel - Pet Details or Add Form
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              child: showAddForm 
-                  ? _buildAddPetForm()
-                  : selectedPet != null 
-                      ? _buildPetDetails()
-                      : _buildWelcomeMessage(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPetCard(Pet pet) {
-    final isSelected = selectedPet?.id == pet.id;
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedPet = pet;
-          showAddForm = false;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
-          border: Border.all(
-            color: isSelected ? const Color(0xFF3498DB) : Colors.grey[300]!,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected 
-                  ? const Color(0xFF3498DB).withOpacity(0.2)
-                  : Colors.grey.withOpacity(0.1),
-              spreadRadius: isSelected ? 2 : 1,
-              blurRadius: isSelected ? 8 : 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+      backgroundColor: Colors.white,
+      body: MultiSplitViewTheme(
+        data: MultiSplitViewThemeData(
+          dividerPainter: DividerPainters.grooved1(
+            color: Colors.indigo[100]!,
+            highlightedColor: Colors.indigo[900]!
+          )
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  image: DecorationImage(
-                    image: NetworkImage(pet.imageUrl),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      pet.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      pet.breed,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3498DB).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        pet.petType,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF3498DB),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        child: MultiSplitView(
+          controller: _controller,
         ),
       ),
     );
@@ -301,6 +146,7 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
     final controller = Get.find<WebPetsController>();
     
     return GestureDetector(
+      behavior: HitTestBehavior.translucent,
       onTap: () {
         webPetsPage?.clearRightPanel();
       },
@@ -311,7 +157,6 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
           borderRadius: BorderRadius.all(Radius.circular(20))
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Header with search
             Row(
