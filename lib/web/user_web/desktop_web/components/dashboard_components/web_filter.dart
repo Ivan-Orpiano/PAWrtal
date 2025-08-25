@@ -27,7 +27,7 @@ class _WebFilterState extends State<WebFilter> {
           } else {
             showDialog(
               context: context,
-              builder: (context) => _buildWebDialog()
+              builder: (context) => _buildWebDialog(context)
             );
           }
         },
@@ -86,21 +86,45 @@ Widget _buildMobileDialog() {
   );
 }
 
-Widget _buildWebDialog() {
+Widget _buildWebDialog(BuildContext context) {
     return Dialog(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Container(
-      width: 550,
-      height: 1000,
-      padding: const EdgeInsets.all(20),
-      child: const Column(
-        children: [
-          SizedBox(height: 16),
-          Text('Filters', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        ],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
-    ),
-  );
+      child: Container(
+        width: 550,
+        height: 1000,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              spacing: 16,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.keyboard_arrow_left_rounded)
+                    ),
+                    const Text(
+                      'Filters',
+                      style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
 }
