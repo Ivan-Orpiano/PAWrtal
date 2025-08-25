@@ -1,33 +1,14 @@
+import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pets_page_pet_tile.dart';
+import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pets_page_search_bar.dart';
+import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pet_creation_panel.dart';
+import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pet_details_panel.dart';
+import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';
+import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:flutter/material.dart';
+import 'package:multi_split_view/multi_split_view.dart';
+import 'package:get/get.dart';
 
-// Pet model
-class Pet {
-  final String id;
-  final String name;
-  final String breed;
-  final String petType;
-  final String imageUrl;
-  final String description;
-  final String medicalHistory;
-  final String age;
-  final String weight;
-  final String color;
-  final String ownerNotes;
-
-  Pet({
-    required this.id,
-    required this.name,
-    required this.breed,
-    required this.petType,
-    required this.imageUrl,
-    required this.description,
-    required this.medicalHistory,
-    required this.age,
-    required this.weight,
-    required this.color,
-    required this.ownerNotes,
-  });
-}
+enum RightPanelView { none, details, create, edit }
 
 class WebPetsPage extends StatefulWidget {
   const WebPetsPage({super.key});
@@ -37,92 +18,87 @@ class WebPetsPage extends StatefulWidget {
 }
 
 class _WebPetsPageState extends State<WebPetsPage> {
-  List<Pet> pets = [
-    Pet(
-      id: '1',
-      name: 'Buddy',
-      breed: 'Golden Retriever',
-      petType: 'Dog',
-      imageUrl: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=300&h=300&fit=crop',
-      description: 'Friendly and energetic dog who loves playing fetch and going for walks.',
-      medicalHistory: 'Vaccinated, dewormed. Last checkup: Jan 2024. No known allergies.',
-      age: '3 years',
-      weight: '32 kg',
-      color: 'Golden',
-      ownerNotes: 'Loves treats and belly rubs. Gets excited around other dogs.',
-    ),
-    Pet(
-      id: '2',
-      name: 'Whiskers',
-      breed: 'Persian',
-      petType: 'Cat',
-      imageUrl: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&h=300&fit=crop',
-      description: 'Calm and affectionate cat who enjoys sunbathing and being petted.',
-      medicalHistory: 'Spayed, vaccinated. Regular dental cleanings. Last vet visit: Dec 2023.',
-      age: '2 years',
-      weight: '4.5 kg',
-      color: 'White and Gray',
-      ownerNotes: 'Prefers quiet environments. Loves tuna treats.',
-    ),
-  ];
+  late final WebPetsController petsController;
+  final MultiSplitViewController _controller = MultiSplitViewController(areas: [
+    Area(flex: 2.5, min: 1.5, builder: (context, area) => const Padding(
+      padding: EdgeInsets.only(top: 16, bottom: 16, left: 65),
+      child: LeftSidePanel(),
+    )),
+    Area(flex: 2, max: 1.3, min: 0.8, builder: (context, area) => const Padding(
+      padding: EdgeInsets.only(top: 16, bottom: 16, right: 65),
+      child: RightSidePanel(),
+    ))
+  ]);
 
-  Pet? selectedPet;
-  bool showAddForm = false;
-  
-  // Form controllers
-  final _nameController = TextEditingController();
-  final _breedController = TextEditingController();
-  final _petTypeController = TextEditingController();
-  final _imageUrlController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _medicalHistoryController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _colorController = TextEditingController();
-  final _ownerNotesController = TextEditingController();
+  RightPanelView rightPanelView = RightPanelView.none;
+  Pet? editingPet;
 
-  void _clearForm() {
-    _nameController.clear();
-    _breedController.clear();
-    _petTypeController.clear();
-    _imageUrlController.clear();
-    _descriptionController.clear();
-    _medicalHistoryController.clear();
-    _ageController.clear();
-    _weightController.clear();
-    _colorController.clear();
-    _ownerNotesController.clear();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!Get.isRegistered<WebPetsController>()) {
+        petsController = Get.put(WebPetsController(
+          authRepository: Get.find(),
+          session: Get.find(),
+        ));
+      } else {
+        petsController = Get.find();
+      }
+      setState(() {});
+    });
   }
 
-  void _savePet() {
-    if (_nameController.text.isEmpty || _breedController.text.isEmpty) return;
-    
-    final newPet = Pet(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text,
-      breed: _breedController.text,
-      petType: _petTypeController.text,
-      imageUrl: _imageUrlController.text.isEmpty 
-          ? 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop'
-          : _imageUrlController.text,
-      description: _descriptionController.text,
-      medicalHistory: _medicalHistoryController.text,
-      age: _ageController.text,
-      weight: _weightController.text,
-      color: _colorController.text,
-      ownerNotes: _ownerNotesController.text,
-    );
-
+  void showCreatePanel() {
     setState(() {
-      pets.add(newPet);
-      showAddForm = false;
-      selectedPet = newPet;
-      _clearForm();
+      rightPanelView = RightPanelView.create;
+      editingPet = null;
     });
+  }
+
+  void showEditPanel(Pet pet) {
+    setState(() {
+      rightPanelView = RightPanelView.edit;
+      editingPet = pet;
+    });
+  }
+
+  void showDetailsPanel(Pet pet) {
+    setState(() {
+      rightPanelView = RightPanelView.details;
+      petsController.selectPet(pet);
+    });
+  }
+
+  void clearRightPanel() {
+    setState(() {
+      rightPanelView = RightPanelView.none;
+      editingPet = null;
+    });
+    petsController.clearSelection();
+  }
+
+  void onPetActionSuccess() {
+    petsController.refreshPets();
+    clearRightPanel();
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<WebPetsController>()) {
+      Get.delete<WebPetsController>();
+    }
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!Get.isRegistered<WebPetsController>()) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Row(
@@ -293,402 +269,259 @@ class _WebPetsPageState extends State<WebPetsPage> {
       ),
     );
   }
+}
 
-  Widget _buildAddPetCard() {
+class LeftSidePanel extends StatefulWidget {
+  const LeftSidePanel({super.key});
+
+  @override
+  State<LeftSidePanel> createState() => _LeftSidePanelState();
+}
+
+class _LeftSidePanelState extends State<LeftSidePanel> {
+  final TextEditingController _searchController = TextEditingController();
+  
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      Get.find<WebPetsController>().updateSearchQuery(_searchController.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final webPetsPage = context.findAncestorStateOfType<_WebPetsPageState>();
+    final controller = Get.find<WebPetsController>();
+    
     return GestureDetector(
       onTap: () {
-        setState(() {
-          showAddForm = true;
-          selectedPet = null;
-        });
+        webPetsPage?.clearRightPanel();
       },
       child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
-          border: Border.all(color: Colors.grey[300]!, width: 2, style: BorderStyle.solid),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Color(0xe6f0ffff),
+          borderRadius: BorderRadius.all(Radius.circular(20))
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFF3498DB).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.add,
-                size: 30,
-                color: Color(0xFF3498DB),
-              ),
+            // Header with search
+            Row(
+              children: [
+                Flexible(
+                  flex: 3,
+                  child: SizedBox(
+                    height: 50,
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search pets...',
+                        hintStyle: const TextStyle(fontSize: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Colors.indigo,
+                            width: 1.5
+                          )
+                        ),
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: _SearchClearButton(controller: _searchController),
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+              ],
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Add Pet',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF3498DB),
-              ),
+            const SizedBox(height: 16),
+            
+            // Pets grid
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final pets = controller.filteredPets;
+                
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.8, 
+                  ),
+                  itemCount: pets.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == pets.length) {
+                      // Add Button Card
+                      return GestureDetector(
+                        onTap: () {
+                          webPetsPage?.showCreatePanel();
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.indigo[50],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.indigo, width: 2, style: BorderStyle.solid),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add, size: 48, color: Colors.indigo),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Add New Pet",
+                                style: TextStyle(
+                                  color: Colors.indigo,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    } else {
+                      final pet = pets[index];
+                      return WebPetsPagePetTile(
+                        pet: pet,
+                        isSelected: controller.selectedPet.value?.petId == pet.petId,
+                        onTap: () {
+                          webPetsPage?.showDetailsPanel(pet);
+                        },
+                      );
+                    }
+                  },
+                );
+              }),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildPetDetails() {
-    if (selectedPet == null) return Container();
+class RightSidePanel extends StatelessWidget {
+  const RightSidePanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final webPetsPage = context.findAncestorStateOfType<_WebPetsPageState>();
+    final controller = Get.find<WebPetsController>();
     
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.grey.shade50,
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with image
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                image: DecorationImage(
-                  image: NetworkImage(selectedPet!.imageUrl),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and type
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        selectedPet!.name,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3498DB),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          selectedPet!.petType,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Quick info cards
-                  Row(
-                    children: [
-                      Expanded(child: _buildInfoCard('Breed', selectedPet!.breed)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _buildInfoCard('Age', selectedPet!.age)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _buildInfoCard('Weight', selectedPet!.weight)),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Description
-                  _buildDetailSection('About', selectedPet!.description),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Medical History
-                  _buildDetailSection('Medical History', selectedPet!.medicalHistory),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Owner Notes
-                  _buildDetailSection('Owner Notes', selectedPet!.ownerNotes),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: _buildRightPanelContent(webPetsPage, controller),
     );
   }
 
-  Widget _buildInfoCard(String title, String value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildRightPanelContent(_WebPetsPageState? webPetsPage, WebPetsController controller) {
+    if (webPetsPage == null) {
+      return const SizedBox.shrink();
+    }
 
-  Widget _buildDetailSection(String title, String content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2C3E50),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
-          child: Text(
-            content.isEmpty ? 'No information available' : content,
-            style: TextStyle(
-              fontSize: 14,
-              color: content.isEmpty ? Colors.grey[500] : const Color(0xFF2C3E50),
-              height: 1.5,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAddPetForm() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+    switch (webPetsPage.rightPanelView) {
+      case RightPanelView.create:
+        return WebPetCreationPanel(
+          onSuccess: webPetsPage.onPetActionSuccess,
+        );
+        
+      case RightPanelView.edit:
+        return WebPetCreationPanel(
+          existingPet: webPetsPage.editingPet,
+          onSuccess: webPetsPage.onPetActionSuccess,
+        );
+        
+      case RightPanelView.details:
+        return Obx(() {
+          final selectedPet = controller.selectedPet.value;
+          if (selectedPet == null) {
+            return const Center(
+              child: Text("No pet selected"),
+            );
+          }
+          
+          return WebPetDetailsPanel(
+            pet: selectedPet,
+            onEdit: () => webPetsPage.showEditPanel(selectedPet),
+            onDelete: () async {
+              await controller.deletePet(selectedPet);
+              webPetsPage.clearRightPanel();
+            },
+          );
+        });
+        
+      case RightPanelView.none:
+      default:
+        return Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add New Pet',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        showAddForm = false;
-                        _clearForm();
-                      });
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+              Icon(
+                Icons.pets,
+                size: 64,
+                color: Colors.grey.shade400,
               ),
-              
-              const SizedBox(height: 24),
-              
-              // Form fields
-              _buildFormField('Pet Name *', _nameController),
-              _buildFormField('Breed *', _breedController),
-              _buildFormField('Pet Type (Dog, Cat, etc.)', _petTypeController),
-              _buildFormField('Image URL', _imageUrlController),
-              _buildFormField('Age', _ageController),
-              _buildFormField('Weight', _weightController),
-              _buildFormField('Color', _colorController),
-              _buildFormField('Description', _descriptionController, maxLines: 3),
-              _buildFormField('Medical History', _medicalHistoryController, maxLines: 3),
-              _buildFormField('Owner Notes', _ownerNotesController, maxLines: 3),
-              
-              const SizedBox(height: 32),
-              
-              // Save button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _savePet,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3498DB),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Save Pet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+              const SizedBox(height: 16),
+              Text(
+                "Select a pet to view details",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "or click the + button to add a new pet",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
+    }
   }
+}
 
-  Widget _buildFormField(String label, TextEditingController controller, {int maxLines = 1}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2C3E50),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: controller,
-            maxLines: maxLines,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF3498DB), width: 2),
-              ),
-              fillColor: Colors.grey[50],
-              filled: true,
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _SearchClearButton extends StatelessWidget {
+  final TextEditingController controller;
 
-  Widget _buildWelcomeMessage() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.pets,
-              size: 80,
-              color: Color(0xFF3498DB),
-            ),
-            SizedBox(height: 24),
-            Text(
-              'Welcome to Pet Manager',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Select a pet to view details\nor add a new pet to get started',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      ),
+  const _SearchClearButton({
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, child) {
+        return value.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () {
+                  controller.clear();
+                },
+              )
+            : const SizedBox.shrink();
+      },
     );
   }
 }

@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 
 class WebSearchBar extends StatefulWidget {
-  final double width;
-
+  final double? width;
+  final Function(String)? onSearchChanged;
+  
   const WebSearchBar({
-    super.key,
-    this.width = 300
-    });
+    super.key, 
+    this.width, 
+    this.onSearchChanged,
+  });
 
   @override
   State<WebSearchBar> createState() => _WebSearchBarState();
 }
 
 class _WebSearchBarState extends State<WebSearchBar> {
-
   final TextEditingController _controller = TextEditingController();
   bool _showClear = false;
 
@@ -24,6 +25,10 @@ class _WebSearchBarState extends State<WebSearchBar> {
       setState(() {
         _showClear = _controller.text.isNotEmpty;
       });
+      // Notify parent about search changes
+      if (widget.onSearchChanged != null) {
+        widget.onSearchChanged!(_controller.text);
+      }
     });
   }
 
@@ -36,42 +41,58 @@ class _WebSearchBarState extends State<WebSearchBar> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: widget.width,
+      width: widget.width ?? 380,
       height: 50,
       child: TextField(
         controller: _controller,
-        onTap: () {
-          setState(() {
-            _showClear = _controller.text.isNotEmpty;
-          });
-        },
         decoration: InputDecoration(
-          hintText: 'Search...',
+          hintText: 'Search for clinics, services, locations...',
           hintStyle: const TextStyle(
-            fontSize: 14
+            fontSize: 14,
+            color: Colors.grey,
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: const BorderSide(
               color: Colors.black,
-              width: 1.5
-            )
+              width: 1.5,
+            ),
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Colors.grey,
           ),
           suffixIcon: _showClear 
-          ? IconButton(
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () {
-              _controller.clear();
-              setState(() {
-                _showClear = false;
-              });
-            },
-          )
-          : const Icon(Icons.search_rounded)
-        )
+            ? IconButton(
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  _controller.clear();
+                  setState(() {
+                    _showClear = false;
+                  });
+                  // Notify parent about cleared search
+                  if (widget.onSearchChanged != null) {
+                    widget.onSearchChanged!('');
+                  }
+                },
+              )
+            : null,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
       ),
     );
   }
