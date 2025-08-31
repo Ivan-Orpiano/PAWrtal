@@ -65,32 +65,47 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
     final isEditing = widget.existingPet != null;
     
     return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row(
-          //   children: [
-          //     Icon(
-          //       Icons.pets,
-          //       color: Colors.indigo,
-          //       size: 24,
-          //     ),
-          //     const SizedBox(width: 12),
-          //     Text(
-          //       isEditing ? "Edit Pet" : "Add New Pet",
-          //       style: const TextStyle(
-          //         fontSize: 20,
-          //         fontWeight: FontWeight.bold,
-          //       ),
-          //     ),
-          //   ],
-          // ),
-          // const SizedBox(height: 24),
-          
-          Expanded(
-            child: SingleChildScrollView(
-              child: Form(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isEditing ? "Edit Pet" : "Add New Pet",
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      widget.onSuccess?.call();
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              Form(
                 key: controller.formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,17 +142,26 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                           imageWidget = Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.add_a_photo,
-                                size: 50,
-                                color: Colors.indigo.shade400,
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3498DB).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.add_a_photo,
+                                  size: 30,
+                                  color: Color(0xFF3498DB),
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
+                              const SizedBox(height: 12),
+                              const Text(
                                 "Click to add photo",
                                 style: TextStyle(
-                                  color: Colors.indigo.shade600,
+                                  color: Color(0xFF3498DB),
                                   fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -148,9 +172,9 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                           height: 200,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: Colors.indigo.shade50,
+                            color: Colors.grey[50],
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.indigo.shade200),
+                            border: Border.all(color: Colors.grey[300]!),
                           ),
                           child: imageWidget,
                         );
@@ -164,7 +188,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         Expanded(
                           child: _buildTextField(
                             controller.nameController,
-                            "Pet Name",
+                            "Pet Name *",
                             Icons.pets,
                           ),
                         ),
@@ -172,7 +196,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         Expanded(
                           child: _buildTextField(
                             controller.typeController,
-                            "Type (e.g. Dog, Cat)",
+                            "Type (e.g. Dog, Cat) *",
                             Icons.category,
                           ),
                         ),
@@ -184,7 +208,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         Expanded(
                           child: _buildTextField(
                             controller.breedController,
-                            "Breed",
+                            "Breed *",
                             Icons.pets_outlined,
                           ),
                         ),
@@ -221,59 +245,54 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                       maxLines: 3,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     // Action Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            // Clear the right panel or navigate back
-                            widget.onSuccess?.call();
-                          },
-                          child: const Text("Cancel"),
-                        ),
-                        const SizedBox(width: 12),
-                        Obx(() => ElevatedButton.icon(
-                          onPressed: controller.isLoading.value
-                              ? null
-                              : () async {
-                                  if (isEditing) {
-                                    await controller.updatePet();
-                                  } else {
-                                    await controller.createPet();
-                                  }
-                                  widget.onSuccess?.call();
-                                },
-                          icon: controller.isLoading.value
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.save),
-                          label: Text(isEditing ? "Update Pet" : "Save Pet"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: Obx(() => ElevatedButton(
+                        onPressed: controller.isLoading.value
+                            ? null
+                            : () async {
+                                if (isEditing) {
+                                  await controller.updatePet();
+                                } else {
+                                  await controller.createPet();
+                                }
+                                widget.onSuccess?.call();
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3498DB),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        )),
-                      ],
+                        ),
+                        child: controller.isLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                isEditing ? "Update Pet" : "Save Pet",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      )),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -287,23 +306,44 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: Colors.indigo),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2C3E50),
+            ),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.indigo, width: 2),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF3498DB), width: 2),
+              ),
+              fillColor: Colors.grey[50],
+              filled: true,
+              contentPadding: const EdgeInsets.all(16),
+              prefixIcon: Icon(icon, color: Colors.grey[500]),
+            ),
+            validator: (value) {
+              if (label.contains('*') && (value == null || value.isEmpty)) {
+                return "Please enter ${label.replaceAll(' *', '')}";
+              }
+              return null;
+            },
           ),
-        ),
-        validator: (value) =>
-            value == null || value.isEmpty ? "Please enter $label" : null,
+        ],
       ),
     );
   }
