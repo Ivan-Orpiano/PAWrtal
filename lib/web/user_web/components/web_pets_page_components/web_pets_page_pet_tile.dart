@@ -31,22 +31,24 @@ class _WebPetsPagePetTileState extends State<WebPetsPagePetTile> {
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: widget.isSelected 
-                ? Colors.indigo.shade100 
-                : (_isHovering ? Colors.grey.shade100 : Colors.white),
+                ? const Color(0xFF3498DB).withOpacity(0.05)
+                : (_isHovering ? Colors.grey.shade50 : Colors.white),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: widget.isSelected 
-                  ? Colors.indigo 
-                  : (_isHovering ? Colors.indigo.shade200 : Colors.grey.shade300),
+                  ? const Color(0xFF3498DB)
+                  : (_isHovering ? const Color(0xFF3498DB).withOpacity(0.3) : Colors.grey.shade300),
               width: widget.isSelected ? 2 : 1,
             ),
             boxShadow: [
               if (_isHovering || widget.isSelected)
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 2,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: widget.isSelected 
+                      ? const Color(0xFF3498DB).withOpacity(0.2)
+                      : Colors.grey.withOpacity(0.1),
+                  spreadRadius: widget.isSelected ? 2 : 1,
+                  blurRadius: widget.isSelected ? 8 : 4,
+                  offset: const Offset(0, 2),
                 ),
             ],
           ),
@@ -58,8 +60,8 @@ class _WebPetsPagePetTileState extends State<WebPetsPagePetTile> {
                 flex: 3,
                 child: Container(
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(16),
                       topRight: Radius.circular(16),
                     ),
@@ -70,7 +72,7 @@ class _WebPetsPagePetTileState extends State<WebPetsPagePetTile> {
                       topRight: Radius.circular(16),
                     ),
                     child: Image.network(
-                      widget.pet.image ?? 'https://via.placeholder.com/150x120?text=No+Image',
+                      widget.pet.image ?? 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop',
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
                         color: Colors.grey.shade200,
@@ -92,18 +94,18 @@ class _WebPetsPagePetTileState extends State<WebPetsPagePetTile> {
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         widget.pet.name,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
                       Text(
                         widget.pet.breed,
                         style: TextStyle(
@@ -113,18 +115,17 @@ class _WebPetsPagePetTileState extends State<WebPetsPagePetTile> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.indigo.shade50,
+                          color: const Color(0xFF3498DB).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           widget.pet.type,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: Colors.indigo.shade700,
+                            color: Color(0xFF3498DB),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

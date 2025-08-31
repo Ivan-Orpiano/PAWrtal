@@ -1,6 +1,5 @@
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class WebPetDetailsPanel extends StatelessWidget {
   final Pet pet;
@@ -18,17 +17,37 @@ class WebPetDetailsPanel extends StatelessWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Delete Pet"),
-        content: Text("Are you sure you want to delete ${pet.name}?"),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          "Delete Pet",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to delete ${pet.name}? This action cannot be undone.",
+          style: TextStyle(
+            color: Colors.grey[600],
+          ),
+        ),
         actions: [
           TextButton(
-            child: const Text("Cancel"),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: Colors.grey[600]),
+            ),
             onPressed: () => Navigator.of(context).pop(false),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text("Delete"),
             onPressed: () => Navigator.of(context).pop(true),
@@ -45,217 +64,195 @@ class WebPetDetailsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with actions
-          // Row(
-          //   children: [
-          //     Icon(
-          //       Icons.pets,
-          //       color: Colors.indigo,
-          //       size: 24,
-          //     ),
-          //     const SizedBox(width: 12),
-          //     Expanded(
-          //       child: Text(
-          //         pet.name,
-          //         style: const TextStyle(
-          //           fontSize: 24,
-          //           fontWeight: FontWeight.bold,
-          //         ),
-          //       ),
-          //     ),
-          //     IconButton(
-          //       icon: const Icon(Icons.edit, color: Colors.blue),
-          //       onPressed: onEdit,
-          //       tooltip: "Edit Pet",
-          //     ),
-          //     IconButton(
-          //       icon: const Icon(Icons.delete, color: Colors.red),
-          //       onPressed: () => _confirmDelete(context),
-          //       tooltip: "Delete Pet",
-          //     ),
-          //   ],
-          // ),
-          // const SizedBox(height: 24),
-
-          Expanded(
-            child: SingleChildScrollView(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with image
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                child: Image.network(
+                  pet.image ?? 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey[200],
+                    child: Icon(
+                      Icons.broken_image,
+                      size: 80,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Pet Image
-                  Center(
-                    child: Container(
-                      height: 250,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.3),
-                            spreadRadius: 2,
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          pet.image ?? 'https://via.placeholder.com/300x250?text=No+Image',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(
-                              Icons.broken_image,
-                              size: 80,
-                              color: Colors.grey,
-                            ),
+                  // Name and type with action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pet.name,
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
                           ),
                         ),
                       ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Color(0xFF3498DB)),
+                            onPressed: onEdit,
+                            tooltip: "Edit Pet",
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _confirmDelete(context),
+                            tooltip: "Delete Pet",
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3498DB),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      pet.type,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-
-                  // Pet Information Cards
-                  _buildInfoSection([
-                    _buildInfoCard(Icons.category, "Type", pet.type),
-                    _buildInfoCard(Icons.pets_outlined, "Breed", pet.breed),
-                  ]),
                   
-                  const SizedBox(height: 16),
-                  
-                  _buildInfoSection([
-                    _buildInfoCard(Icons.palette, "Color", pet.color ?? "Not specified"),
-                    _buildInfoCard(Icons.monitor_weight, "Weight", 
-                      pet.weight != null ? "${pet.weight} kg" : "Not specified"),
-                  ]),
-
-                  if (pet.notes != null && pet.notes!.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _buildNotesCard(),
-                  ],
-
                   const SizedBox(height: 24),
-
-                  // Additional sections can be added here
-                  // For example: Medical records, appointments, etc.
+                  
+                  // Quick info cards
+                  Row(
+                    children: [
+                      Expanded(child: _buildInfoCard('Breed', pet.breed)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildInfoCard('Color', pet.color ?? 'Not specified')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildInfoCard('Weight', 
+                        pet.weight != null ? '${pet.weight} kg' : 'Not specified')),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Notes section
+                  if (pet.notes != null && pet.notes!.isNotEmpty)
+                    _buildDetailSection('Notes', pet.notes!),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoSection(List<Widget> children) {
-    return Row(
-      children: children.map((child) => 
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: child,
-          ),
-        ),
-      ).toList(),
-    );
-  }
-
-  Widget _buildInfoCard(IconData icon, String label, String value) {
+  Widget _buildInfoCard(String title, String value) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.indigo, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
           Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildNotesCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+  Widget _buildDetailSection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.notes, color: Colors.indigo, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                "Notes",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
           ),
-          const SizedBox(height: 8),
-          Text(
-            pet.notes!,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
+          child: Text(
+            content.isEmpty ? 'No information available' : content,
+            style: TextStyle(
+              fontSize: 14,
+              color: content.isEmpty ? Colors.grey[500] : const Color(0xFF2C3E50),
+              height: 1.5,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
