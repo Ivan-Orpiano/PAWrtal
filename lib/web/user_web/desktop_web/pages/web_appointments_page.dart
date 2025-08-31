@@ -12,70 +12,13 @@ class WebAppointmentsPage extends StatefulWidget {
 class _AppointmentsWebPageState extends State<WebAppointmentsPage> {
   @override
   Widget build(BuildContext context) {
-
-  DateTime now = DateTime.now();
-  String formattedDate = DateFormat('yyyy/MM/dd').format(now);
-
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 238, 238, 238),
       body: Container(
         padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20)
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Date Today: $formattedDate",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18
-                    ),
-                  ),
-                  const Text(
-                    "Appointments Today: 1",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18
-                    ),
-                  ),
-                  const Row(
-                    children: [
-                      Text(
-                        "Pending: 1",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12
-                        ),
-                      ),
-                      VerticalDivider(indent: 10, endIndent: 10, width: 7.5,),
-                      Text(
-                        "Accepted: 1",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12
-                        ),
-                      ),
-                      VerticalDivider(indent: 10, endIndent: 10, width: 7.5,),
-                      Text(
-                        "Rejected: 1",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12
-                        ),
-                      )
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            appointmentBar(),
             const SizedBox(height: 16),
             const Expanded(
               child: Row(
@@ -93,6 +36,66 @@ class _AppointmentsWebPageState extends State<WebAppointmentsPage> {
       ),
     );
   }
+}
+
+Widget appointmentBar() {
+  DateTime now = DateTime.now();
+  String formattedDate = DateFormat('yyyy/MM/dd').format(now);
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    height: 60,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20)
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Date Today: $formattedDate",
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18
+          ),
+        ),
+        const Text(
+          "Appointments Today: 1",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 18
+          ),
+        ),
+        const Row(
+          children: [
+            Text(
+              "Pending: 1",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12
+              ),
+            ),
+            VerticalDivider(indent: 10, endIndent: 10, width: 7.5,),
+            Text(
+              "Accepted: 1",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12
+              ),
+            ),
+            VerticalDivider(indent: 10, endIndent: 10, width: 7.5,),
+            Text(
+              "Rejected: 1",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12
+              ),
+            )
+          ],
+        ),
+      ],
+    ),
+  );
 }
 
 class AppointmentPending extends StatefulWidget {
@@ -292,7 +295,7 @@ class _AppointmentTileState extends State<AppointmentTile> {
         onTap: () {
           showDialog(
             context: context,
-            builder: (context) => const WebAppointmentDialog()
+            builder: (context) => _buildAppointmentDialog(context)
           );
         },
         child: Container(
@@ -378,7 +381,7 @@ class _AppointmentTileState extends State<AppointmentTile> {
                           ),
                           const SizedBox(width: 5,),
                           Text(
-                            "Purpose of appointment", 
+                            "Vaccination", 
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade700
@@ -451,55 +454,45 @@ class _AppointmentTileState extends State<AppointmentTile> {
   }
 }
 
-class WebAppointmentDialog extends StatefulWidget {
-  const WebAppointmentDialog({super.key});
-
-  @override
-  State<WebAppointmentDialog> createState() => _WebAppointmentDialogState();
-}
-
-class _WebAppointmentDialogState extends State<WebAppointmentDialog> {
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
+Widget _buildAppointmentDialog(BuildContext context) {
+  return Dialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Container(
+      width: 550,
+      height: 700,
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Container(
-        width: 550,
-        height: 700,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              spacing: 16,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      icon: const Icon(Icons.keyboard_arrow_left_rounded)
+      clipBehavior: Clip.hardEdge,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            spacing: 16,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.keyboard_arrow_left_rounded)
+                  ),
+                  const Text(
+                    'Appointment Details',
+                    style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold
                     ),
-                    const Text(
-                      'Appointment Details',
-                      style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
