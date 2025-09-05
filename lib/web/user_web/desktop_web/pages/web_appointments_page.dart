@@ -10,92 +10,273 @@ class WebAppointmentsPage extends StatefulWidget {
 }
 
 class _AppointmentsWebPageState extends State<WebAppointmentsPage> {
+  int selectedTabIndex = 0; // 0: Pending, 1: Accepted, 2: Declined
+  final double tabletWidth = 1100;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 238, 238, 238),
-      body: Container(
-        padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
-        child: Column(
-          children: [
-            appointmentBar(),
-            const SizedBox(height: 16),
-            const Expanded(
-              child: Row(
-                children: [
-                  AppointmentPending(),
-                  SizedBox(width: 16),
-                  AppointmentAccepted(),
-                  SizedBox(width: 16),
-                  AppointmentDeclined()
-                ],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isTablet = constraints.maxWidth < tabletWidth;
+        
+        return Scaffold(
+          backgroundColor: const Color(0xFFEEEEEE),
+          body: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 20 : 65,
+              vertical: 16
             ),
-          ],
+            child: Column(
+              children: [
+                _buildAppointmentBar(),
+                const SizedBox(height: 16),
+                if (isTablet) _buildTabletView() else _buildDesktopView(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopView() {
+    return const Expanded(
+      child: Row(
+        children: [
+          AppointmentPending(),
+          SizedBox(width: 16),
+          AppointmentAccepted(),
+          SizedBox(width: 16),
+          AppointmentDeclined()
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletView() {
+    return Expanded(
+      child: Column(
+        children: [
+          _buildTabSelector(),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _buildSelectedTab(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabSelector() {
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildTabButton(0, Icons.pending_rounded, "Pending", Colors.grey),
+          _buildTabButton(1, Icons.check_rounded, "Accepted", Colors.green),
+          _buildTabButton(2, Icons.cancel_rounded, "Declined", Colors.red),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(int index, IconData icon, String text, Color color) {
+    bool isSelected = selectedTabIndex == index;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => selectedTabIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: isSelected ? Border.all(color: color, width: 2) : null,
+          ),
+          child: Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Colors.black : Colors.grey.shade600,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? Colors.black : Colors.grey.shade700,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-}
 
-Widget appointmentBar() {
-  DateTime now = DateTime.now();
-  String formattedDate = DateFormat('yyyy/MM/dd').format(now);
+  Widget _buildSelectedTab() {
+    switch (selectedTabIndex) {
+      case 0:
+        return const AppointmentPending();
+      case 1:
+        return const AppointmentAccepted();
+      case 2:
+        return const AppointmentDeclined();
+      default:
+        return const AppointmentPending();
+    }
+  }
 
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    height: 60,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20)
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildAppointmentBar() {
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('MMM dd, yyyy').format(now);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isCompact = constraints.maxWidth < 600;
+          
+          if (isCompact) {
+            return Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoCard(Icons.calendar_today, "Today", formattedDate),
+                    _buildInfoCard(Icons.event_note, "Appointments", "3"),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatusChip("Pending", "1", Colors.grey),
+                    _buildStatusChip("Accepted", "1", Colors.green),
+                    _buildStatusChip("Declined", "1", Colors.red),
+                  ],
+                ),
+              ],
+            );
+          }
+          
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildInfoCard(Icons.calendar_today, "Today", formattedDate),
+              _buildInfoCard(Icons.event_note, "Total Appointments", "3"),
+              Row(
+                children: [
+                  _buildStatusChip("Pending", "1", Colors.grey),
+                  const SizedBox(width: 12),
+                  _buildStatusChip("Accepted", "1", Colors.green),
+                  const SizedBox(width: 12),
+                  _buildStatusChip("Declined", "1", Colors.red),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(IconData icon, String label, String value) {
+    return Row(
       children: [
-        Text(
-          "Date Today: $formattedDate",
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icon, color: Colors.blue, size: 20),
         ),
-        const Text(
-          "Appointments Today: 1",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18
-          ),
-        ),
-        const Row(
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Pending: 1",
+              label,
               style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            VerticalDivider(indent: 10, endIndent: 10, width: 7.5,),
             Text(
-              "Accepted: 1",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            VerticalDivider(indent: 10, endIndent: 10, width: 7.5,),
-            Text(
-              "Rejected: 1",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12
-              ),
-            )
           ],
         ),
       ],
-    ),
-  );
+    );
+  }
+
+  Widget _buildStatusChip(String label, String count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            "$label: $count",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class AppointmentPending extends StatefulWidget {
@@ -110,25 +291,40 @@ class _AppointmentPendingState extends State<AppointmentPending> {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        height: 760,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20)
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Container(
-          padding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
           child: Column(
             children: [
               AppointmentTabTitle(
-                icon: Icons.pending_rounded,
-                text: "Pending",
-                color: Colors.grey.shade200
-              ),
-              const AppointmentTile(
-                color: Color.fromARGB(255, 224, 224, 224),
                 icon: Icons.pending_actions_rounded,
-                text: "PENDING",
-              )
+                text: "Pending",
+                color: Colors.grey.shade100,
+                iconColor: Colors.black,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: const [
+                    AppointmentTile(
+                      color: Color.fromARGB(255, 224, 224, 224),
+                      icon: Icons.pending_actions_rounded,
+                      text: "PENDING",
+                      statusColor: Colors.black,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -149,25 +345,40 @@ class _AppointmentAcceptedState extends State<AppointmentAccepted> {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        height: 760,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20)
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Container(
-          padding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
           child: Column(
             children: [
               AppointmentTabTitle(
-                icon: Icons.check_rounded,
+                icon: Icons.check_circle_rounded,
                 text: "Accepted",
-                color: Colors.green.shade100
+                color: Colors.green.shade100,
+                iconColor: Colors.black,
               ),
-              AppointmentTile(
-                color: Colors.green.shade200,
-                icon: Icons.check_circle_outline,
-                text: "ACCEPTED",
-              )
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children:  [
+                    AppointmentTile(
+                      color: Color(0xFFC8E6C9),
+                      icon: Icons.check_circle_outline,
+                      text: "ACCEPTED",
+                      statusColor: Colors.black,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -188,25 +399,40 @@ class _AppointmentDeclinedState extends State<AppointmentDeclined> {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        height: 760,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20)
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child:  Container(
-          padding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
           child: Column(
             children: [
               AppointmentTabTitle(
                 icon: Icons.cancel_rounded,
                 text: "Declined",
-                color: Colors.red.shade100
+                color: Colors.red.shade100,
+                iconColor: Colors.black,
               ),
-              AppointmentTile(
-                color: Colors.red.shade200,
-                icon: Icons.cancel_outlined,
-                text: "DECLINED",
-              )
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: const [
+                    AppointmentTile(
+                      color: Color(0xFFFFCDD2),
+                      icon: Icons.cancel_outlined,
+                      text: "DECLINED",
+                      statusColor: Colors.black,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -215,238 +441,230 @@ class _AppointmentDeclinedState extends State<AppointmentDeclined> {
   }
 }
 
-class AppointmentTabTitle extends StatefulWidget {
+class AppointmentTabTitle extends StatelessWidget {
   final Color color;
+  final Color iconColor;
   final IconData icon;
   final String text;
 
   const AppointmentTabTitle({
     super.key,
     required this.color,
+    required this.iconColor,
     required this.icon,
     required this.text
   });
 
   @override
-  State<AppointmentTabTitle> createState() => _AppointmentTabTitleState();
-}
-
-class _AppointmentTabTitleState extends State<AppointmentTabTitle> {
-  @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Container(
-          width: 100,
-          height: 50,
-          decoration: BoxDecoration(
-            color: widget.color,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              width: 1,
-              color: Colors.black
-            )
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: iconColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: iconColor,
+            size: 20,
           ),
-          child:  Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 5),
-                child: Icon(
-                  widget.icon
-                ),
-              ),
-              Text(
-                widget.text,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold
-                ),
-              )
-            ],
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: iconColor
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class AppointmentTile extends StatefulWidget {
+class AppointmentTile extends StatelessWidget {
   final String text;
   final IconData icon;
   final Color color;
+  final Color statusColor;
 
   const AppointmentTile({
     super.key,
     required this.text,
     required this.icon,
     required this.color,
+    required this.statusColor,
   });
 
   @override
-  State<AppointmentTile> createState() => _AppointmentTileState();
-}
-
-class _AppointmentTileState extends State<AppointmentTile> {
-  @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: InkWell(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (context) => _buildAppointmentDialog(context)
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          height: 250,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(20)
-          ),
-          child: Column(
-            spacing: 12,
-            children: [
-              SizedBox(
-                height: 40,
-                child: Row(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => _buildAppointmentDialog(context)
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: [
+                Row(
                   children: [
                     Container(
-                      height: 40,
-                      width: 120,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: widget.color,
-                        borderRadius: BorderRadius.circular(10)
+                        color: color,
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
-                        spacing: 4,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            widget.icon
-                          ),
+                          Icon(icon, size: 16, color: statusColor),
+                          const SizedBox(width: 6),
                           Text(
-                            widget.text,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold
+                            text,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: statusColor,
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
-                    const Spacer(
+                    const Spacer(),
+                    Icon(
+                      Icons.keyboard_arrow_right_rounded,
+                      color: Colors.grey.shade400,
                     ),
-                    const Icon(
-                      Icons.keyboard_arrow_right_rounded
-                    )
                   ],
                 ),
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Flexible(
-                    flex: 4,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        'lib/images/test_image.jpg',
-                        width: 85,
-                        height: 85,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 7,
-                    children: [
-                      const Text(
-                        "Clinic name",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey.shade200,
+                        child: const Icon(
+                          Icons.local_hospital,
+                          size: 40,
+                          color: Colors.blue,
                         ),
                       ),
-                      Row(
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.medical_services_outlined,
-                            size: 22,
-                            color: Colors.grey.shade700
-                          ),
-                          const SizedBox(width: 5,),
-                          Text(
-                            "Vaccination", 
+                          const Text(
+                            "Sunny Paws Veterinary Clinic",
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade700
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
-                          )
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.medical_services_outlined,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Annual Vaccination",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.pets_rounded,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Max (Golden Retriever)",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.pets_rounded,
-                            size: 22,
-                            color: Colors.grey.shade700
-                          ),
-                          const SizedBox(width: 5,),
-                          Text(
-                            "Name of pet", 
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade700
-                            ),
-                          )
-                        ],
-                      )
-                    ],
-                  )
-                ],
-              ),
-              Container(
-                height: 67,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
+                    ),
+                  ],
                 ),
-                child: Container(
+                const SizedBox(height: 16),
+                Container(
                   padding: const EdgeInsets.all(12),
-                  child: const Row(
-                    spacing: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                  ),
+                  child: Row(
                     children: [
                       Icon(
-                        Icons.access_time_rounded,
+                        Icons.schedule_rounded,
+                        color: Colors.blue.shade600,
+                        size: 20,
                       ),
+                      const SizedBox(width: 12),
                       Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "December 1 2025",
+                            "December 15, 2024",
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
+                              color: Colors.blue.shade700,
                             ),
                           ),
                           Text(
-                            "3 :00 AM - 4 : 00 AM",
+                            "10:00 AM - 11:00 AM",
                             style: TextStyle(
-                              fontSize: 12
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
                             ),
-                          )
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
-              )
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -467,31 +685,53 @@ Widget _buildAppointmentDialog(BuildContext context) {
         borderRadius: BorderRadius.circular(20),
       ),
       clipBehavior: Clip.hardEdge,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            spacing: 16,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.keyboard_arrow_left_rounded)
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
+                const Text(
+                  'Appointment Details',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const Text(
-                    'Appointment Details',
-                    style: TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Add your appointment details content here
+                  Center(
+                    child: Text(
+                      'Detailed appointment information will go here',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     ),
   );
