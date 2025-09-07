@@ -24,7 +24,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
 
   final List<Widget> _pages = const [
     WebDashboardPage(),
-    WebAppointmentsPage(),
+    EnhancedWebAppointmentsPage(),
     WebMessagesPage(),
     WebPetsPage(),
   ];
