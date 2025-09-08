@@ -51,7 +51,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 236, 242, 249),
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
         title: const Text(
           "🐾 Pawrtal Users",
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -67,6 +67,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
           ],
         ),
       ),
+      backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -85,6 +86,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         return GestureDetector(
           onTap: () => _showUserCard(users[index]),
           child: Card(
+            color: const Color.fromRGBO(248, 253, 255, 1),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             elevation: 6,

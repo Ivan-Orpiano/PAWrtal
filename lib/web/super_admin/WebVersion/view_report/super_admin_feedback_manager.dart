@@ -1,209 +1,667 @@
-import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_page.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/super_ad_main_menu_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-void main() {
-  runApp(const VetClinicFeedbackApp());
-}
-
-class VetClinicFeedbackApp extends StatelessWidget {
-  // const VetClinicFeedbackApp({Key? key}) : super(key: key);
+class VetClinicFeedbackApp extends StatefulWidget {
   const VetClinicFeedbackApp({super.key});
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Vet Clinic Feedback Manager',
-      theme: ThemeData.light().copyWith(
-        primaryColor: Colors.teal,
-        scaffoldBackgroundColor: const Color.fromRGBO(248, 253, 255, 0.2),
-      ),
-      home: const VetClinicFeedbackManager(),
-    );
-  }
+  State<VetClinicFeedbackApp> createState() => _VetClinicFeedbackAppState();
 }
 
-class VetClinicFeedbackManager extends StatefulWidget {
-  const VetClinicFeedbackManager({super.key});
+class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedFilter = 'All';
+  String _selectedStatus = 'All';
+  List<FeedbackItem> _allFeedbacks = [];
+  List<FeedbackItem> _filteredFeedbacks = [];
+  bool _isLoading = false;
+  int _currentPage = 1;
+  final int _itemsPerPage = 10;
 
   @override
-  State<VetClinicFeedbackManager> createState() =>
-      _VetClinicFeedbackManagerState();
-}
-
-class _VetClinicFeedbackManagerState extends State<VetClinicFeedbackManager> {
-  final List<Map<String, String>> allFeedback = [
-    {
-      'clinic': 'Happy Paws Vet Clinic',
-      'user': 'Alice Johnson',
-      'feedback': 'Amazing service and friendly staff!',
-      'email': 'alice@example.com',
-    },
-    {
-      'clinic': 'PetCare Animal Clinic',
-      'user': 'Bob Smith',
-      'feedback': 'Waiting time is too long.',
-      'email': 'bob@example.com',
-    },
-  ];
-
-  List<Map<String, String>> deleteRequests = [];
-
-  String searchQuery = '';
-
-  void _handleDeleteRequest(Map<String, String> feedback) {
-    if (!deleteRequests.contains(feedback)) {
-      setState(() {
-        deleteRequests.add(feedback);
-      });
-    }
+  void initState() {
+    super.initState();
+    _loadSampleData();
+    _filteredFeedbacks = _allFeedbacks;
   }
 
-  void _handleApprove(Map<String, String> feedback) {
+  void _loadSampleData() {
+    _allFeedbacks = [
+      FeedbackItem(
+        id: '001',
+        vetClinicName: 'Paws & Claws Veterinary Clinic',
+        customerName: 'John Smith',
+        feedback:
+            'Excellent service! Dr. Martinez was very professional and caring.',
+        rating: 5,
+        status: 'Pending',
+        date: DateTime.now().subtract(Duration(hours: 2)),
+        hasDeleteRequest: true,
+        adminRequestedBy: 'Admin Sarah',
+      ),
+      FeedbackItem(
+        id: '002',
+        vetClinicName: 'City Pet Hospital',
+        customerName: 'Emily Johnson',
+        feedback: 'Long wait time, but good treatment for my cat.',
+        rating: 3,
+        status: 'Approved',
+        date: DateTime.now().subtract(Duration(days: 1)),
+        hasDeleteRequest: false,
+      ),
+      FeedbackItem(
+        id: '003',
+        vetClinicName: 'Animal Care Center',
+        customerName: 'Michael Brown',
+        feedback: 'Poor service. Staff was rude and unprofessional.',
+        rating: 1,
+        status: 'Pending',
+        date: DateTime.now().subtract(Duration(days: 2)),
+        hasDeleteRequest: true,
+        adminRequestedBy: 'Admin Mike',
+      ),
+      FeedbackItem(
+        id: '004',
+        vetClinicName: 'Happy Tails Veterinary',
+        customerName: 'Sarah Wilson',
+        feedback:
+            'Great facilities and friendly staff. My dog loves coming here!',
+        rating: 5,
+        status: 'Approved',
+        date: DateTime.now().subtract(Duration(days: 3)),
+        hasDeleteRequest: false,
+      ),
+      FeedbackItem(
+        id: '005',
+        vetClinicName: 'Pet Wellness Center',
+        customerName: 'David Lee',
+        feedback: 'Average experience. Could improve appointment scheduling.',
+        rating: 3,
+        status: 'Under Review',
+        date: DateTime.now().subtract(Duration(days: 4)),
+        hasDeleteRequest: true,
+        adminRequestedBy: 'Admin Lisa',
+      ),
+    ];
+    _filteredFeedbacks = _allFeedbacks;
+  }
+
+  void _filterFeedbacks() {
     setState(() {
-      allFeedback.remove(feedback);
-      deleteRequests.remove(feedback);
+      _filteredFeedbacks = _allFeedbacks.where((feedback) {
+        bool matchesSearch = _searchController.text.isEmpty ||
+            feedback.vetClinicName
+                .toLowerCase()
+                .contains(_searchController.text.toLowerCase()) ||
+            feedback.customerName
+                .toLowerCase()
+                .contains(_searchController.text.toLowerCase());
+
+        bool matchesFilter = _selectedFilter == 'All' ||
+            (_selectedFilter == 'With Delete Request' &&
+                feedback.hasDeleteRequest) ||
+            (_selectedFilter == 'No Delete Request' &&
+                !feedback.hasDeleteRequest);
+
+        bool matchesStatus =
+            _selectedStatus == 'All' || feedback.status == _selectedStatus;
+
+        return matchesSearch && matchesFilter && matchesStatus;
+      }).toList();
     });
   }
 
-  void _handleReject(Map<String, String> feedback) {
-    setState(() {
-      deleteRequests.remove(feedback);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    List<Map<String, String>> filtered = allFeedback
-        .where((f) =>
-            f['clinic']!.toLowerCase().contains(searchQuery.toLowerCase()))
-        .toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 0.8),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const WebSuperAdminHomePage()),
-            );
-          },
-        ),
-        title: const Text('View Reports'),
-      ),
-      body: Row(
-        children: [
-          // Left: Feedback and Search
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search vet clinic...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    onChanged: (value) => setState(() => searchQuery = value),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final feedback = filtered[index];
-                      return FeedbackCard(
-                        feedback: feedback,
-                        onRequestDelete: () => _handleDeleteRequest(feedback),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Right: Notifications panel
-          Expanded(
-            flex: 1,
-            child: NotificationPanel(
-              requests: deleteRequests,
-              onApprove: _handleApprove,
-              onReject: _handleReject,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class FeedbackCard extends StatefulWidget {
-  final Map<String, String> feedback;
-  final VoidCallback onRequestDelete;
-
-  const FeedbackCard({
-    super.key,
-    required this.feedback,
-    required this.onRequestDelete,
-  });
-
-  @override
-  State<FeedbackCard> createState() => _FeedbackCardState();
-}
-
-class _FeedbackCardState extends State<FeedbackCard> {
-  void _viewDetails() {
+  void _showFeedbackDetails(FeedbackItem feedback) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Feedback from ${widget.feedback['user']}'),
-        content: Text(
-          'Clinic: ${widget.feedback['clinic']}\n'
-          'Email: ${widget.feedback['email']}\n\n'
-          'Feedback:\n${widget.feedback['feedback']}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (Navigator.of(dialogContext).canPop()) {
-                Navigator.of(dialogContext).pop();
-              }
-            },
-            child: const Text('Close'),
+      builder: (context) => FeedbackDetailDialog(feedback: feedback),
+    );
+  }
+
+  void _handleDeleteRequest(FeedbackItem feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => DeleteRequestDialog(
+        feedback: feedback,
+        onApprove: () => _approveDeletion(feedback),
+        onDeny: () => _denyDeletion(feedback),
+      ),
+    );
+  }
+
+  void _approveDeletion(FeedbackItem feedback) {
+    setState(() {
+      _allFeedbacks.removeWhere((item) => item.id == feedback.id);
+      _filterFeedbacks();
+    });
+    _showSnackBar('Deletion approved and feedback removed', Colors.green);
+  }
+
+  void _denyDeletion(FeedbackItem feedback) {
+    setState(() {
+      feedback.hasDeleteRequest = false;
+      feedback.adminRequestedBy = null;
+    });
+    _showSnackBar('Deletion request denied', Colors.orange);
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget _buildDashboardStats() {
+    int totalFeedbacks = _allFeedbacks.length;
+    int pendingRequests = _allFeedbacks.where((f) => f.hasDeleteRequest).length;
+    int approvedFeedbacks =
+        _allFeedbacks.where((f) => f.status == 'Approved').length;
+    double avgRating = _allFeedbacks.isEmpty
+        ? 0
+        : _allFeedbacks.map((f) => f.rating).reduce((a, b) => a + b) /
+            _allFeedbacks.length;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 768;
+          return GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: isMobile ? 2 : 4,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: isMobile ? 1.2 : 1.5,
+            children: [
+              _buildStatCard('Total Feedbacks', totalFeedbacks.toString(),
+                  Icons.feedback, Color(0xFF4A90E2)),
+              _buildStatCard('Delete Requests', pendingRequests.toString(),
+                  Icons.delete_outline, Color(0xFFE74C3C)),
+              _buildStatCard('Approved', approvedFeedbacks.toString(),
+                  Icons.check_circle, Color(0xFF2ECC71)),
+              _buildStatCard('Avg Rating', avgRating.toStringAsFixed(1),
+                  Icons.star, Color(0xFFF39C12)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 32),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF7F8C8D),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
+  Widget _buildSearchAndFilters() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 768;
+
+          if (isMobile) {
+            return Column(
+              children: [
+                _buildSearchBar(),
+                SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _buildFilterDropdown()),
+                    SizedBox(width: 16),
+                    Expanded(child: _buildStatusDropdown()),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(flex: 3, child: _buildSearchBar()),
+              SizedBox(width: 16),
+              Expanded(flex: 2, child: _buildFilterDropdown()),
+              SizedBox(width: 16),
+              Expanded(flex: 2, child: _buildStatusDropdown()),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      controller: _searchController,
+      onChanged: (value) => _filterFeedbacks(),
+      decoration: InputDecoration(
+        hintText: 'Search vet clinics or customers...',
+        prefixIcon: Icon(Icons.search, color: Color(0xFF517399)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF517399)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF517399), width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedFilter,
+      decoration: InputDecoration(
+        labelText: 'Filter Requests',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF517399), width: 2),
+        ),
+      ),
+      items: ['All', 'With Delete Request', 'No Delete Request']
+          .map((filter) => DropdownMenuItem(value: filter, child: Text(filter)))
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedFilter = value!;
+          _filterFeedbacks();
+        });
+      },
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedStatus,
+      decoration: InputDecoration(
+        labelText: 'Status',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF517399), width: 2),
+        ),
+      ),
+      items: ['All', 'Pending', 'Approved', 'Under Review']
+          .map((status) => DropdownMenuItem(value: status, child: Text(status)))
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedStatus = value!;
+          _filterFeedbacks();
+        });
+      },
+    );
+  }
+
+  Widget _buildFeedbackList() {
+    if (_filteredFeedbacks.isEmpty) {
+      return Container(
+        margin: EdgeInsets.all(16),
+        padding: EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.inbox, size: 64, color: Color(0xFF95A5A6)),
+              SizedBox(height: 16),
+              Text(
+                'No feedback found',
+                style: TextStyle(fontSize: 18, color: Color(0xFF7F8C8D)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      margin: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 768;
+
+          if (isMobile) {
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: _filteredFeedbacks.length,
+              separatorBuilder: (context, index) => Divider(height: 1),
+              itemBuilder: (context, index) =>
+                  _buildMobileFeedbackCard(_filteredFeedbacks[index]),
+            );
+          }
+
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columns: [
+                DataColumn(
+                    label: Text('Vet Clinic',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                    label: Text('Customer',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                    label: Text('Rating',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                    label: Text('Status',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                    label: Text('Date',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                    label: Text('Delete Request',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(
+                    label: Text('Actions',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+              ],
+              rows: _filteredFeedbacks
+                  .map((feedback) => _buildDataRow(feedback))
+                  .toList(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMobileFeedbackCard(FeedbackItem feedback) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  feedback.vetClinicName,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              _buildStatusChip(feedback.status),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text('Customer: ${feedback.customerName}',
+              style: TextStyle(color: Color(0xFF7F8C8D))),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              _buildRatingStars(feedback.rating),
+              SizedBox(width: 16),
+              Text(
+                '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}',
+                style: TextStyle(color: Color(0xFF7F8C8D), fontSize: 12),
+              ),
+            ],
+          ),
+          if (feedback.hasDeleteRequest) ...[
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Color(0xFFFFE5E5),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Color(0xFFFF6B6B)),
+              ),
+              child: Text(
+                'Delete requested by ${feedback.adminRequestedBy}',
+                style: TextStyle(color: Color(0xFFD63031), fontSize: 12),
+              ),
+            ),
+          ],
+          SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () => _showFeedbackDetails(feedback),
+                icon: Icon(Icons.visibility, size: 16),
+                label: Text('View'),
+                style: TextButton.styleFrom(foregroundColor: Color(0xFF517399)),
+              ),
+              if (feedback.hasDeleteRequest)
+                TextButton.icon(
+                  onPressed: () => _handleDeleteRequest(feedback),
+                  icon: Icon(Icons.delete_outline, size: 16),
+                  label: Text('Handle'),
+                  style:
+                      TextButton.styleFrom(foregroundColor: Color(0xFFE74C3C)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  DataRow _buildDataRow(FeedbackItem feedback) {
+    return DataRow(
+      cells: [
+        DataCell(
+          Container(
+            width: 150,
+            child: Text(
+              feedback.vetClinicName,
+              style: TextStyle(fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(Text(feedback.customerName)),
+        DataCell(_buildRatingStars(feedback.rating)),
+        DataCell(_buildStatusChip(feedback.status)),
+        DataCell(Text(
+            '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}')),
+        DataCell(
+          feedback.hasDeleteRequest
+              ? Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFFE5E5),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Color(0xFFFF6B6B)),
+                  ),
+                  child: Text(
+                    feedback.adminRequestedBy!,
+                    style: TextStyle(color: Color(0xFFD63031), fontSize: 12),
+                  ),
+                )
+              : Text('No', style: TextStyle(color: Color(0xFF7F8C8D))),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _showFeedbackDetails(feedback),
+                icon: Icon(Icons.visibility, color: Color(0xFF517399)),
+                tooltip: 'View Details',
+              ),
+              if (feedback.hasDeleteRequest)
+                IconButton(
+                  onPressed: () => _handleDeleteRequest(feedback),
+                  icon: Icon(Icons.delete_outline, color: Color(0xFFE74C3C)),
+                  tooltip: 'Handle Delete Request',
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingStars(int rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        return Icon(
+          index < rating ? Icons.star : Icons.star_border,
+          color: Color(0xFFF39C12),
+          size: 16,
+        );
+      }),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color chipColor;
+    switch (status) {
+      case 'Approved':
+        chipColor = Color(0xFF2ECC71);
+        break;
+      case 'Pending':
+        chipColor = Color(0xFFF39C12);
+        break;
+      case 'Under Review':
+        chipColor = Color(0xFF3498DB);
+        break;
+      default:
+        chipColor = Color(0xFF95A5A6);
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: chipColor),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: chipColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      elevation: 4,
-      child: ListTile(
-        title: Text(widget.feedback['clinic']!,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(widget.feedback['feedback']!),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
           children: [
-            IconButton(
-              tooltip: 'View',
-              icon: const Icon(Icons.visibility, color: Colors.teal),
-              onPressed: _viewDetails,
+            Icon(Icons.admin_panel_settings,
+                color: const Color.fromARGB(255, 81, 115, 153)),
+            SizedBox(width: 8),
+            Text(
+              'Feedback Manager',
+              style: TextStyle(
+                  color: const Color.fromARGB(255, 81, 115, 153),
+                  fontWeight: FontWeight.bold),
             ),
-            IconButton(
-              tooltip: 'Request Delete',
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              onPressed: widget.onRequestDelete,
-            ),
+          ],
+        ),
+        backgroundColor: Color.fromRGBO(248, 253, 255, 1),
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              // Export functionality
+              _showSnackBar(
+                  'Export functionality coming soon!', Color(0xFF3498DB));
+            },
+            icon: Icon(Icons.file_download, color: Colors.white),
+            tooltip: 'Export CSV',
+          ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _loadSampleData();
+                _filterFeedbacks();
+              });
+            },
+            icon: Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      backgroundColor: Color.fromRGBO(249, 253, 255, 1),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDashboardStats(),
+            SizedBox(height: 16),
+            _buildSearchAndFilters(),
+            SizedBox(height: 16),
+            _buildFeedbackList(),
           ],
         ),
       ),
@@ -211,67 +669,240 @@ class _FeedbackCardState extends State<FeedbackCard> {
   }
 }
 
-class NotificationPanel extends StatelessWidget {
-  final List<Map<String, String>> requests;
-  final Function(Map<String, String>) onApprove;
-  final Function(Map<String, String>) onReject;
+class FeedbackItem {
+  final String id;
+  final String vetClinicName;
+  final String customerName;
+  final String feedback;
+  final int rating;
+  String status;
+  final DateTime date;
+  bool hasDeleteRequest;
+  String? adminRequestedBy;
 
-  const NotificationPanel({
-    super.key,
-    required this.requests,
-    required this.onApprove,
-    required this.onReject,
+  FeedbackItem({
+    required this.id,
+    required this.vetClinicName,
+    required this.customerName,
+    required this.feedback,
+    required this.rating,
+    required this.status,
+    required this.date,
+    required this.hasDeleteRequest,
+    this.adminRequestedBy,
   });
+}
+
+class FeedbackDetailDialog extends StatelessWidget {
+  final FeedbackItem feedback;
+
+  const FeedbackDetailDialog({Key? key, required this.feedback})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: const EdgeInsets.all(12),
-      child: Column(
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.feedback, color: Color(0xFF517399), size: 24),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Feedback Details',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close),
+                ),
+              ],
+            ),
+            Divider(),
+            SizedBox(height: 16),
+            _buildDetailRow('Vet Clinic:', feedback.vetClinicName),
+            _buildDetailRow('Customer:', feedback.customerName),
+            _buildDetailRow('Rating:', '${feedback.rating}/5 stars'),
+            _buildDetailRow('Status:', feedback.status),
+            _buildDetailRow('Date:',
+                '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}'),
+            if (feedback.hasDeleteRequest)
+              _buildDetailRow(
+                  'Delete Requested By:', feedback.adminRequestedBy!),
+            SizedBox(height: 16),
+            Text(
+              'Feedback:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Color(0xFFF8FDFF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Color(0xFFE0E6ED)),
+              ),
+              child: Text(
+                feedback.feedback,
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+            ),
+            SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Close'), //dito
+                  style: TextButton.styleFrom(
+                    backgroundColor: Color(0xFF517399),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Respond functionality
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Respond functionality coming soon!'),
+                        backgroundColor: Color(0xFF3498DB),
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.reply, color: Colors.white),
+                  label: Text('Respond'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF517399),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Delete Requests',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                  fontWeight: FontWeight.w500, color: Color(0xFF7F8C8D)),
+            ),
           ),
-          const Divider(),
           Expanded(
-            child: requests.isEmpty
-                ? const Center(child: Text('No requests'))
-                : ListView.builder(
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) {
-                      final request = requests[index];
-                      return Card(
-                        child: ListTile(
-                          title: Text(request['clinic']!),
-                          subtitle:
-                              Text('Requested by: ${request['user'] ?? ''}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                tooltip: 'Approve',
-                                icon: const Icon(Icons.check_circle,
-                                    color: Colors.green),
-                                onPressed: () => onApprove(request),
-                              ),
-                              IconButton(
-                                tooltip: 'Reject',
-                                icon: const Icon(Icons.cancel,
-                                    color: Colors.redAccent),
-                                onPressed: () => onReject(request),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class DeleteRequestDialog extends StatelessWidget {
+  final FeedbackItem feedback;
+  final VoidCallback onApprove;
+  final VoidCallback onDeny;
+
+  const DeleteRequestDialog({
+    Key? key,
+    required this.feedback,
+    required this.onApprove,
+    required this.onDeny,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Icon(Icons.warning, color: Color(0xFFF39C12)),
+          SizedBox(width: 8),
+          Text('Delete Request'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Admin "${feedback.adminRequestedBy}" has requested to delete this feedback:',
+            style: TextStyle(fontSize: 16),
+          ),
+          SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Color(0xFFF8FDFF),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Color(0xFFE0E6ED)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Vet Clinic: ${feedback.vetClinicName}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Customer: ${feedback.customerName}'),
+                Text('Rating: ${feedback.rating}/5'),
+                SizedBox(height: 8),
+                Text(feedback.feedback,
+                    style: TextStyle(fontStyle: FontStyle.italic)),
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'What would you like to do?',
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            onDeny();
+          },
+          child: Text('Deny Request'),
+          style: TextButton.styleFrom(foregroundColor: Color(0xFF95A5A6)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            onApprove();
+          },
+          child: Text('Approve Deletion'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFFE74C3C),
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 }
