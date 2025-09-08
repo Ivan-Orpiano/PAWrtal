@@ -340,12 +340,12 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                               padding: const EdgeInsets.only(bottom: 925),
                               child: Visibility(
                                 visible: _panelState == PanelState.scrollable,
-                                child: const WebAppointmentPanel(),
+                                child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
                               ),
                             ),
                             Visibility(
                               visible: _panelState == PanelState.static,
-                              child: const WebAppointmentPanel(),
+                              child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
                             )
                           ],
                         ),
@@ -375,7 +375,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
           Positioned(
             top: 120,
             right: getResponsivePadding(screenWidth),
-            child: const WebAppointmentPanel()
+            child: EnhancedWebAppointmentPanel(clinic: widget.clinic)
           ),
           if (_showWidget)
           Positioned(

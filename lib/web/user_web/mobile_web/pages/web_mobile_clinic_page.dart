@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/user_web/mobile_web/pages/web_mobile_schedule_appointment.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
 import 'package:flutter/material.dart';
@@ -100,7 +101,8 @@ class _WebMobileClinicPageState extends State<WebMobileClinicPage> {
                 padding: const EdgeInsets.only(left: 25),
                 child: Row(
                   children: [
-                    const Icon(Icons.phone, color: Color.fromARGB(255, 81, 115, 153)),
+                    const Icon(Icons.phone,
+                        color: Color.fromARGB(255, 81, 115, 153)),
                     const SizedBox(width: 8),
                     Text(
                       widget.clinic.contact,
@@ -120,7 +122,8 @@ class _WebMobileClinicPageState extends State<WebMobileClinicPage> {
                 padding: const EdgeInsets.only(left: 25),
                 child: Row(
                   children: [
-                    const Icon(Icons.email, color: Color.fromARGB(255, 81, 115, 153)),
+                    const Icon(Icons.email,
+                        color: Color.fromARGB(255, 81, 115, 153)),
                     const SizedBox(width: 8),
                     Text(
                       widget.clinic.email,
@@ -234,18 +237,20 @@ class _WebMobileClinicPageState extends State<WebMobileClinicPage> {
                         left: 20, top: 20, bottom: 20, right: 10),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 75, vertical: 15),
-                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 75, vertical: 15),
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
                       onPressed: () {
-                        // TODO: Navigate to appointment scheduling
-                        // This would be similar to your mobile app's ScheduleAppointment page
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Appointment scheduling coming soon!"),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WebMobileScheduleAppointment(
+                                clinic: widget.clinic),
                           ),
                         );
                       },
@@ -257,10 +262,12 @@ class _WebMobileClinicPageState extends State<WebMobileClinicPage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 20, bottom: 20, right: 20),
+                  padding:
+                      const EdgeInsets.only(top: 20, bottom: 20, right: 20),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 25, vertical: 15),
                       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
