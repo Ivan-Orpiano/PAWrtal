@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 
 class VetClinicFeedbackApp extends StatefulWidget {
   const VetClinicFeedbackApp({super.key});
@@ -637,7 +638,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
               _showSnackBar(
                   'Export functionality coming soon!', Color(0xFF3498DB));
             },
-            icon: Icon(Icons.file_download, color: Colors.white),
+            icon: Icon(Icons.file_download,
+                color: const Color.fromARGB(255, 81, 115, 153)),
             tooltip: 'Export CSV',
           ),
           IconButton(
@@ -647,7 +649,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                 _filterFeedbacks();
               });
             },
-            icon: Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(Icons.refresh,
+                color: const Color.fromARGB(255, 81, 115, 153)),
             tooltip: 'Refresh',
           ),
         ],
@@ -665,6 +668,18 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(builder: (context) => ApplicationReport()),
+          // );
+        },
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+        child: Icon(Icons.mobile_friendly,
+            color: const Color.fromARGB(255, 81, 115, 153)),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
