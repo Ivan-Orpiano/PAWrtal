@@ -16,7 +16,7 @@ class EnhancedWebAppointmentsPage extends StatefulWidget {
 }
 
 class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPage> {
-  int selectedTabIndex = 0; // 0: Pending, 1: Active, 2: Issues
+  int selectedTabIndex = 0; // 0: Pending, 1: Active, 2: Cancelled
   final double tabletWidth = 1100;
   late EnhancedUserAppointmentController appointmentController;
 
@@ -86,7 +86,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
             const SizedBox(width: 16),
             _buildAppointmentColumn("Active", appointmentController.accepted, Colors.green, Icons.check_circle),
             const SizedBox(width: 16),
-            _buildAppointmentColumn("Issues", appointmentController.declined, Colors.red, Icons.cancel),
+            _buildAppointmentColumn("Cancelled", appointmentController.declined, Colors.red, Icons.cancel),
           ],
         );
       }),
@@ -125,7 +125,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         children: [
           _buildTabButton(0, Icons.pending_actions, "Pending", Colors.orange, appointmentController.pending.length),
           _buildTabButton(1, Icons.check_circle, "Active", Colors.green, appointmentController.accepted.length),
-          _buildTabButton(2, Icons.cancel, "Issues", Colors.red, appointmentController.declined.length),
+          _buildTabButton(2, Icons.cancel, "Cancelled", Colors.red, appointmentController.declined.length),
         ],
       )),
     );
@@ -214,7 +214,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
           break;
         case 2:
           appointments = appointmentController.declined;
-          emptyTitle = "Great! No Issues Here";
+          emptyTitle = "Great! No Cancelled Here";
           emptyMessage = "Declined or missed appointments will appear here";
           emptyIcon = Icons.sentiment_satisfied;
           emptyColor = Colors.red;
@@ -638,7 +638,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
           children: [
             _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
             _buildStatusChip("Active", "${stats['upcoming']}", Colors.green),
-            _buildStatusChip("Issues", "${appointmentController.declined.length}", Colors.red),
+            _buildStatusChip("Cancelled", "${appointmentController.declined.length}", Colors.red),
           ],
         ),
       ],
@@ -676,7 +676,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
             const SizedBox(width: 12),
             _buildStatusChip("Active", "${stats['upcoming']}", Colors.green),
             const SizedBox(width: 12),
-            _buildStatusChip("Issues", "${appointmentController.declined.length}", Colors.red),
+            _buildStatusChip("Cancelled", "${appointmentController.declined.length}", Colors.red),
           ],
         ),
       ],
@@ -797,7 +797,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     switch (index) {
       case 0: return "Pending";
       case 1: return "Active";
-      case 2: return "Issues";
+      case 2: return "Cancelled";
       default: return "Unknown";
     }
   }

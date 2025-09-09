@@ -177,7 +177,7 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                         )),
                         Obx(() => _buildTab(
                           Icons.cancel_rounded,
-                          "Issues",
+                          "Cancelled",
                           controller.declined.length,
                           Colors.red,
                         )),
