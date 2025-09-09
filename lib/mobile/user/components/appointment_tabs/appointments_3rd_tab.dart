@@ -50,7 +50,7 @@ class EnhancedAPThirdTab extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                "Great! No Issues Here",
+                "Great! No Cancelled Here",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
