@@ -14,8 +14,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   String _selectedStatus = 'All';
   List<FeedbackItem> _allFeedbacks = [];
   List<FeedbackItem> _filteredFeedbacks = [];
-  bool _isLoading = false;
-  int _currentPage = 1;
+  final bool _isLoading = false;
+  final int _currentPage = 1;
   final int _itemsPerPage = 10;
 
   @override
@@ -35,7 +35,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             'Excellent service! Dr. Martinez was very professional and caring.',
         rating: 5,
         status: 'Pending',
-        date: DateTime.now().subtract(Duration(hours: 2)),
+        date: DateTime.now().subtract(const Duration(hours: 2)),
         hasDeleteRequest: true,
         adminRequestedBy: 'Admin Sarah',
       ),
@@ -46,7 +46,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         feedback: 'Long wait time, but good treatment for my cat.',
         rating: 3,
         status: 'Approved',
-        date: DateTime.now().subtract(Duration(days: 1)),
+        date: DateTime.now().subtract(const Duration(days: 1)),
         hasDeleteRequest: false,
       ),
       FeedbackItem(
@@ -56,7 +56,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         feedback: 'Poor service. Staff was rude and unprofessional.',
         rating: 1,
         status: 'Pending',
-        date: DateTime.now().subtract(Duration(days: 2)),
+        date: DateTime.now().subtract(const Duration(days: 2)),
         hasDeleteRequest: true,
         adminRequestedBy: 'Admin Mike',
       ),
@@ -68,7 +68,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             'Great facilities and friendly staff. My dog loves coming here!',
         rating: 5,
         status: 'Approved',
-        date: DateTime.now().subtract(Duration(days: 3)),
+        date: DateTime.now().subtract(const Duration(days: 3)),
         hasDeleteRequest: false,
       ),
       FeedbackItem(
@@ -78,7 +78,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         feedback: 'Average experience. Could improve appointment scheduling.',
         rating: 3,
         status: 'Under Review',
-        date: DateTime.now().subtract(Duration(days: 4)),
+        date: DateTime.now().subtract(const Duration(days: 4)),
         hasDeleteRequest: true,
         adminRequestedBy: 'Admin Lisa',
       ),
@@ -150,7 +150,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
       SnackBar(
         content: Text(message),
         backgroundColor: color,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -179,13 +179,13 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             childAspectRatio: isMobile ? 1.2 : 1.5,
             children: [
               _buildStatCard('Total Feedbacks', totalFeedbacks.toString(),
-                  Icons.feedback, Color(0xFF4A90E2)),
+                  Icons.feedback, const Color(0xFF4A90E2)),
               _buildStatCard('Delete Requests', pendingRequests.toString(),
-                  Icons.delete_outline, Color(0xFFE74C3C)),
+                  Icons.delete_outline, const Color(0xFFE74C3C)),
               _buildStatCard('Approved', approvedFeedbacks.toString(),
-                  Icons.check_circle, Color(0xFF2ECC71)),
+                  Icons.check_circle, const Color(0xFF2ECC71)),
               _buildStatCard('Avg Rating', avgRating.toStringAsFixed(1),
-                  Icons.star, Color(0xFFF39C12)),
+                  Icons.star, const Color(0xFFF39C12)),
             ],
           );
         },
@@ -203,28 +203,28 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: color, size: 32),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF2C3E50),
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: Color(0xFF7F8C8D),
               fontWeight: FontWeight.w500,
@@ -238,8 +238,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
 
   Widget _buildSearchAndFilters() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
-      padding: EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -247,7 +247,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -259,11 +259,11 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             return Column(
               children: [
                 _buildSearchBar(),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(child: _buildFilterDropdown()),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 16),
                     Expanded(child: _buildStatusDropdown()),
                   ],
                 ),
@@ -274,9 +274,9 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           return Row(
             children: [
               Expanded(flex: 3, child: _buildSearchBar()),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(flex: 2, child: _buildFilterDropdown()),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(flex: 2, child: _buildStatusDropdown()),
             ],
           );
@@ -291,14 +291,14 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
       onChanged: (value) => _filterFeedbacks(),
       decoration: InputDecoration(
         hintText: 'Search vet clinics or customers...',
-        prefixIcon: Icon(Icons.search, color: Color(0xFF517399)),
+        prefixIcon: const Icon(Icons.search, color: Color(0xFF517399)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Color(0xFF517399)),
+          borderSide: const BorderSide(color: Color(0xFF517399)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Color(0xFF517399), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
       ),
     );
@@ -312,7 +312,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Color(0xFF517399), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
       ),
       items: ['All', 'With Delete Request', 'No Delete Request']
@@ -335,7 +335,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Color(0xFF517399), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
       ),
       items: ['All', 'Pending', 'Approved', 'Under Review']
@@ -353,13 +353,13 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   Widget _buildFeedbackList() {
     if (_filteredFeedbacks.isEmpty) {
       return Container(
-        margin: EdgeInsets.all(16),
-        padding: EdgeInsets.all(32),
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Center(
+        child: const Center(
           child: Column(
             children: [
               Icon(Icons.inbox, size: 64, color: Color(0xFF95A5A6)),
@@ -375,7 +375,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
     }
 
     return Container(
-      margin: EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -383,7 +383,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -394,9 +394,9 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           if (isMobile) {
             return ListView.separated(
               shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: _filteredFeedbacks.length,
-              separatorBuilder: (context, index) => Divider(height: 1),
+              separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) =>
                   _buildMobileFeedbackCard(_filteredFeedbacks[index]),
             );
@@ -405,7 +405,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              columns: [
+              columns: const [
                 DataColumn(
                     label: Text('Vet Clinic',
                         style: TextStyle(fontWeight: FontWeight.bold))),
@@ -440,7 +440,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
 
   Widget _buildMobileFeedbackCard(FeedbackItem feedback) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -449,58 +449,60 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
               Expanded(
                 child: Text(
                   feedback.vetClinicName,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
               _buildStatusChip(feedback.status),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text('Customer: ${feedback.customerName}',
-              style: TextStyle(color: Color(0xFF7F8C8D))),
-          SizedBox(height: 8),
+              style: const TextStyle(color: Color(0xFF7F8C8D))),
+          const SizedBox(height: 8),
           Row(
             children: [
               _buildRatingStars(feedback.rating),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Text(
                 '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}',
-                style: TextStyle(color: Color(0xFF7F8C8D), fontSize: 12),
+                style: const TextStyle(color: Color(0xFF7F8C8D), fontSize: 12),
               ),
             ],
           ),
           if (feedback.hasDeleteRequest) ...[
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Color(0xFFFFE5E5),
+                color: const Color(0xFFFFE5E5),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Color(0xFFFF6B6B)),
+                border: Border.all(color: const Color(0xFFFF6B6B)),
               ),
               child: Text(
                 'Delete requested by ${feedback.adminRequestedBy}',
-                style: TextStyle(color: Color(0xFFD63031), fontSize: 12),
+                style: const TextStyle(color: Color(0xFFD63031), fontSize: 12),
               ),
             ),
           ],
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(
                 onPressed: () => _showFeedbackDetails(feedback),
-                icon: Icon(Icons.visibility, size: 16),
-                label: Text('View'),
-                style: TextButton.styleFrom(foregroundColor: Color(0xFF517399)),
+                icon: const Icon(Icons.visibility, size: 16),
+                label: const Text('View'),
+                style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF517399)),
               ),
               if (feedback.hasDeleteRequest)
                 TextButton.icon(
                   onPressed: () => _handleDeleteRequest(feedback),
-                  icon: Icon(Icons.delete_outline, size: 16),
-                  label: Text('Handle'),
-                  style:
-                      TextButton.styleFrom(foregroundColor: Color(0xFFE74C3C)),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('Handle'),
+                  style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFE74C3C)),
                 ),
             ],
           ),
@@ -513,11 +515,11 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
     return DataRow(
       cells: [
         DataCell(
-          Container(
+          SizedBox(
             width: 150,
             child: Text(
               feedback.vetClinicName,
-              style: TextStyle(fontWeight: FontWeight.w500),
+              style: const TextStyle(fontWeight: FontWeight.w500),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -530,18 +532,20 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         DataCell(
           feedback.hasDeleteRequest
               ? Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Color(0xFFFFE5E5),
+                    color: const Color(0xFFFFE5E5),
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Color(0xFFFF6B6B)),
+                    border: Border.all(color: const Color(0xFFFF6B6B)),
                   ),
                   child: Text(
                     feedback.adminRequestedBy!,
-                    style: TextStyle(color: Color(0xFFD63031), fontSize: 12),
+                    style:
+                        const TextStyle(color: Color(0xFFD63031), fontSize: 12),
                   ),
                 )
-              : Text('No', style: TextStyle(color: Color(0xFF7F8C8D))),
+              : const Text('No', style: TextStyle(color: Color(0xFF7F8C8D))),
         ),
         DataCell(
           Row(
@@ -549,13 +553,14 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             children: [
               IconButton(
                 onPressed: () => _showFeedbackDetails(feedback),
-                icon: Icon(Icons.visibility, color: Color(0xFF517399)),
+                icon: const Icon(Icons.visibility, color: Color(0xFF517399)),
                 tooltip: 'View Details',
               ),
               if (feedback.hasDeleteRequest)
                 IconButton(
                   onPressed: () => _handleDeleteRequest(feedback),
-                  icon: Icon(Icons.delete_outline, color: Color(0xFFE74C3C)),
+                  icon: const Icon(Icons.delete_outline,
+                      color: Color(0xFFE74C3C)),
                   tooltip: 'Handle Delete Request',
                 ),
             ],
@@ -571,7 +576,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
       children: List.generate(5, (index) {
         return Icon(
           index < rating ? Icons.star : Icons.star_border,
-          color: Color(0xFFF39C12),
+          color: const Color(0xFFF39C12),
           size: 16,
         );
       }),
@@ -582,20 +587,20 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
     Color chipColor;
     switch (status) {
       case 'Approved':
-        chipColor = Color(0xFF2ECC71);
+        chipColor = const Color(0xFF2ECC71);
         break;
       case 'Pending':
-        chipColor = Color(0xFFF39C12);
+        chipColor = const Color(0xFFF39C12);
         break;
       case 'Under Review':
-        chipColor = Color(0xFF3498DB);
+        chipColor = const Color(0xFF3498DB);
         break;
       default:
-        chipColor = Color(0xFF95A5A6);
+        chipColor = const Color(0xFF95A5A6);
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: chipColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -616,30 +621,30 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.admin_panel_settings,
-                color: const Color.fromARGB(255, 81, 115, 153)),
+                color: Color.fromARGB(255, 81, 115, 153)),
             SizedBox(width: 8),
             Text(
               'Feedback Manager',
               style: TextStyle(
-                  color: const Color.fromARGB(255, 81, 115, 153),
+                  color: Color.fromARGB(255, 81, 115, 153),
                   fontWeight: FontWeight.bold),
             ),
           ],
         ),
-        backgroundColor: Color.fromRGBO(248, 253, 255, 1),
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
         elevation: 0,
         actions: [
           IconButton(
             onPressed: () {
               // Export functionality
               _showSnackBar(
-                  'Export functionality coming soon!', Color(0xFF3498DB));
+                  'Export functionality coming soon!', const Color(0xFF3498DB));
             },
-            icon: Icon(Icons.file_download,
-                color: const Color.fromARGB(255, 81, 115, 153)),
+            icon: const Icon(Icons.file_download,
+                color: Color.fromARGB(255, 81, 115, 153)),
             tooltip: 'Export CSV',
           ),
           IconButton(
@@ -649,35 +654,35 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                 _filterFeedbacks();
               });
             },
-            icon: Icon(Icons.refresh,
-                color: const Color.fromARGB(255, 81, 115, 153)),
+            icon: const Icon(Icons.refresh,
+                color: Color.fromARGB(255, 81, 115, 153)),
             tooltip: 'Refresh',
           ),
         ],
       ),
-      backgroundColor: Color.fromRGBO(249, 253, 255, 1),
+      backgroundColor: const Color.fromRGBO(254, 255, 255, 1),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDashboardStats(),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildSearchAndFilters(),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildFeedbackList(),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => ApplicationReport()),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ApplicationReport()),
+          );
         },
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        child: Icon(Icons.mobile_friendly,
-            color: const Color.fromARGB(255, 81, 115, 153)),
+        child: const Icon(Icons.mobile_friendly,
+            color: Color.fromARGB(255, 81, 115, 153)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -711,8 +716,7 @@ class FeedbackItem {
 class FeedbackDetailDialog extends StatelessWidget {
   final FeedbackItem feedback;
 
-  const FeedbackDetailDialog({Key? key, required this.feedback})
-      : super(key: key);
+  const FeedbackDetailDialog({super.key, required this.feedback});
 
   @override
   Widget build(BuildContext context) {
@@ -722,16 +726,16 @@ class FeedbackDetailDialog extends StatelessWidget {
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         constraints: const BoxConstraints(maxWidth: 500),
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.feedback, color: Color(0xFF517399), size: 24),
-                SizedBox(width: 8),
-                Expanded(
+                const Icon(Icons.feedback, color: Color(0xFF517399), size: 24),
+                const SizedBox(width: 8),
+                const Expanded(
                   child: Text(
                     'Feedback Details',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -739,12 +743,12 @@ class FeedbackDetailDialog extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close),
+                  icon: const Icon(Icons.close),
                 ),
               ],
             ),
-            Divider(),
-            SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
             _buildDetailRow('Vet Clinic:', feedback.vetClinicName),
             _buildDetailRow('Customer:', feedback.customerName),
             _buildDetailRow('Rating:', '${feedback.rating}/5 stars'),
@@ -754,53 +758,53 @@ class FeedbackDetailDialog extends StatelessWidget {
             if (feedback.hasDeleteRequest)
               _buildDetailRow(
                   'Delete Requested By:', feedback.adminRequestedBy!),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Feedback:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Color(0xFFF8FDFF),
+                color: const Color(0xFFF8FDFF),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Color(0xFFE0E6ED)),
+                border: Border.all(color: const Color(0xFFE0E6ED)),
               ),
               child: Text(
                 feedback.feedback,
-                style: TextStyle(fontSize: 14, height: 1.5),
+                style: const TextStyle(fontSize: 14, height: 1.5),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Close'), //dito
+                  onPressed: () => Navigator.pop(context), //dito
                   style: TextButton.styleFrom(
-                    backgroundColor: Color(0xFF517399),
+                    backgroundColor: const Color(0xFF517399),
                     foregroundColor: Colors.white,
                   ),
+                  child: Text('Close'),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () {
                     // Respond functionality
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text('Respond functionality coming soon!'),
                         backgroundColor: Color(0xFF3498DB),
                       ),
                     );
                   },
-                  icon: Icon(Icons.reply, color: Colors.white),
-                  label: Text('Respond'),
+                  icon: const Icon(Icons.reply, color: Colors.white),
+                  label: const Text('Respond'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF517399),
+                    backgroundColor: const Color(0xFF517399),
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -814,7 +818,7 @@ class FeedbackDetailDialog extends StatelessWidget {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -822,14 +826,14 @@ class FeedbackDetailDialog extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                   fontWeight: FontWeight.w500, color: Color(0xFF7F8C8D)),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -844,17 +848,17 @@ class DeleteRequestDialog extends StatelessWidget {
   final VoidCallback onDeny;
 
   const DeleteRequestDialog({
-    Key? key,
+    super.key,
     required this.feedback,
     required this.onApprove,
     required this.onDeny,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Row(
+      title: const Row(
         children: [
           Icon(Icons.warning, color: Color(0xFFF39C12)),
           SizedBox(width: 8),
@@ -867,31 +871,31 @@ class DeleteRequestDialog extends StatelessWidget {
         children: [
           Text(
             'Admin "${feedback.adminRequestedBy}" has requested to delete this feedback:',
-            style: TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Color(0xFFF8FDFF),
+              color: const Color(0xFFF8FDFF),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Color(0xFFE0E6ED)),
+              border: Border.all(color: const Color(0xFFE0E6ED)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Vet Clinic: ${feedback.vetClinicName}',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('Customer: ${feedback.customerName}'),
                 Text('Rating: ${feedback.rating}/5'),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(feedback.feedback,
-                    style: TextStyle(fontStyle: FontStyle.italic)),
+                    style: const TextStyle(fontStyle: FontStyle.italic)),
               ],
             ),
           ),
-          SizedBox(height: 16),
-          Text(
+          const SizedBox(height: 16),
+          const Text(
             'What would you like to do?',
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
@@ -903,19 +907,19 @@ class DeleteRequestDialog extends StatelessWidget {
             Navigator.pop(context);
             onDeny();
           },
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
           child: Text('Deny Request'),
-          style: TextButton.styleFrom(foregroundColor: Color(0xFF95A5A6)),
         ),
         ElevatedButton(
           onPressed: () {
             Navigator.pop(context);
             onApprove();
           },
-          child: Text('Approve Deletion'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFE74C3C),
+            backgroundColor: const Color(0xFFE74C3C),
             foregroundColor: Colors.white,
           ),
+          child: Text('Approve Deletion'),
         ),
       ],
     );

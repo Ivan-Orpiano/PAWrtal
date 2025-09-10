@@ -165,6 +165,13 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                         height: 80,
                         child: Row(
                           children: [
+                            // Back button
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back),
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                            ),
                             InkWell(
                               onTap: () {
                                 Navigator.pop(context);
@@ -345,7 +352,8 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                                   borderRadius: BorderRadius.zero,
                                 ),
                                 foregroundColor: Colors.white,
-                                backgroundColor: Colors.blue,
+                                backgroundColor:
+                                    const Color.fromRGBO(81, 115, 153, 0.8),
                               ),
                               child: const Text(
                                 "Manage Admin Accounts",
@@ -371,7 +379,8 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                                   borderRadius: BorderRadius.zero,
                                 ),
                                 foregroundColor: Colors.white,
-                                backgroundColor: Colors.blue,
+                                backgroundColor:
+                                    const Color.fromRGBO(81, 115, 153, 0.8),
                               ),
                               child: const Text(
                                 "Manage Staff Accounts",
@@ -420,7 +429,10 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      icon: const Icon(Icons.delete),
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.white,
+                      ),
                       label: const Text(
                         "Delete Admin",
                         style: TextStyle(fontWeight: FontWeight.bold),
