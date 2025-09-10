@@ -54,7 +54,10 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
         title: const Text(
           "🐾 Pawrtal Users",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color.fromRGBO(81, 115, 153, 1),
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
