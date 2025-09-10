@@ -166,6 +166,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             _allFeedbacks.length;
 
     return Container(
+      color: const Color.fromRGBO(248, 253, 255, 1),
       margin: const EdgeInsets.all(16),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -241,15 +242,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color.fromRGBO(248, 253, 255, 1),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -306,6 +300,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
 
   Widget _buildFilterDropdown() {
     return DropdownButtonFormField<String>(
+      dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
       value: _selectedFilter,
       decoration: InputDecoration(
         labelText: 'Filter Requests',
@@ -329,6 +324,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
 
   Widget _buildStatusDropdown() {
     return DropdownButtonFormField<String>(
+      dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
       value: _selectedStatus,
       decoration: InputDecoration(
         labelText: 'Status',
@@ -356,7 +352,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color.fromRGBO(248, 253, 255, 1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
@@ -377,7 +373,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color.fromRGBO(248, 253, 255, 1),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -553,7 +549,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             children: [
               IconButton(
                 onPressed: () => _showFeedbackDetails(feedback),
-                icon: const Icon(Icons.visibility, color: Color(0xFF517399)),
+                icon: const Icon(Icons.visibility, color: Color.fromRGBO(81, 115, 153, 1)),
                 tooltip: 'View Details',
               ),
               if (feedback.hasDeleteRequest)
@@ -660,7 +656,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           ),
         ],
       ),
-      backgroundColor: const Color.fromRGBO(254, 255, 255, 1),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,6 +720,7 @@ class FeedbackDetailDialog extends StatelessWidget {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
+        color: const Color.fromRGBO(248, 253, 255, 1),
         width: MediaQuery.of(context).size.width * 0.9,
         constraints: const BoxConstraints(maxWidth: 500),
         padding: const EdgeInsets.all(24),
@@ -865,6 +862,7 @@ class DeleteRequestDialog extends StatelessWidget {
           Text('Delete Request'),
         ],
       ),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
