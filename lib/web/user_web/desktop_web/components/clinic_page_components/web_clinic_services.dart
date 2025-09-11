@@ -41,22 +41,48 @@ class _WebClinicServicesUpdatedState extends State<WebClinicServicesUpdated> {
     return services;
   }
 
+  int _getColumnCount(double width) {
+    if (width >= 800) {
+      return 2; // Desktop: 2 columns
+    } else if (width >= 600) {
+      return 2; // Tablet: 2 columns
+    } else {
+      return 1; // Mobile: 1 column
+    }
+  }
+
+  double _getChildAspectRatio(double width) {
+    if (width >= 800) {
+      return 10; // Desktop: keep original ratio
+    } else if (width >= 600) {
+      return 8; // Tablet: slightly shorter
+    } else {
+      return 6; // Mobile: even shorter for better fit
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final services = _parseServices();
     
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 10,
-      ),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: services.length,
-      itemBuilder: (context, index) {
-        return WebServicesUpdated(serviceName: services[index]);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: _getColumnCount(width),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: _getChildAspectRatio(width),
+          ),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: services.length,
+          itemBuilder: (context, index) {
+            return WebServicesUpdated(serviceName: services[index]);
+          },
+        );
       },
     );
   }

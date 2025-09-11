@@ -23,11 +23,11 @@ class WebClinicPageUpdated extends StatefulWidget {
 }
 
 enum PanelState { scrollable, positioned, static }
-PanelState _panelState = PanelState.scrollable;
 
 class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final ScrollController _scrollController = ScrollController();
   bool _showWidget = false;
+  PanelState _panelState = PanelState.scrollable;
   final galleryKey = GlobalKey();
   final servicesKey = GlobalKey();
   final locationKey = GlobalKey();
@@ -42,6 +42,18 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
         curve: Curves.easeInOut,
         alignment: 0.6, 
       );
+    }
+  }
+
+  void _updatePanelState() {
+    final offset = _scrollController.offset;
+
+    if (offset <= 550 && _panelState != PanelState.scrollable) {
+      setState(() => _panelState = PanelState.scrollable);
+    } else if (offset > 550 && offset <= 1400 && _panelState != PanelState.positioned) {
+      setState(() => _panelState = PanelState.positioned);
+    } else if (offset > 1400 && _panelState != PanelState.static) {
+      setState(() => _panelState = PanelState.static);
     }
   }
 
@@ -62,13 +74,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
         });
       }
 
-      if (offset <= 550 && _panelState != PanelState.scrollable) {
-        setState(() => _panelState = PanelState.scrollable);
-      } else if (offset > 550 && offset <= 1550 && _panelState != PanelState.positioned) {
-        setState(() => _panelState = PanelState.positioned);
-      } else if (offset > 1550 && _panelState != PanelState.static) {
-        setState(() => _panelState = PanelState.static);
-      }
+      _updatePanelState();
     });
   }
 
@@ -106,15 +112,216 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     return desiredMinRight + t * (desiredMaxRight - desiredMinRight);
   }
 
-  double getLeftSideWidth(double screenWidth) {
-    if (screenWidth >= 1550) {
-      return 700;
-    } else if (screenWidth >= 1100) {
-      double factor = (screenWidth - 1100) / (1550 - 1100);
-      return 600 + (100 * factor);
+double getLeftSideWidth(double screenWidth) {
+    // Calculate available width after padding and spacing
+    final horizontalPadding = getResponsivePadding(screenWidth) * 2; // Both sides
+    final spacingBetween = 125; // The flexible spacing
+    final appointmentPanelWidth = getAppointmentPanelWidth(screenWidth);
+    
+    // Total available width minus reserved space
+    final availableWidth = screenWidth - horizontalPadding - spacingBetween - appointmentPanelWidth;
+    
+    // Ensure minimum width for left content
+    return availableWidth.clamp(400.0, double.infinity);
+  }
+
+  double getAppointmentPanelWidth(double screenWidth) {
+    // Smooth responsive scaling for appointment panel
+    const double minScreen = 800;
+    const double midScreen = 1200;
+    const double maxScreen = 1920;
+    const double minWidth = 300;
+    const double midWidth = 360;
+    const double maxWidth = 420;
+
+    if (screenWidth <= minScreen) {
+      return minWidth;
+    } else if (screenWidth <= midScreen) {
+      // Smooth interpolation between min and mid
+      double t = (screenWidth - minScreen) / (midScreen - minScreen);
+      return minWidth + t * (midWidth - minWidth);
+    } else if (screenWidth <= maxScreen) {
+      // Smooth interpolation between mid and max
+      double t = (screenWidth - midScreen) / (maxScreen - midScreen);
+      return midWidth + t * (maxWidth - midWidth);
     } else {
-      return 600;
+      return maxWidth;
     }
+  }
+
+  // Alternative method if you want even more control over the layout
+  Map<String, double> getResponsiveWidths(double screenWidth) {
+    final horizontalPadding = getResponsivePadding(screenWidth) * 2;
+    final spacingBetween = 125;
+    final totalReservedSpace = horizontalPadding + spacingBetween;
+    
+    // Define appointment panel width with smooth scaling
+    late double appointmentWidth;
+    if (screenWidth >= 1400) {
+      appointmentWidth = 420;
+    } else if (screenWidth >= 1100) {
+      // Smooth interpolation
+      double t = (screenWidth - 1100) / (1400 - 1100);
+      appointmentWidth = 320 + t * 100; // 320 to 420
+    } else if (screenWidth >= 800) {
+      double t = (screenWidth - 800) / (1100 - 800);
+      appointmentWidth = 280 + t * 40; // 280 to 320
+    } else {
+      appointmentWidth = 280; // Minimum width
+    }
+    
+    // Calculate left side width
+    final leftSideWidth = (screenWidth - totalReservedSpace - appointmentWidth).clamp(300.0, 800.0);
+    
+    return {
+      'leftSide': leftSideWidth,
+      'appointmentPanel': appointmentWidth,
+    };
+  }
+
+  Widget _buildMainContent(double screenWidth) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: getLeftSideWidth(screenWidth)
+            ),
+            child: _buildLeftContent(),
+          ),
+          const Flexible(
+            flex: 2,
+            child: SizedBox(width: 125),
+          ),
+          
+          // Appointment panel stack - always on the right
+          SizedBox(
+            width: getAppointmentPanelWidth(screenWidth),
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    // Scrollable state panel
+                    if (_panelState == PanelState.scrollable)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 40),
+                        child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
+                      ),
+                    
+                    // Static state panel
+                    if (_panelState == PanelState.static)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeftContent() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: widget.clinic.image.isNotEmpty
+                ? Image.network(
+                    widget.clinic.image,
+                    height: 40,
+                    width: 40,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'lib/images/test_image.jpg',
+                        height: 40,
+                        width: 40,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  )
+                : Image.asset(
+                    'lib/images/test_image.jpg',
+                    height: 40,
+                    width: 40,
+                    fit: BoxFit.cover,
+                  ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                widget.clinic.clinicName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16
+                ),
+              ),
+            )
+          ],
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        WebClinicDescriptionUpdated(clinic: widget.clinic),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Text(
+                'Services offered',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 22
+                ),
+              )
+            ],
+          ),
+        ),
+        WebClinicServicesUpdated(
+          key: servicesKey,
+          clinic: widget.clinic,
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        WebRatingsAndReviews(key: reviewsKey),
+      ]
+    );
   }
 
   @override
@@ -140,6 +347,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
           ListView(
             controller: _scrollController,
             children: [
+              // Header
               Container(
                 height: 81,
                 decoration: const BoxDecoration(
@@ -192,6 +400,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                 ),
               ),
 
+              // Clinic name and gallery section
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Container(
@@ -223,137 +432,10 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                 ),
               ),
               
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
-                child: Row(
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: getLeftSideWidth(screenWidth)
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: widget.clinic.image.isNotEmpty
-                                  ? Image.network(
-                                      widget.clinic.image,
-                                      height: 40,
-                                      width: 40,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Image.asset(
-                                          'lib/images/test_image.jpg',
-                                          height: 40,
-                                          width: 40,
-                                          fit: BoxFit.cover,
-                                        );
-                                      },
-                                    )
-                                  : Image.asset(
-                                      'lib/images/test_image.jpg',
-                                      height: 40,
-                                      width: 40,
-                                      fit: BoxFit.cover,
-                                    ),
-                              ),
-                              const SizedBox(width: 18),
-                              Expanded(
-                                child: Text(
-                                  widget.clinic.clinicName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16
-                                  ),
-                                ),
-                              )
-                            ],
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          WebClinicDescriptionUpdated(clinic: widget.clinic),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Services offered',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 22
-                                  ),
-                                )
-                              ],
-                            ),
-                          ),
-                          WebClinicServicesUpdated(
-                            key: servicesKey,
-                            clinic: widget.clinic,
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          WebRatingsAndReviews(key: reviewsKey),
-                        ]
-                      ),
-                    ),
-                    const Flexible(
-                      flex: 2,
-                      child: SizedBox(width: 125),
-                    ),
-              
-                    Stack(
-                      children: [
-                        Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 925),
-                              child: Visibility(
-                                visible: _panelState == PanelState.scrollable,
-                                child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
-                              ),
-                            ),
-                            Visibility(
-                              visible: _panelState == PanelState.static,
-                              child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
-                            )
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // Main content area
+              _buildMainContent(screenWidth),
+
+              // Location section
               Container(
                 padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
                 child: const Padding(
@@ -371,12 +453,19 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
               const SizedBox(height: 64)
             ],
           ),
+
+          // Positioned appointment panel
           if (_panelState == PanelState.positioned)
           Positioned(
             top: 120,
             right: getResponsivePadding(screenWidth),
-            child: EnhancedWebAppointmentPanel(clinic: widget.clinic)
+            child: SizedBox(
+              width: getAppointmentPanelWidth(screenWidth),
+              child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
+            ),
           ),
+
+          // Navigation bar overlay
           if (_showWidget)
           Positioned(
             child: Container(

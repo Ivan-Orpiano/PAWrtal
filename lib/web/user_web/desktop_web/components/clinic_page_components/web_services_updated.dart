@@ -53,37 +53,52 @@ class WebServicesUpdated extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: _getServiceColor(serviceName).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: _getServiceColor(serviceName).withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _getServiceIcon(serviceName),
-            size: 22,
-            color: _getServiceColor(serviceName),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Adjust padding and font size based on available width
+        double horizontalPadding = constraints.maxWidth > 300 ? 12 : 8;
+        double verticalPadding = constraints.maxWidth > 300 ? 8 : 6;
+        double iconSize = constraints.maxWidth > 300 ? 22 : 18;
+        double fontSize = constraints.maxWidth > 300 ? 16 : 14;
+        double spacing = constraints.maxWidth > 300 ? 12 : 8;
+        
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding, 
+            vertical: verticalPadding
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              serviceName,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-              overflow: TextOverflow.ellipsis,
+          decoration: BoxDecoration(
+            color: _getServiceColor(serviceName).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: _getServiceColor(serviceName).withOpacity(0.3),
+              width: 1,
             ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(
+                _getServiceIcon(serviceName),
+                size: iconSize,
+                color: _getServiceColor(serviceName),
+              ),
+              SizedBox(width: spacing),
+              Expanded(
+                child: Text(
+                  serviceName,
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
