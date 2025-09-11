@@ -1,102 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart';
+import 'package:flutter/services.dart';
 
-class AppwriteService {
-  static const String endpoint = '';
-  static const String projectId = '';
-  static const String databaseId = '';
-  static const String reportsCollectionId = '';
-  static const String repliesCollectionId = '';
-
-  late Client client;
-  late Databases databases;
-  late Account account;
-
-  AppwriteService() {
-    client = Client().setEndpoint(endpoint).setProject(projectId);
-
-    databases = Databases(client);
-    account = Account(client);
-  }
-}
-
-class UserReport {
+class UserFeedback {
   final String id;
   final String userId;
   final String userName;
   final String userEmail;
-  final String title;
+  final String subject;
   final String description;
-  final String category;
-  final String priority;
-  final String status;
-  final DateTime createdAt;
-  final List<String>? attachments;
+  final FeedbackType type;
+  final Priority priority;
+  final FeedbackStatus status;
+  final DateTime submittedAt;
+  final String? adminReply;
+  final DateTime? repliedAt;
+  final List<String> attachments;
+  final String appVersion;
+  final String deviceInfo;
 
-  UserReport({
+  UserFeedback({
     required this.id,
     required this.userId,
     required this.userName,
     required this.userEmail,
-    required this.title,
+    required this.subject,
     required this.description,
-    required this.category,
+    required this.type,
     required this.priority,
     required this.status,
-    required this.createdAt,
-    this.attachments,
+    required this.submittedAt,
+    this.adminReply,
+    this.repliedAt,
+    this.attachments = const [],
+    required this.appVersion,
+    required this.deviceInfo,
   });
-
-  factory UserReport.fromDocument(Document doc) {
-    return UserReport(
-      id: doc.$id,
-      userId: doc.data['userId'] ?? '',
-      userName: doc.data['userName'] ?? '',
-      userEmail: doc.data['userEmail'] ?? '',
-      title: doc.data['title'] ?? '',
-      description: doc.data['description'] ?? '',
-      category: doc.data['category'] ?? 'General',
-      priority: doc.data['priority'] ?? 'Medium',
-      status: doc.data['status'] ?? 'Open',
-      createdAt: DateTime.parse(
-          doc.data['createdAt'] ?? DateTime.now().toIso8601String()),
-      attachments: doc.data['attachments'] != null
-          ? List<String>.from(doc.data['attachments'])
-          : null,
-    );
-  }
 }
 
-class AdminReply {
-  final String id;
-  final String reportId;
-  final String adminId;
-  final String adminName;
-  final String message;
-  final DateTime createdAt;
+enum FeedbackType { bug, feature, complaint, question, compliment }
 
-  AdminReply({
-    required this.id,
-    required this.reportId,
-    required this.adminId,
-    required this.adminName,
-    required this.message,
-    required this.createdAt,
-  });
+enum Priority { low, medium, high, critical }
 
-  factory AdminReply.fromDocument(Document doc) {
-    return AdminReply(
-      id: doc.$id,
-      reportId: doc.data['reportId'] ?? '',
-      adminId: doc.data['adminId'] ?? '',
-      adminName: doc.data['adminName'] ?? '',
-      message: doc.data['message'] ?? '',
-      createdAt: DateTime.parse(
-          doc.data['createdAt'] ?? DateTime.now().toIso8601String()),
-    );
-  }
-}
+enum FeedbackStatus { pending, inProgress, resolved, closed }
 
 class ApplicationReport extends StatefulWidget {
   const ApplicationReport({super.key});
@@ -105,238 +50,278 @@ class ApplicationReport extends StatefulWidget {
 }
 
 class _ApplicationReportState extends State<ApplicationReport> {
-  final AppwriteService _appwriteService = AppwriteService();
-  int _selectedIndex = 0;
+  List<UserFeedback> feedbackList = [];
+  List<UserFeedback> filteredFeedbackList = [];
+  String searchQuery = '';
+  FeedbackStatus? selectedStatus;
+  FeedbackType? selectedType;
+  Priority? selectedPriority;
 
-  final List<Widget> _pages = [
-    DashboardOverview(),
-    ReportsManagement(),
-    AnalyticsView(),
-    // SettingsView(),
-  ];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMockData();
+    filteredFeedbackList = feedbackList;
+  }
+
+  void _loadMockData() {
+    feedbackList = [
+      UserFeedback(
+        id: 'FB001',
+        userId: 'U001',
+        userName: 'John Doe',
+        userEmail: 'john.doe@email.com',
+        subject: 'App crashes when uploading large files',
+        description:
+            'The application consistently crashes when I try to upload files larger than 50MB. This happens on both WiFi and cellular connection.',
+        type: FeedbackType.bug,
+        priority: Priority.high,
+        status: FeedbackStatus.pending,
+        submittedAt: DateTime.now().subtract(Duration(hours: 2)),
+        attachments: ['crash_log.txt', 'screenshot.png'],
+        appVersion: '2.1.4',
+        deviceInfo: 'iPhone 14 Pro, iOS 16.5',
+      ),
+      UserFeedback(
+        id: 'FB002',
+        userId: 'U002',
+        userName: 'Sarah Wilson',
+        userEmail: 'sarah.wilson@email.com',
+        subject: 'Feature request: Dark mode support',
+        description:
+            'Would love to see a dark mode option in the app settings. Current bright theme strains eyes during night usage.',
+        type: FeedbackType.feature,
+        priority: Priority.medium,
+        status: FeedbackStatus.inProgress,
+        submittedAt: DateTime.now().subtract(Duration(days: 1)),
+        attachments: [],
+        appVersion: '2.1.4',
+        deviceInfo: 'Samsung Galaxy S23, Android 13',
+        adminReply:
+            'Thank you for the suggestion! Dark mode is currently in development and will be available in version 2.2.0.',
+        repliedAt: DateTime.now().subtract(Duration(hours: 12)),
+      ),
+      UserFeedback(
+        id: 'FB003',
+        userId: 'U003',
+        userName: 'Mike Johnson',
+        userEmail: 'mike.johnson@email.com',
+        subject: 'Login issues after recent update',
+        description:
+            'Unable to login after updating to version 2.1.4. App shows "Invalid credentials" even with correct password.',
+        type: FeedbackType.bug,
+        priority: Priority.critical,
+        status: FeedbackStatus.resolved,
+        submittedAt: DateTime.now().subtract(Duration(days: 2)),
+        attachments: ['error_screenshot.jpg'],
+        appVersion: '2.1.4',
+        deviceInfo: 'Google Pixel 7, Android 13',
+        adminReply:
+            'This issue has been identified and fixed in version 2.1.5. Please update your app from the store.',
+        repliedAt: DateTime.now().subtract(Duration(days: 1)),
+      ),
+      UserFeedback(
+        id: 'FB004',
+        userId: 'U004',
+        userName: 'Emma Davis',
+        userEmail: 'emma.davis@email.com',
+        subject: 'Excellent customer service!',
+        description:
+            'I had an issue last week and the support team was incredibly helpful and responsive. Thank you!',
+        type: FeedbackType.compliment,
+        priority: Priority.low,
+        status: FeedbackStatus.closed,
+        submittedAt: DateTime.now().subtract(Duration(days: 3)),
+        attachments: [],
+        appVersion: '2.1.3',
+        deviceInfo: 'iPad Air, iOS 16.4',
+        adminReply:
+            'Thank you so much for your kind words! We\'re delighted to hear about your positive experience.',
+        repliedAt: DateTime.now().subtract(Duration(days: 2)),
+      ),
+    ];
+  }
+
+  void _filterFeedback() {
+    setState(() {
+      filteredFeedbackList = feedbackList.where((feedback) {
+        bool matchesSearch = searchQuery.isEmpty ||
+            feedback.subject
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase()) ||
+            feedback.userName
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase()) ||
+            feedback.description
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase());
+
+        bool matchesStatus =
+            selectedStatus == null || feedback.status == selectedStatus;
+        bool matchesType =
+            selectedType == null || feedback.type == selectedType;
+        bool matchesPriority =
+            selectedPriority == null || feedback.priority == selectedPriority;
+
+        return matchesSearch && matchesStatus && matchesType && matchesPriority;
+      }).toList();
+
+      // Sort by priority and date
+      filteredFeedbackList.sort((a, b) {
+        int priorityComparison = _getPriorityValue(b.priority)
+            .compareTo(_getPriorityValue(a.priority));
+        if (priorityComparison != 0) return priorityComparison;
+        return b.submittedAt.compareTo(a.submittedAt);
+      });
+    });
+  }
+
+  int _getPriorityValue(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return 4;
+      case Priority.high:
+        return 3;
+      case Priority.medium:
+        return 2;
+      case Priority.low:
+        return 1;
+    }
+  }
+
+  void _showFeedbackDetails(UserFeedback feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => FeedbackDetailsDialog(
+        feedback: feedback,
+        onReply: (reply) => _handleReply(feedback.id, reply),
+        onStatusUpdate: (status) => _updateFeedbackStatus(feedback.id, status),
+      ),
+    );
+  }
+
+  void _handleReply(String feedbackId, String reply) {
+    setState(() {
+      final index = feedbackList.indexWhere((f) => f.id == feedbackId);
+      if (index != -1) {
+        feedbackList[index] = UserFeedback(
+          id: feedbackList[index].id,
+          userId: feedbackList[index].userId,
+          userName: feedbackList[index].userName,
+          userEmail: feedbackList[index].userEmail,
+          subject: feedbackList[index].subject,
+          description: feedbackList[index].description,
+          type: feedbackList[index].type,
+          priority: feedbackList[index].priority,
+          status: FeedbackStatus.resolved,
+          submittedAt: feedbackList[index].submittedAt,
+          adminReply: reply,
+          repliedAt: DateTime.now(),
+          attachments: feedbackList[index].attachments,
+          appVersion: feedbackList[index].appVersion,
+          deviceInfo: feedbackList[index].deviceInfo,
+        );
+      }
+    });
+    _filterFeedback();
+  }
+
+  void _updateFeedbackStatus(String feedbackId, FeedbackStatus status) {
+    setState(() {
+      final index = feedbackList.indexWhere((f) => f.id == feedbackId);
+      if (index != -1) {
+        feedbackList[index] = UserFeedback(
+          id: feedbackList[index].id,
+          userId: feedbackList[index].userId,
+          userName: feedbackList[index].userName,
+          userEmail: feedbackList[index].userEmail,
+          subject: feedbackList[index].subject,
+          description: feedbackList[index].description,
+          type: feedbackList[index].type,
+          priority: feedbackList[index].priority,
+          status: status,
+          submittedAt: feedbackList[index].submittedAt,
+          adminReply: feedbackList[index].adminReply,
+          repliedAt: feedbackList[index].repliedAt,
+          attachments: feedbackList[index].attachments,
+          appVersion: feedbackList[index].appVersion,
+          deviceInfo: feedbackList[index].deviceInfo,
+        );
+      }
+    });
+    _filterFeedback();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Super Admin Dashboard'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications),
-            onPressed: () {
-              _showNotifications(context);
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.account_circle),
-            onPressed: () {
-              _showAdminProfile(context);
-            },
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(),
-      body: _pages[_selectedIndex],
-    );
-  }
-
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue[900],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.admin_panel_settings,
-                      size: 40, color: Colors.blue[900]),
-                ),
-                SizedBox(height: 10),
-                Text('Super Admin',
-                    style: TextStyle(color: Colors.white, fontSize: 18)),
-                Text('admin@company.com',
-                    style: TextStyle(color: Colors.white70, fontSize: 14)),
-              ],
-            ),
-          ),
-          _buildDrawerItem(Icons.dashboard, 'Dashboard', 0),
-          _buildDrawerItem(Icons.bug_report, 'Reports Management', 1),
-          _buildDrawerItem(Icons.analytics, 'Analytics', 2),
-          _buildDrawerItem(Icons.settings, 'Settings', 3),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.logout),
-            title: Text('Logout'),
-            onTap: () {
-              _showLogoutDialog(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(IconData icon, String title, int index) {
-    return ListTile(
-      leading: Icon(icon,
-          color: _selectedIndex == index ? Colors.blue : Colors.grey),
-      title: Text(title,
+        title: Text(
+          'Feedback Management Dashboard',
           style: TextStyle(
-            color: _selectedIndex == index ? Colors.blue : Colors.black,
-            fontWeight:
-                _selectedIndex == index ? FontWeight.bold : FontWeight.normal,
-          )),
-      selected: _selectedIndex == index,
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  void _showNotifications(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Notifications'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.circle, color: Colors.red, size: 12),
-              title: Text('New high priority report'),
-              subtitle: Text('2 minutes ago'),
-            ),
-            ListTile(
-              leading: Icon(Icons.circle, color: Colors.orange, size: 12),
-              title: Text('3 pending responses'),
-              subtitle: Text('1 hour ago'),
-            ),
-          ],
+              color: Color.fromARGB(255, 81, 115, 153),
+              fontWeight: FontWeight.bold),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAdminProfile(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Admin Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
-            SizedBox(height: 16),
-            Text('Super Admin',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text('admin@company.com'),
-            SizedBox(height: 16),
-            Text('Role: System Administrator'),
-            Text('Last Login: ${DateTime.now().toString().substring(0, 16)}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirm Logout'),
-        content: Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
+          IconButton(
+            icon: Icon(
+              Icons.refresh,
+              color: Color.fromARGB(255, 81, 115, 153),
+            ),
             onPressed: () {
-              // Implement logout logic
-              Navigator.pop(context);
+              _loadMockData();
+              _filterFeedback();
             },
-            child: Text('Logout'),
           ),
+          IconButton(
+            icon: Icon(
+              Icons.analytics,
+              color: Color.fromARGB(255, 81, 115, 153),
+            ),
+            onPressed: () => _showAnalytics(),
+          ),
+        ],
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      ),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      body: Column(
+        children: [
+          _buildStatsCards(),
+          _buildFiltersSection(),
+          Expanded(child: _buildFeedbackList()),
         ],
       ),
     );
   }
-}
 
-// Dashboard Overview
-class DashboardOverview extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget _buildStatsCards() {
+    final pending =
+        feedbackList.where((f) => f.status == FeedbackStatus.pending).length;
+    final inProgress =
+        feedbackList.where((f) => f.status == FeedbackStatus.inProgress).length;
+    final resolved =
+        feedbackList.where((f) => f.status == FeedbackStatus.resolved).length;
+    final critical =
+        feedbackList.where((f) => f.priority == Priority.critical).length;
+
+    return Container(
+      color: const Color.fromRGBO(248, 253, 255, 1),
       padding: EdgeInsets.all(16),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard(
-                      'Total Reports', '1,234', Colors.blue, Icons.bug_report)),
-              SizedBox(width: 16),
-              Expanded(
-                  child: _buildStatCard(
-                      'Open Reports', '89', Colors.orange, Icons.warning)),
-            ],
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard('Resolved Today', '23', Colors.green,
-                      Icons.check_circle)),
-              SizedBox(width: 16),
-              Expanded(
-                  child: _buildStatCard(
-                      'High Priority', '12', Colors.red, Icons.priority_high)),
-            ],
-          ),
-          SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Recent Reports',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 16),
-                  _buildRecentReportItem(
-                      'App Crashes on Login', 'John Doe', 'High', Colors.red),
-                  _buildRecentReportItem('UI Bug in Settings', 'Jane Smith',
-                      'Medium', Colors.orange),
-                  _buildRecentReportItem(
-                      'Feature Request', 'Bob Johnson', 'Low', Colors.green),
-                ],
-              ),
-            ),
-          ),
+          _buildStatCard(
+              'Pending', pending.toString(), Colors.orange, Icons.pending),
+          SizedBox(width: 12),
+          _buildStatCard(
+              'In Progress', inProgress.toString(), Colors.blue, Icons.work),
+          SizedBox(width: 12),
+          _buildStatCard('Resolved', resolved.toString(), Colors.green,
+              Icons.check_circle),
+          SizedBox(width: 12),
+          _buildStatCard(
+              'Critical', critical.toString(), Colors.red, Icons.warning),
         ],
       ),
     );
@@ -344,153 +329,177 @@ class DashboardOverview extends StatelessWidget {
 
   Widget _buildStatCard(
       String title, String value, Color color, IconData icon) {
-    return Card(
-      child: Padding(
+    return Expanded(
+      child: Container(
         padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 40, color: color),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 24),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: 8),
-            Text(value,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(title,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentReportItem(
-      String title, String user, String priority, Color color) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('Reported by $user • Priority: $priority',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Reports Management
-class ReportsManagement extends StatefulWidget {
-  @override
-  _ReportsManagementState createState() => _ReportsManagementState();
-}
-
-class _ReportsManagementState extends State<ReportsManagement> {
-  final AppwriteService _appwriteService = AppwriteService();
-  List<UserReport> _reports = [];
-  bool _isLoading = true;
-  String _selectedFilter = 'All';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadReports();
-  }
-
-  Future<void> _loadReports() async {
-    try {
-      setState(() => _isLoading = true);
-
-      final result = await _appwriteService.databases.listDocuments(
-        databaseId: AppwriteService.databaseId,
-        collectionId: AppwriteService.reportsCollectionId,
-        queries: [
-          Query.orderDesc('createdAt'),
-          Query.limit(100),
-        ],
-      );
-
-      setState(() {
-        _reports = result.documents
-            .map((doc) => UserReport.fromDocument(doc))
-            .toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showErrorSnackBar('Failed to load reports: ${e.toString()}');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildFilters(),
-        Expanded(
-          child: _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : _buildReportsList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilters() {
+  Widget _buildFiltersSection() {
     return Container(
-      padding: EdgeInsets.all(16),
-      child: Row(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
         children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search reports...',
-                prefixIcon: Icon(Icons.search),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search feedback...',
+              prefixIcon: Icon(Icons.search),
+              suffixIcon: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        searchQuery = '';
+                        _filterFeedback();
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!),
               ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-          ),
-          SizedBox(width: 16),
-          DropdownButton<String>(
-            value: _selectedFilter,
-            items: ['All', 'Open', 'In Progress', 'Resolved', 'Closed']
-                .map((filter) {
-              return DropdownMenuItem(value: filter, child: Text(filter));
-            }).toList(),
             onChanged: (value) {
-              setState(() => _selectedFilter = value!);
-              _applyFilter();
+              searchQuery = value;
+              _filterFeedback();
             },
           ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildFilterDropdown<FeedbackStatus>(
+                'Status',
+                selectedStatus,
+                FeedbackStatus.values,
+                (value) => setState(() {
+                  selectedStatus = value;
+                  _filterFeedback();
+                }),
+                (status) => _getStatusText(status),
+              )),
+              SizedBox(width: 12),
+              Expanded(
+                  child: _buildFilterDropdown<FeedbackType>(
+                'Type',
+                selectedType,
+                FeedbackType.values,
+                (value) => setState(() {
+                  selectedType = value;
+                  _filterFeedback();
+                }),
+                (type) => _getTypeText(type),
+              )),
+              SizedBox(width: 12),
+              Expanded(
+                  child: _buildFilterDropdown<Priority>(
+                'Priority',
+                selectedPriority,
+                Priority.values,
+                (value) => setState(() {
+                  selectedPriority = value;
+                  _filterFeedback();
+                }),
+                (priority) => _getPriorityText(priority),
+              )),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildReportsList() {
-    if (_reports.isEmpty) {
+  Widget _buildFilterDropdown<T>(
+    String label,
+    T? selectedValue,
+    List<T> items,
+    Function(T?) onChanged,
+    String Function(T) getText,
+  ) {
+    return DropdownButtonFormField<T>(
+      dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      value: selectedValue,
+      items: [
+        DropdownMenuItem<T>(
+          value: null,
+          child: Text('All'),
+        ),
+        ...items.map((item) => DropdownMenuItem<T>(
+              value: item,
+              child: Text(getText(item)),
+            )),
+      ],
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildFeedbackList() {
+    if (filteredFeedbackList.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox, size: 64, color: Colors.grey),
+            Icon(Icons.feedback_outlined, size: 64, color: Colors.grey[400]),
             SizedBox(height: 16),
-            Text('No reports found',
-                style: TextStyle(fontSize: 18, color: Colors.grey)),
+            Text(
+              'No feedback found',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       );
@@ -498,214 +507,125 @@ class _ReportsManagementState extends State<ReportsManagement> {
 
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemCount: _reports.length,
+      itemCount: filteredFeedbackList.length,
       itemBuilder: (context, index) {
-        final report = _reports[index];
-        return Card(
-          margin: EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: _buildPriorityIndicator(report.priority),
-            title: Text(report.title,
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${report.userName} • ${report.category}'),
-                Text(
-                    '${_formatDate(report.createdAt)} • Status: ${report.status}'),
-              ],
-            ),
-            trailing: PopupMenuButton(
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  child: Text('View Details'),
-                  value: 'view',
-                ),
-                PopupMenuItem(
-                  child: Text('Reply'),
-                  value: 'reply',
-                ),
-                PopupMenuItem(
-                  child: Text('Change Status'),
-                  value: 'status',
-                ),
-              ],
-              onSelected: (value) => _handleReportAction(value, report),
-            ),
-            onTap: () => _showReportDetails(report),
-          ),
-        );
+        final feedback = filteredFeedbackList[index];
+        return _buildFeedbackCard(feedback);
       },
     );
   }
 
-  Widget _buildPriorityIndicator(String priority) {
-    Color color;
-    switch (priority.toLowerCase()) {
-      case 'high':
-        color = Colors.red;
-        break;
-      case 'medium':
-        color = Colors.orange;
-        break;
-      case 'low':
-        color = Colors.green;
-        break;
-      default:
-        color = Colors.grey;
-    }
-
-    return Container(
-      width: 4,
-      height: 40,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  void _handleReportAction(String action, UserReport report) {
-    switch (action) {
-      case 'view':
-        _showReportDetails(report);
-        break;
-      case 'reply':
-        _showReplyDialog(report);
-        break;
-      case 'status':
-        _showStatusChangeDialog(report);
-        break;
-    }
-  }
-
-  void _showReportDetails(UserReport report) {
-    showDialog(
-      context: context,
-      builder: (context) => ReportDetailsDialog(report: report),
-    );
-  }
-
-  void _showReplyDialog(UserReport report) {
-    showDialog(
-      context: context,
-      builder: (context) => ReplyDialog(
-        report: report,
-        onReplySent: () {
-          _loadReports(); // Refresh the list
-        },
-      ),
-    );
-  }
-
-  void _showStatusChangeDialog(UserReport report) {
-    showDialog(
-      context: context,
-      builder: (context) => StatusChangeDialog(
-        report: report,
-        onStatusChanged: () {
-          _loadReports(); // Refresh the list
-        },
-      ),
-    );
-  }
-
-  void _applyFilter() {
-    // Implement filtering logic
-    _loadReports(); // For now, just reload
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-}
-
-// Report Details Dialog
-class ReportDetailsDialog extends StatelessWidget {
-  final UserReport report;
-
-  ReportDetailsDialog({required this.report});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
+  Widget _buildFeedbackCard(UserFeedback feedback) {
+    return Card(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      margin: EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showFeedbackDetails(feedback),
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(16),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      report.title,
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              _buildInfoRow(
-                  'Reporter', '${report.userName} (${report.userEmail})'),
-              _buildInfoRow('Category', report.category),
-              _buildInfoRow('Priority', report.priority),
-              _buildInfoRow('Status', report.status),
-              _buildInfoRow('Created', _formatDate(report.createdAt)),
-              SizedBox(height: 16),
-              Text('Description:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(report.description),
-              ),
-              if (report.attachments != null &&
-                  report.attachments!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Attachments:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                ...report.attachments!.map((attachment) => Chip(
-                    label: Text(attachment),
-                    avatar: Icon(Icons.attach_file, size: 16))),
-              ],
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Close'),
-                  ),
+                  _buildPriorityBadge(feedback.priority),
                   SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      // Show reply dialog
-                    },
-                    child: Text('Reply'),
-                  ),
+                  _buildTypeBadge(feedback.type),
+                  Spacer(),
+                  _buildStatusBadge(feedback.status),
                 ],
               ),
+              SizedBox(height: 12),
+              Text(
+                feedback.subject,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                feedback.description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.grey[500]),
+                  SizedBox(width: 4),
+                  Text(
+                    feedback.userName,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  SizedBox(width: 16),
+                  Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
+                  SizedBox(width: 4),
+                  Text(
+                    _formatDateTime(feedback.submittedAt),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  if (feedback.attachments.isNotEmpty) ...[
+                    SizedBox(width: 16),
+                    Icon(Icons.attachment, size: 16, color: Colors.grey[500]),
+                    SizedBox(width: 4),
+                    Text(
+                      '${feedback.attachments.length}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ],
+              ),
+              if (feedback.adminReply != null) ...[
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.admin_panel_settings,
+                              size: 16, color: Colors.blue[600]),
+                          SizedBox(width: 4),
+                          Text(
+                            'Admin Reply',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[600],
+                            ),
+                          ),
+                          Spacer(),
+                          Text(
+                            _formatDateTime(feedback.repliedAt!),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        feedback.adminReply!,
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -713,331 +633,768 @@ class ReportDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+  Widget _buildPriorityBadge(Priority priority) {
+    Color color;
+    IconData icon;
+    switch (priority) {
+      case Priority.critical:
+        color = Colors.red;
+        icon = Icons.error;
+        break;
+      case Priority.high:
+        color = Colors.orange;
+        icon = Icons.warning;
+        break;
+      case Priority.medium:
+        color = Colors.yellow[700]!;
+        icon = Icons.info;
+        break;
+      case Priority.low:
+        color = Colors.grey;
+        icon = Icons.low_priority;
+        break;
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 80,
-            child:
-                Text('$label:', style: TextStyle(fontWeight: FontWeight.bold)),
+          Icon(icon, size: 12, color: color),
+          SizedBox(width: 4),
+          Text(
+            _getPriorityText(priority),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
-          Expanded(child: Text(value)),
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-}
+  Widget _buildTypeBadge(FeedbackType type) {
+    Color color = Colors.blue;
+    switch (type) {
+      case FeedbackType.bug:
+        color = Colors.red;
+        break;
+      case FeedbackType.feature:
+        color = Colors.green;
+        break;
+      case FeedbackType.complaint:
+        color = Colors.orange;
+        break;
+      case FeedbackType.question:
+        color = Colors.purple;
+        break;
+      case FeedbackType.compliment:
+        color = Colors.teal;
+        break;
+    }
 
-// Reply Dialog
-class ReplyDialog extends StatefulWidget {
-  final UserReport report;
-  final VoidCallback onReplySent;
-
-  ReplyDialog({required this.report, required this.onReplySent});
-
-  @override
-  _ReplyDialogState createState() => _ReplyDialogState();
-}
-
-class _ReplyDialogState extends State<ReplyDialog> {
-  final TextEditingController _messageController = TextEditingController();
-  final AppwriteService _appwriteService = AppwriteService();
-  bool _isSending = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 500,
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Reply to: ${widget.report.title}',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Reporter: ${widget.report.userName}',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: _messageController,
-                maxLines: 8,
-                decoration: InputDecoration(
-                  hintText: 'Type your reply here...',
-                  border: OutlineInputBorder(),
-                  labelStyle: TextStyle(fontSize: 16),
-                ),
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Checkbox(
-                    value: false,
-                    onChanged: (value) {},
-                  ),
-                  Text('Also send email notification'),
-                ],
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isSending ? null : () => Navigator.pop(context),
-                    child: Text('Cancel'),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _isSending ? null : _sendReply,
-                    child: _isSending
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text('Send Reply'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        _getTypeText(type),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );
   }
 
-  Future<void> _sendReply() async {
-    if (_messageController.text.trim().isEmpty) {
-      _showErrorSnackBar('Please enter a reply message');
-      return;
+  Widget _buildStatusBadge(FeedbackStatus status) {
+    Color color;
+    switch (status) {
+      case FeedbackStatus.pending:
+        color = Colors.orange;
+        break;
+      case FeedbackStatus.inProgress:
+        color = Colors.blue;
+        break;
+      case FeedbackStatus.resolved:
+        color = Colors.green;
+        break;
+      case FeedbackStatus.closed:
+        color = Colors.grey;
+        break;
     }
 
-    setState(() => _isSending = true);
-
-    try {
-      await _appwriteService.databases.createDocument(
-        databaseId: AppwriteService.databaseId,
-        collectionId: AppwriteService.repliesCollectionId,
-        documentId: ID.unique(),
-        data: {
-          'reportId': widget.report.id,
-          'adminId': 'current_admin_id', // Replace with actual admin ID
-          'adminName': 'Super Admin', // Replace with actual admin name
-          'message': _messageController.text.trim(),
-          'createdAt': DateTime.now().toIso8601String(),
-        },
-      );
-
-      // Update report status to "In Progress" if it was "Open"
-      if (widget.report.status == 'Open') {
-        await _appwriteService.databases.updateDocument(
-          databaseId: AppwriteService.databaseId,
-          collectionId: AppwriteService.reportsCollectionId,
-          documentId: widget.report.id,
-          data: {'status': 'In Progress'},
-        );
-      }
-
-      Navigator.pop(context);
-      widget.onReplySent();
-      _showSuccessSnackBar('Reply sent successfully!');
-    } catch (e) {
-      _showErrorSnackBar('Failed to send reply: ${e.toString()}');
-    } finally {
-      setState(() => _isSending = false);
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        _getStatusText(status),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+  String _getPriorityText(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return 'Critical';
+      case Priority.high:
+        return 'High';
+      case Priority.medium:
+        return 'Medium';
+      case Priority.low:
+        return 'Low';
+    }
+  }
+
+  String _getTypeText(FeedbackType type) {
+    switch (type) {
+      case FeedbackType.bug:
+        return 'Bug';
+      case FeedbackType.feature:
+        return 'Feature';
+      case FeedbackType.complaint:
+        return 'Complaint';
+      case FeedbackType.question:
+        return 'Question';
+      case FeedbackType.compliment:
+        return 'Compliment';
+    }
+  }
+
+  String _getStatusText(FeedbackStatus status) {
+    switch (status) {
+      case FeedbackStatus.pending:
+        return 'Pending';
+      case FeedbackStatus.inProgress:
+        return 'In Progress';
+      case FeedbackStatus.resolved:
+        return 'Resolved';
+      case FeedbackStatus.closed:
+        return 'Closed';
+    }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  void _showAnalytics() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: Text('Feedback Analytics'),
+        content: Container(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildAnalyticsItem(
+                  'Total Feedback', feedbackList.length.toString()),
+              _buildAnalyticsItem('Average Response Time', '4.2 hours'),
+              _buildAnalyticsItem('Resolution Rate', '87.5%'),
+              _buildAnalyticsItem('User Satisfaction', '4.6/5.0'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsItem(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(value,
+              style: TextStyle(
+                  color: Colors.blue[600], fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 }
 
-// Status Change Dialog
-class StatusChangeDialog extends StatefulWidget {
-  final UserReport report;
-  final VoidCallback onStatusChanged;
+class FeedbackDetailsDialog extends StatefulWidget {
+  final UserFeedback feedback;
+  final Function(String) onReply;
+  final Function(FeedbackStatus) onStatusUpdate;
 
-  StatusChangeDialog({required this.report, required this.onStatusChanged});
+  FeedbackDetailsDialog({
+    required this.feedback,
+    required this.onReply,
+    required this.onStatusUpdate,
+  });
 
   @override
-  _StatusChangeDialogState createState() => _StatusChangeDialogState();
+  _FeedbackDetailsDialogState createState() => _FeedbackDetailsDialogState();
 }
 
-class _StatusChangeDialogState extends State<StatusChangeDialog> {
-  final AppwriteService _appwriteService = AppwriteService();
-  String _selectedStatus = '';
-  bool _isUpdating = false;
-
-  final List<String> _statusOptions = [
-    'Open',
-    'In Progress',
-    'Resolved',
-    'Closed',
-    'On Hold',
-  ];
+class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
+  final TextEditingController _replyController = TextEditingController();
+  bool _isReplying = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedStatus = widget.report.status;
+    if (widget.feedback.adminReply != null) {
+      _replyController.text = widget.feedback.adminReply!;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Change Report Status'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+    return Dialog(
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Feedback Details',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailSection('User Information', [
+                      'Name: ${widget.feedback.userName}',
+                      'Email: ${widget.feedback.userEmail}',
+                      'User ID: ${widget.feedback.userId}',
+                    ]),
+                    SizedBox(height: 16),
+                    _buildDetailSection('Feedback Information', [
+                      'ID: ${widget.feedback.id}',
+                      'Subject: ${widget.feedback.subject}',
+                      'Type: ${_getTypeText(widget.feedback.type)}',
+                      'Priority: ${_getPriorityText(widget.feedback.priority)}',
+                      'Status: ${_getStatusText(widget.feedback.status)}',
+                      'Submitted: ${_formatFullDateTime(widget.feedback.submittedAt)}',
+                    ]),
+                    SizedBox(height: 16),
+                    _buildDetailSection('Technical Information', [
+                      'App Version: ${widget.feedback.appVersion}',
+                      'Device Info: ${widget.feedback.deviceInfo}',
+                    ]),
+                    SizedBox(height: 16),
+                    _buildDescriptionSection(),
+                    if (widget.feedback.attachments.isNotEmpty) ...[
+                      SizedBox(height: 16),
+                      _buildAttachmentsSection(),
+                    ],
+                    SizedBox(height: 16),
+                    _buildReplySection(),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildActionButtons(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(String title, List<String> items) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 255, 255, 255),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Report: ${widget.report.title}'),
-          SizedBox(height: 16),
-          Text('Current Status: ${widget.report.status}'),
-          SizedBox(height: 16),
-          Text('New Status:'),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
           SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _selectedStatus,
-            items: _statusOptions.map((status) {
-              return DropdownMenuItem(value: status, child: Text(status));
-            }).toList(),
-            onChanged: (value) {
-              setState(() => _selectedStatus = value!);
-            },
-            decoration: InputDecoration(border: OutlineInputBorder()),
+          ...items.map((item) => Padding(
+                padding: EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  item,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescriptionSection() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Description',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue[800],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            widget.feedback.description,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              height: 1.4,
+            ),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _isUpdating ? null : () => Navigator.pop(context),
-          child: Text('Cancel'),
+    );
+  }
+
+  Widget _buildAttachmentsSection() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Attachments (${widget.feedback.attachments.length})',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.orange[800],
+            ),
+          ),
+          SizedBox(height: 8),
+          ...widget.feedback.attachments.map(
+            (attachment) => Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    _getFileIcon(attachment),
+                    size: 16,
+                    color: Colors.orange[600],
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      attachment,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _downloadAttachment(attachment),
+                    child: Text('Download',
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 81, 115, 153),
+                        )),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplySection() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: widget.feedback.adminReply != null
+            ? Colors.green[50]
+            : Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: widget.feedback.adminReply != null
+              ? Colors.green[200]!
+              : Colors.grey[200]!,
         ),
-        ElevatedButton(
-          onPressed: _isUpdating || _selectedStatus == widget.report.status
-              ? null
-              : _updateStatus,
-          child: _isUpdating
-              ? SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.admin_panel_settings,
+                size: 20,
+                color: widget.feedback.adminReply != null
+                    ? Colors.green[600]
+                    : Colors.grey[600],
+              ),
+              SizedBox(width: 8),
+              Text(
+                widget.feedback.adminReply != null
+                    ? 'Admin Reply'
+                    : 'Compose Reply',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: widget.feedback.adminReply != null
+                      ? Colors.green[800]
+                      : Colors.grey[800],
+                ),
+              ),
+              if (widget.feedback.adminReply != null) ...[
+                Spacer(),
+                Text(
+                  'Replied: ${_formatFullDateTime(widget.feedback.repliedAt!)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          SizedBox(height: 12),
+          TextField(
+            controller: _replyController,
+            maxLines: 4,
+            enabled: _isReplying || widget.feedback.adminReply == null,
+            decoration: InputDecoration(
+              hintText: 'Type your reply to the customer...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              contentPadding: EdgeInsets.all(12),
+            ),
+          ),
+          if (widget.feedback.adminReply == null || _isReplying) ...[
+            SizedBox(height: 12),
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _sendReply,
+                  icon: Icon(
+                    Icons.send,
+                    color: Colors.white,
+                  ),
+                  label: Text(widget.feedback.adminReply == null
+                      ? 'Send Reply'
+                      : 'Update Reply'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromRGBO(81, 115, 153, 1),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                if (_isReplying) ...[
+                  SizedBox(width: 12),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isReplying = false;
+                        _replyController.text =
+                            widget.feedback.adminReply ?? '';
+                      });
+                    },
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ] else ...[
+            SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isReplying = true;
+                });
+              },
+              icon: Icon(
+                Icons.edit,
+                color: Colors.white,
+              ),
+              label: Text('Edit Reply'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[600],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<FeedbackStatus>(
+            dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
+            value: widget.feedback.status,
+            decoration: InputDecoration(
+              labelText: 'Update Status',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            items: FeedbackStatus.values
+                .map(
+                  (status) => DropdownMenuItem(
+                    value: status,
+                    child: Text(_getStatusText(status)),
+                  ),
                 )
-              : Text('Update'),
+                .toList(),
+            onChanged: (status) {
+              if (status != null && status != widget.feedback.status) {
+                widget.onStatusUpdate(status);
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        SizedBox(width: 16),
+        ElevatedButton(
+          onPressed: () => _copyFeedbackInfo(),
+          child: Text('Copy Info'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        SizedBox(width: 12),
+        ElevatedButton(
+          onPressed: () => _exportFeedback(),
+          child: Text('Export'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+            foregroundColor: Colors.white,
+          ),
         ),
       ],
     );
   }
 
-  Future<void> _updateStatus() async {
-    setState(() => _isUpdating = true);
-
-    try {
-      await _appwriteService.databases.updateDocument(
-        databaseId: AppwriteService.databaseId,
-        collectionId: AppwriteService.reportsCollectionId,
-        documentId: widget.report.id,
-        data: {
-          'status': _selectedStatus,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-      );
-
-      Navigator.pop(context);
-      widget.onStatusChanged();
-      _showSuccessSnackBar('Status updated successfully!');
-    } catch (e) {
-      _showErrorSnackBar('Failed to update status: ${e.toString()}');
-    } finally {
-      setState(() => _isUpdating = false);
+  IconData _getFileIcon(String filename) {
+    final extension = filename.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return Icons.image;
+      case 'txt':
+      case 'log':
+        return Icons.description;
+      case 'zip':
+      case 'rar':
+        return Icons.archive;
+      default:
+        return Icons.attachment;
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  void _downloadAttachment(String filename) {
+    // TODO: Implement actual file download logic
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
-  }
-}
-
-// Analytics View
-class AnalyticsView extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Analytics Dashboard',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                  child: _buildAnalyticsCard('Reports This Week', '127',
-                      Icons.trending_up, Colors.blue)),
-              SizedBox(width: 16),
-              Expanded(
-                  child: _buildAnalyticsCard('Average Resolution Time',
-                      '2.3 days', Icons.timer, Colors.green)),
-            ],
-          ),
-        ],
+      SnackBar(
+        content: Text('Downloading $filename...'),
+        backgroundColor: Colors.blue[600],
       ),
     );
   }
 
-  Widget _buildAnalyticsCard(
-      String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, size: 40, color: color),
-            SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value,
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                Text(title,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-              ],
-            ),
-          ],
+  void _sendReply() {
+    if (_replyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a reply message'),
+          backgroundColor: Colors.red[600],
         ),
+      );
+      return;
+    }
+
+    widget.onReply(_replyController.text.trim());
+    setState(() {
+      _isReplying = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Reply sent successfully'),
+        backgroundColor: Colors.green[600],
       ),
     );
+
+    Navigator.pop(context);
+  }
+
+  void _copyFeedbackInfo() {
+    final info = '''
+Feedback ID: ${widget.feedback.id}
+User: ${widget.feedback.userName} (${widget.feedback.userEmail})
+Subject: ${widget.feedback.subject}
+Type: ${_getTypeText(widget.feedback.type)}
+Priority: ${_getPriorityText(widget.feedback.priority)}
+Status: ${_getStatusText(widget.feedback.status)}
+Submitted: ${_formatFullDateTime(widget.feedback.submittedAt)}
+App Version: ${widget.feedback.appVersion}
+Device: ${widget.feedback.deviceInfo}
+
+Description:
+${widget.feedback.description}
+
+${widget.feedback.adminReply != null ? 'Admin Reply:\n${widget.feedback.adminReply}' : ''}
+    ''';
+
+    Clipboard.setData(ClipboardData(text: info));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Feedback information copied to clipboard'),
+        backgroundColor: Colors.blue[600],
+      ),
+    );
+  }
+
+  void _exportFeedback() {
+    // TODO: Implement actual export functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Exporting feedback data...'),
+        backgroundColor: Colors.green[600],
+      ),
+    );
+  }
+
+  String _getTypeText(FeedbackType type) {
+    switch (type) {
+      case FeedbackType.bug:
+        return 'Bug Report';
+      case FeedbackType.feature:
+        return 'Feature Request';
+      case FeedbackType.complaint:
+        return 'Complaint';
+      case FeedbackType.question:
+        return 'Question';
+      case FeedbackType.compliment:
+        return 'Compliment';
+    }
+  }
+
+  String _getPriorityText(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return 'Critical';
+      case Priority.high:
+        return 'High';
+      case Priority.medium:
+        return 'Medium';
+      case Priority.low:
+        return 'Low';
+    }
+  }
+
+  String _getStatusText(FeedbackStatus status) {
+    switch (status) {
+      case FeedbackStatus.pending:
+        return 'Pending';
+      case FeedbackStatus.inProgress:
+        return 'In Progress';
+      case FeedbackStatus.resolved:
+        return 'Resolved';
+      case FeedbackStatus.closed:
+        return 'Closed';
+    }
+  }
+
+  String _formatFullDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
