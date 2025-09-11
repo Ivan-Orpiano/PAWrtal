@@ -30,6 +30,7 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
       AdminWebClinicpage(),
       AdminWebAppointments(),
       AdminWebMessages(),
+      AdminWebStaffs(),
     ];
 
     // if (widget.canAccessStaffs) {

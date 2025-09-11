@@ -28,6 +28,7 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
       AdminWebClinicpage(),
       AdminWebAppointments(),
       AdminWebMessages(),
+      AdminWebStaffs(),
     ];
 
     // if (widget.canAccessStaffs) {
@@ -44,11 +45,11 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
       Icons.calendar_today,
       Icons.message,
     ];
-    
+
     if (widget.canAccessStaffs) {
       baseIcons.add(Icons.people);
     }
-    
+
     return baseIcons;
   }
 
