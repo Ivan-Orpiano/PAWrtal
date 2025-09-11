@@ -30,6 +30,7 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
       AdminWebClinicpage(),
       AdminWebAppointments(),
       AdminWebMessages(),
+      AdminWebStaffs(),
     ];
 
     // Only add staffs page if user has permission

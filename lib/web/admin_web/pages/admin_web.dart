@@ -21,7 +21,7 @@ final List<Widget> _pages = const [
   AdminWebClinicpage(),
   AdminWebAppointments(),
   AdminWebMessages(),
-  //AdminWebStaffs(),
+  AdminWebStaffs(),
 ];
 
 class _AdminWebState extends State<AdminWeb> {
