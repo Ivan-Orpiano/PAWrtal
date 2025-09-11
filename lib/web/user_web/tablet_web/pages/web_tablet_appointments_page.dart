@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_appointments_page.dart';
 import 'package:flutter/material.dart';
 
 class WebTabletAppointmentsPage extends StatefulWidget {
@@ -10,6 +11,8 @@ class WebTabletAppointmentsPage extends StatefulWidget {
 class _WebTabletAppointmentsPageState extends State<WebTabletAppointmentsPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold();
+    return Scaffold(
+      body: EnhancedWebAppointmentsPage(),
+    );
   }
 }

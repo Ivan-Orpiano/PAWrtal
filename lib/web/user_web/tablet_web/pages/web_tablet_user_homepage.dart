@@ -23,7 +23,7 @@ class WebTabletUserHomepage extends StatefulWidget {
 class _WebTabletUserHomepageState extends State<WebTabletUserHomepage> {
 
   final List<Widget> _pages = const [
-    WebTabletDashboardPage(),
+    WebTabletDashboardPageUpdated(),
     WebTabletAppointmentsPage(),
     WebTabletMessagesPage(),
     WebTabletPetsPage(),

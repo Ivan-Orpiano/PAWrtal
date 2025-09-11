@@ -18,52 +18,18 @@ class _WebFilterState extends State<WebFilter> {
       padding: const EdgeInsets.only(right: 12),
       child: GestureDetector(
         onTap: () {
-          showDialog(
-            context: context,
-            barrierDismissible: true,
-            builder: (BuildContext context) {
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < mobileWidth) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      }
-                    });
-                  }
-                  return Dialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
-                      width: 550,
-                      height: 1000,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      clipBehavior: Clip.hardEdge,
-                      child: const SingleChildScrollView(
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              SizedBox(height: 16),
-                              Text(
-                                'Filters',
-                                style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
+          final isMobile = MediaQuery.of(context).size.width < mobileWidth;
+          if (isMobile) {
+            showModalBottomSheet(
+              context: context,
+              builder: (_) => _buildMobileDialog(),
+            );
+          } else {
+            showDialog(
+              context: context,
+              builder: (context) => _buildWebDialog(context)
+            );
+          }
         },
         child: MouseRegion(
           onEnter: (_) {
@@ -112,4 +78,53 @@ class _WebFilterState extends State<WebFilter> {
       ),
     );
   }
+}
+
+Widget _buildMobileDialog() {
+  return Container(
+    height: 600,
+  );
+}
+
+Widget _buildWebDialog(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        width: 550,
+        height: 1000,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              spacing: 16,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.keyboard_arrow_left_rounded)
+                    ),
+                    const Text(
+                      'Filters',
+                      style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
 }
