@@ -549,7 +549,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             children: [
               IconButton(
                 onPressed: () => _showFeedbackDetails(feedback),
-                icon: const Icon(Icons.visibility, color: Color.fromRGBO(81, 115, 153, 1)),
+                icon: const Icon(Icons.visibility,
+                    color: Color.fromRGBO(81, 115, 153, 1)),
                 tooltip: 'View Details',
               ),
               if (feedback.hasDeleteRequest)
@@ -623,7 +624,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                 color: Color.fromARGB(255, 81, 115, 153)),
             SizedBox(width: 8),
             Text(
-              'Feedback Manager',
+              'Vet Feedback',
               style: TextStyle(
                   color: Color.fromARGB(255, 81, 115, 153),
                   fontWeight: FontWeight.bold),
@@ -677,7 +678,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           );
         },
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        child: const Icon(Icons.mobile_friendly,
+        child: const Icon(Icons.phone_android_rounded,
             color: Color.fromARGB(255, 81, 115, 153)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,

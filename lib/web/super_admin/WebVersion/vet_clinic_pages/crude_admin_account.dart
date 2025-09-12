@@ -30,7 +30,7 @@ class _CrudeAdminAccountState extends State<CrudeAdminAccount>
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Admin Management',
+          'Admin Account Management',
           style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Color.fromRGBO(81, 115, 153, 1)),

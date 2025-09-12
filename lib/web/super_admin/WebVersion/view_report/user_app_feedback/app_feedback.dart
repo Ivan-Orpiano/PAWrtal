@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -258,11 +259,19 @@ class _ApplicationReportState extends State<ApplicationReport> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Feedback Management Dashboard',
-          style: TextStyle(
-              color: Color.fromARGB(255, 81, 115, 153),
-              fontWeight: FontWeight.bold),
+        automaticallyImplyLeading: false,
+        title: const Row(
+          children: [
+            Icon(Icons.bug_report_sharp,
+                color: Color.fromARGB(255, 81, 115, 153)),
+            SizedBox(width: 8),
+            Text(
+              'System Reports',
+              style: TextStyle(
+                  color: Color.fromARGB(255, 81, 115, 153),
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -293,6 +302,18 @@ class _ApplicationReportState extends State<ApplicationReport> {
           Expanded(child: _buildFeedbackList()),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const VetClinicFeedbackApp()),
+          );
+        },
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+        child: const Icon(Icons.pets, color: Color.fromARGB(255, 81, 115, 153)),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
