@@ -100,7 +100,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       backgroundColor: const Color.fromRGBO(253, 253, 255, 1),
       appBar: AppBar(
         title: const Text(
-          'Manage Staff Accounts',
+          'Staff Account Management',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Color.fromRGBO(81, 115, 153, 1),
@@ -546,6 +546,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
@@ -627,6 +628,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('Delete Staff Member'),
