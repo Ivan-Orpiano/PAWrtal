@@ -6,6 +6,8 @@
 // import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 // import 'package:capstone_app/mobile/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
 // =======
+import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
+
 import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_sort_button.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_my_tags.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_search_bar.dart';
@@ -31,6 +33,18 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 81, 115, 153)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const SuperAdminDesktopHomePage()),
+            );
+          },
+          tooltip: 'Back',
+        ),
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
