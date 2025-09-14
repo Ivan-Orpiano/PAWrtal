@@ -6,7 +6,7 @@ class StaffMember {
   final String role;
   final String email;
   final String phone;
-  final String password;
+//  final String password;
   final DateTime joinDate;
   final String department;
   final bool isActive;
@@ -17,7 +17,7 @@ class StaffMember {
     required this.role,
     required this.email,
     required this.phone,
-    required this.password,
+    // required this.password,
     required this.joinDate,
     required this.department,
     required this.isActive,
@@ -40,7 +40,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       role: 'Senior Veterinarian',
       email: 'sarah.johnson@vetclinic.com',
       phone: '+1-555-0123',
-      password: '••••••••',
+      //  password: '••••••••',
       joinDate: DateTime(2020, 3, 15),
       department: 'Surgery',
       isActive: true,
@@ -51,7 +51,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       role: 'Veterinary Technician',
       email: 'mike.rodriguez@vetclinic.com',
       phone: '+1-555-0124',
-      password: '••••••••',
+      //   password: '••••••••',
       joinDate: DateTime(2021, 7, 22),
       department: 'General Care',
       isActive: true,
@@ -62,7 +62,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       role: 'Receptionist',
       email: 'emily.chen@vetclinic.com',
       phone: '+1-555-0125',
-      password: '••••••••',
+      //  password: '••••••••',
       joinDate: DateTime(2022, 1, 10),
       department: 'Administration',
       isActive: true,
@@ -73,7 +73,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       role: 'Veterinarian',
       email: 'james.wilson@vetclinic.com',
       phone: '+1-555-0126',
-      password: '••••••••',
+      // password: '••••••••',
       joinDate: DateTime(2019, 11, 5),
       department: 'Emergency',
       isActive: false,
@@ -84,7 +84,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
       role: 'Veterinary Assistant',
       email: 'lisa.thompson@vetclinic.com',
       phone: '+1-555-0127',
-      password: '••••••••',
+      //  password: '••••••••',
       joinDate: DateTime(2023, 4, 18),
       department: 'General Care',
       isActive: true,
@@ -179,6 +179,13 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -422,8 +429,8 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                   const Divider(height: 20),
                   _buildInfoRow('Phone', staff.phone, Icons.phone),
                   const Divider(height: 20),
-                  _buildInfoRow('Password', staff.password, Icons.lock),
-                  const Divider(height: 20),
+                  // _buildInfoRow('Password', staff.password, Icons.lock),
+                  // const Divider(height: 20),
                   _buildInfoRow('Department', staff.department, Icons.business),
                   const Divider(height: 20),
                   _buildInfoRow(
@@ -583,7 +590,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                     '${staff.joinDate.day}/${staff.joinDate.month}/${staff.joinDate.year}'),
                 _buildDetailItem(
                     'Status', staff.isActive ? 'Active' : 'Inactive'),
-                _buildDetailItem('Password', staff.password),
+                //  _buildDetailItem('Password', staff.password),
               ],
             ),
           ),

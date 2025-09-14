@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+//import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 
 class CrudeAdminAccount extends StatefulWidget {
   const CrudeAdminAccount({super.key});
@@ -29,6 +30,7 @@ class _CrudeAdminAccountState extends State<CrudeAdminAccount>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+
         title: const Text(
           'Admin Account Management',
           style: TextStyle(
@@ -560,13 +562,13 @@ class _ManageAdminsTabState extends State<ManageAdminsTab> {
 
   Color _getRoleColor(String role) {
     switch (role.toLowerCase()) {
-      case 'super admin':
+      case 'administrative works':
         return Colors.red;
-      case 'clinic admin':
-        return Colors.blue;
       case 'veterinarian':
-        return Colors.green;
+        return Colors.blue;
       case 'staff':
+        return Colors.green;
+      case 'secretary':
         return Colors.orange;
       default:
         return const Color.fromRGBO(81, 115, 153, 1.0);
@@ -653,7 +655,7 @@ class CreateAdminDialog extends StatefulWidget {
   });
 
   @override
-  _CreateAdminDialogState createState() => _CreateAdminDialogState();
+  State<CreateAdminDialog> createState() => _CreateAdminDialogState();
 }
 
 class _CreateAdminDialogState extends State<CreateAdminDialog> {
@@ -664,14 +666,14 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
   final _passwordController = TextEditingController();
   final _clinicNameController = TextEditingController();
   final _addressController = TextEditingController();
-  String _selectedRole = 'Clinic Admin';
+  String _selectedRole = 'Administrative Works';
   bool _passwordVisible = false;
 
   final List<String> _roles = [
-    'Super Admin',
-    'Clinic Admin',
+    'Administrative Works',
     'Veterinarian',
     'Staff',
+    'Secretary'
   ];
 
   @override
@@ -1018,6 +1020,7 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
         ],
       ),
       child: DropdownButtonFormField<String>(
+        dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
         value: _selectedRole,
         onChanged: (String? newValue) {
           if (newValue != null) {
@@ -1049,7 +1052,6 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
   }
 }
 
-// Add the AdminAccount class definition
 class AdminAccount {
   final String name;
   final String email;

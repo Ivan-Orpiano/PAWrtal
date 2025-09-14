@@ -402,32 +402,40 @@ class _ApplicationReportState extends State<ApplicationReport> {
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search feedback...',
-              prefixIcon: Icon(Icons.search),
-              suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        searchQuery = '';
-                        _filterFeedback();
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+          Focus(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search feedback...',
+                prefixIcon: Icon(Icons.search),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          searchQuery = '';
+                          _filterFeedback();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide:
+                      BorderSide(color: const Color.fromRGBO(81, 115, 153, 1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                      color: const Color.fromRGBO(81, 115, 153, 1), width: 2),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              onChanged: (value) {
+                searchQuery = value;
+                _filterFeedback();
+              },
             ),
-            onChanged: (value) {
-              searchQuery = value;
-              _filterFeedback();
-            },
           ),
           SizedBox(height: 12),
           Row(
@@ -486,6 +494,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
+          
           borderRadius: BorderRadius.circular(8),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -495,6 +504,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
         DropdownMenuItem<T>(
           value: null,
           child: Text('All'),
+          
         ),
         ...items.map((item) => DropdownMenuItem<T>(
               value: item,
@@ -887,7 +897,7 @@ class FeedbackDetailsDialog extends StatefulWidget {
   });
 
   @override
-  _FeedbackDetailsDialogState createState() => _FeedbackDetailsDialogState();
+  State<FeedbackDetailsDialog> createState() => _FeedbackDetailsDialogState();
 }
 
 class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
@@ -1113,6 +1123,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
             ? Colors.green[50]
             : Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
+        
         border: Border.all(
           color: widget.feedback.adminReply != null
               ? Colors.green[200]!
