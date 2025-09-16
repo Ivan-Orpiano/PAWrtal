@@ -631,7 +631,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           },
           tooltip: 'Back',
         ),
-         surfaceTintColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         title: const Row(
           children: [
             Icon(Icons.admin_panel_settings,

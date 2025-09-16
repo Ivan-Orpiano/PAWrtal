@@ -1,4 +1,5 @@
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -259,7 +260,19 @@ class _ApplicationReportState extends State<ApplicationReport> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-         surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 81, 115, 153)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const SuperAdminDesktopHomePage()),
+            );
+          },
+          tooltip: 'Back',
+        ),
+        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: const Row(
           children: [
@@ -285,7 +298,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
               _filterFeedback();
             },
           ),
-          
           IconButton(
             icon: Icon(
               Icons.analytics,
