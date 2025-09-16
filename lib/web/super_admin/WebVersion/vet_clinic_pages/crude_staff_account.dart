@@ -385,7 +385,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Color.fromRGBO(81, 115, 153, 1),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -503,13 +503,13 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
+        Icon(icon, size: 18, color: const Color.fromRGBO(81, 115, 153, 1)),
         const SizedBox(width: 10),
         Text(
           '$label:',
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: Color.fromRGBO(81, 115, 153, 1),
             fontSize: 14,
           ),
         ),
@@ -519,7 +519,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
             value,
             style: const TextStyle(
               fontSize: 14,
-              color: Colors.black87,
+              color: Color.fromRGBO(81, 115, 153, 1),
             ),
           ),
         ),
@@ -586,7 +586,9 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                 child: Text(
                   staff.name,
                   style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color.fromRGBO(81, 115, 153, 1)),
                 ),
               ),
             ],
@@ -631,15 +633,18 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
             child: Text(
               '$label:',
               style: const TextStyle(
-                  fontWeight: FontWeight.w600, color: Colors.grey),
+                  fontWeight: FontWeight.w600,
+                  color: Color.fromRGBO(81, 115, 153, 1)),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 16),
+              child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color.fromRGBO(81, 115, 153, 1),
             ),
-          ),
+          )),
         ],
       ),
     );
