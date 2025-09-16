@@ -57,7 +57,7 @@ class _WebSearchBarState extends State<WebSearchBar> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: const BorderSide(color: Colors.black54),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
