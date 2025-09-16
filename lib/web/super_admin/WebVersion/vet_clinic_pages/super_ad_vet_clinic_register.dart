@@ -78,6 +78,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: AppBar(
+        
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,

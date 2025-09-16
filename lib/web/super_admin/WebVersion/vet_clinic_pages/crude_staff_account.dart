@@ -1,25 +1,26 @@
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 import 'package:flutter/material.dart';
 
 class StaffMember {
-  final String id;
+//  final String id;
   final String name;
-  final String role;
+  // final String role;
   final String email;
   final String phone;
 //  final String password;
   final DateTime joinDate;
-  final String department;
+//  final String department;
   final bool isActive;
 
   StaffMember({
-    required this.id,
+    //  required this.id,
     required this.name,
-    required this.role,
+    //  required this.role,
     required this.email,
     required this.phone,
     // required this.password,
     required this.joinDate,
-    required this.department,
+    //required this.department,
     required this.isActive,
   });
 }
@@ -35,58 +36,58 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
 
   List<StaffMember> staffMembers = [
     StaffMember(
-      id: 'VET001',
+      //  id: 'VET001',
       name: 'Dr. Sarah Johnson',
-      role: 'Senior Veterinarian',
+      // role: 'Senior Veterinarian',
       email: 'sarah.johnson@vetclinic.com',
       phone: '+1-555-0123',
       //  password: '••••••••',
       joinDate: DateTime(2020, 3, 15),
-      department: 'Surgery',
+      //   department: 'Surgery',
       isActive: true,
     ),
     StaffMember(
-      id: 'VET002',
+      // id: 'VET002',
       name: 'Mike Rodriguez',
-      role: 'Veterinary Technician',
+      // role: 'Veterinary Technician',
       email: 'mike.rodriguez@vetclinic.com',
       phone: '+1-555-0124',
       //   password: '••••••••',
       joinDate: DateTime(2021, 7, 22),
-      department: 'General Care',
+      //   department: 'General Care',
       isActive: true,
     ),
     StaffMember(
-      id: 'VET003',
+      //  id: 'VET003',
       name: 'Emily Chen',
-      role: 'Receptionist',
+      //  role: 'Receptionist',
       email: 'emily.chen@vetclinic.com',
       phone: '+1-555-0125',
       //  password: '••••••••',
       joinDate: DateTime(2022, 1, 10),
-      department: 'Administration',
+      //   department: 'Administration',
       isActive: true,
     ),
     StaffMember(
-      id: 'VET004',
+      // id: 'VET004',
       name: 'Dr. James Wilson',
-      role: 'Veterinarian',
+      //  role: 'Veterinarian',
       email: 'james.wilson@vetclinic.com',
       phone: '+1-555-0126',
       // password: '••••••••',
       joinDate: DateTime(2019, 11, 5),
-      department: 'Emergency',
+      // department: 'Emergency',
       isActive: false,
     ),
     StaffMember(
-      id: 'VET005',
+      //id: 'VET005',
       name: 'Lisa Thompson',
-      role: 'Veterinary Assistant',
+      // role: 'Veterinary Assistant',
       email: 'lisa.thompson@vetclinic.com',
       phone: '+1-555-0127',
       //  password: '••••••••',
       joinDate: DateTime(2023, 4, 18),
-      department: 'General Care',
+      //   department: 'General Care',
       isActive: true,
     ),
   ];
@@ -99,6 +100,19 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(253, 253, 255, 1),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 81, 115, 153)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const SuperAdminVetClinicPage()),
+            );
+          },
+          tooltip: 'Back',
+        ),
+        surfaceTintColor: Colors.transparent,
         title: const Text(
           'Staff Account Management',
           style: TextStyle(
@@ -106,6 +120,7 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
             color: Color.fromRGBO(81, 115, 153, 1),
           ),
         ),
+        centerTitle: true,
         backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
         elevation: 0,
         actions: [
@@ -349,17 +364,17 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
             // Header Row
             Row(
               children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: _getRoleColor(staff.role),
-                  child: Text(
-                    staff.name.split(' ').map((e) => e[0]).join(''),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                // CircleAvatar(
+                //   radius: 25,
+                //   backgroundColor: _getRoleColor(staff.role),
+                //   child: Text(
+                //     staff.name.split(' ').map((e) => e[0]).join(''),
+                //     style: const TextStyle(
+                //       color: Colors.white,     ROLE AVATAR
+                //       fontWeight: FontWeight.bold,
+                //     ),
+                //   ),
+                // ),
                 const SizedBox(width: 15),
                 Expanded(
                   child: Column(
@@ -374,22 +389,22 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getRoleColor(staff.role),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          staff.role,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(
+                      //       horizontal: 12, vertical: 4),
+                      //   decoration: BoxDecoration(
+                      //     color: _getRoleColor(staff.role),
+                      //     borderRadius: BorderRadius.circular(12),
+                      //   ),
+                      //   child: Text(     //ROLE
+                      //     staff.role,
+                      //     style: const TextStyle(
+                      //       color: Colors.white,
+                      //       fontSize: 12,
+                      //       fontWeight: FontWeight.w600,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
@@ -423,15 +438,15 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
               ),
               child: Column(
                 children: [
-                  _buildInfoRow('ID', staff.id, Icons.badge),
-                  const Divider(height: 20),
+                  //    _buildInfoRow('ID', staff.id, Icons.badge),
+                  // const Divider(height: 20),
                   _buildInfoRow('Email', staff.email, Icons.email),
                   const Divider(height: 20),
                   _buildInfoRow('Phone', staff.phone, Icons.phone),
-                  const Divider(height: 20),
+                  // const Divider(height: 20),
                   // _buildInfoRow('Password', staff.password, Icons.lock),
                   // const Divider(height: 20),
-                  _buildInfoRow('Department', staff.department, Icons.business),
+                  //   _buildInfoRow('Department', staff.department, Icons.business),
                   const Divider(height: 20),
                   _buildInfoRow(
                       'Join Date',
@@ -512,37 +527,37 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
     );
   }
 
-  Color _getRoleColor(String role) {
-    switch (role.toLowerCase()) {
-      case 'senior veterinarian':
-        return Colors.purple;
-      case 'veterinarian':
-        return Colors.blue;
-      case 'veterinary technician':
-        return Colors.green;
-      case 'veterinary assistant':
-        return Colors.orange;
-      case 'receptionist':
-        return Colors.teal;
-      default:
-        return Colors.grey;
-    }
-  }
+  // Color _getRoleColor(String role) {
+  //   switch (role.toLowerCase()) {
+  //     case 'senior veterinarian':
+  //       return Colors.purple;
+  //     case 'veterinarian':
+  //       return Colors.blue;
+  //     case 'veterinary technician':
+  //       return Colors.green;
+  //     case 'veterinary assistant':
+  //       return Colors.orange;
+  //     case 'receptionist':
+  //       return Colors.teal;
+  //     default:
+  //       return Colors.grey;
+  //   }
+  // }
 
   List<StaffMember> getFilteredStaff() {
     return staffMembers.where((staff) {
       // Search filter
       bool matchesSearch = searchQuery.isEmpty ||
           staff.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          staff.role.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          staff.email.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          staff.id.toLowerCase().contains(searchQuery.toLowerCase());
+          //   staff.role.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          staff.email.toLowerCase().contains(searchQuery.toLowerCase());
+      //   staff.id.toLowerCase().contains(searchQuery.toLowerCase())
 
       // Role filter
       bool matchesFilter = selectedFilter == 'All' ||
           (selectedFilter == 'Active' && staff.isActive) ||
-          (selectedFilter == 'Inactive' && !staff.isActive) ||
-          staff.role.toLowerCase().contains(selectedFilter.toLowerCase());
+          (selectedFilter == 'Inactive' && !staff.isActive);
+      //staff.role.toLowerCase().contains(selectedFilter.toLowerCase());
 
       return matchesSearch && matchesFilter;
     }).toList();
@@ -558,14 +573,14 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: _getRoleColor(staff.role),
-                child: Text(
-                  staff.name.split(' ').map((e) => e[0]).join(''),
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
+              // CircleAvatar(
+              //   backgroundColor: _getRoleColor(staff.role),
+              //   child: Text(     ROLE
+              //     staff.name.split(' ').map((e) => e[0]).join(''),
+              //     style: const TextStyle(
+              //         color: Colors.white, fontWeight: FontWeight.bold),
+              //   ),
+              // ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -581,11 +596,11 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailItem('Staff ID', staff.id),
-                _buildDetailItem('Role', staff.role),
+                //_buildDetailItem('Staff ID', staff.id),
+                // _buildDetailItem('Role', staff.role),
                 _buildDetailItem('Email', staff.email),
                 _buildDetailItem('Phone', staff.phone),
-                _buildDetailItem('Department', staff.department),
+                //_buildDetailItem('Department', staff.department),
                 _buildDetailItem('Join Date',
                     '${staff.joinDate.day}/${staff.joinDate.month}/${staff.joinDate.year}'),
                 _buildDetailItem(
