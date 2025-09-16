@@ -6,6 +6,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_cli
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_services_manager.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_hover_underline_text.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_rating_reviews.dart';
+import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdminVetClinicPage extends StatefulWidget {
@@ -167,14 +168,28 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                           children: [
                             // Back button
                             IconButton(
-                              icon: const Icon(Icons.arrow_back),
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Color.fromARGB(255, 81, 115, 153),
+                              ),
                               onPressed: () {
-                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SuperAdminDesktopHomePage()),
+                                );
                               },
                             ),
                             InkWell(
                               onTap: () {
-                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const SuperAdminDesktopHomePage(),
+                                  ),
+                                );
                               },
                               child: Image.asset(
                                 'lib/images/PAWrtal_logo.png',

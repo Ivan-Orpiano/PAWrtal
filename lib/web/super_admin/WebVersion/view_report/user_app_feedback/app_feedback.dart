@@ -259,6 +259,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: const Row(
           children: [
@@ -284,6 +285,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
               _filterFeedback();
             },
           ),
+          
           IconButton(
             icon: Icon(
               Icons.analytics,
@@ -494,7 +496,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
-          
           borderRadius: BorderRadius.circular(8),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -504,7 +505,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
         DropdownMenuItem<T>(
           value: null,
           child: Text('All'),
-          
         ),
         ...items.map((item) => DropdownMenuItem<T>(
               value: item,
@@ -1123,7 +1123,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
             ? Colors.green[50]
             : Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
-        
         border: Border.all(
           color: widget.feedback.adminReply != null
               ? Colors.green[200]!

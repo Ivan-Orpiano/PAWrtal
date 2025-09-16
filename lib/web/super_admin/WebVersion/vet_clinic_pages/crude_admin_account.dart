@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 //import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
@@ -30,7 +31,19 @@ class _CrudeAdminAccountState extends State<CrudeAdminAccount>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 81, 115, 153)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const SuperAdminVetClinicPage()),
+            );
+          },
+          tooltip: 'Back',
+        ),
+        surfaceTintColor: Colors.transparent,
         title: const Text(
           'Admin Account Management',
           style: TextStyle(
@@ -803,8 +816,19 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
                           if (value?.isEmpty ?? true) {
                             return 'Phone number is required';
                           }
+                          if (!RegExp(r'^\d+$').hasMatch(value!)) {
+                            return 'Phone number must contain digits only';
+                          }
+                          if (value.length > 14) {
+                            return 'Phone number must be at most 14 digits';
+                          }
                           return null;
                         },
+                        // Only allow digits to be entered, and max 14 digits
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(14),
+                        ],
                       ),
                       const SizedBox(height: 20),
                       _buildSectionTitle('Account Details'),
@@ -922,6 +946,7 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -940,6 +965,7 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
         keyboardType: keyboardType,
         validator: validator,
         maxLines: maxLines,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon:

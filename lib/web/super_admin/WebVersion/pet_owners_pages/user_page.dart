@@ -159,6 +159,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+         surfaceTintColor: Colors.transparent,
         backgroundColor: Color.fromARGB(255, 248, 253, 255),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back,
