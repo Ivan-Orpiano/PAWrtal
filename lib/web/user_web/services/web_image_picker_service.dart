@@ -1,32 +1,35 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 
 class WebImagePickerService {
+  static final ImagePicker _picker = ImagePicker();
+
   static Future<ImagePickerResult?> pickImage() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true, // Important for web to get bytes
+      final XFile? result = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,  // Optional: limit image size
+        maxHeight: 1080, // Optional: limit image size
       );
 
-      if (result != null && result.files.single.bytes != null) {
-        PlatformFile file = result.files.single;
+      if (result != null) {
+        final String name = result.name;
         
         // For web, we work with bytes
         if (kIsWeb) {
+          final bytes = await result.readAsBytes();
           return ImagePickerResult.fromBytes(
-            bytes: file.bytes!,
-            name: file.name,
+            bytes: bytes,
+            name: name,
           );
         } 
-        // For desktop, we can still use file path
-        else if (file.path != null) {
+        // For mobile/desktop, we can use file path
+        else {
           return ImagePickerResult.fromFile(
-            file: File(file.path!),
-            name: file.name,
+            file: File(result.path),
+            name: name,
           );
         }
       }

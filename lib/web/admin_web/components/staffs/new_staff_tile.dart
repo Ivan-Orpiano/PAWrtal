@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
+// import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 class NewStaffTile extends StatelessWidget {
   final void Function(String name, String email, List<String> authorities,
@@ -592,32 +593,33 @@ class NewStaffTile extends StatelessWidget {
   }
 
   Widget _buildProfilePhotoSection({
-    required Uint8List? selectedImageBytes,
-    required ValueChanged<Uint8List?> onChange,
-  }) {
-    return Column(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            InkWell(
-              onTap: () async {
-                try {
-                  final result = await FilePicker.platform.pickFiles(
-                    type: FileType.image,
-                    withData: true,
-                  );
+  required Uint8List? selectedImageBytes,
+  required ValueChanged<Uint8List?> onChange,
+}) {
+  final ImagePicker _picker = ImagePicker();
 
-                  if (result != null && result.files.single.bytes != null) {
-                    final bytes = result.files.single.bytes!;
-                    final size = result.files.single.size;
+  return Column(
+    children: [
+      Stack(
+        clipBehavior: Clip.none,
+        children: [
+          InkWell(
+            onTap: () async {
+              try {
+                final XFile? result = await _picker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 1920,
+                  maxHeight: 1080,
+                );
 
-                    // 5MB limit
-                    if (size > 5 * 1024 * 1024) {
-                      return;
-                    }
-                    onChange(bytes);
+                if (result != null) {
+                  final bytes = await result.readAsBytes();
+                  // 5MB limit
+                  if (bytes.length > 5 * 1024 * 1024) {
+                    return;
                   }
+                  onChange(bytes);
+                }
                 } catch (_) {
                   // Handle error
                 }
