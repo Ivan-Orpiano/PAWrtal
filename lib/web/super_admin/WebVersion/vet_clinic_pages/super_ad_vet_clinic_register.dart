@@ -78,6 +78,17 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: AppBar(
+        
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color.fromARGB(255, 81, 115, 153),
+          ),
+          onPressed: () {
+            // Navigate back to MenuPage
+            Navigator.pop(context);
+          },
+        ),
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,

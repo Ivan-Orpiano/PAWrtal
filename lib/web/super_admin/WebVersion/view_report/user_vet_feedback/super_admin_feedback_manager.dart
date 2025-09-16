@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
+import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 
 class VetClinicFeedbackApp extends StatefulWidget {
   const VetClinicFeedbackApp({super.key});
@@ -618,6 +619,19 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 81, 115, 153)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const SuperAdminDesktopHomePage()),
+            );
+          },
+          tooltip: 'Back',
+        ),
+        surfaceTintColor: Colors.transparent,
         title: const Row(
           children: [
             Icon(Icons.admin_panel_settings,
@@ -631,7 +645,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             ),
           ],
         ),
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         elevation: 0,
         actions: [
           IconButton(

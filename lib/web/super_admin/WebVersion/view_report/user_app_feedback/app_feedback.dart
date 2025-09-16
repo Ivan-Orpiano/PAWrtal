@@ -1,4 +1,5 @@
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -259,6 +260,19 @@ class _ApplicationReportState extends State<ApplicationReport> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 81, 115, 153)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const SuperAdminDesktopHomePage()),
+            );
+          },
+          tooltip: 'Back',
+        ),
+        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: const Row(
           children: [
@@ -402,32 +416,40 @@ class _ApplicationReportState extends State<ApplicationReport> {
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search feedback...',
-              prefixIcon: Icon(Icons.search),
-              suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        searchQuery = '';
-                        _filterFeedback();
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+          Focus(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search feedback...',
+                prefixIcon: Icon(Icons.search),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          searchQuery = '';
+                          _filterFeedback();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide:
+                      BorderSide(color: const Color.fromRGBO(81, 115, 153, 1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                      color: const Color.fromRGBO(81, 115, 153, 1), width: 2),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              onChanged: (value) {
+                searchQuery = value;
+                _filterFeedback();
+              },
             ),
-            onChanged: (value) {
-              searchQuery = value;
-              _filterFeedback();
-            },
           ),
           SizedBox(height: 12),
           Row(
@@ -887,7 +909,7 @@ class FeedbackDetailsDialog extends StatefulWidget {
   });
 
   @override
-  _FeedbackDetailsDialogState createState() => _FeedbackDetailsDialogState();
+  State<FeedbackDetailsDialog> createState() => _FeedbackDetailsDialogState();
 }
 
 class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {

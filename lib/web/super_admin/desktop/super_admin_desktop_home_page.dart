@@ -14,6 +14,7 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
@@ -72,28 +73,31 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                 ),
               ],
               child: Obx(() => TextButton.icon(
-                onPressed: controller.isLoggingOut.value ? null : () {},
-                icon: controller.isLoggingOut.value
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Color.fromRGBO(81, 115, 153, 0.8),
-                          ),
-                        ),
-                      )
-                    : const Icon(Icons.account_circle,
-                        color: Color.fromRGBO(81, 115, 153, 0.8)),
-                label: Text(
-                  controller.isLoggingOut.value ? 'Processing...' : controller.userName,
-                  style: const TextStyle(color: Color.fromRGBO(81, 115, 153, 0.8)),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color.fromRGBO(81, 115, 153, 0.8),
-                ),
-              )),
+                    onPressed: controller.isLoggingOut.value ? null : () {},
+                    icon: controller.isLoggingOut.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color.fromRGBO(81, 115, 153, 0.8),
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.account_circle,
+                            color: Color.fromRGBO(81, 115, 153, 0.8)),
+                    label: Text(
+                      controller.isLoggingOut.value
+                          ? 'Processing...'
+                          : controller.userName,
+                      style: const TextStyle(
+                          color: Color.fromRGBO(81, 115, 153, 0.8)),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color.fromRGBO(81, 115, 153, 0.8),
+                    ),
+                  )),
             ),
           ),
         ],
