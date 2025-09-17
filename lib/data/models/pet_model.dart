@@ -10,6 +10,7 @@ class Pet {
   double? weight;
   String? createdAt;
   String? documentId;
+  String? gender;
 
   Pet({
     required this.petId,
@@ -23,6 +24,7 @@ class Pet {
     this.weight,
     this.createdAt,
     this.documentId,
+    this.gender,
   });
 
   Pet.fromMap(Map<String, dynamic> map) {
@@ -37,6 +39,7 @@ class Pet {
     weight = (map['weight'] as num?)?.toDouble() ?? 0.0;
     createdAt = map['\$createdAt'] ?? '';
     documentId = map['\$id'] ?? '';
+    gender = map['gender'] ?? '';
   }
 
   Map<String, dynamic> toMap() {
@@ -50,6 +53,7 @@ class Pet {
       'image': image,
       'notes': notes,
       'weight': weight,
+      'gender': gender,
     };
   }
 
@@ -65,6 +69,7 @@ class Pet {
     double? weight,
     String? createdAt,
     String? documentId,
+    String? gender,
   }) {
     return Pet(
       petId: petId ?? this.petId,
@@ -78,6 +83,7 @@ class Pet {
       weight: weight ?? this.weight,
       createdAt: createdAt ?? this.createdAt,
       documentId: documentId ?? this.documentId,
+      gender: gender ?? this.gender,
     );
   }
 }

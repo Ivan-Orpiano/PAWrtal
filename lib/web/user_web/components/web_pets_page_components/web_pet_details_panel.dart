@@ -172,6 +172,8 @@ class WebPetDetailsPanel extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(child: _buildInfoCard('Weight', 
                         pet.weight != null ? '${pet.weight} kg' : 'Not specified')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildInfoCard('Gender', pet.gender ?? 'Not specified')),
                     ],
                   ),
                   
