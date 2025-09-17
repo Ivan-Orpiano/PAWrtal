@@ -49,7 +49,7 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                         IconButton(
                           icon: const Icon(Icons.keyboard_arrow_left_rounded),
                           onPressed: () {
-                            //di ko alam kung saan yung routes or pano 
+                            controller.navigateToLogin();
                           },
                         ),
                       ],

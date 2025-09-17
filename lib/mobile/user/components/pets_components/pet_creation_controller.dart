@@ -24,6 +24,7 @@ class PetCreationController extends GetxController {
   final colorController = TextEditingController();
   final notesController = TextEditingController();
   final weightController = TextEditingController();
+  final genderController = TextEditingController();
 
   var imageFile = Rxn<File>();
   var imageUrl = ''.obs;
@@ -40,6 +41,7 @@ class PetCreationController extends GetxController {
       notesController.text = existingPet!.notes ?? '';
       weightController.text = existingPet!.weight?.toString() ?? '';
       imageUrl.value = existingPet!.image ?? '';
+      genderController.text = existingPet!.gender ?? '';
     }
   }
 
@@ -73,6 +75,7 @@ class PetCreationController extends GetxController {
         image: finalImageUrl,
         notes: notesController.text.trim(),
         weight: double.tryParse(weightController.text.trim()),
+        gender: genderController.text.trim(),
         createdAt: DateTime.now().toIso8601String(),
         documentId: '',
       );
@@ -133,6 +136,7 @@ class PetCreationController extends GetxController {
         color: colorController.text.trim(),
         notes: notesController.text.trim(),
         weight: double.tryParse(weightController.text.trim()),
+        gender: genderController.text.trim(),
         image: finalImageUrl,
         createdAt: existingPet!.createdAt,
         documentId: existingPet!.documentId,
@@ -180,6 +184,7 @@ class PetCreationController extends GetxController {
     colorController.dispose();
     notesController.dispose();
     weightController.dispose();
+    genderController.dispose();
     super.onClose();
   }
 }

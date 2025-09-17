@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class WebMobilePetDetailsPage extends StatelessWidget {
   final Pet pet;
-  
+
   const WebMobilePetDetailsPage({
     super.key,
     required this.pet,
@@ -142,7 +142,7 @@ class WebMobilePetDetailsPage extends StatelessWidget {
       } catch (e) {
         // Close loading dialog
         Navigator.pop(context);
-        
+
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -234,7 +234,7 @@ class WebMobilePetDetailsPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
 
                     // Pet Information
@@ -243,23 +243,29 @@ class WebMobilePetDetailsPage extends StatelessWidget {
                       "Breed",
                       pet.breed,
                     ),
-                    
+
                     _buildInfoRow(
                       Icons.category,
                       "Type",
                       pet.type,
                     ),
-                    
+
                     _buildInfoRow(
                       Icons.palette,
                       "Color",
                       pet.color ?? "Not specified",
                     ),
-                    
+
                     _buildInfoRow(
                       Icons.monitor_weight,
                       "Weight",
                       pet.weight != null ? "${pet.weight} kg" : "Not specified",
+                    ),
+
+                    _buildInfoRow(
+                      Icons.person_outline,
+                      "Gender",
+                      pet.gender ?? "Not specified",
                     ),
 
                     if (pet.notes != null && pet.notes!.isNotEmpty) ...[
@@ -341,7 +347,8 @@ class WebMobilePetDetailsPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                  color:
+                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(

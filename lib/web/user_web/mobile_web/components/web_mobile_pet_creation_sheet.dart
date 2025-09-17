@@ -216,6 +216,8 @@ class _WebMobilePetCreationSheetState extends State<WebMobilePetCreationSheet> {
                   required: false,
                 ),
                 
+                _buildGenderDropdown(),
+
                 _buildTextField(
                   controller.notesController,
                   "Notes",
@@ -334,6 +336,49 @@ class _WebMobilePetCreationSheetState extends State<WebMobilePetCreationSheet> {
       ),
     );
   }
+
+  Widget _buildGenderDropdown() {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: DropdownButtonFormField<String>(
+      value: controller.genderController.text.isEmpty
+          ? null
+          : controller.genderController.text,
+      decoration: InputDecoration(
+        labelText: "Gender",
+        prefixIcon: Icon(Icons.person_outline, color: Colors.blue.shade600),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color.fromARGB(255, 81, 115, 153),
+            width: 2,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'Male', child: Text('Male')),
+        DropdownMenuItem(value: 'Female', child: Text('Female')),
+      ],
+      onChanged: (value) {
+        controller.genderController.text = value ?? '';
+      },
+    ),
+  );
+}
 
   @override
   void dispose() {

@@ -42,7 +42,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
         setState(() {
           _selectedImage = result;
         });
-        
+
         // For mobile/desktop compatibility, create a temporary file
         if (result.isFile && result.file != null) {
           controller.pickImage(result.file!);
@@ -63,7 +63,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existingPet != null;
-    
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -102,9 +102,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                   ),
                 ],
               ),
-              
               const SizedBox(height: 24),
-              
               Form(
                 key: controller.formKey,
                 child: Column(
@@ -118,12 +116,14 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         final url = controller.imageUrl.value;
 
                         Widget imageWidget;
-                        
-                        if (_selectedImage?.isWeb == true && _selectedImage?.bytes != null) {
+
+                        if (_selectedImage?.isWeb == true &&
+                            _selectedImage?.bytes != null) {
                           // Show web-picked image
                           imageWidget = ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.memory(_selectedImage!.bytes!, fit: BoxFit.cover),
+                            child: Image.memory(_selectedImage!.bytes!,
+                                fit: BoxFit.cover),
                           );
                         } else if (file != null) {
                           // Show file-picked image (desktop/mobile)
@@ -146,7 +146,8 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF3498DB).withOpacity(0.1),
+                                  color:
+                                      const Color(0xFF3498DB).withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -202,7 +203,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         ),
                       ],
                     ),
-                    
+
                     Row(
                       children: [
                         Expanded(
@@ -234,7 +235,58 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Expanded(child: Container()), // Empty space
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Gender",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2C3E50),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                DropdownButtonFormField<String>(
+                                  value:
+                                      controller.genderController.text.isEmpty
+                                          ? null
+                                          : controller.genderController.text,
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                          color: Color(0xFF3498DB), width: 2),
+                                    ),
+                                    fillColor: Colors.grey[50],
+                                    filled: true,
+                                    contentPadding: const EdgeInsets.all(16),
+                                    prefixIcon: Icon(Icons.person_outline,
+                                        color: Colors.grey[500]),
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'Male', child: Text('Male')),
+                                    DropdownMenuItem(
+                                        value: 'Female', child: Text('Female')),
+                                  ],
+                                  onChanged: (value) {
+                                    controller.genderController.text =
+                                        value ?? '';
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ), // Empty space
                       ],
                     ),
 
@@ -252,40 +304,40 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                       width: double.infinity,
                       height: 50,
                       child: Obx(() => ElevatedButton(
-                        onPressed: controller.isLoading.value
-                            ? null
-                            : () async {
-                                if (isEditing) {
-                                  await controller.updatePet();
-                                } else {
-                                  await controller.createPet();
-                                }
-                                widget.onSuccess?.call();
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3498DB),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: controller.isLoading.value
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                isEditing ? "Update Pet" : "Save Pet",
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                            onPressed: controller.isLoading.value
+                                ? null
+                                : () async {
+                                    if (isEditing) {
+                                      await controller.updatePet();
+                                    } else {
+                                      await controller.createPet();
+                                    }
+                                    widget.onSuccess?.call();
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3498DB),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                      )),
+                            ),
+                            child: controller.isLoading.value
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    isEditing ? "Update Pet" : "Save Pet",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          )),
                     ),
                   ],
                 ),
@@ -329,7 +381,8 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF3498DB), width: 2),
+                borderSide:
+                    const BorderSide(color: Color(0xFF3498DB), width: 2),
               ),
               fillColor: Colors.grey[50],
               filled: true,
@@ -350,7 +403,8 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
 
   @override
   void dispose() {
-    Get.delete<PetCreationController>(tag: widget.existingPet?.petId ?? 'web_new');
+    Get.delete<PetCreationController>(
+        tag: widget.existingPet?.petId ?? 'web_new');
     super.dispose();
   }
 }
