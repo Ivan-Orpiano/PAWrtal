@@ -22,27 +22,6 @@ class _WebTagsState extends State<WebTags> {
     "Nearby",
     "Popular",
     "Recommended",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "Testing",
-    "End"
   ];
 
   double _getTextWidth(String text) {

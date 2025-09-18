@@ -138,7 +138,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
             children: [
               const WebTags(),
               const SizedBox(width: 12),
-              const WebFilter(),
               WebSearchBar(
                 onSearchChanged: _filterClinics,
               ),
