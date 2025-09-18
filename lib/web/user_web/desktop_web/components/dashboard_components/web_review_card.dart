@@ -45,7 +45,7 @@ class WebReviewCard extends StatelessWidget {
                   Text(
                     '★★★★★'.substring(0, review.rating.round()),
                     style: const TextStyle(
-                      color: Colors.black,
+                      color: Colors.amber,
                       fontSize: 14
                     ),
                   )
