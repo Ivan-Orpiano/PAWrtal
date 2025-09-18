@@ -11,7 +11,8 @@ class VetClinicRegister extends StatefulWidget {
   State<VetClinicRegister> createState() => _VetClinicRegisterState();
 }
 
-class _VetClinicRegisterState extends State<VetClinicRegister> {
+class _VetClinicRegisterState extends State<VetClinicRegister>
+    with TickerProviderStateMixin {
   final GetStorage _getStorage = GetStorage();
 
   final GlobalKey<FormState> inputForm = GlobalKey<FormState>();
@@ -36,6 +37,50 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
 
   bool isLoading = false;
   bool isPasswordVisible = false;
+
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.elasticOut,
+    ));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
 
   void _onVetNameChanged(String value) {
     setState(() {
@@ -72,228 +117,506 @@ class _VetClinicRegisterState extends State<VetClinicRegister> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    return Scaffold(
-      appBar: AppBar(
-        
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Color.fromARGB(255, 81, 115, 153),
-          ),
-          onPressed: () {
-            // Navigate back to MenuPage
-            Navigator.pop(context);
-          },
-        ),
-        surfaceTintColor: Colors.transparent,
-        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        centerTitle: true,
-        toolbarHeight: screenHeight * 0.1,
-        flexibleSpace: Container(
-          margin: const EdgeInsets.only(top: 15.0),
-          child: Center(
-            child: Image.asset(
-              "lib/images/PAWrtal_logo.png",
-              height: screenHeight * 0.08,
-              fit: BoxFit.contain,
+  Widget _buildAnimatedTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required int maxLength,
+    required Color borderColor,
+    required Function(String) onChanged,
+    required String? Function(String?) validator,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon,
+    IconData? prefixIcon,
+    int animationDelay = 0,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 600 + animationDelay),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: Opacity(
+            opacity: value,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromARGB(255, 81, 115, 153)
+                        .withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextFormField(
+                controller: controller,
+                maxLength: maxLength + 1,
+                obscureText: obscureText,
+                keyboardType: keyboardType,
+                onChanged: onChanged,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  labelText: labelText,
+                  labelStyle: TextStyle(
+                    color: borderColor == Colors.orange
+                        ? Colors.orange
+                        : const Color.fromARGB(255, 81, 115, 153),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  prefixIcon: prefixIcon != null
+                      ? Container(
+                          margin: const EdgeInsets.only(left: 12, right: 8),
+                          child: Icon(
+                            prefixIcon,
+                            color: const Color.fromARGB(255, 81, 115, 153),
+                            size: 22,
+                          ),
+                        )
+                      : null,
+                  suffixIcon: suffixIcon,
+                  counterText: "",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: borderColor, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: borderColor, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Color.fromARGB(255, 81, 115, 153),
+                      width: 2.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Colors.red, width: 1.5),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 18,
+                  ),
+                ),
+                validator: validator,
+              ),
             ),
           ),
-        ),
-      ),
-      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              const Text(
-                "Veterinary Registration",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      body: CustomScrollView(
+        slivers: [
+          // Modern App Bar
+          SliverAppBar(
+            expandedHeight: screenHeight * 0.15,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromARGB(255, 81, 115, 153)
+                        .withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              const SizedBox(height: 30),
-              Form(
-                key: inputForm,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: vetName,
-                      maxLength: vetNameLimit + 1,
-                      obscureText: false,
-                      onChanged: _onVetNameChanged,
-                      decoration: InputDecoration(
-                        labelText: "Veterinary Name: *",
-                        border: OutlineInputBorder(
-                            borderSide: BorderSide(color: vetNameBorderColor)),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: vetNameBorderColor)),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: vetNameBorderColor, width: 2)),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Veterinary Name is required.";
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      controller: vetAddress,
-                      maxLength: vetAddressLimit + 1,
-                      obscureText: false,
-                      onChanged: _onVetAddressChanged,
-                      decoration: InputDecoration(
-                        labelText: "Address: *",
-                        border: OutlineInputBorder(
-                            borderSide:
-                                BorderSide(color: vetAddressBorderColor)),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide:
-                                BorderSide(color: vetAddressBorderColor)),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: vetAddressBorderColor, width: 2)),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Address is required.";
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      controller: vetContact,
-                      maxLength: vetContactLimit + 1,
-                      obscureText: false,
-                      keyboardType: TextInputType.number,
-                      onChanged: _onVetContactChanged,
-                      decoration: InputDecoration(
-                        labelText: "Contact Number: *",
-                        border: OutlineInputBorder(
-                            borderSide:
-                                BorderSide(color: vetContactBorderColor)),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide:
-                                BorderSide(color: vetContactBorderColor)),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: vetContactBorderColor, width: 2)),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Contact Number is required';
-                        }
-                        if (!RegExp(r'^\d+$').hasMatch(value)) {
-                          return 'Contact Number must be numeric';
-                        }
-                        if (value.length != vetContactLimit) {
-                          return 'Contact Number must be exactly $vetContactLimit digits';
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      keyboardType: TextInputType.emailAddress,
-                      controller: vetEmail,
-                      maxLength: vetEmailLimit + 1,
-                      obscureText: false,
-                      onChanged: _onVetEmailChanged,
-                      decoration: InputDecoration(
-                        labelText: "Email: *",
-                        border: OutlineInputBorder(
-                            borderSide: BorderSide(color: vetEmailBorderColor)),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: vetEmailBorderColor)),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: vetEmailBorderColor, width: 2)),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Email is required";
-                        }
-                        if (!value.contains("@") || !value.contains(".")) {
-                          return "Enter a valid email address";
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      controller: vetPassword,
-                      maxLength: vetPasswordLimit,
-                      obscureText: !isPasswordVisible,
-                      onChanged: _onPasswordChanged,
-                      decoration: InputDecoration(
-                        labelText: "Password: *",
-                        border: OutlineInputBorder(
-                            borderSide:
-                                BorderSide(color: vetPasswordBorderColor)),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide:
-                                BorderSide(color: vetPasswordBorderColor)),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: vetPasswordBorderColor, width: 2)),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              isPasswordVisible = !isPasswordVisible;
-                            });
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Password is required";
-                        }
-                        if (value.length < 6) {
-                          return "Password must be at least 6 characters";
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: Color.fromARGB(255, 81, 115, 153),
+                  size: 20,
                 ),
-              ), // buildTextField("Veterinary Name *" ),
-              // buildTextField("Address *"),
-              // buildTextField("Email *",
-              //     keyboardType: TextInputType.emailAddress),
-              // buildTextField("Password *", adminPassword: true),
-              const SizedBox(height: 30),
-              isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromARGB(255, 81, 115, 153)
+                            .withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    "lib/images/PAWrtal_logo.png",
+                    height: 40,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Main Content
+          SliverToBoxAdapter(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+
+                      // Header Section with gradient background
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
                               const Color.fromARGB(255, 81, 115, 153),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                              const Color.fromARGB(255, 101, 133, 170)
+                                  .withOpacity(0.2),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color.fromARGB(255, 81, 115, 153)
+                                  .withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        onPressed: _registerClinic,
-                        child: const Text(
-                          "Register",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.local_hospital_rounded,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Expanded(
+                                  child: Text(
+                                    "Veterinary Registration",
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Join our network of trusted veterinary clinics",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white.withOpacity(0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-            ],
+
+                      const SizedBox(height: 40),
+
+                      // Form Section
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color.fromARGB(255, 81, 115, 153)
+                                  .withOpacity(0.08),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: inputForm,
+                          child: Column(
+                            children: [
+                              _buildAnimatedTextField(
+                                controller: vetName,
+                                labelText: "Veterinary Name ",
+                                maxLength: vetNameLimit,
+                                borderColor: vetNameBorderColor,
+                                onChanged: _onVetNameChanged,
+                                prefixIcon: Icons.business_rounded,
+                                animationDelay: 0,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Veterinary Name is required.";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              _buildAnimatedTextField(
+                                controller: vetAddress,
+                                labelText: "Address ",
+                                maxLength: vetAddressLimit,
+                                borderColor: vetAddressBorderColor,
+                                onChanged: _onVetAddressChanged,
+                                prefixIcon: Icons.location_on_rounded,
+                                animationDelay: 100,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Address is required.";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              _buildAnimatedTextField(
+                                controller: vetContact,
+                                labelText: "Contact Number ",
+                                maxLength: vetContactLimit,
+                                borderColor: vetContactBorderColor,
+                                onChanged: _onVetContactChanged,
+                                keyboardType: TextInputType.number,
+                                prefixIcon: Icons.phone_rounded,
+                                animationDelay: 200,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Contact Number is required';
+                                  }
+                                  if (!RegExp(r'^\d+$').hasMatch(value)) {
+                                    return 'Contact Number must be numeric';
+                                  }
+                                  if (value.length != vetContactLimit) {
+                                    return 'Contact Number must be exactly $vetContactLimit digits';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              _buildAnimatedTextField(
+                                controller: vetEmail,
+                                labelText: "Email ",
+                                maxLength: vetEmailLimit,
+                                borderColor: vetEmailBorderColor,
+                                onChanged: _onVetEmailChanged,
+                                keyboardType: TextInputType.emailAddress,
+                                prefixIcon: Icons.email_rounded,
+                                animationDelay: 300,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Email is required";
+                                  }
+                                  if (!value.contains("@") ||
+                                      !value.contains(".")) {
+                                    return "Enter a valid email address";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              _buildAnimatedTextField(
+                                controller: vetPassword,
+                                labelText: "Password ",
+                                maxLength: vetPasswordLimit,
+                                borderColor: vetPasswordBorderColor,
+                                onChanged: _onPasswordChanged,
+                                obscureText: !isPasswordVisible,
+                                prefixIcon: Icons.lock_rounded,
+                                animationDelay: 400,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    isPasswordVisible
+                                        ? Icons.visibility_rounded
+                                        : Icons.visibility_off_rounded,
+                                    color:
+                                        const Color.fromARGB(255, 81, 115, 153),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      isPasswordVisible = !isPasswordVisible;
+                                    });
+                                  },
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Password is required";
+                                  }
+                                  if (value.length < 6) {
+                                    return "Password must be at least 6 characters";
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Register Button
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: 0.8 + (0.2 * value),
+                            child: Container(
+                              width: double.infinity,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        const Color.fromARGB(255, 81, 115, 153)
+                                            .withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: isLoading
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            const Color.fromARGB(
+                                                255, 81, 115, 153),
+                                            const Color.fromARGB(
+                                                    255, 81, 115, 153)
+                                                .withOpacity(0.8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.white),
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                      onPressed: _registerClinic,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              const Color.fromARGB(
+                                                  255, 81, 115, 153),
+                                              const Color.fromARGB(
+                                                      255, 81, 115, 153)
+                                                  .withOpacity(0.8),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        child: const Center(
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.app_registration_rounded,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                "Register Clinic",
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
