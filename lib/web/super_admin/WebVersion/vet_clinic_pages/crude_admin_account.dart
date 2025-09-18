@@ -720,7 +720,7 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
+        height: MediaQuery.of(context).size.height * 0.6,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [
@@ -838,32 +838,32 @@ class _CreateAdminDialogState extends State<CreateAdminDialog> {
                         _buildPasswordField(),
                         const SizedBox(height: 20),
                       ],
-                      _buildSectionTitle('Clinic Information'),
-                      _buildTextField(
-                        controller: _clinicNameController,
-                        label: 'Vet Clinic Name',
-                        icon: Icons.local_hospital,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) {
-                            return 'Clinic name is required';
-                          }
-                          return null;
-                        },
-                      ),
+                      // _buildSectionTitle('Clinic Information'),
+                      // _buildTextField(
+                      //   controller: _clinicNameController,
+                      //   label: 'Vet Clinic Name',
+                      //   icon: Icons.local_hospital,
+                      //   validator: (value) {
+                      //     if (value?.isEmpty ?? true) {
+                      //       return 'Clinic name is required';
+                      //     }
+                      //     return null;
+                      //   },
+                      // ),
+                      // const SizedBox(height: 15),
+                      // _buildTextField(
+                      //   controller: _addressController,
+                      //   label: 'Clinic Address',
+                      //   icon: Icons.location_on,
+                      //   maxLines: 3,
+                      //   validator: (value) {
+                      //     if (value?.isEmpty ?? true) {
+                      //       return 'Address is required';
+                      //     }
+                      //     return null;
+                      //   },
+                      // ),
                       const SizedBox(height: 15),
-                      _buildTextField(
-                        controller: _addressController,
-                        label: 'Clinic Address',
-                        icon: Icons.location_on,
-                        maxLines: 3,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) {
-                            return 'Address is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 30),
                       _buildActionButton(),
                     ],
                   ),

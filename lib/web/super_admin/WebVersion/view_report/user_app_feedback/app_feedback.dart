@@ -560,9 +560,9 @@ class _ApplicationReportState extends State<ApplicationReport> {
 
   Widget _buildFeedbackCard(UserFeedback feedback) {
     return Card(
-      color: const Color.fromRGBO(248, 253, 255, 1),
+      color: const Color.fromRGBO(242, 250, 252, 1),
       margin: EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

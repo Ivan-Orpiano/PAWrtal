@@ -373,196 +373,207 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
 
     return Container(
       margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           bool isMobile = constraints.maxWidth < 768;
+          int crossAxisCount =
+              isMobile ? 1 : (constraints.maxWidth > 1200 ? 3 : 2);
 
-          if (isMobile) {
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredFeedbacks.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) =>
-                  _buildMobileFeedbackCard(_filteredFeedbacks[index]),
-            );
-          }
-
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(
-                    label: Text('Vet Clinic',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(
-                    label: Text('Customer',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(
-                    label: Text('Rating',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(
-                    label: Text('Status',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(
-                    label: Text('Date',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(
-                    label: Text('Delete Request',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(
-                    label: Text('Actions',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-              rows: _filteredFeedbacks
-                  .map((feedback) => _buildDataRow(feedback))
-                  .toList(),
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: isMobile ? 1.2 : 1.1,
             ),
+            itemCount: _filteredFeedbacks.length,
+            itemBuilder: (context, index) =>
+                _buildFeedbackCard(_filteredFeedbacks[index]),
           );
         },
       ),
     );
   }
 
-  Widget _buildMobileFeedbackCard(FeedbackItem feedback) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  feedback.vetClinicName,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+  Widget _buildFeedbackCard(FeedbackItem feedback) {
+    return Card(
+      elevation: 4,
+      color: const Color.fromRGBO(242, 250, 252, 1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      shadowColor: Colors.black.withOpacity(0.1),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    feedback.vetClinicName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildStatusChip(feedback.status),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Customer
+            _buildCardInfoRow(
+              Icons.person,
+              'Customer',
+              feedback.customerName,
+              const Color(0xFF517399),
+            ),
+            const SizedBox(height: 4),
+
+            // Rating
+            _buildCardInfoRow(
+              Icons.star,
+              'Rating',
+              null,
+              const Color(0xFFF39C12),
+              customWidget: _buildRatingStars(feedback.rating),
+            ),
+            const SizedBox(height: 4),
+
+            // Date
+            _buildCardInfoRow(
+              Icons.calendar_today,
+              'Date',
+              '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}',
+              const Color(0xFF7F8C8D),
+            ),
+            const SizedBox(height: 8),
+
+            // Delete Request Section
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: feedback.hasDeleteRequest
+                    ? const Color(0xFFFFE5E5)
+                    : const Color(0xFFE8F5E8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: feedback.hasDeleteRequest
+                      ? const Color(0xFFFF6B6B)
+                      : const Color(0xFF2ECC71),
+                  width: 1,
                 ),
               ),
-              _buildStatusChip(feedback.status),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('Customer: ${feedback.customerName}',
-              style: const TextStyle(color: Color(0xFF7F8C8D))),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _buildRatingStars(feedback.rating),
-              const SizedBox(width: 16),
-              Text(
-                '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}',
-                style: const TextStyle(color: Color(0xFF7F8C8D), fontSize: 12),
-              ),
-            ],
-          ),
-          if (feedback.hasDeleteRequest) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE5E5),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const Color(0xFFFF6B6B)),
-              ),
-              child: Text(
-                'Delete requested by ${feedback.adminRequestedBy}',
-                style: const TextStyle(color: Color(0xFFD63031), fontSize: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    feedback.hasDeleteRequest
+                        ? Icons.warning
+                        : Icons.check_circle,
+                    size: 16,
+                    color: feedback.hasDeleteRequest
+                        ? const Color(0xFFD63031)
+                        : const Color(0xFF27AE60),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      feedback.hasDeleteRequest
+                          ? 'Delete requested by ${feedback.adminRequestedBy}'
+                          : 'No delete request',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: feedback.hasDeleteRequest
+                            ? const Color(0xFFD63031)
+                            : const Color(0xFF27AE60),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: () => _showFeedbackDetails(feedback),
-                icon: const Icon(Icons.visibility, size: 16),
-                label: const Text('View'),
-                style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF517399)),
-              ),
-              if (feedback.hasDeleteRequest)
-                TextButton.icon(
-                  onPressed: () => _handleDeleteRequest(feedback),
-                  icon: const Icon(Icons.delete_outline, size: 16),
-                  label: const Text('Handle'),
-                  style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFE74C3C)),
+
+            const Spacer(flex: 16),
+
+            // Actions
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  onPressed: () => _showFeedbackDetails(feedback),
+                  icon: const Icon(Icons.visibility, size: 20),
+                  color: const Color(0xFF517399),
+                  tooltip: 'View Details',
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF517399).withOpacity(0.1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                if (feedback.hasDeleteRequest)
+                  IconButton(
+                    onPressed: () => _handleDeleteRequest(feedback),
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    color: const Color(0xFFE74C3C),
+                    tooltip: 'Handle Delete Request',
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFE74C3C).withOpacity(0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  DataRow _buildDataRow(FeedbackItem feedback) {
-    return DataRow(
-      cells: [
-        DataCell(
-          SizedBox(
-            width: 150,
-            child: Text(
-              feedback.vetClinicName,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-              overflow: TextOverflow.ellipsis,
-            ),
+  Widget _buildCardInfoRow(
+      IconData icon, String label, String? value, Color iconColor,
+      {Widget? customWidget}) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: iconColor),
+        const SizedBox(width: 8),
+        Text(
+          '$label:',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF7F8C8D),
           ),
         ),
-        DataCell(Text(feedback.customerName)),
-        DataCell(_buildRatingStars(feedback.rating)),
-        DataCell(_buildStatusChip(feedback.status)),
-        DataCell(Text(
-            '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}')),
-        DataCell(
-          feedback.hasDeleteRequest
-              ? Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFE5E5),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: const Color(0xFFFF6B6B)),
-                  ),
-                  child: Text(
-                    feedback.adminRequestedBy!,
-                    style:
-                        const TextStyle(color: Color(0xFFD63031), fontSize: 12),
-                  ),
-                )
-              : const Text('No', style: TextStyle(color: Color(0xFF7F8C8D))),
-        ),
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => _showFeedbackDetails(feedback),
-                icon: const Icon(Icons.visibility,
-                    color: Color.fromRGBO(81, 115, 153, 1)),
-                tooltip: 'View Details',
-              ),
-              if (feedback.hasDeleteRequest)
-                IconButton(
-                  onPressed: () => _handleDeleteRequest(feedback),
-                  icon: const Icon(Icons.delete_outline,
-                      color: Color(0xFFE74C3C)),
-                  tooltip: 'Handle Delete Request',
+        const SizedBox(width: 8),
+        Expanded(
+          child: customWidget ??
+              Text(
+                value ?? '',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
                 ),
-            ],
-          ),
+                overflow: TextOverflow.ellipsis,
+              ),
         ),
       ],
     );
@@ -794,12 +805,12 @@ class FeedbackDetailDialog extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context), //dito
+                  onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
                     backgroundColor: const Color(0xFF517399),
                     foregroundColor: Colors.white,
                   ),
-                  child: Text('Close'),
+                  child: const Text('Close'),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
@@ -921,7 +932,7 @@ class DeleteRequestDialog extends StatelessWidget {
             onDeny();
           },
           style: TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
-          child: Text('Deny Request'),
+          child: const Text('Deny Request'),
         ),
         ElevatedButton(
           onPressed: () {
