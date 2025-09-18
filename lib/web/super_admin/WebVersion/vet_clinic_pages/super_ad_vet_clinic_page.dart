@@ -1,5 +1,6 @@
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/crude_admin_account.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/crude_staff_account.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_album.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_description.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_location.dart';
@@ -177,7 +178,7 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                                   context,
                                   MaterialPageRoute(
                                       builder: (context) =>
-                                          const SuperAdminDesktopHomePage()),
+                                          const SuperAdminVetClinic()),
                                 );
                               },
                             ),
