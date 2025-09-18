@@ -462,6 +462,40 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             ),
             const SizedBox(height: 8),
 
+            // Feedback Content Section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FDFF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE0E6ED)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Feedback:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF517399),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    feedback.feedback,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
             // Delete Request Section
             Container(
               padding: const EdgeInsets.all(8),
@@ -507,26 +541,13 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
               ),
             ),
 
-            const Spacer(flex: 16),
+            const SizedBox(height: 8),
 
-            // Actions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  onPressed: () => _showFeedbackDetails(feedback),
-                  icon: const Icon(Icons.visibility, size: 20),
-                  color: const Color(0xFF517399),
-                  tooltip: 'View Details',
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFF517399).withOpacity(0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (feedback.hasDeleteRequest)
+            // Actions - Only delete button if there's a delete request
+            if (feedback.hasDeleteRequest)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
                   IconButton(
                     onPressed: () => _handleDeleteRequest(feedback),
                     icon: const Icon(Icons.delete_outline, size: 20),
@@ -539,8 +560,8 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                       ),
                     ),
                   ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
