@@ -13,6 +13,7 @@ enum AuthStatus {
 
 class AppWriteProvider {
   Client client = Client();
+  Client get appwriteClient => client;
 
   Account? account;
   Storage? storage;

@@ -1,3 +1,4 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
@@ -9,6 +10,7 @@ import '../models/appointment_model.dart';
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
   AuthRepository(this.appWriteProvider);
+  Client get client => appWriteProvider.appwriteClient;
 
   Future<models.User> signup(Map map) => appWriteProvider.signup(map);
   Future<models.Document> createUser(Map map) =>
