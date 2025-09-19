@@ -68,7 +68,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
         ),
         actions: const [
           Padding(
-            padding: EdgeInsets.only(right: 60),
+            padding: EdgeInsets.only(right: 65),
             child: Row(
               children: [
                 WebNotificationIcon(),

@@ -435,6 +435,16 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                       ),
                     ),
                     const Spacer(),
+                    // Add Rate & Review button for completed appointments
+                    if (appointment.status == 'completed') ...[
+                      IconButton(
+                        onPressed: () => _showRatingDialog(appointment, clinic, pet),
+                        icon: const Icon(Icons.rate_review),
+                        color: Colors.amber,
+                        tooltip: 'Rate & Review',
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Icon(
                       Icons.keyboard_arrow_right_rounded,
                       color: Colors.grey.shade400,
@@ -975,7 +985,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                     const SizedBox(height: 30),
 
                     // Action Buttons
-                    _buildDialogActionButtons(appointment),
+                    _buildDialogActionButtons(appointment, clinic, pet),
                   ],
                 ),
               ),
@@ -1062,9 +1072,35 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     );
   }
 
-  Widget _buildDialogActionButtons(Appointment appointment) {
+  Widget _buildDialogActionButtons(Appointment appointment, Clinic? clinic, Pet? pet) {
     return Column(
       children: [
+        // Rate & Review button for completed appointments
+        if (appointment.status == 'completed')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context); // Close current dialog
+                _showRatingDialog(appointment, clinic, pet);
+              },
+              icon: const Icon(Icons.rate_review),
+              label: const Text('Rate & Review'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade50,
+                foregroundColor: Colors.amber.shade700,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.amber.shade200),
+                ),
+              ),
+            ),
+          ),
+
+        if (appointment.status == 'completed')
+          const SizedBox(height: 12),
+
         // Cancel button for eligible appointments
         if (appointmentController.canCancelAppointment(appointment))
           SizedBox(
@@ -1109,7 +1145,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     );
   }
 
-  void _showCancelDialog(Appointment appointment) {
+    void _showCancelDialog(Appointment appointment) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1207,5 +1243,288 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         ),
       ),
     );
+  }
+
+  void _showRatingDialog(Appointment appointment, Clinic? clinic, Pet? pet) {
+    showDialog(
+      context: context,
+      builder: (context) => _buildRatingDialog(appointment, clinic, pet),
+    );
+  }
+
+  Widget _buildRatingDialog(Appointment appointment, Clinic? clinic, Pet? pet) {
+    int selectedRating = 0;
+    final TextEditingController reviewController = TextEditingController();
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: 500,
+            constraints: const BoxConstraints(maxHeight: 600),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.amber.shade50,
+                        Colors.orange.shade50,
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      const Text(
+                        'Rate & Review',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.rate_review, color: Colors.amber),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Appointment Info Summary
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.local_hospital,
+                                    color: Colors.blue.shade600,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      clinic?.clinicName ?? 'Unknown Clinic',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${appointment.service} • ${pet?.name ?? appointment.petId}',
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('MMM dd, yyyy').format(appointment.dateTime),
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Rating Section
+                        const Text(
+                          'How would you rate your experience?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(5, (index) {
+                              return GestureDetector(
+                                onTap: () => setState(() => selectedRating = index + 1),
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    selectedRating > index ? Icons.star : Icons.star_border,
+                                    color: selectedRating > index ? Colors.amber : Colors.grey.shade400,
+                                    size: 40,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+
+                        if (selectedRating > 0) ...[
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Text(
+                              _getRatingText(selectedRating),
+                              style: TextStyle(
+                                color: _getRatingColor(selectedRating),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+
+                        // Review Section
+                        const Text(
+                          'Share your experience (Optional)',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: TextField(
+                            controller: reviewController,
+                            maxLines: 4,
+                            maxLength: 500,
+                            decoration: InputDecoration(
+                              hintText: 'Tell us about your visit, the service quality, staff friendliness, etc...',
+                              hintStyle: TextStyle(color: Colors.grey.shade500),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(16),
+                              counterStyle: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Submit Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: selectedRating > 0 
+                              ? () => _submitRating(appointment, selectedRating, reviewController.text, clinic)
+                              : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: selectedRating > 0 ? Colors.amber : Colors.grey.shade300,
+                              foregroundColor: selectedRating > 0 ? Colors.white : Colors.grey.shade500,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: selectedRating > 0 ? 2 : 0,
+                            ),
+                            child: Text(
+                              selectedRating > 0 ? 'Submit Review' : 'Select a Rating',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getRatingText(int rating) {
+    switch (rating) {
+      case 1: return 'Poor';
+      case 2: return 'Fair';
+      case 3: return 'Good';
+      case 4: return 'Very Good';
+      case 5: return 'Excellent';
+      default: return '';
+    }
+  }
+
+  Color _getRatingColor(int rating) {
+    switch (rating) {
+      case 1: return Colors.red;
+      case 2: return Colors.orange;
+      case 3: return Colors.amber;
+      case 4: return Colors.lightGreen;
+      case 5: return Colors.green;
+      default: return Colors.grey;
+    }
+  }
+
+  void _submitRating(Appointment appointment, int rating, String review, Clinic? clinic) {
+    // Here you would typically send the rating and review to your backend
+    // For now, we'll just show a success message
+    Navigator.pop(context); // Close rating dialog
+    
+    Get.snackbar(
+      'Review Submitted!',
+      'Thank you for your feedback. Your ${rating}-star review helps other pet owners.',
+      backgroundColor: Colors.green.shade50,
+      colorText: Colors.green.shade700,
+      icon: const Icon(Icons.check_circle, color: Colors.green),
+      duration: const Duration(seconds: 3),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+
+    // You can add additional logic here to:
+    // 1. Save the rating to your database
+    // 2. Update the appointment model to include rating info
+    // 3. Send the review to the clinic
+    // 4. Update any clinic rating averages
+    
+    print('Rating submitted: $rating stars');
+    print('Review: $review');
+    print('Appointment ID: ${appointment.documentId}');
+    print('Clinic: ${clinic?.clinicName}');
   }
 }
