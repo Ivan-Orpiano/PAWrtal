@@ -130,370 +130,508 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
 
     bool isEditing = false;
 
+    // Replace the existing Scaffold with this updated version
     return Scaffold(
-      // appBar: AppBar(
-      //   actions: [
-      //     IconButton(
-      //       icon: Icon(isEditing ? Icons.check : Icons.edit),
-      //       onPressed: () {
-      //         setState(() {
-      //           if (isEditing) {
-      //             //BACKEND     //palitan lahat ng Text() widgets for future purposes
-      //           } else {
-      //             isEditing = !isEditing;
-      //           }
-      //         });
-      //       },
-      //     ),
-      //   ],
-      // ),
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          ListView(
-            controller: _scrollController,
-            children: [
-              Container(
-                height: 81,
-                decoration: const BoxDecoration(
-                    border: Border(
-                        bottom: BorderSide(color: Colors.black26, width: 1))),
-                child: Column(
-                  children: [
-                    Container(
+          // Add padding bottom to prevent content from being hidden behind fixed nav
+          Padding(
+            padding:
+                const EdgeInsets.only(bottom: 80), // Space for fixed bottom nav
+            child: ListView(
+              controller: _scrollController,
+              children: [
+                Container(
+                  height: 81,
+                  decoration: const BoxDecoration(
+                      border: Border(
+                          bottom: BorderSide(color: Colors.black26, width: 1))),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: getResponsivePadding(screenWidth)),
+                        child: SizedBox(
+                          height: 80,
+                          child: Row(
+                            children: [
+                              // Back button
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Color.fromARGB(255, 81, 115, 153),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SuperAdminVetClinic()),
+                                  );
+                                },
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SuperAdminDesktopHomePage(),
+                                    ),
+                                  );
+                                },
+                                child: Image.asset(
+                                  'lib/images/PAWrtal_logo.png',
+                                  width: 150,
+                                  height: 100,
+                                ),
+                              ),
+                              const Spacer(
+                                flex: 1,
+                              ),
+                              const Spacer(
+                                flex: 1,
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Container(
                       padding: EdgeInsets.symmetric(
                           horizontal: getResponsivePadding(screenWidth)),
-                      child: SizedBox(
-                        height: 80,
-                        child: Row(
-                          children: [
-                            // Back button
-                            IconButton(
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                color: Color.fromARGB(255, 81, 115, 153),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                "Qualipaws Animal Health Clinic",
+                                style: TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.bold),
                               ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const SuperAdminVetClinic()),
-                                );
-                              },
-                            ),
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const SuperAdminDesktopHomePage(),
+                              const Spacer(),
+                              IconButton(
+                                //edit icon
+                                icon: const Icon(Icons.edit),
+                                onPressed: () {
+                                  // backend 'to sa edit
+                                },
+                              ),
+                            ],
+                          ),
+                          VetProfileAlbum(
+                            key: galleryKeySA,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                SingleChildScrollView(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: getResponsivePadding(screenWidth)),
+                    child: Row(
+                      children: [
+                        //left side
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                              maxWidth: getLeftSideWidth(screenWidth)),
+                          child: Column(children: [
+                            Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.asset(
+                                    'lib/images/pfp.jpg',
+                                    height: 40,
+                                    width: 40,
                                   ),
-                                );
-                              },
-                              child: Image.asset(
-                                'lib/images/PAWrtal_logo.png',
-                                width: 150,
-                                height: 100,
+                                ),
+                                const SizedBox(width: 18),
+                                const Text(
+                                  "Qualipaws Veterinary Clinic",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16),
+                                )
+                              ],
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 32),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ),
-                            const Spacer(
-                              flex: 1,
+                            const VetProfileDescription(),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 32),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
-                            const Spacer(
-                              flex: 1,
-                            )
-                          ],
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Services offered',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 22),
+                                  )
+                                ],
+                              ),
+                            ),
+                            VetProfileServices(key: servicesKeySA),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 32),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                            VetProfileRatingReview(key: reviewsKeySA),
+                          ]),
+                        ),
+                        //box that seperates left and right
+                        const Flexible(
+                          flex: 2,
+                          child: SizedBox(width: 125),
+                        ),
+
+                        //right side
+                      ],
+                    ),
+                  ),
+                ),
+
+
+
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: getResponsivePadding(screenWidth)),
+                  child: const Padding(
+                    padding: EdgeInsets.only(top: 64, bottom: 64),
+                    child: Divider(
+                      height: 1,
+                      thickness: 0.5,
+                    ),
+                  ),
+                ),
+                VetProfileLocation(
+                  key: locationKeySA,
+                ),
+                const SizedBox(height: 40),
+
+      
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: getResponsivePadding(screenWidth),
+                      vertical: 24,
+                    ),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(180, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          "Delete Admin",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () {
+                          //backend delete
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: getResponsivePadding(screenWidth),
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CrudeAdminAccount(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 56,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color.fromRGBO(81, 115, 153, 0.9),
+                                Color.fromRGBO(81, 115, 153, 0.7),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color.fromRGBO(81, 115, 153, 0.3),
+                                offset: const Offset(0, 2),
+                                blurRadius: 6,
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              // Animated background circles
+                              Positioned(
+                                right: -8,
+                                top: -8,
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.15),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: -6,
+                                bottom: -6,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                              ),
+                              // Main content
+                              Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.admin_panel_settings,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Flexible(
+                                      child: Text(
+                                        "Admin Accounts",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Staff Account Button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CrudeStaffAccount(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 56,
+                          margin: const EdgeInsets.only(left: 8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color.fromRGBO(81, 115, 153, 0.9),
+                                Color.fromRGBO(81, 115, 153, 0.7),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color.fromRGBO(81, 115, 153, 0.3),
+                                offset: const Offset(0, 2),
+                                blurRadius: 6,
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              // Animated background circles
+                              Positioned(
+                                left: -8,
+                                top: -8,
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.15),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                right: -6,
+                                bottom: -6,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                              ),
+                              // Main content
+                              Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.people,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Flexible(
+                                      child: Text(
+                                        "Staff Accounts",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: getResponsivePadding(screenWidth)),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              "Qualipaws Animal Health Clinic",
-                              style: TextStyle(
-                                  fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              //edit icon
-                              icon: const Icon(Icons.edit),
-                              onPressed: () {
-                                // backend 'to sa edit
-                              },
-                            ),
-                          ],
-                        ),
-                        VetProfileAlbum(
-                          key: galleryKeySA,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              SingleChildScrollView(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: getResponsivePadding(screenWidth)),
-                  child: Row(
-                    children: [
-                      //left side
-                      ConstrainedBox(
-                        constraints: BoxConstraints(
-                            maxWidth: getLeftSideWidth(screenWidth)),
-                        child: Column(children: [
-                          Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: Image.asset(
-                                  'lib/images/pfp.jpg',
-                                  height: 40,
-                                  width: 40,
-                                ),
-                              ),
-                              const SizedBox(width: 18),
-                              const Text(
-                                "Qualipaws Veterinary Clinic",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 16),
-                              )
-                            ],
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          const VetProfileDescription(),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Services offered',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 22),
-                                )
-                              ],
-                            ),
-                          ),
-                          VetProfileServices(key: servicesKeySA),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: Divider(
-                                height: 1,
-                                thickness: 0.5,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          VetProfileRatingReview(key: reviewsKeySA),
-                        ]),
-                      ),
-                      //box that seperates left and right
-                      const Flexible(
-                        flex: 2,
-                        child: SizedBox(width: 125),
-                      ),
-
-                      //right side
-                    ],
-                  ),
-                ),
-              ),
-
-              SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 32),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      double buttonWidth =
-                          constraints.maxWidth < 400 ? double.infinity : 220;
-                      double spacing = constraints.maxWidth < 600 ? 16 : 60;
-                      return Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: spacing,
-                        runSpacing: 16,
-                        children: [
-                          SizedBox(
-                            width: buttonWidth,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const CrudeAdminAccount(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: Size(buttonWidth, 50),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                foregroundColor: Colors.white,
-                                backgroundColor:
-                                    const Color.fromRGBO(81, 115, 153, 0.8),
-                              ),
-                              child: const Text(
-                                "Manage Admin Accounts",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: buttonWidth,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const CrudeStaffAccount(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: Size(buttonWidth, 50),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                ),
-                                foregroundColor: Colors.white,
-                                backgroundColor:
-                                    const Color.fromRGBO(81, 115, 153, 0.8),
-                              ),
-                              child: const Text(
-                                "Manage Staff Accounts",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: getResponsivePadding(screenWidth)),
-                child: const Padding(
-                  padding: EdgeInsets.only(top: 64, bottom: 64),
-                  child: Divider(
-                    height: 1,
-                    thickness: 0.5,
-                  ),
-                ),
-              ),
-              VetProfileLocation(
-                key: locationKeySA,
-              ),
-              const SizedBox(height: 40),
-
-              // delete admin button
-              SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: getResponsivePadding(screenWidth),
-                    vertical: 24,
-                  ),
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(180, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        "Delete Admin",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: () {
-                        //backend delete
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+
+          // Existing scroll-based navigation (unchanged)
           if (_showWidget)
             Positioned(
-                child: Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: getResponsivePadding(screenWidth)),
-              height: 80,
-              decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                      bottom: BorderSide(color: Colors.black26, width: 1))),
-              child: Row(
-                spacing: 18,
-                children: [
-                  VetHoverUnderlineText(
-                    text: "Gallery",
-                    onTap: () => _scrollToSection(galleryKeySA),
-                  ),
-                  VetHoverUnderlineText(
-                    text: "Services",
-                    onTap: () => _scrollToSection(servicesKeySA),
-                  ),
-                  VetHoverUnderlineText(
-                    text: "Reviews & Ratings",
-                    onTap: () => _scrollToSection(reviewsKeySA),
-                  ),
-                  VetHoverUnderlineText(
-                    text: "Location",
-                    onTap: () => _scrollToSection(locationKeySA),
-                  )
-                ],
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: getResponsivePadding(screenWidth)),
+                height: 80,
+                decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                        bottom: BorderSide(color: Colors.black26, width: 1))),
+                child: Row(
+                  spacing: 18,
+                  children: [
+                    VetHoverUnderlineText(
+                      text: "Gallery",
+                      onTap: () => _scrollToSection(galleryKeySA),
+                    ),
+                    VetHoverUnderlineText(
+                      text: "Services",
+                      onTap: () => _scrollToSection(servicesKeySA),
+                    ),
+                    VetHoverUnderlineText(
+                      text: "Reviews & Ratings",
+                      onTap: () => _scrollToSection(reviewsKeySA),
+                    ),
+                    VetHoverUnderlineText(
+                      text: "Location",
+                      onTap: () => _scrollToSection(locationKeySA),
+                    )
+                  ],
+                ),
               ),
-            )),
+            ),
         ],
       ),
     );

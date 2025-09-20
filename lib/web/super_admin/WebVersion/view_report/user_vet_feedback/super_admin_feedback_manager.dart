@@ -3,18 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 
-class VetClinicFeedbackApp extends StatefulWidget {
-  const VetClinicFeedbackApp({super.key});
+class VetClinicDeletionManager extends StatefulWidget {
+  const VetClinicDeletionManager({super.key});
   @override
-  State<VetClinicFeedbackApp> createState() => _VetClinicFeedbackAppState();
+  State<VetClinicDeletionManager> createState() =>
+      _VetClinicDeletionManagerState();
 }
 
-class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
+class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedFilter = 'All';
   String _selectedStatus = 'All';
-  List<FeedbackItem> _allFeedbacks = [];
-  List<FeedbackItem> _filteredFeedbacks = [];
+  String _selectedReason = 'All';
+  List<DeletionRequestItem> _allRequests = [];
+  List<DeletionRequestItem> _filteredRequests = [];
   final bool _isLoading = false;
   final int _currentPage = 1;
   final int _itemsPerPage = 10;
@@ -23,125 +24,138 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   void initState() {
     super.initState();
     _loadSampleData();
-    _filteredFeedbacks = _allFeedbacks;
+    _filteredRequests = _allRequests;
   }
 
   void _loadSampleData() {
-    _allFeedbacks = [
-      FeedbackItem(
+    _allRequests = [
+      DeletionRequestItem(
         id: '001',
         vetClinicName: 'Paws & Claws Veterinary Clinic',
-        customerName: 'John Smith',
-        feedback:
-            'Excellent service! Dr. Martinez was very professional and caring.',
-        rating: 5,
+        requestedBy: 'Dr. Sarah Martinez',
+        reason: 'Business Closure',
+        description:
+            'The veterinary clinic is permanently closing due to retirement. All patient records have been transferred to partner clinics.',
         status: 'Pending',
-        date: DateTime.now().subtract(const Duration(hours: 2)),
-        hasDeleteRequest: true,
-        adminRequestedBy: 'Admin Sarah',
+        dateRequested: DateTime.now().subtract(const Duration(hours: 2)),
+        businessLicense: 'VET-2023-001',
+        contactEmail: 'sarah.martinez@pawsclaws.com',
+        contactPhone: '+1 (555) 123-4567',
       ),
-      FeedbackItem(
+      DeletionRequestItem(
         id: '002',
         vetClinicName: 'City Pet Hospital',
-        customerName: 'Emily Johnson',
-        feedback: 'Long wait time, but good treatment for my cat.',
-        rating: 3,
-        status: 'Approved',
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        hasDeleteRequest: false,
+        requestedBy: 'Admin Emily Johnson',
+        reason: 'Policy Violation',
+        description:
+            'Multiple reports of unprofessional conduct and violation of platform terms of service.',
+        status: 'Under Review',
+        dateRequested: DateTime.now().subtract(const Duration(days: 1)),
+        businessLicense: 'VET-2023-002',
+        contactEmail: 'admin@citypethospital.com',
+        contactPhone: '+1 (555) 234-5678',
       ),
-      FeedbackItem(
+      DeletionRequestItem(
         id: '003',
         vetClinicName: 'Animal Care Center',
-        customerName: 'Michael Brown',
-        feedback: 'Poor service. Staff was rude and unprofessional.',
-        rating: 1,
-        status: 'Pending',
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        hasDeleteRequest: true,
-        adminRequestedBy: 'Admin Mike',
+        requestedBy: 'Dr. Michael Brown',
+        reason: 'Relocation',
+        description:
+            'Moving to a different service area outside our platform coverage. Will continue operations under new management.',
+        status: 'Approved',
+        dateRequested: DateTime.now().subtract(const Duration(days: 2)),
+        businessLicense: 'VET-2023-003',
+        contactEmail: 'm.brown@animalcare.com',
+        contactPhone: '+1 (555) 345-6789',
+        dateProcessed: DateTime.now().subtract(const Duration(hours: 12)),
       ),
-      FeedbackItem(
+      DeletionRequestItem(
         id: '004',
         vetClinicName: 'Happy Tails Veterinary',
-        customerName: 'Sarah Wilson',
-        feedback:
-            'Great facilities and friendly staff. My dog loves coming here!',
-        rating: 5,
-        status: 'Approved',
-        date: DateTime.now().subtract(const Duration(days: 3)),
-        hasDeleteRequest: false,
+        requestedBy: 'Dr. Sarah Wilson',
+        reason: 'Business Closure',
+        description:
+            'Economic difficulties due to recent market changes. Unable to maintain operations.',
+        status: 'Denied',
+        dateRequested: DateTime.now().subtract(const Duration(days: 3)),
+        businessLicense: 'VET-2023-004',
+        contactEmail: 'info@happytails.vet',
+        contactPhone: '+1 (555) 456-7890',
+        dateProcessed: DateTime.now().subtract(const Duration(days: 1)),
+        denialReason: 'Insufficient documentation provided',
       ),
-      FeedbackItem(
+      DeletionRequestItem(
         id: '005',
         vetClinicName: 'Pet Wellness Center',
-        customerName: 'David Lee',
-        feedback: 'Average experience. Could improve appointment scheduling.',
-        rating: 3,
-        status: 'Under Review',
-        date: DateTime.now().subtract(const Duration(days: 4)),
-        hasDeleteRequest: true,
-        adminRequestedBy: 'Admin Lisa',
+        requestedBy: 'Admin David Lee',
+        reason: 'Data Privacy Request',
+        description:
+            'GDPR compliance request for complete data removal from all systems.',
+        status: 'Pending',
+        dateRequested: DateTime.now().subtract(const Duration(days: 4)),
+        businessLicense: 'VET-2023-005',
+        contactEmail: 'privacy@petwellness.com',
+        contactPhone: '+1 (555) 567-8901',
       ),
     ];
-    _filteredFeedbacks = _allFeedbacks;
+    _filteredRequests = _allRequests;
   }
 
-  void _filterFeedbacks() {
+  void _filterRequests() {
     setState(() {
-      _filteredFeedbacks = _allFeedbacks.where((feedback) {
+      _filteredRequests = _allRequests.where((request) {
         bool matchesSearch = _searchController.text.isEmpty ||
-            feedback.vetClinicName
+            request.vetClinicName
                 .toLowerCase()
                 .contains(_searchController.text.toLowerCase()) ||
-            feedback.customerName
+            request.requestedBy
                 .toLowerCase()
                 .contains(_searchController.text.toLowerCase());
 
-        bool matchesFilter = _selectedFilter == 'All' ||
-            (_selectedFilter == 'With Delete Request' &&
-                feedback.hasDeleteRequest) ||
-            (_selectedFilter == 'No Delete Request' &&
-                !feedback.hasDeleteRequest);
-
         bool matchesStatus =
-            _selectedStatus == 'All' || feedback.status == _selectedStatus;
+            _selectedStatus == 'All' || request.status == _selectedStatus;
 
-        return matchesSearch && matchesFilter && matchesStatus;
+        bool matchesReason =
+            _selectedReason == 'All' || request.reason == _selectedReason;
+
+        return matchesSearch && matchesStatus && matchesReason;
       }).toList();
     });
   }
 
-  void _showFeedbackDetails(FeedbackItem feedback) {
+  void _showRequestDetails(DeletionRequestItem request) {
     showDialog(
       context: context,
-      builder: (context) => FeedbackDetailDialog(feedback: feedback),
+      builder: (context) => RequestDetailDialog(request: request),
     );
   }
 
-  void _handleDeleteRequest(FeedbackItem feedback) {
+  void _handleDeletionRequest(DeletionRequestItem request) {
     showDialog(
       context: context,
-      builder: (context) => DeleteRequestDialog(
-        feedback: feedback,
-        onApprove: () => _approveDeletion(feedback),
-        onDeny: () => _denyDeletion(feedback),
+      builder: (context) => DeleteRequestActionDialog(
+        request: request,
+        onApprove: () => _approveDeletion(request),
+        onDeny: (reason) => _denyDeletion(request, reason),
       ),
     );
   }
 
-  void _approveDeletion(FeedbackItem feedback) {
+  void _approveDeletion(DeletionRequestItem request) {
     setState(() {
-      _allFeedbacks.removeWhere((item) => item.id == feedback.id);
-      _filterFeedbacks();
+      request.status = 'Approved';
+      request.dateProcessed = DateTime.now();
+      _filterRequests();
     });
-    _showSnackBar('Deletion approved and feedback removed', Colors.green);
+    _showSnackBar('Deletion request approved successfully', Colors.green);
   }
 
-  void _denyDeletion(FeedbackItem feedback) {
+  void _denyDeletion(DeletionRequestItem request, String reason) {
     setState(() {
-      feedback.hasDeleteRequest = false;
-      feedback.adminRequestedBy = null;
+      request.status = 'Denied';
+      request.dateProcessed = DateTime.now();
+      request.denialReason = reason;
+      _filterRequests();
     });
     _showSnackBar('Deletion request denied', Colors.orange);
   }
@@ -157,14 +171,13 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   }
 
   Widget _buildDashboardStats() {
-    int totalFeedbacks = _allFeedbacks.length;
-    int pendingRequests = _allFeedbacks.where((f) => f.hasDeleteRequest).length;
-    int approvedFeedbacks =
-        _allFeedbacks.where((f) => f.status == 'Approved').length;
-    double avgRating = _allFeedbacks.isEmpty
-        ? 0
-        : _allFeedbacks.map((f) => f.rating).reduce((a, b) => a + b) /
-            _allFeedbacks.length;
+    int totalRequests = _allRequests.length;
+    int pendingRequests =
+        _allRequests.where((r) => r.status == 'Pending').length;
+    int approvedRequests =
+        _allRequests.where((r) => r.status == 'Approved').length;
+    int underReviewRequests =
+        _allRequests.where((r) => r.status == 'Under Review').length;
 
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
@@ -180,14 +193,14 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             crossAxisSpacing: 16,
             childAspectRatio: isMobile ? 1.2 : 1.5,
             children: [
-              _buildStatCard('Total Feedbacks', totalFeedbacks.toString(),
-                  Icons.feedback, const Color(0xFF4A90E2)),
-              _buildStatCard('Delete Requests', pendingRequests.toString(),
-                  Icons.delete_outline, const Color(0xFFE74C3C)),
-              _buildStatCard('Approved', approvedFeedbacks.toString(),
+              _buildStatCard('Total Requests', totalRequests.toString(),
+                  Icons.delete_forever, const Color(0xFF4A90E2)),
+              _buildStatCard('Pending', pendingRequests.toString(),
+                  Icons.pending, const Color(0xFFF39C12)),
+              _buildStatCard('Approved', approvedRequests.toString(),
                   Icons.check_circle, const Color(0xFF2ECC71)),
-              _buildStatCard('Avg Rating', avgRating.toStringAsFixed(1),
-                  Icons.star, const Color(0xFFF39C12)),
+              _buildStatCard('Under Review', underReviewRequests.toString(),
+                  Icons.reviews, const Color(0xFF9B59B6)),
             ],
           );
         },
@@ -257,9 +270,9 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _buildFilterDropdown()),
-                    const SizedBox(width: 16),
                     Expanded(child: _buildStatusDropdown()),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildReasonDropdown()),
                   ],
                 ),
               ],
@@ -270,9 +283,9 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             children: [
               Expanded(flex: 3, child: _buildSearchBar()),
               const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildFilterDropdown()),
-              const SizedBox(width: 16),
               Expanded(flex: 2, child: _buildStatusDropdown()),
+              const SizedBox(width: 16),
+              Expanded(flex: 2, child: _buildReasonDropdown()),
             ],
           );
         },
@@ -283,9 +296,9 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   Widget _buildSearchBar() {
     return TextField(
       controller: _searchController,
-      onChanged: (value) => _filterFeedbacks(),
+      onChanged: (value) => _filterRequests(),
       decoration: InputDecoration(
-        hintText: 'Search vet clinics or customers...',
+        hintText: 'Search vet clinics or requesters...',
         prefixIcon: const Icon(Icons.search, color: Color(0xFF517399)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -296,30 +309,6 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
       ),
-    );
-  }
-
-  Widget _buildFilterDropdown() {
-    return DropdownButtonFormField<String>(
-      dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-      value: _selectedFilter,
-      decoration: InputDecoration(
-        labelText: 'Filter Requests',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
-        ),
-      ),
-      items: ['All', 'With Delete Request', 'No Delete Request']
-          .map((filter) => DropdownMenuItem(value: filter, child: Text(filter)))
-          .toList(),
-      onChanged: (value) {
-        setState(() {
-          _selectedFilter = value!;
-          _filterFeedbacks();
-        });
-      },
     );
   }
 
@@ -335,20 +324,51 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
           borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
       ),
-      items: ['All', 'Pending', 'Approved', 'Under Review']
+      items: ['All', 'Pending', 'Approved', 'Denied', 'Under Review']
           .map((status) => DropdownMenuItem(value: status, child: Text(status)))
           .toList(),
       onChanged: (value) {
         setState(() {
           _selectedStatus = value!;
-          _filterFeedbacks();
+          _filterRequests();
         });
       },
     );
   }
 
-  Widget _buildFeedbackList() {
-    if (_filteredFeedbacks.isEmpty) {
+  Widget _buildReasonDropdown() {
+    return DropdownButtonFormField<String>(
+      dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
+      value: _selectedReason,
+      decoration: InputDecoration(
+        labelText: 'Reason',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+        ),
+      ),
+      items: [
+        'All',
+        'Business Closure',
+        'Policy Violation',
+        'Relocation',
+        'Data Privacy Request',
+        'Other'
+      ]
+          .map((reason) => DropdownMenuItem(value: reason, child: Text(reason)))
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          _selectedReason = value!;
+          _filterRequests();
+        });
+      },
+    );
+  }
+
+  Widget _buildRequestList() {
+    if (_filteredRequests.isEmpty) {
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(32),
@@ -362,7 +382,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
               Icon(Icons.inbox, size: 64, color: Color(0xFF95A5A6)),
               SizedBox(height: 16),
               Text(
-                'No feedback found',
+                'No deletion requests found',
                 style: TextStyle(fontSize: 18, color: Color(0xFF7F8C8D)),
               ),
             ],
@@ -386,18 +406,18 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: isMobile ? 1.2 : 1.1,
+              childAspectRatio: isMobile ? 1.0 : 0.9,
             ),
-            itemCount: _filteredFeedbacks.length,
+            itemCount: _filteredRequests.length,
             itemBuilder: (context, index) =>
-                _buildFeedbackCard(_filteredFeedbacks[index]),
+                _buildRequestCard(_filteredRequests[index]),
           );
         },
       ),
     );
   }
 
-  Widget _buildFeedbackCard(FeedbackItem feedback) {
+  Widget _buildRequestCard(DeletionRequestItem request) {
     return Card(
       elevation: 4,
       color: const Color.fromRGBO(242, 250, 252, 1),
@@ -418,7 +438,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
               children: [
                 Expanded(
                   child: Text(
-                    feedback.vetClinicName,
+                    request.vetClinicName,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -429,40 +449,48 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _buildStatusChip(feedback.status),
+                _buildStatusChip(request.status),
               ],
             ),
             const SizedBox(height: 6),
 
-            // Customer
+            // Requested By
             _buildCardInfoRow(
               Icons.person,
-              'Customer',
-              feedback.customerName,
+              'Requested By',
+              request.requestedBy,
               const Color(0xFF517399),
             ),
             const SizedBox(height: 4),
 
-            // Rating
+            // Reason
             _buildCardInfoRow(
-              Icons.star,
-              'Rating',
-              null,
+              Icons.info_outline,
+              'Reason',
+              request.reason,
               const Color(0xFFF39C12),
-              customWidget: _buildRatingStars(feedback.rating),
             ),
             const SizedBox(height: 4),
 
-            // Date
+            // Date Requested
             _buildCardInfoRow(
               Icons.calendar_today,
-              'Date',
-              '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}',
+              'Date Requested',
+              '${request.dateRequested.day}/${request.dateRequested.month}/${request.dateRequested.year}',
               const Color(0xFF7F8C8D),
+            ),
+            const SizedBox(height: 4),
+
+            // Business License
+            _buildCardInfoRow(
+              Icons.business,
+              'License',
+              request.businessLicense,
+              const Color(0xFF9B59B6),
             ),
             const SizedBox(height: 8),
 
-            // Feedback Content Section
+            // Description Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -475,7 +503,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Feedback:',
+                    'Description:',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -484,7 +512,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    feedback.feedback,
+                    request.description,
                     style: const TextStyle(
                       fontSize: 13,
                       height: 1.4,
@@ -496,72 +524,120 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             ),
             const SizedBox(height: 8),
 
-            // Delete Request Section
+            // Contact Information
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: feedback.hasDeleteRequest
-                    ? const Color(0xFFFFE5E5)
-                    : const Color(0xFFE8F5E8),
+                color: const Color(0xFFF0F8FF),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: feedback.hasDeleteRequest
-                      ? const Color(0xFFFF6B6B)
-                      : const Color(0xFF2ECC71),
-                  width: 1,
-                ),
+                border: Border.all(color: const Color(0xFF517399), width: 1),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(
-                    feedback.hasDeleteRequest
-                        ? Icons.warning
-                        : Icons.check_circle,
-                    size: 16,
-                    color: feedback.hasDeleteRequest
-                        ? const Color(0xFFD63031)
-                        : const Color(0xFF27AE60),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      feedback.hasDeleteRequest
-                          ? 'Delete requested by ${feedback.adminRequestedBy}'
-                          : 'No delete request',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: feedback.hasDeleteRequest
-                            ? const Color(0xFFD63031)
-                            : const Color(0xFF27AE60),
+                  Row(
+                    children: [
+                      const Icon(Icons.email,
+                          size: 16, color: Color(0xFF517399)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          request.contactEmail,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.phone,
+                          size: 16, color: Color(0xFF517399)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          request.contactPhone,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 8),
-
-            // Actions - Only delete button if there's a delete request
-            if (feedback.hasDeleteRequest)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  IconButton(
-                    onPressed: () => _handleDeleteRequest(feedback),
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    color: const Color(0xFFE74C3C),
-                    tooltip: 'Handle Delete Request',
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFE74C3C).withOpacity(0.1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+            // Show denial reason if denied
+            if (request.status == 'Denied' && request.denialReason != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE5E5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFF6B6B), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 16, color: Color(0xFFD63031)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Denial Reason: ${request.denialReason}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFFD63031),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ],
+
+            const SizedBox(height: 8),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showRequestDetails(request),
+                  icon: const Icon(
+                    Icons.visibility,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  label: const Text('View Details'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF517399),
+                    foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+                  ),
+                ),
+                if (request.status == 'Pending' ||
+                    request.status == 'Under Review')
+                  ElevatedButton.icon(
+                    onPressed: () => _handleDeletionRequest(request),
+                    icon: const Icon(
+                      Icons.gavel,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    label: const Text('Process'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE74C3C),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -569,8 +645,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   }
 
   Widget _buildCardInfoRow(
-      IconData icon, String label, String? value, Color iconColor,
-      {Widget? customWidget}) {
+      IconData icon, String label, String? value, Color iconColor) {
     return Row(
       children: [
         Icon(icon, size: 16, color: iconColor),
@@ -585,31 +660,17 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: customWidget ??
-              Text(
-                value ?? '',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2C3E50),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+          child: Text(
+            value ?? '',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2C3E50),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
-    );
-  }
-
-  Widget _buildRatingStars(int rating) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        return Icon(
-          index < rating ? Icons.star : Icons.star_border,
-          color: const Color(0xFFF39C12),
-          size: 16,
-        );
-      }),
     );
   }
 
@@ -623,7 +684,10 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         chipColor = const Color(0xFFF39C12);
         break;
       case 'Under Review':
-        chipColor = const Color(0xFF3498DB);
+        chipColor = const Color(0xFF9B59B6);
+        break;
+      case 'Denied':
+        chipColor = const Color(0xFFE74C3C);
         break;
       default:
         chipColor = const Color(0xFF95A5A6);
@@ -666,11 +730,11 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         surfaceTintColor: Colors.transparent,
         title: const Row(
           children: [
-            Icon(Icons.admin_panel_settings,
+            Icon(Icons.delete_forever,
                 color: Color.fromARGB(255, 81, 115, 153)),
             SizedBox(width: 8),
             Text(
-              'Vet Feedback',
+              'Vet Clinic Deletion Requests',
               style: TextStyle(
                   color: Color.fromARGB(255, 81, 115, 153),
                   fontWeight: FontWeight.bold),
@@ -682,7 +746,6 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
         actions: [
           IconButton(
             onPressed: () {
-              // Export functionality
               _showSnackBar(
                   'Export functionality coming soon!', const Color(0xFF3498DB));
             },
@@ -694,7 +757,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             onPressed: () {
               setState(() {
                 _loadSampleData();
-                _filterFeedbacks();
+                _filterRequests();
               });
             },
             icon: const Icon(Icons.refresh,
@@ -712,7 +775,7 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
             const SizedBox(height: 16),
             _buildSearchAndFilters(),
             const SizedBox(height: 16),
-            _buildFeedbackList(),
+            _buildRequestList(),
           ],
         ),
       ),
@@ -732,34 +795,40 @@ class _VetClinicFeedbackAppState extends State<VetClinicFeedbackApp> {
   }
 }
 
-class FeedbackItem {
+class DeletionRequestItem {
   final String id;
   final String vetClinicName;
-  final String customerName;
-  final String feedback;
-  final int rating;
+  final String requestedBy;
+  final String reason;
+  final String description;
   String status;
-  final DateTime date;
-  bool hasDeleteRequest;
-  String? adminRequestedBy;
+  final DateTime dateRequested;
+  final String businessLicense;
+  final String contactEmail;
+  final String contactPhone;
+  DateTime? dateProcessed;
+  String? denialReason;
 
-  FeedbackItem({
+  DeletionRequestItem({
     required this.id,
     required this.vetClinicName,
-    required this.customerName,
-    required this.feedback,
-    required this.rating,
+    required this.requestedBy,
+    required this.reason,
+    required this.description,
     required this.status,
-    required this.date,
-    required this.hasDeleteRequest,
-    this.adminRequestedBy,
+    required this.dateRequested,
+    required this.businessLicense,
+    required this.contactEmail,
+    required this.contactPhone,
+    this.dateProcessed,
+    this.denialReason,
   });
 }
 
-class FeedbackDetailDialog extends StatelessWidget {
-  final FeedbackItem feedback;
+class RequestDetailDialog extends StatelessWidget {
+  final DeletionRequestItem request;
 
-  const FeedbackDetailDialog({super.key, required this.feedback});
+  const RequestDetailDialog({super.key, required this.request});
 
   @override
   Widget build(BuildContext context) {
@@ -769,92 +838,82 @@ class FeedbackDetailDialog extends StatelessWidget {
       child: Container(
         color: const Color.fromRGBO(248, 253, 255, 1),
         width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 600),
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.feedback, color: Color(0xFF517399), size: 24),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Feedback Details',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.delete_forever,
+                      color: Color(0xFF517399), size: 24),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Deletion Request Details',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const Divider(),
-            const SizedBox(height: 16),
-            _buildDetailRow('Vet Clinic:', feedback.vetClinicName),
-            _buildDetailRow('Customer:', feedback.customerName),
-            _buildDetailRow('Rating:', '${feedback.rating}/5 stars'),
-            _buildDetailRow('Status:', feedback.status),
-            _buildDetailRow('Date:',
-                '${feedback.date.day}/${feedback.date.month}/${feedback.date.year}'),
-            if (feedback.hasDeleteRequest)
-              _buildDetailRow(
-                  'Delete Requested By:', feedback.adminRequestedBy!),
-            const SizedBox(height: 16),
-            const Text(
-              'Feedback:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FDFF),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE0E6ED)),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
-              child: Text(
-                feedback.feedback,
-                style: const TextStyle(fontSize: 14, height: 1.5),
+              const Divider(),
+              const SizedBox(height: 16),
+              _buildDetailRow('Vet Clinic:', request.vetClinicName),
+              _buildDetailRow('Requested By:', request.requestedBy),
+              _buildDetailRow('Reason:', request.reason),
+              _buildDetailRow('Status:', request.status),
+              _buildDetailRow('Business License:', request.businessLicense),
+              _buildDetailRow('Contact Email:', request.contactEmail),
+              _buildDetailRow('Contact Phone:', request.contactPhone),
+              _buildDetailRow('Date Requested:',
+                  '${request.dateRequested.day}/${request.dateRequested.month}/${request.dateRequested.year}'),
+              if (request.dateProcessed != null)
+                _buildDetailRow('Date Processed:',
+                    '${request.dateProcessed!.day}/${request.dateProcessed!.month}/${request.dateProcessed!.year}'),
+              if (request.denialReason != null)
+                _buildDetailRow('Denial Reason:', request.denialReason!),
+              const SizedBox(height: 16),
+              const Text(
+                'Description:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF517399),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Close'),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FDFF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE0E6ED)),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // Respond functionality
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Respond functionality coming soon!'),
-                        backgroundColor: Color(0xFF3498DB),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.reply, color: Colors.white),
-                  label: const Text('Respond'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF517399),
-                    foregroundColor: Colors.white,
-                  ),
+                child: Text(
+                  request.description,
+                  style: const TextStyle(fontSize: 14, height: 1.5),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFF517399),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -867,7 +926,7 @@ class FeedbackDetailDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 140,
             child: Text(
               label,
               style: const TextStyle(
@@ -886,17 +945,26 @@ class FeedbackDetailDialog extends StatelessWidget {
   }
 }
 
-class DeleteRequestDialog extends StatelessWidget {
-  final FeedbackItem feedback;
+class DeleteRequestActionDialog extends StatefulWidget {
+  final DeletionRequestItem request;
   final VoidCallback onApprove;
-  final VoidCallback onDeny;
+  final Function(String) onDeny;
 
-  const DeleteRequestDialog({
+  const DeleteRequestActionDialog({
     super.key,
-    required this.feedback,
+    required this.request,
     required this.onApprove,
     required this.onDeny,
   });
+
+  @override
+  State<DeleteRequestActionDialog> createState() =>
+      _DeleteRequestActionDialogState();
+}
+
+class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
+  final TextEditingController _denialReasonController = TextEditingController();
+  bool _showDenialForm = false;
 
   @override
   Widget build(BuildContext context) {
@@ -904,69 +972,140 @@ class DeleteRequestDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Row(
         children: [
-          Icon(Icons.warning, color: Color(0xFFF39C12)),
+          Icon(
+            Icons.gavel,
+            color: const Color(0xFF517399),
+          ),
           SizedBox(width: 8),
-          Text('Delete Request'),
+          Text('Process Deletion Request'),
         ],
       ),
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Admin "${feedback.adminRequestedBy}" has requested to delete this feedback:',
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FDFF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE0E6ED)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Review the deletion request for "${widget.request.vetClinicName}":',
+              style: const TextStyle(fontSize: 16),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Vet Clinic: ${feedback.vetClinicName}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Customer: ${feedback.customerName}'),
-                Text('Rating: ${feedback.rating}/5'),
-                const SizedBox(height: 8),
-                Text(feedback.feedback,
-                    style: const TextStyle(fontStyle: FontStyle.italic)),
-              ],
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FDFF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE0E6ED)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Requested By: ${widget.request.requestedBy}',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Reason: ${widget.request.reason}'),
+                  Text('Business License: ${widget.request.businessLicense}'),
+                  const SizedBox(height: 8),
+                  const Text('Description:',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(widget.request.description,
+                      style: const TextStyle(fontStyle: FontStyle.italic)),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'What would you like to do?',
-            style: TextStyle(fontWeight: FontWeight.w500),
-          ),
-        ],
+            const SizedBox(height: 16),
+            if (!_showDenialForm) ...[
+              const Text(
+                'What would you like to do with this request?',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ] else ...[
+              const Text(
+                'Please provide a reason for denial:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _denialReasonController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Enter denial reason...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF517399), width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            onDeny();
-          },
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
-          child: const Text('Deny Request'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context);
-            onApprove();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFE74C3C),
-            foregroundColor: Colors.white,
+        if (!_showDenialForm) ...[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
+            child: const Text('Cancel'),
           ),
-          child: Text('Approve Deletion'),
-        ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _showDenialForm = true;
+              });
+            },
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFE74C3C)),
+            child: const Text('Deny Request'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onApprove();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2ECC71),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Approve Deletion'),
+          ),
+        ] else ...[
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _showDenialForm = false;
+                _denialReasonController.clear();
+              });
+            },
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
+            child: const Text('Back'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_denialReasonController.text.trim().isNotEmpty) {
+                Navigator.pop(context);
+                widget.onDeny(_denialReasonController.text.trim());
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE74C3C),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm Denial'),
+          ),
+        ],
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _denialReasonController.dispose();
+    super.dispose();
   }
 }

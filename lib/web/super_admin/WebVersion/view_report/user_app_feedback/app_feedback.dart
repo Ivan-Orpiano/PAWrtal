@@ -321,7 +321,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
           Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => const VetClinicFeedbackApp()),
+                builder: (context) => const VetClinicDeletionManager()),
           );
         },
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
