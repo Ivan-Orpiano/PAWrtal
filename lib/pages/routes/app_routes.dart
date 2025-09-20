@@ -20,3 +20,4 @@ abstract class _Paths {
   static const login = '/login';
   static const createStaff = '/createStaff';
 }
+

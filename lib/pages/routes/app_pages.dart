@@ -1,4 +1,3 @@
-// app_pages.dart (Updated portion)
 import 'package:capstone_app/mobile/admin/pages/staff_account_creation/staff_account_binding.dart';
 import 'package:capstone_app/mobile/admin/pages/staff_account_creation/staff_account_creation_page.dart';
 import 'package:capstone_app/pages/admin_home/admin_home_binding.dart';

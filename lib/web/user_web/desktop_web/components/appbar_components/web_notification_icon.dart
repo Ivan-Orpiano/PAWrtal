@@ -125,12 +125,9 @@ class _NotificationIconWebState extends State<WebNotificationIcon> {
   }
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: IconButton(
-        icon: const Icon(Icons.notifications_rounded),
-        onPressed: () => _togglePopup(context),
-      ),
+    return IconButton(
+      icon: const Icon(Icons.notifications_rounded),
+      onPressed: () => _togglePopup(context),
     );
   }
 }

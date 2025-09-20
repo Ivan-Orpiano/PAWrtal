@@ -1,171 +1,11 @@
-// import 'package:capstone_app/web/dimensions.dart';
-// import 'package:capstone_app/web/pages/web_login/web_login_page.dart';
-// import 'package:flutter/material.dart';
-
-// class WebProfileIcon extends StatefulWidget {
-//   final double? right;
-//   final double? top;
-//   final double? width;
-  
-//   const WebProfileIcon({
-//     super.key,
-//     this.right = 75,
-//     this.top = 70,
-//     this.width = 250
-//     });
-
-//   @override
-//   State<WebProfileIcon> createState() => _ProfileIconWebState();
-// }
-
-// class _ProfileIconWebState extends State<WebProfileIcon> {
-//   OverlayEntry? _overlayEntry;
-
-//   void _togglePopup(BuildContext context) {
-//     if (_overlayEntry == null) {
-//       _overlayEntry = _createOverlayEntry(context);
-//       Overlay.of(context).insert(_overlayEntry!);
-//     } else {
-//       _closePopup();
-//     }
-//   }
-
-//   void _closePopup() {
-//     _overlayEntry?.remove();
-//     _overlayEntry = null;
-//   }
-
-//   OverlayEntry _createOverlayEntry(BuildContext context) {
-//     return OverlayEntry(
-//       builder: (context) => LayoutBuilder(
-//         builder: (context, constraints) {
-//           if (constraints.maxWidth < mobileWidth) {
-//             WidgetsBinding.instance.addPostFrameCallback((_){
-//               _closePopup();
-//             });
-//           }
-//           return Stack(
-//             children: [
-//               Positioned.fill(
-//                 child: GestureDetector(
-//                   behavior: HitTestBehavior.opaque,
-//                   onTap: _closePopup,
-//                   child: Container(),
-//                 ),
-//               ),
-//               Positioned(
-//                 right: widget.right,
-//                 top: widget.top,
-//                 width: widget.width,
-//                 child: Material(
-//                   elevation: 5,
-//                   borderRadius: BorderRadius.circular(10),
-//                   color: Colors.white,
-//                   child: Padding(
-//                     padding: const EdgeInsets.only(top: 10, bottom: 10),
-//                     child: Column(
-//                       mainAxisSize: MainAxisSize.min,
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         const ListTile(
-//                           leading: CircleAvatar(
-//                             backgroundImage: AssetImage('lib/images/blackguy.png'),
-//                           ),
-//                           title: Text(
-//                             "Test",
-//                           style: TextStyle(color: Colors.black87),
-//                           ),
-//                           subtitle: Text(
-//                             "test@gmail.com",
-//                             style: TextStyle(color: Colors.black87),
-//                           ),
-//                         ),
-
-//                         const Divider(color: Colors.black87),
-
-//                         SizedBox(
-//                           width: double.infinity,
-//                           child: _popupItem(
-//                             "Settings",
-//                             () {}
-//                           ),
-//                         ),
-//                         SizedBox(
-//                           width: double.infinity,
-//                           child: _popupItem(
-//                             "Help", 
-//                             () {}
-//                           ),
-//                         ),
-//                         SizedBox(
-//                           width: double.infinity,
-//                           child: _popupItem(
-//                             "Send feedback",
-//                             () {}
-//                           ),
-//                         ),
-//                         SizedBox(
-//                           width: double.infinity,
-//                           child: _popupItem(
-//                             "Sign out", () {
-//                               _closePopup();
-//                               Navigator.push(
-//                                 context,
-//                                 MaterialPageRoute(
-//                                   builder: (context) => const WebLoginPage()
-//                                 )
-//                               );
-//                             }
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           );
-//         }
-//       )
-//     );
-//   }
-
-//   Widget _popupItem(String text, VoidCallback onTap) {
-//     return InkWell(
-//       onTap: () {
-//         _closePopup();
-//         onTap();
-//       },
-//       child: Padding(
-//         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
-//         child: Text(text, style: const TextStyle(color: Colors.black87)),
-//       ),
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.only(right: 16),
-//       child: InkWell(
-//         onTap: () => _togglePopup(context),
-//         child: ClipRRect(
-//           borderRadius: BorderRadius.circular(50),
-//           child: Image.asset(
-//             'lib/images/blackguy.png',
-//             width: 35,
-//             height: 35,
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:capstone_app/utils/logout_helper.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_settings_and_everything_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+
+// Import your settings page
+// import 'path_to_your_settings_page.dart';
 
 class WebProfileIcon extends StatefulWidget {
   final double? right;
@@ -226,6 +66,12 @@ class _WebProfileIconState extends State<WebProfileIcon> {
         );
       },
     );
+  }
+
+  // Navigate to settings page with specific section
+  void _navigateToSettings(String section) {
+    _closePopup();
+    Get.to(() => WebSettingsAndEverythingPage(initialSelection: section));
   }
 
   OverlayEntry _createOverlayEntry(BuildContext context) {
@@ -290,45 +136,25 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                     SizedBox(
                       width: double.infinity,
                       child: _popupItem("Profile", () {
-                        Get.snackbar(
-                          'Info',
-                          'Profile page coming soon',
-                          backgroundColor: Colors.blue,
-                          colorText: Colors.white,
-                        );
+                        _navigateToSettings("Profile");
                       }),
                     ),
                     SizedBox(
                       width: double.infinity,
                       child: _popupItem("Settings", () {
-                        Get.snackbar(
-                          'Info',
-                          'Settings page coming soon',
-                          backgroundColor: Colors.blue,
-                          colorText: Colors.white,
-                        );
+                        _navigateToSettings("Settings");
                       }),
                     ),
                     SizedBox(
                       width: double.infinity,
                       child: _popupItem("Help", () {
-                        Get.snackbar(
-                          'Info',
-                          'Help page coming soon',
-                          backgroundColor: Colors.blue,
-                          colorText: Colors.white,
-                        );
+                        _navigateToSettings("Help");
                       }),
                     ),
                     SizedBox(
                       width: double.infinity,
                       child: _popupItem("Send feedback", () {
-                        Get.snackbar(
-                          'Info',
-                          'Feedback form coming soon',
-                          backgroundColor: Colors.blue,
-                          colorText: Colors.white,
-                        );
+                        _navigateToSettings("Send feedback");
                       }),
                     ),
                     SizedBox(
@@ -349,10 +175,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
   Widget _popupItem(String text, VoidCallback onTap) {
     return InkWell(
-      onTap: () {
-        _closePopup();
-        onTap();
-      },
+      onTap: onTap, // Removed _closePopup() from here since it's now handled in _navigateToSettings
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
         child: Text(text, style: const TextStyle(color: Colors.black87)),
@@ -363,7 +186,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 30),
+      padding: const EdgeInsets.only(left: 16),
       child: InkWell(
         onTap: () => _togglePopup(context),
         child: const CircleAvatar(
