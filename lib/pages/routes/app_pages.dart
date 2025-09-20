@@ -23,8 +23,6 @@ import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_binding.dar
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_page.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_binding.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_page.dart';
-// Add this import for the settings page
-import 'package:capstone_app/web/user_web/desktop_web/pages/web_settings_and_everything_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -71,11 +69,6 @@ class AppPages {
       name: _Paths.createStaff,
       page: () => const StaffAccountCreationPage(),
       binding: CreateStaffBinding(),
-    ),
-    // Add the settings page route
-    GetPage(
-      name: _Paths.webSettings,
-      page: () => const WebSettingsAndEverythingPage(),
-    ),
+    )
   ];
 }
