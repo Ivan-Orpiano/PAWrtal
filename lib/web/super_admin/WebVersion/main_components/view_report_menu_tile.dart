@@ -13,7 +13,7 @@ class ViewReportTile extends StatelessWidget {
         onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const VetClinicFeedbackApp(),
+              builder: (context) => const VetClinicDeletionManager(),
             )),
         child: Padding(
             padding: const EdgeInsets.all(5),
