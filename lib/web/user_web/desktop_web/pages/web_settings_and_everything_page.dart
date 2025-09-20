@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:capstone_app/pages/routes/app_pages.dart';
 
 class WebSettingsAndEverythingPage extends StatefulWidget {
   final String? initialSelection;
@@ -18,8 +19,33 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
   @override
   void initState() {
     super.initState();
-    if (widget.initialSelection != null) {
+    // Check for route parameters first, then widget parameter
+    final routeSelection = Get.parameters['initialSelection'];
+    if (routeSelection != null && routeSelection.isNotEmpty) {
+      selectedItem = routeSelection;
+    } else if (widget.initialSelection != null) {
       selectedItem = widget.initialSelection!;
+    }
+  }
+
+  // Handle back navigation
+  void _handleBackNavigation() {
+    if (Navigator.canPop(context)) {
+      Get.back();
+    } else {
+      // If no navigation history, go to appropriate home page based on user role
+      final userRole = storage.read("role") ?? "user";
+      switch (userRole.toLowerCase()) {
+        case 'admin':
+          Get.offNamed(Routes.adminHome);
+          break;
+        case 'superadmin':
+          Get.offNamed(Routes.superAdminHome);
+          break;
+        default:
+          Get.offNamed(Routes.userHome);
+          break;
+      }
     }
   }
 
@@ -36,6 +62,12 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
         iconTheme: const IconThemeData(color: Colors.black87),
         elevation: 1,
         surfaceTintColor: Colors.white,
+        // Force showing the back button and handle navigation
+        automaticallyImplyLeading: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _handleBackNavigation,
+        ),
       ),
       body: Row(
         children: [
@@ -77,6 +109,8 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
           setState(() {
             selectedItem = title;
           });
+          // Update the URL parameters when switching sections
+          Get.parameters['initialSelection'] = title;
         }
       },
       child: Container(
@@ -529,7 +563,7 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                Get.back(); // Go back to previous page
+                _handleBackNavigation(); // Use the same back navigation logic
                 // Add your logout logic here
                 Get.snackbar(
                   'Info',

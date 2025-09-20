@@ -35,7 +35,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Colors.white,
         leadingWidth: 220,
         toolbarHeight: 80,
         bottom: PreferredSize(

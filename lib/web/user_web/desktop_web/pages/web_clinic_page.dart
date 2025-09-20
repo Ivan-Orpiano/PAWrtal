@@ -341,7 +341,7 @@ double getLeftSideWidth(double screenWidth) {
     );
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50,
       body: Stack(
         children: [
           ListView(
@@ -351,6 +351,7 @@ double getLeftSideWidth(double screenWidth) {
               Container(
                 height: 81,
                 decoration: const BoxDecoration(
+                  color: Colors.white,
                   border: Border(
                     bottom: BorderSide(
                       color: Colors.black26,
