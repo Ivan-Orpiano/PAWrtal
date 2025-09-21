@@ -1,11 +1,7 @@
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_settings_and_everything_page.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-
-// Import your settings page
-// import 'path_to_your_settings_page.dart';
 
 class WebProfileIcon extends StatefulWidget {
   final double? right;
@@ -68,10 +64,16 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     );
   }
 
-  // Navigate to settings page with specific section
+  // Navigate to settings page with specific section using MaterialPageRoute
   void _navigateToSettings(String section) {
     _closePopup();
-    Get.to(() => WebSettingsAndEverythingPage(initialSelection: section));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => WebSettingsAndEverythingPage(
+          initialSelection: section,
+        ),
+      ),
+    );
   }
 
   OverlayEntry _createOverlayEntry(BuildContext context) {
@@ -175,7 +177,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
   Widget _popupItem(String text, VoidCallback onTap) {
     return InkWell(
-      onTap: onTap, // Removed _closePopup() from here since it's now handled in _navigateToSettings
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
         child: Text(text, style: const TextStyle(color: Colors.black87)),

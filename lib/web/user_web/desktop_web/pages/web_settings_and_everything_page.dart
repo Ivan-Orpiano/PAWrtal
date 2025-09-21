@@ -1,6 +1,10 @@
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:capstone_app/utils/logout_helper.dart';
 
 class WebSettingsAndEverythingPage extends StatefulWidget {
   final String? initialSelection;
@@ -8,62 +12,165 @@ class WebSettingsAndEverythingPage extends StatefulWidget {
   const WebSettingsAndEverythingPage({super.key, this.initialSelection});
 
   @override
-  State<WebSettingsAndEverythingPage> createState() => _SettingsAndEveryThingPageState();
+  State<WebSettingsAndEverythingPage> createState() => _WebSettingsAndEverythingPageState();
 }
 
-class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage> {
+class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingPage> {
   String selectedItem = 'Profile';
   final GetStorage storage = GetStorage();
 
   @override
   void initState() {
     super.initState();
+    
+    // Set initial selection based on parameter
     if (widget.initialSelection != null) {
       selectedItem = widget.initialSelection!;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // Light background
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Text(
-          selectedItem,
-          style: const TextStyle(color: Colors.black87),
-        ),
-        iconTheme: const IconThemeData(color: Colors.black87),
-        elevation: 1,
-        surfaceTintColor: Colors.white,
-      ),
-      body: Row(
-        children: [
-          // Left Sidebar
-          Container(
-            width: 240,
-            color: Colors.white,
-            child: Column(
-              children: [
-                _buildSidebarItem('Profile', Icons.person),
-                _buildSidebarItem('Settings', Icons.settings),
-                _buildSidebarItem('Help', Icons.help_outline),
-                _buildSidebarItem('Send feedback', Icons.feedback_outlined),
-                const Divider(color: Colors.grey),
-                _buildSidebarItem('Sign out', Icons.logout, isDestructive: true),
-              ],
-            ),
-          ),
-          // Right Content Area
-          Expanded(
-            child: Container(
-              color: Colors.grey[50],
-              child: _buildContentArea(),
-            ),
-          ),
-        ],
+  void _showSnackbar(String title, String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        // Handle any cleanup if needed when popping
+      },
+      child: KeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKeyEvent: (KeyEvent event) {
+          // Handle keyboard shortcuts without interfering with browser
+          if (event is KeyDownEvent) {
+            // Prevent certain browser shortcuts from causing issues
+            if (event.logicalKey == LogicalKeyboardKey.keyS && 
+                (HardwareKeyboard.instance.isControlPressed || 
+                 HardwareKeyboard.instance.isMetaPressed)) {
+              // Consume the event to prevent "page not found" error
+              return;
+            }
+            // Handle Escape key to go back
+            if (event.logicalKey == LogicalKeyboardKey.escape) {
+              Navigator.of(context).pop();
+              return;
+            }
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.grey[50],
+          body: Column(
+            children: [
+              // Custom Header
+              Container(
+                height: 81,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.black26,
+                      width: 1
+                    )
+                  )
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: _getResponsivePadding()),
+                      child: SizedBox(
+                        height: 80,
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                Navigator.pop(context);
+                              },
+                              child: Image.asset(
+                                'lib/images/PAWrtal_logo.png',
+                                width: 150,
+                                height: 100,
+                              ),
+                            ),
+                            const Spacer(flex: 1),
+                            const Expanded(
+                              flex: 2,
+                              child: WebSearchBar(width: 380),
+                            ),
+                            const Spacer(flex: 1),
+                            WebNotificationIcon(
+                              right: _getNotifRight(),
+                              top: 70,
+                              width: 500,
+                            ),
+                            WebProfileIcon(
+                              right: _getIconRight(),
+                              top: 70,
+                              width: 250,
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Main Content
+              Expanded(
+                child: Row(
+                  children: [
+                    // Left Sidebar
+                    Container(
+                      width: 240,
+                      color: Colors.white,
+                      child: Column(
+                        children: [
+                          _buildSidebarItem('Profile', Icons.person),
+                          _buildSidebarItem('Settings', Icons.settings),
+                          _buildSidebarItem('Help', Icons.help_outline),
+                          _buildSidebarItem('Send feedback', Icons.feedback_outlined),
+                          const Divider(color: Colors.grey),
+                          _buildSidebarItem('Sign out', Icons.logout, isDestructive: true),
+                        ],
+                      ),
+                    ),
+                    // Right Content Area
+                    Expanded(
+                      child: Container(
+                        color: Colors.grey[50],
+                        child: _buildContentArea(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ]
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for responsive design
+  double _getResponsivePadding() {
+    return MediaQuery.of(context).size.width * 0.02;
+  }
+
+  double _getNotifRight() {
+    return 75.0;
+  }
+
+  double _getIconRight() {
+    return 75.0;
   }
 
   Widget _buildSidebarItem(String title, IconData icon, {bool isDestructive = false}) {
@@ -74,6 +181,7 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
         if (title == 'Sign out') {
           _showLogoutDialog();
         } else {
+          // Update selected item
           setState(() {
             selectedItem = title;
           });
@@ -215,11 +323,10 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    Get.snackbar(
+                    _showSnackbar(
                       'Info',
                       'Edit profile functionality coming soon',
-                      backgroundColor: Colors.blue,
-                      colorText: Colors.white,
+                      Colors.blue,
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -334,6 +441,11 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
             value: isEnabled,
             onChanged: (value) {
               // Handle switch toggle
+              _showSnackbar(
+                'Settings',
+                'Setting updated successfully',
+                Colors.green,
+              );
             },
             activeColor: Colors.blue,
           ),
@@ -418,6 +530,8 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
   }
 
   Widget _buildFeedbackContent() {
+    final TextEditingController feedbackController = TextEditingController();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -460,6 +574,7 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  controller: feedbackController,
                   maxLines: 5,
                   style: const TextStyle(color: Colors.black87),
                   decoration: InputDecoration(
@@ -484,12 +599,20 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    Get.snackbar(
-                      'Success',
-                      'Thank you for your feedback!',
-                      backgroundColor: Colors.green,
-                      colorText: Colors.white,
-                    );
+                    if (feedbackController.text.trim().isNotEmpty) {
+                      _showSnackbar(
+                        'Success',
+                        'Thank you for your feedback!',
+                        Colors.green,
+                      );
+                      feedbackController.clear();
+                    } else {
+                      _showSnackbar(
+                        'Error',
+                        'Please enter your feedback before submitting',
+                        Colors.orange,
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
@@ -510,14 +633,14 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF212121),
+          backgroundColor: Colors.white,
           title: const Text(
             'Sign out',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.black87),
           ),
           content: const Text(
             'Are you sure you want to sign out?',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.black87),
           ),
           actions: [
             TextButton(
@@ -528,15 +651,9 @@ class _SettingsAndEveryThingPageState extends State<WebSettingsAndEverythingPage
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
-                Get.back(); // Go back to previous page
-                // Add your logout logic here
-                Get.snackbar(
-                  'Info',
-                  'Logout functionality coming soon',
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white,
-                );
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous page
+                await LogoutHelper.logout();
               },
               child: const Text(
                 'Sign out',
