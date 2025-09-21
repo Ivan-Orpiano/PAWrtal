@@ -218,12 +218,23 @@ class _WebMapsState extends State<WebMaps> {
                           },
                         ),
                         children: [
-                          TileLayer(
-                            urlTemplate:
-                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                            subdomains: const ['a', 'b', 'c'],
-                            maxZoom: 19,
-                          ),
+                          // CartoDB Positron (minimal, clean style)
+TileLayer(
+  urlTemplate: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  subdomains: const ['a', 'b', 'c', 'd'],
+),
+
+// CartoDB Voyager (clean with some POIs)
+TileLayer(
+  urlTemplate: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+  subdomains: const ['a', 'b', 'c', 'd'],
+),
+
+// OpenStreetMap without labels/POIs
+TileLayer(
+  urlTemplate: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+  subdomains: const ['a', 'b', 'c'],
+),
                           if (routePoints.isNotEmpty)
                             PolylineLayer(
                               polylines: [
