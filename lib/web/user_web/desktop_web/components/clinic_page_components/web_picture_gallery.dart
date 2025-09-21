@@ -1,5 +1,8 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class WebPictureGalleryUpdated extends StatefulWidget {
   final Clinic clinic;
@@ -11,23 +14,55 @@ class WebPictureGalleryUpdated extends StatefulWidget {
 }
 
 class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
+  List<String> _galleryImages = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClinicGallery();
+  }
+
+  Future<void> _loadClinicGallery() async {
+    try {
+      // Try to get gallery from clinic settings first
+      final authRepository = Get.find<AuthRepository>();
+      final clinicSettings = await authRepository.getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
+      
+      if (clinicSettings != null && clinicSettings.gallery.isNotEmpty) {
+        setState(() {
+          _galleryImages = clinicSettings.gallery;
+          _isLoading = false;
+        });
+      } else {
+        // Fallback to default images with clinic's main image
+        setState(() {
+          _galleryImages = _getDefaultGalleryImages();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading clinic gallery: $e");
+      setState(() {
+        _galleryImages = _getDefaultGalleryImages();
+        _isLoading = false;
+      });
+    }
+  }
   
-  List<String> _getGalleryImages() {
-    // For now, we'll use the clinic's main image and some placeholder images
-    // In the future, you might want to add a gallery field to your Clinic model
+  List<String> _getDefaultGalleryImages() {
     List<String> images = [];
     
     if (widget.clinic.image.isNotEmpty) {
       images.add(widget.clinic.image);
     }
     
-    // Add some placeholder images to fill the gallery
-    // You can replace these with actual clinic gallery images from your database
+    // Add placeholder images if no gallery is set
     List<String> placeholders = [
-      'lib/images/test_image.jpg',
-      'lib/images/test_image.jpg',
-      'lib/images/test_image.jpg',
-      'lib/images/test_image.jpg',
+      'lib/images/placeholder.png',
+      'lib/images/placeholder.png',
+      'lib/images/placeholder.png',
+      'lib/images/placeholder.png',
     ];
     
     images.addAll(placeholders);
@@ -52,21 +87,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: imagePath.startsWith('lib/')
-                        ? Image.asset(
-                            imagePath,
-                            fit: BoxFit.contain,
-                          )
-                        : Image.network(
-                            imagePath,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.asset(
-                                'lib/images/test_image.jpg',
-                                fit: BoxFit.contain,
-                              );
-                            },
-                          ),
+                    child: _buildImage(imagePath, BoxFit.contain),
                   ),
                 ),
               ),
@@ -89,6 +110,52 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
     );
   }
 
+  Widget _buildImage(String imagePath, BoxFit fit) {
+    if (imagePath.startsWith('lib/')) {
+      return Image.asset(
+        imagePath,
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: const Icon(Icons.error, size: 50),
+          );
+        },
+      );
+    } else {
+      return Image.network(
+        imagePath,
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.grey[200],
+            child: Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / 
+                      loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'lib/images/placeholder.png',
+            fit: fit,
+            width: double.infinity,
+            height: double.infinity,
+          );
+        },
+      );
+    }
+  }
+
   Widget _buildGalleryImage(String imagePath, {BorderRadius? borderRadius}) {
     return GestureDetector(
       onTap: () => _showImageDialog(imagePath, 0),
@@ -99,27 +166,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
         ),
         child: ClipRRect(
           borderRadius: borderRadius ?? BorderRadius.zero,
-          child: imagePath.startsWith('lib/')
-              ? Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                )
-              : Image.network(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.asset(
-                      'lib/images/test_image.jpg',
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                    );
-                  },
-                ),
+          child: _buildImage(imagePath, BoxFit.cover),
         ),
       ),
     );
@@ -127,7 +174,47 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
 
   @override
   Widget build(BuildContext context) {
-    final images = _getGalleryImages();
+    if (_isLoading) {
+      return Container(
+        height: 520,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_galleryImages.isEmpty) {
+      return Container(
+        height: 520,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.photo_library_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "No gallery images available",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -140,7 +227,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
             child: Container(
               height: 520,
               child: _buildGalleryImage(
-                images.isNotEmpty ? images[0] : 'lib/images/test_image.jpg',
+                _galleryImages[0],
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   bottomLeft: Radius.circular(20),
@@ -151,6 +238,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
           const SizedBox(width: 12),
 
           // Middle column (2 stacked boxes)
+          if (_galleryImages.length > 1)
           Flexible(
             flex: 2,
             child: Column(
@@ -158,15 +246,12 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                 Container(
                   height: 255,
                   margin: const EdgeInsets.only(bottom: 10),
-                  child: _buildGalleryImage(
-                    images.length > 1 ? images[1] : 'lib/images/test_image.jpg',
-                  ),
+                  child: _buildGalleryImage(_galleryImages[1]),
                 ),
+                if (_galleryImages.length > 2)
                 Container(
                   height: 255,
-                  child: _buildGalleryImage(
-                    images.length > 2 ? images[2] : 'lib/images/test_image.jpg',
-                  ),
+                  child: _buildGalleryImage(_galleryImages[2]),
                 ),
               ],
             ),
@@ -174,6 +259,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
           const SizedBox(width: 12),
 
           // Right column (2 stacked boxes with button)
+          if (_galleryImages.length > 3)
           Flexible(
             flex: 2,
             child: Column(
@@ -182,7 +268,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                   height: 255,
                   margin: const EdgeInsets.only(bottom: 10),
                   child: _buildGalleryImage(
-                    images.length > 3 ? images[3] : 'lib/images/test_image.jpg',
+                    _galleryImages[3],
                     borderRadius: const BorderRadius.only(
                       topRight: Radius.circular(20),
                     ),
@@ -193,12 +279,13 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                     Container(
                       height: 255,
                       child: _buildGalleryImage(
-                        images.length > 4 ? images[4] : 'lib/images/test_image.jpg',
+                        _galleryImages.length > 4 ? _galleryImages[4] : _galleryImages[3],
                         borderRadius: const BorderRadius.only(
                           bottomRight: Radius.circular(20),
                         ),
                       ),
                     ),
+                    if (_galleryImages.length > 4)
                     Positioned.fill(
                       child: Container(
                         decoration: const BoxDecoration(
@@ -220,14 +307,16 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(width: 1),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.grid_view_rounded),
-                              SizedBox(width: 4),
+                              const Icon(Icons.grid_view_rounded),
+                              const SizedBox(width: 4),
                               Text(
-                                "Show all photos",
-                                style: TextStyle(fontWeight: FontWeight.w600),
+                                _galleryImages.length > 5 
+                                    ? "Show all ${_galleryImages.length} photos"
+                                    : "Show all photos",
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -245,8 +334,6 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
   }
 
   void _showAllPhotosDialog() {
-    final images = _getGalleryImages();
-    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -275,7 +362,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "${widget.clinic.clinicName} - Gallery",
+                        "${widget.clinic.clinicName} - Gallery (${_galleryImages.length} photos)",
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold
@@ -297,27 +384,13 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                       mainAxisSpacing: 12,
                       childAspectRatio: 1,
                     ),
-                    itemCount: images.length,
+                    itemCount: _galleryImages.length,
                     itemBuilder: (context, index) {
                       return GestureDetector(
-                        onTap: () => _showImageDialog(images[index], index),
+                        onTap: () => _showImageDialog(_galleryImages[index], index),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: images[index].startsWith('lib/')
-                              ? Image.asset(
-                                  images[index],
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.network(
-                                  images[index],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset(
-                                      'lib/images/test_image.jpg',
-                                      fit: BoxFit.cover,
-                                    );
-                                  },
-                                ),
+                          child: _buildImage(_galleryImages[index], BoxFit.cover),
                         ),
                       );
                     },
