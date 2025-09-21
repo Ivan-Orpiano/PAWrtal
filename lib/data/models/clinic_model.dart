@@ -1,3 +1,5 @@
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
+
 class Clinic {
   String? documentId;
   late String clinicName;

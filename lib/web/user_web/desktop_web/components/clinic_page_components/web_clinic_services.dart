@@ -4,41 +4,37 @@ import 'package:flutter/material.dart';
 
 class WebClinicServicesUpdated extends StatefulWidget {
   final Clinic clinic;
-  
+
   const WebClinicServicesUpdated({super.key, required this.clinic});
 
   @override
-  State<WebClinicServicesUpdated> createState() => _WebClinicServicesUpdatedState();
+  State<WebClinicServicesUpdated> createState() =>
+      _WebClinicServicesUpdatedState();
 }
 
 class _WebClinicServicesUpdatedState extends State<WebClinicServicesUpdated> {
   List<String> _parseServices() {
-    if (widget.clinic.services.isEmpty) {
-      return [
-        'General Checkup',
-        'Vaccination',
-        'Surgery',
-        'Dental Care',
-        'Emergency Care',
-        'Laboratory Tests',
-        'Pet Grooming',
-        'Microchipping'
-      ];
+    // First try to get services from clinic settings if available
+    // For now, fall back to existing logic until settings are integrated
+    if (widget.clinic.services.isNotEmpty) {
+      return widget.clinic.services
+          .split(RegExp(r'[,;|\n•]'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
-    
-    // Split services by common delimiters and clean them up
-    List<String> services = widget.clinic.services
-        .split(RegExp(r'[,;|\n•]'))
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-    
-    // If still empty or too few, add some defaults
-    if (services.isEmpty) {
-      services = ['General Pet Care'];
-    }
-    
-    return services;
+
+    // Default services
+    return [
+      'General Checkup',
+      'Vaccination',
+      'Surgery',
+      'Dental Care',
+      'Emergency Care',
+      'Laboratory Tests',
+      'Pet Grooming',
+      'Microchipping'
+    ];
   }
 
   int _getColumnCount(double width) {
@@ -64,11 +60,11 @@ class _WebClinicServicesUpdatedState extends State<WebClinicServicesUpdated> {
   @override
   Widget build(BuildContext context) {
     final services = _parseServices();
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        
+
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: _getColumnCount(width),
