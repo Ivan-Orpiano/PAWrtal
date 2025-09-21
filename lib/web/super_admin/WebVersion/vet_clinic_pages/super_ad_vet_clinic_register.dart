@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -359,14 +360,14 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                               ],
                             ),
                             const SizedBox(height: 12),
-                            Text(
-                              "Join our network of trusted veterinary clinics",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white.withOpacity(0.9),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                            // Text(
+                            //   "Join our network of trusted veterinary clinics",
+                            //   style: TextStyle(
+                            //     fontSize: 16,
+                            //     color: Colors.white.withOpacity(0.9),
+                            //     fontWeight: FontWeight.w500,
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),
@@ -633,6 +634,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       final account = Account(client);
       final databases = Databases(client);
 
+      // Create user account
       final models.User newUser = await account.create(
         userId: ID.unique(),
         email: vetEmail.text.trim(),
@@ -640,7 +642,8 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         name: vetName.text.trim(),
       );
 
-      await databases.createDocument(
+      // Create clinic document
+      final clinicDoc = await databases.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.clinicsCollectionID,
         documentId: ID.unique(),
@@ -657,6 +660,15 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
           'description': "",
           'image': "",
         },
+      );
+
+      // Create default clinic settings
+      final defaultSettings = ClinicSettings(clinicId: clinicDoc.$id);
+      await databases.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicSettingsCollectionID,
+        documentId: ID.unique(),
+        data: defaultSettings.toMap(),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(

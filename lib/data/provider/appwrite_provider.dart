@@ -2,6 +2,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:appwrite/enums.dart';
 
@@ -425,6 +426,116 @@ class AppWriteProvider {
       queries: [Query.equal("clinicId", clinicId)],
     );
     return result.documents.isNotEmpty ? result.documents.first : null;
+  }
+
+  // ClinicSettings methods
+  Future<Document> createClinicSettings(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicSettingsCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<Document?> getClinicSettingsByClinicId(String clinicId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicSettingsCollectionID,
+        queries: [Query.equal("clinicId", clinicId)],
+      );
+      return result.documents.isNotEmpty ? result.documents.first : null;
+    } catch (e) {
+      print("Error fetching clinic settings: $e");
+      return null;
+    }
+  }
+
+  Future<Document> updateClinicSettings(String documentId, Map<String, dynamic> data) async {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicSettingsCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<void> deleteClinicSettings(String documentId) async {
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicSettingsCollectionID,
+      documentId: documentId,
+    );
+  }
+
+  // Upload multiple images for clinic gallery - handles both mobile and web
+  Future<List<models.File>> uploadClinicGalleryImages(List<PlatformFile> files) async {
+    final List<models.File> uploadedFiles = [];
+    
+    for (int i = 0; i < files.length; i++) {
+      try {
+        final file = files[i];
+        String fileName = "${DateTime.now().millisecondsSinceEpoch}_$i.${file.extension ?? 'jpg'}";
+        
+        InputFile inputFile;
+        
+        // Handle web vs mobile platforms
+        if (file.bytes != null) {
+          // Web platform - use bytes
+          inputFile = InputFile.fromBytes(
+            bytes: file.bytes!,
+            filename: fileName,
+          );
+        } else if (file.path != null) {
+          // Mobile platform - use path
+          inputFile = InputFile.fromPath(
+            path: file.path!,
+            filename: fileName,
+          );
+        } else {
+          print("Error: File has neither bytes nor path");
+          continue;
+        }
+        
+        final response = await storage!.createFile(
+          bucketId: AppwriteConstants.imageBucketID,
+          fileId: ID.unique(),
+          file: inputFile,
+        );
+        
+        uploadedFiles.add(response);
+      } catch (e) {
+        print("Error uploading image ${files[i].name}: $e");
+        // Continue with other images even if one fails
+      }
+    }
+    
+    return uploadedFiles;
+  }
+
+  // Delete multiple images from clinic gallery
+  Future<void> deleteClinicGalleryImages(List<String> fileIds) async {
+    for (String fileId in fileIds) {
+      try {
+        await storage!.deleteFile(
+          bucketId: AppwriteConstants.imageBucketID,
+          fileId: fileId,
+        );
+      } catch (e) {
+        print("Error deleting image $fileId: $e");
+        // Continue with other deletions even if one fails
+      }
+    }
+  }
+
+  // Get image URL from file ID with proper authentication
+  String getImageUrl(String fileId) {
+    // Simple, direct URL construction for public access
+    final url = '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+    print("Generated URL: $url");
+    return url;
   }
 
   Future<Document?> getUserById(String userId) async {

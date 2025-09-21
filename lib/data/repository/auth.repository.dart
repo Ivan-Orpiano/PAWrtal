@@ -1,9 +1,12 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
+
+import 'package:file_picker/file_picker.dart';
 
 import '../models/appointment_model.dart';
 
@@ -115,5 +118,45 @@ class AuthRepository {
   Future<List<MedicalRecord>> getClinicMedicalRecords(String clinicId) async {
     final rawRecords = await appWriteProvider.getClinicMedicalRecords(clinicId);
     return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+  }
+
+  // ClinicSettings methods
+  Future<models.Document> createClinicSettings(ClinicSettings clinicSettings) =>
+      appWriteProvider.createClinicSettings(clinicSettings.toMap());
+
+  Future<ClinicSettings?> getClinicSettingsByClinicId(String clinicId) async {
+    final doc = await appWriteProvider.getClinicSettingsByClinicId(clinicId);
+    if (doc != null) {
+      final settings = ClinicSettings.fromMap(doc.data);
+      settings.documentId = doc.$id;
+      return settings;
+    }
+    return null;
+  }
+
+  Future<models.Document> updateClinicSettings(ClinicSettings clinicSettings) =>
+      appWriteProvider.updateClinicSettings(
+        clinicSettings.documentId!,
+        clinicSettings.toMap(),
+      );
+
+  Future<void> deleteClinicSettings(String documentId) =>
+      appWriteProvider.deleteClinicSettings(documentId);
+
+  Future<List<models.File>> uploadClinicGalleryImages(
+          List<PlatformFile> files) =>
+      appWriteProvider.uploadClinicGalleryImages(files);
+
+  Future<void> deleteClinicGalleryImages(List<String> fileIds) =>
+      appWriteProvider.deleteClinicGalleryImages(fileIds);
+
+  String getImageUrl(String fileId) => appWriteProvider.getImageUrl(fileId);
+
+  // Initialize clinic settings when a new clinic is created
+  Future<ClinicSettings> initializeClinicSettings(String clinicId) async {
+    final defaultSettings = ClinicSettings(clinicId: clinicId);
+    final doc = await createClinicSettings(defaultSettings);
+    defaultSettings.documentId = doc.$id;
+    return defaultSettings;
   }
 }
