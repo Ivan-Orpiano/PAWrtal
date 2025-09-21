@@ -54,31 +54,46 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
-          Container(
+          // Header with clinic status
+          Obx(() => Container(
             padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Color(0xFF5173B8),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: _getHeaderColor(),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, color: Colors.white, size: 24),
+                Icon(_getHeaderIcon(), color: Colors.white, size: 24),
                 const SizedBox(width: 12),
-                Text(
-                  'Book Appointment',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Book Appointment',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (controller.clinicSettings.value != null)
+                        Text(
+                          _getClinicStatusText(),
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
+          )),
 
           // Content
           Flexible(
@@ -88,6 +103,9 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Clinic status banner (if closed)
+                  _buildStatusBanner(),
+                  
                   // Calendar Section
                   _buildSectionHeader('Select Date'),
                   const SizedBox(height: 12),
@@ -120,6 +138,104 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     );
   }
 
+  Color _getHeaderColor() {
+    if (controller.clinicSettings.value == null) {
+      return const Color(0xFF5173B8);
+    }
+    
+    final settings = controller.clinicSettings.value!;
+    if (!settings.isOpen) {
+      return Colors.red;
+    } else if (!settings.isOpenToday()) {
+      return Colors.orange;
+    } else {
+      return const Color(0xFF5173B8);
+    }
+  }
+
+  IconData _getHeaderIcon() {
+    if (controller.clinicSettings.value == null) {
+      return Icons.calendar_today;
+    }
+    
+    final settings = controller.clinicSettings.value!;
+    if (!settings.isOpen) {
+      return Icons.cancel;
+    } else if (!settings.isOpenToday()) {
+      return Icons.schedule;
+    } else {
+      return Icons.calendar_today;
+    }
+  }
+
+  String _getClinicStatusText() {
+    if (controller.clinicSettings.value == null) {
+      return '';
+    }
+    
+    final settings = controller.clinicSettings.value!;
+    if (!settings.isOpen) {
+      return 'Currently closed';
+    } else if (!settings.isOpenToday()) {
+      return 'Closed today';
+    } else {
+      return 'Open - ${settings.getTodayHours()}';
+    }
+  }
+
+  Widget _buildStatusBanner() {
+    return Obx(() {
+      if (controller.clinicSettings.value == null) {
+        return const SizedBox.shrink();
+      }
+      
+      final settings = controller.clinicSettings.value!;
+      if (settings.isOpen && settings.isOpenToday()) {
+        return const SizedBox.shrink();
+      }
+      
+      Color bannerColor;
+      String bannerText;
+      IconData bannerIcon;
+      
+      if (!settings.isOpen) {
+        bannerColor = Colors.red;
+        bannerText = 'This clinic is currently closed for appointments';
+        bannerIcon = Icons.cancel;
+      } else {
+        bannerColor = Colors.orange;
+        bannerText = 'This clinic is closed today';
+        bannerIcon = Icons.schedule;
+      }
+      
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: bannerColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: bannerColor.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(bannerIcon, color: bannerColor, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                bannerText,
+                style: TextStyle(
+                  color: bannerColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   Widget _buildSectionHeader(String title) {
     return Text(
       title,
@@ -140,7 +256,9 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       child: TableCalendar(
         focusedDay: controller.selectedDateTime.value ?? DateTime.now(),
         firstDay: DateTime.now(),
-        lastDay: DateTime.now().add(const Duration(days: 90)),
+        lastDay: DateTime.now().add(Duration(
+          days: controller.clinicSettings.value?.maxAdvanceBooking ?? 30,
+        )),
         headerStyle: HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
@@ -164,10 +282,13 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
           weekendTextStyle: TextStyle(color: Colors.grey[600]),
           outsideDaysVisible: false,
           cellMargin: const EdgeInsets.all(4),
+          disabledTextStyle: TextStyle(color: Colors.grey[400]),
         ),
         enabledDayPredicate: controller.isDateSelectable,
         onDaySelected: (selectedDay, focusedDay) {
-          controller.onDateSelected(selectedDay);
+          if (controller.isDateSelectable(selectedDay)) {
+            controller.onDateSelected(selectedDay);
+          }
         },
         selectedDayPredicate: (day) =>
             isSameDay(day, controller.selectedDateTime.value),
@@ -213,10 +334,30 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                         ),
                       );
                     }).toList(),
-                    onChanged: controller.onTimeSelected,
+                    onChanged: controller.availableTimes.isEmpty 
+                        ? null 
+                        : controller.onTimeSelected,
                   ),
                 ),
               )),
+              // Show message if no times available
+              Obx(() {
+                if (controller.selectedDateTime.value != null && 
+                    controller.availableTimes.isEmpty &&
+                    controller.clinicSettings.value != null) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'No available times for this date',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red[600],
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
             ],
           ),
         ),
@@ -342,7 +483,12 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                       CircleAvatar(
                         radius: 16,
                         backgroundColor: Colors.grey[200],
-                        child: const Icon(Icons.pets, size: 16),
+                        backgroundImage: pet.image != null && pet.image!.isNotEmpty
+                            ? NetworkImage(pet.image!)
+                            : null,
+                        child: pet.image == null || pet.image!.isEmpty
+                            ? const Icon(Icons.pets, size: 16)
+                            : null,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -377,56 +523,88 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
   }
 
   Widget _buildBookButton() {
-    return Obx(() => SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: controller.canBookAppointment
-            ? controller.bookAppointment
-            : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF5173B8),
-          disabledBackgroundColor: Colors.grey[300],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
-        child: controller.isBooking.value
-            ? const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+    return Obx(() {
+      final validationMessage = controller.bookingValidationMessage;
+      final isEnabled = controller.canBookAppointment;
+      
+      return Column(
+        children: [
+          // Show validation message if any
+          if (validationMessage != null && !controller.isBooking.value)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Booking...',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  Icon(Icons.info_outline, color: Colors.orange[700], size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      validationMessage,
+                      style: TextStyle(
+                        color: Colors.orange[700],
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
-              )
-            : Text(
-                'Book Appointment',
-                style: GoogleFonts.inter(
-                  color: controller.canBookAppointment
-                      ? Colors.white
-                      : Colors.grey[600],
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
               ),
-      ),
-    ));
+            ),
+          
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: isEnabled ? controller.bookAppointment : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isEnabled ? const Color(0xFF5173B8) : Colors.grey[300],
+                disabledBackgroundColor: Colors.grey[300],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: isEnabled ? 2 : 0,
+              ),
+              child: controller.isBooking.value
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Booking...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      'Book Appointment',
+                      style: GoogleFonts.inter(
+                        color: isEnabled ? Colors.white : Colors.grey[600],
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   @override

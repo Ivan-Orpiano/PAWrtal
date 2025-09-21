@@ -1,7 +1,9 @@
-import 'package:capstone_app/web/user_web/desktop_web/pages/web_clinic_page.dart';
-import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class WebDashboardTileUpdated extends StatefulWidget {
   final Clinic clinic;
@@ -21,18 +23,46 @@ class WebDashboardTileUpdated extends StatefulWidget {
 
 class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
   bool _isLiked = false;
+  ClinicSettings? _clinicSettings;
+  bool _isLoadingSettings = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClinicSettings();
+  }
+
+  Future<void> _loadClinicSettings() async {
+    try {
+      final authRepository = Get.find<AuthRepository>();
+      final settings = await authRepository.getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
+      setState(() {
+        _clinicSettings = settings;
+        _isLoadingSettings = false;
+      });
+    } catch (e) {
+      print("Error loading clinic settings for tile: $e");
+      setState(() {
+        _isLoadingSettings = false;
+      });
+    }
+  }
 
   // Helper method to extract services for display
   List<String> _getServicesList() {
-    if (widget.clinic.services.isEmpty) return [];
+    // First try clinic settings, then fall back to clinic.services
+    List<String> services = [];
     
-    // Split services by common delimiters and take first few
-    List<String> services = widget.clinic.services
-        .split(RegExp(r'[,;|\n]'))
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .take(3)
-        .toList();
+    if (_clinicSettings != null && _clinicSettings!.services.isNotEmpty) {
+      services = _clinicSettings!.services.take(3).toList();
+    } else if (widget.clinic.services.isNotEmpty) {
+      services = widget.clinic.services
+          .split(RegExp(r'[,;|\n]'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .take(3)
+          .toList();
+    }
     
     return services;
   }
@@ -55,9 +85,82 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
     }
   }
 
+  Widget _buildStatusBadge() {
+    if (_isLoadingSettings) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(strokeWidth: 1),
+        ),
+      );
+    }
+
+    final isOpen = _clinicSettings?.isOpen ?? true;
+    final isOpenToday = _clinicSettings?.isOpenToday() ?? true;
+    
+    Color statusColor;
+    String statusText;
+    
+    if (!isOpen) {
+      statusColor = Colors.red;
+      statusText = "CLOSED";
+    } else if (!isOpenToday) {
+      statusColor = Colors.orange;
+      statusText = "CLOSED TODAY";
+    } else {
+      statusColor = Colors.green;
+      statusText = "OPEN";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: statusColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        statusText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHoursDisplay() {
+    if (_isLoadingSettings || _clinicSettings == null) {
+      return const SizedBox.shrink();
+    }
+
+    final todayHours = _clinicSettings!.getTodayHours();
+    
+    return Text(
+      todayHours,
+      style: TextStyle(
+        color: Colors.grey[600],
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final services = _getServicesList();
+    
+    // Get profile image - use first gallery image from settings, then fallback to clinic.image
+    String profileImage = widget.clinic.image;
+    if (_clinicSettings != null && _clinicSettings!.gallery.isNotEmpty) {
+      profileImage = _clinicSettings!.gallery.first;
+    }
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 30),
@@ -84,26 +187,33 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
                     height: widget.tileHeight * 0.7,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(15),
-                      child: widget.clinic.image.isNotEmpty
+                      child: profileImage.isNotEmpty
                           ? Image.network(
-                              widget.clinic.image,
+                              profileImage,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               errorBuilder: (context, error, stackTrace) {
                                 return Image.asset(
-                                  'lib/images/test_image.jpg',
+                                  'lib/images/placeholder.png',
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                 );
                               },
                             )
                           : Image.asset(
-                              'lib/images/test_image.jpg',
+                              'lib/images/placeholder.png',
                               fit: BoxFit.cover,
                               width: double.infinity,
                             ),
                     ),
                   ),
+                  // Status badge
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: _buildStatusBadge(),
+                  ),
+                  // Like button
                   Positioned(
                     top: 10,
                     right: 10,
@@ -174,6 +284,20 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
                   ),
                 ],
               ),
+              // Hours display
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(child: _buildHoursDisplay()),
+                ],
+              ),
+              // Services display
+              if (services.isNotEmpty)
               Row(
                 children: [
                   const Padding(
