@@ -9,19 +9,19 @@ class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
 
   @override
-  State<AdminHomePage> createState() => _AdminHomePageState();  
+  State<AdminHomePage> createState() => AdminHomePageState();  
 }
 
-class _AdminHomePageState extends State<AdminHomePage> {
+class AdminHomePageState extends State<AdminHomePage> {
   int _selectedPage = 0;
 
-  void _navigateBottomBar(int index) {
+  void navigateBottomBar(int index) {
     setState(() {
       _selectedPage = index;
     });
   }
 
-  final List _pages = [
+  final List<Widget> _pages = [
     const AdminLandingPage(),
     const EnhancedAppointmentListPage(),
     const MessagesPage(),
@@ -32,9 +32,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       bottomNavigationBar: GnavBar(
-        onTabChange: (index) => _navigateBottomBar(index),
+        selectedIndex: _selectedPage, // Pass the selected index
+        onTabChange: (index) => navigateBottomBar(index),
       ),
-      body: _pages[_selectedPage],
+      body: IndexedStack( // Use IndexedStack to preserve state
+        index: _selectedPage,
+        children: _pages,
+      ),
     );
   }
 }
