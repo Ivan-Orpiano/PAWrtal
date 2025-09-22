@@ -11,6 +11,7 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
@@ -22,11 +23,15 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
         flexibleSpace: Container(
           margin: const EdgeInsets.only(top: 15.0),
           child: Center(
-            child: Image.asset(
-              "lib/images/PAWrtal_logo.png",
-              height: double.infinity,
-              width: double.infinity,
-              fit: BoxFit.contain,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: screenHeight * 0.08,
+                maxWidth: screenWidth * 0.3,
+              ),
+              child: Image.asset(
+                "lib/images/PAWrtal_logo.png",
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ),
@@ -72,30 +77,44 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                   ),
                 ),
               ],
-              child: Obx(() => TextButton.icon(
-                    onPressed: controller.isLoggingOut.value ? null : () {},
-                    icon: controller.isLoggingOut.value
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color.fromRGBO(81, 115, 153, 0.8),
-                              ),
+              child: Obx(() => InkWell(
+                    onTap: controller.isLoggingOut.value
+                        ? null
+                        : () {
+                            // This will trigger the popup menu
+                          },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8.0, vertical: 4.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          controller.isLoggingOut.value
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color.fromRGBO(81, 115, 153, 0.8),
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.account_circle,
+                                  color: Color.fromRGBO(81, 115, 153, 0.8)),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              controller.isLoggingOut.value
+                                  ? 'Processing...'
+                                  : controller.userName,
+                              style: const TextStyle(
+                                  color: Color.fromRGBO(81, 115, 153, 0.8)),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          )
-                        : const Icon(Icons.account_circle,
-                            color: Color.fromRGBO(81, 115, 153, 0.8)),
-                    label: Text(
-                      controller.isLoggingOut.value
-                          ? 'Processing...'
-                          : controller.userName,
-                      style: const TextStyle(
-                          color: Color.fromRGBO(81, 115, 153, 0.8)),
-                    ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color.fromRGBO(81, 115, 153, 0.8),
+                          ),
+                        ],
+                      ),
                     ),
                   )),
             ),
@@ -107,26 +126,85 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
         builder: (BuildContext context, BoxConstraints constraints) {
           return SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.only(top: 20, bottom: 60),
+              padding: EdgeInsets.symmetric(
+                horizontal: constraints.maxWidth * 0.05,
+                vertical: 20,
+              ),
               child: constraints.maxWidth > 800
-                  ? const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(child: VetClinicTile()),
-                        Expanded(child: PetOwnerTile()),
-                        Expanded(child: ViewReportTile()),
-                      ],
-                    )
-                  : const SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: Column(
+                  ? IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          VetClinicTile(),
-                          PetOwnerTile(),
-                          ViewReportTile(),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth / 3 - 16,
+                                ),
+                                child: const VetClinicTile(),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth / 3 - 16,
+                                ),
+                                child: const PetOwnerTile(),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth / 3 - 16,
+                                ),
+                                child: const ViewReportTile(),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
+                    )
+                  : Column(
+                      children: [
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth,
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: VetClinicTile(),
+                          ),
+                        ),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth,
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: PetOwnerTile(),
+                          ),
+                        ),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth,
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: ViewReportTile(),
+                          ),
+                        ),
+                      ],
                     ),
             ),
           );
@@ -138,27 +216,52 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Logout'),
           content: const Text('Are you sure you want to logout?'),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: controller.isLoggingOut.value
+                  ? null
+                  : () {
+                      Navigator.of(context).pop();
+                    },
               child: const Text('Cancel'),
             ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await controller.logout();
-              },
-              child: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
+            Obx(() => TextButton(
+                  onPressed: controller.isLoggingOut.value
+                      ? null
+                      : () async {
+                          Navigator.of(context).pop();
+                          try {
+                            await controller.logout();
+                          } catch (e) {
+                            // Handle logout error
+                            Get.snackbar(
+                              'Error',
+                              'Failed to logout. Please try again.',
+                              backgroundColor: Colors.red,
+                              colorText: Colors.white,
+                            );
+                          }
+                        },
+                  child: controller.isLoggingOut.value
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.red),
+                          ),
+                        )
+                      : const Text(
+                          'Logout',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                )),
           ],
         );
       },

@@ -232,7 +232,9 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       body: CustomScrollView(
         slivers: [
           // Modern App Bar
+
           SliverAppBar(
+            surfaceTintColor: Colors.transparent,
             expandedHeight: screenHeight * 0.15,
             floating: false,
             pinned: true,

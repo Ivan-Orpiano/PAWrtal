@@ -157,20 +157,20 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                           child: Row(
                             children: [
                               // Back button
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.arrow_back,
-                                  color: Color.fromARGB(255, 81, 115, 153),
-                                ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const SuperAdminVetClinic()),
-                                  );
-                                },
-                              ),
+                              // IconButton(
+                              //   icon: const Icon(
+                              //     Icons.arrow_back,
+                              //     color: Color.fromARGB(255, 81, 115, 153),
+                              //   ),
+                              //   onPressed: () {
+                              //     Navigator.push(
+                              //       context,
+                              //       MaterialPageRoute(
+                              //           builder: (context) =>
+                              //               const SuperAdminVetClinic()),
+                              //     );
+                              //   },
+                              // ),
                               InkWell(
                                 onTap: () {
                                   Navigator.push(
@@ -233,7 +233,6 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                     ),
                   ),
                 ),
-
                 SingleChildScrollView(
                   child: Container(
                     padding: EdgeInsets.symmetric(
@@ -326,9 +325,6 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                     ),
                   ),
                 ),
-
-
-
                 Container(
                   padding: EdgeInsets.symmetric(
                       horizontal: getResponsivePadding(screenWidth)),
@@ -344,8 +340,6 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                   key: locationKeySA,
                 ),
                 const SizedBox(height: 40),
-
-      
                 SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
