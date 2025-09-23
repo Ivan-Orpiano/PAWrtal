@@ -200,6 +200,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
         feedback: feedback,
         onReply: (reply) => _handleReply(feedback.id, reply),
         onStatusUpdate: (status) => _updateFeedbackStatus(feedback.id, status),
+        onDelete: () => _deleteFeedback(feedback.id),
       ),
     );
   }
@@ -254,6 +255,58 @@ class _ApplicationReportState extends State<ApplicationReport> {
       }
     });
     _filterFeedback();
+  }
+
+  void _deleteFeedback(String feedbackId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: Text(
+          'Delete Feedback',
+          style: TextStyle(
+            color: Colors.red[700],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete this feedback? This action cannot be undone.',
+          style: TextStyle(color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                feedbackList.removeWhere((f) => f.id == feedbackId);
+              });
+              _filterFeedback();
+              Navigator.pop(context); // Close confirmation dialog
+              Navigator.pop(context); // Close details dialog
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Feedback deleted successfully'),
+                  backgroundColor: Colors.red[600],
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -455,40 +508,43 @@ class _ApplicationReportState extends State<ApplicationReport> {
           Row(
             children: [
               Expanded(
-                  child: _buildFilterDropdown<FeedbackStatus>(
-                'Status',
-                selectedStatus,
-                FeedbackStatus.values,
-                (value) => setState(() {
-                  selectedStatus = value;
-                  _filterFeedback();
-                }),
-                (status) => _getStatusText(status),
-              )),
+                child: _buildFilterDropdown<FeedbackStatus>(
+                  'Status',
+                  selectedStatus,
+                  FeedbackStatus.values,
+                  (value) => setState(() {
+                    selectedStatus = value;
+                    _filterFeedback();
+                  }),
+                  (status) => _getStatusText(status),
+                ),
+              ),
               SizedBox(width: 12),
               Expanded(
-                  child: _buildFilterDropdown<FeedbackType>(
-                'Type',
-                selectedType,
-                FeedbackType.values,
-                (value) => setState(() {
-                  selectedType = value;
-                  _filterFeedback();
-                }),
-                (type) => _getTypeText(type),
-              )),
+                child: _buildFilterDropdown<FeedbackType>(
+                  'Type',
+                  selectedType,
+                  FeedbackType.values,
+                  (value) => setState(() {
+                    selectedType = value;
+                    _filterFeedback();
+                  }),
+                  (type) => _getTypeText(type),
+                ),
+              ),
               SizedBox(width: 12),
               Expanded(
-                  child: _buildFilterDropdown<Priority>(
-                'Priority',
-                selectedPriority,
-                Priority.values,
-                (value) => setState(() {
-                  selectedPriority = value;
-                  _filterFeedback();
-                }),
-                (priority) => _getPriorityText(priority),
-              )),
+                child: _buildFilterDropdown<Priority>(
+                  'Priority',
+                  selectedPriority,
+                  Priority.values,
+                  (value) => setState(() {
+                    selectedPriority = value;
+                    _filterFeedback();
+                  }),
+                  (priority) => _getPriorityText(priority),
+                ),
+              ),
             ],
           ),
         ],
@@ -507,7 +563,10 @@ class _ApplicationReportState extends State<ApplicationReport> {
       dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Colors.black),
+        floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
         border: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFF517399)),
           borderRadius: BorderRadius.circular(8),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -579,6 +638,25 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   _buildTypeBadge(feedback.type),
                   Spacer(),
                   _buildStatusBadge(feedback.status),
+                  // Add delete button for resolved and closed feedback
+                  if (feedback.status == FeedbackStatus.resolved ||
+                      feedback.status == FeedbackStatus.closed) ...[
+                    SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => _deleteFeedback(feedback.id),
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red[600],
+                        size: 20,
+                      ),
+                      tooltip: 'Delete feedback',
+                      constraints: BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      padding: EdgeInsets.all(4),
+                    ),
+                  ],
                 ],
               ),
               SizedBox(height: 12),
@@ -901,11 +979,13 @@ class FeedbackDetailsDialog extends StatefulWidget {
   final UserFeedback feedback;
   final Function(String) onReply;
   final Function(FeedbackStatus) onStatusUpdate;
+  final VoidCallback onDelete;
 
   FeedbackDetailsDialog({
     required this.feedback,
     required this.onReply,
     required this.onStatusUpdate,
+    required this.onDelete,
   });
 
   @override
@@ -948,6 +1028,14 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                     ),
                   ),
                 ),
+                // Add delete button in header for resolved/closed feedback
+                if (widget.feedback.status == FeedbackStatus.resolved ||
+                    widget.feedback.status == FeedbackStatus.closed)
+                  IconButton(
+                    onPressed: widget.onDelete,
+                    icon: Icon(Icons.delete_outline, color: Colors.red[600]),
+                    tooltip: 'Delete feedback',
+                  ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(Icons.close),
@@ -1281,6 +1369,22 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
           ),
         ),
         SizedBox(width: 16),
+        // Add delete button in action buttons for resolved/closed feedback
+        if (widget.feedback.status == FeedbackStatus.resolved ||
+            widget.feedback.status == FeedbackStatus.closed)
+          ElevatedButton.icon(
+            onPressed: widget.onDelete,
+            icon: Icon(
+              Icons.delete_outline,
+              color: Colors.white,
+            ),
+            label: Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+          ),
+        SizedBox(width: 12),
         ElevatedButton(
           onPressed: () => _copyFeedbackInfo(),
           child: Text('Copy Info'),
