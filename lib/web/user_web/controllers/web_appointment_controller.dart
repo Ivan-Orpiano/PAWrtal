@@ -4,8 +4,8 @@ import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class WebAppointmentController extends GetxController {
   final AuthRepository authRepository;
@@ -20,122 +20,87 @@ class WebAppointmentController extends GetxController {
 
   var isLoading = false.obs;
   var isBooking = false.obs;
-  var pets = <Pet>[].obs;
   var selectedDateTime = Rx<DateTime?>(null);
   var selectedTime = Rx<String?>(null);
   var selectedService = Rx<String?>(null);
   var selectedPet = Rx<Pet?>(null);
-  var clinicSettings = Rxn<ClinicSettings>();
+  var clinicSettings = Rx<ClinicSettings?>(null);
+  var pets = <Pet>[].obs;
   var availableTimes = <String>[].obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchUserPets();
-    loadClinicSettings();
-    // Set default date to today
-    selectedDateTime.value = DateTime.now();
+    _loadClinicSettings();
+    _loadUserPets();
   }
 
-  Future<void> loadClinicSettings() async {
+  Future<void> _loadClinicSettings() async {
     try {
       final settings = await authRepository.getClinicSettingsByClinicId(clinic.documentId ?? '');
       clinicSettings.value = settings;
-      
-      // Update available times when date changes
-      if (selectedDateTime.value != null) {
-        updateAvailableTimes(selectedDateTime.value!);
-      }
     } catch (e) {
       print("Error loading clinic settings: $e");
     }
   }
 
-  Future<void> fetchUserPets() async {
+  Future<void> _loadUserPets() async {
     try {
       isLoading.value = true;
       final userId = session.userId;
-
-      if (userId.isEmpty) {
-        _showSnackBar("User not logged in", isError: true);
-        return;
+      
+      if (userId.isNotEmpty) {
+        final petDocs = await authRepository.getUserPets(userId);
+        pets.assignAll(petDocs.map((doc) => Pet.fromMap(doc.data)).toList());
       }
-
-      final petDocs = await authRepository.getUserPets(userId);
-      pets.value = petDocs.map((doc) {
-        final pet = Pet.fromMap(doc.data);
-        pet.documentId = doc.$id;
-        return pet;
-      }).toList();
-
     } catch (e) {
-      _showSnackBar("Failed to load pets: $e", isError: true);
+      print("Error loading pets: $e");
     } finally {
       isLoading.value = false;
     }
   }
 
   List<String> get services {
-    // First try clinic settings, then fall back to clinic.services
     if (clinicSettings.value != null && clinicSettings.value!.services.isNotEmpty) {
       return clinicSettings.value!.services;
     }
     
-    if (clinic.services.isNotEmpty) {
-      return clinic.services.split(',').map((s) => s.trim()).toList();
+    if (clinic.services.isEmpty) {
+      return ['General Consultation', 'Vaccination', 'Check-up', 'Grooming'];
     }
-    
-    return ['General Consultation', 'Vaccination', 'Check-up', 'Grooming'];
+    return clinic.services.split(',').map((s) => s.trim()).toList();
   }
 
   bool isDateSelectable(DateTime day) {
-    // Disable past dates
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final checkDay = DateTime(day.year, day.month, day.day);
-    
-    if (checkDay.isBefore(today)) return false;
-    
-    // Check clinic settings for availability
+    // Check if date is in the past
+    if (day.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+      return false;
+    }
+
+    // Check if clinic settings allow this date
     if (clinicSettings.value != null) {
       // Check if clinic is open
-      if (!clinicSettings.value!.isOpen) return false;
-      
+      if (!clinicSettings.value!.isOpen) {
+        return false;
+      }
+
       // Check max advance booking
-      final maxAdvanceDays = clinicSettings.value!.maxAdvanceBooking;
-      final maxDate = today.add(Duration(days: maxAdvanceDays));
-      if (checkDay.isAfter(maxDate)) return false;
-      
+      final maxAdvanceDate = DateTime.now().add(
+        Duration(days: clinicSettings.value!.maxAdvanceBooking)
+      );
+      if (day.isAfter(maxAdvanceDate)) {
+        return false;
+      }
+
       // Check if clinic is open on this day
-      final dayName = _getDayName(checkDay.weekday);
-      final dayHours = clinicSettings.value!.operatingHours[dayName];
-      if (dayHours == null || dayHours['isOpen'] != true) return false;
+      final dayName = _getDayName(day.weekday);
+      final daySchedule = clinicSettings.value!.operatingHours[dayName];
+      if (daySchedule?['isOpen'] != true) {
+        return false;
+      }
     }
-    
+
     return true;
-  }
-
-  void onDateSelected(DateTime selectedDay) {
-    selectedDateTime.value = selectedDay;
-    selectedTime.value = null; // Reset selected time
-    updateAvailableTimes(selectedDay);
-  }
-
-  void updateAvailableTimes(DateTime date) {
-    if (clinicSettings.value != null) {
-      availableTimes.value = clinicSettings.value!.getAvailableTimeSlots(date);
-    } else {
-      // Fallback to default time slots
-      availableTimes.value = [
-        '9:00 AM',
-        '10:00 AM',
-        '11:00 AM',
-        '1:00 PM',
-        '2:00 PM',
-        '3:00 PM',
-        '4:00 PM',
-      ];
-    }
   }
 
   String _getDayName(int weekday) {
@@ -151,6 +116,80 @@ class WebAppointmentController extends GetxController {
     }
   }
 
+  void onDateSelected(DateTime date) {
+    selectedDateTime.value = date;
+    selectedTime.value = null; // Reset selected time when date changes
+    _updateAvailableTimeSlots();
+  }
+
+  void _updateAvailableTimeSlots() {
+    if (selectedDateTime.value == null) {
+      availableTimes.clear();
+      return;
+    }
+
+    List<String> slots = [];
+    
+    if (clinicSettings.value != null) {
+      slots = clinicSettings.value!.getAvailableTimeSlotsFiltered(selectedDateTime.value!);
+    } else {
+      // Fallback to default time slots
+      slots = [
+        '09:00',
+        '10:00',
+        '11:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+      ];
+      
+      // Filter out past time slots if the selected date is today
+      if (_isToday(selectedDateTime.value!)) {
+        slots = _filterPastTimeSlots(slots);
+      }
+    }
+
+    availableTimes.assignAll(slots);
+    
+    // Reset selected time if it's no longer available
+    if (selectedTime.value != null && !slots.contains(selectedTime.value)) {
+      selectedTime.value = null;
+    }
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year && 
+           date.month == now.month && 
+           date.day == now.day;
+  }
+
+  List<String> _filterPastTimeSlots(List<String> timeSlots) {
+    final now = DateTime.now();
+    
+    return timeSlots.where((timeSlot) {
+      try {
+        final timeParts = timeSlot.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        
+        final slotDateTime = DateTime(
+          selectedDateTime.value!.year, 
+          selectedDateTime.value!.month, 
+          selectedDateTime.value!.day, 
+          hour, 
+          minute
+        );
+        // Add a 30-minute buffer - don't allow booking slots that start within 30 minutes
+        return slotDateTime.isAfter(now.add(const Duration(minutes: 30)));
+      } catch (e) {
+        // If parsing fails, include the slot (better to be permissive)
+        return true;
+      }
+    }).toList();
+  }
+
   void onTimeSelected(String? time) {
     selectedTime.value = time;
   }
@@ -163,169 +202,114 @@ class WebAppointmentController extends GetxController {
     selectedPet.value = pet;
   }
 
-  DateTime parseTimeStringToDateTime(DateTime date, String timeString) {
-    // Handle both formats: "9:00 AM" and "09:00"
-    if (timeString.contains('AM') || timeString.contains('PM')) {
-      final timeParts = timeString.split(" ");
-      final hourMinute = timeParts[0].split(":");
-      int hour = int.parse(hourMinute[0]);
-      final int minute = int.parse(hourMinute[1]);
-      final meridian = timeParts[1].toUpperCase();
-
-      if (meridian == 'PM' && hour != 12) {
-        hour += 12;
-      } else if (meridian == 'AM' && hour == 12) {
-        hour = 0;
-      }
-
-      return DateTime(date.year, date.month, date.day, hour, minute);
-    } else {
-      // Handle 24-hour format "09:00"
-      final hourMinute = timeString.split(":");
-      final hour = int.parse(hourMinute[0]);
-      final minute = int.parse(hourMinute[1]);
-      return DateTime(date.year, date.month, date.day, hour, minute);
-    }
-  }
-
   bool get canBookAppointment {
-    if (isBooking.value) return false;
-    
-    // Check basic fields
-    if (selectedDateTime.value == null ||
-        selectedTime.value == null ||
-        selectedService.value == null ||
-        selectedPet.value == null) {
-      return false;
-    }
-    
-    // Check if clinic is open for appointments
-    if (clinicSettings.value != null && !clinicSettings.value!.isOpen) {
-      return false;
-    }
-    
-    return true;
+    return selectedDateTime.value != null &&
+           selectedTime.value != null &&
+           selectedService.value != null &&
+           selectedPet.value != null &&
+           !isBooking.value &&
+           (clinicSettings.value?.isOpen ?? true);
   }
 
   String? get bookingValidationMessage {
     if (clinicSettings.value != null && !clinicSettings.value!.isOpen) {
-      return "This clinic is currently closed for appointments";
+      return 'This clinic is currently not accepting appointments';
     }
     
     if (selectedDateTime.value == null) {
-      return "Please select a date";
+      return 'Please select a date';
+    }
+    
+    if (availableTimes.isEmpty) {
+      return 'No available times for this date';
     }
     
     if (selectedTime.value == null) {
-      return "Please select a time";
+      return 'Please select a time';
     }
     
     if (selectedService.value == null) {
-      return "Please select a service";
+      return 'Please select a service';
     }
     
     if (selectedPet.value == null) {
-      return "Please select a pet";
+      return 'Please select a pet';
     }
     
     return null;
   }
 
   Future<void> bookAppointment() async {
-    final validationMessage = bookingValidationMessage;
-    if (validationMessage != null) {
-      _showSnackBar(validationMessage, isError: true);
-      return;
-    }
+    if (!canBookAppointment) return;
 
     final userId = session.userId;
     if (userId.isEmpty) {
-      _showSnackBar("User not logged in", isError: true);
+      Get.snackbar(
+        "Error", 
+        "User not logged in",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     try {
       isBooking.value = true;
 
-      final appointmentDateTime = parseTimeStringToDateTime(
-        selectedDateTime.value!, 
-        selectedTime.value!
+      // Parse time and create DateTime
+      final timeParts = selectedTime.value!.split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      
+      final appointmentDateTime = DateTime(
+        selectedDateTime.value!.year,
+        selectedDateTime.value!.month,
+        selectedDateTime.value!.day,
+        hour,
+        minute,
       );
 
       final appointment = Appointment(
         userId: userId,
         clinicId: clinic.documentId ?? '',
-        petId: selectedPet.value!.documentId ?? selectedPet.value!.name,
+        petId: selectedPet.value!.name, // Using pet name as ID for now
         service: selectedService.value!,
         dateTime: appointmentDateTime,
-        status: (clinicSettings.value?.autoAcceptAppointments ?? false) ? 'accepted' : 'pending',
+        status: clinicSettings.value?.autoAcceptAppointments == true ? 'accepted' : 'pending',
       );
 
       await authRepository.createAppointment(appointment);
 
-      _showSuccessDialog();
-      _resetForm();
+      // Show success message
+      Get.snackbar(
+        "Success", 
+        clinicSettings.value?.autoAcceptAppointments == true
+          ? "Appointment automatically confirmed!"
+          : "Appointment booked successfully! You will receive confirmation once the clinic reviews your request.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+
+      // Reset form
+      selectedDateTime.value = null;
+      selectedTime.value = null;
+      selectedService.value = null;
+      selectedPet.value = null;
+      availableTimes.clear();
 
     } catch (e) {
-      _showSnackBar("Failed to book appointment: $e", isError: true);
+      Get.snackbar(
+        "Error", 
+        "Failed to book appointment: $e",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isBooking.value = false;
     }
-  }
-
-  void _resetForm() {
-    selectedTime.value = null;
-    selectedService.value = null;
-    selectedPet.value = null;
-    selectedDateTime.value = DateTime.now();
-    updateAvailableTimes(DateTime.now());
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    Get.snackbar(
-      isError ? "Error" : "Success",
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: isError ? Colors.red[600] : Colors.green[600],
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 8,
-    );
-  }
-
-  void _showSuccessDialog() {
-    final autoAccept = clinicSettings.value?.autoAcceptAppointments ?? false;
-    final statusText = autoAccept ? "confirmed" : "received and pending review";
-    
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 28),
-            SizedBox(width: 12),
-            Text('Appointment Booked!'),
-          ],
-        ),
-        content: Text(
-          'Your appointment with ${clinic.clinicName} has been $statusText. '
-          '${autoAccept ? "You're all set!" : "You will receive a confirmation once the clinic reviews your request."}'
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Get.back(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5173B8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)
-              ),
-            ),
-            child: const Text('OK', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
-    );
   }
 }

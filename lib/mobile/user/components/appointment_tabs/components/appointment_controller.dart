@@ -54,9 +54,11 @@ class EnhancedUserAppointmentController extends GetxController {
     for (final clinicId in clinicIds) {
       if (!clinics.containsKey(clinicId) && clinicId.isNotEmpty) {
         try {
-          final clinic = await authRepository.getClinicById(clinicId);
-          if (clinic != null) {
-            clinics[clinicId] = clinic as Clinic;
+          final clinicDoc = await authRepository.getClinicById(clinicId);
+          if (clinicDoc != null) {
+            final clinic = Clinic.fromMap(clinicDoc.data);
+            clinic.documentId = clinicDoc.$id;
+            clinics[clinicId] = clinic;
           }
         } catch (e) {
           print('Error fetching clinic $clinicId: $e');

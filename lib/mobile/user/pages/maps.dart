@@ -44,7 +44,7 @@ class Maps extends StatelessWidget {
               ),
             )
           ),
-          const MyTags()
+          // const MyTags()
         ]
       ),
     );
