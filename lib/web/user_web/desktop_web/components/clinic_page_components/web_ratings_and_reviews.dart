@@ -45,42 +45,42 @@ class WebRatingsAndReviews extends StatefulWidget {
 
 class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
   bool _showAllReviews = false;
-  final List <Review> reviews =[
+  final List<Review> reviews = [
     Review(
-      userName: 'Mike',
-      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      userName: 'Juan',
+      profileImageUrl: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2', 
       rating: 5,
-      comment: 'Hindi na makalaya'
+      comment: 'Amazing experience! The service was excellent and I really felt valued. Definitely recommend to everyone.'
     ),
     Review(
-      userName: 'David',
-      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      userName: 'Will',
+      profileImageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9',
       rating: 4,
-      comment: 'Dinadalaw mo ''ko bawat gabi'
+      comment: 'Very good overall. A few small things could be improved, but I’m still satisfied.'
     ),
     Review(
-      userName: 'Ivan',
-      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      userName: 'Smith',
+      profileImageUrl: 'https://images.unsplash.com/photo-1517423440428-a5a00ad493e8',
       rating: 3,
-      comment: 'Wala mang nakikita'
+      comment: 'It was okay. Not bad, but nothing too special either. Average experience.'
     ),
     Review(
-      userName: 'Dave',
-      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      userName: 'Wally',
+      profileImageUrl: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987',
       rating: 2,
-      comment: 'Haplos mo''y ramdam pa rin sa dilim'
+      comment: 'Honestly not the best. I expected more, and a few things really need improvement.'
     ),
     Review(
-      userName: 'Lenard',
-      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      userName: 'Brian',
+      profileImageUrl: 'https://images.unsplash.com/photo-1487412912498-0447578fcca8',
       rating: 1.5,
-      comment: 'Hindi na na-nanaginip'
+      comment: 'Pretty disappointing. The experience didn’t meet my expectations at all.'
     ),
     Review(
-      userName: 'Lenard',
-      profileImageUrl: 'https://cdn.prod.website-files.com/62bdc93e9cccfb43e155104c/66f106a855c31c342d2e1b40_Skeleton%20PFP%20400x400%20(7).png',
+      userName: 'Mia',
+      profileImageUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e',
       rating: 5,
-      comment: 'Hindi na na-nanaginip'
+      comment: 'Perfect! I had such a great time, everything went smoothly and exceeded my expectations.'
     ),
   ];
 
@@ -445,6 +445,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
                                             ),
                                           ),
                                         ),
+                                        const SizedBox(height: 30,)
                                       ],
                                     ),
                                   )
