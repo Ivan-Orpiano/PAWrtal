@@ -198,6 +198,44 @@ class ClinicSettings {
     return slots;
   }
 
+  List<String> getAvailableTimeSlotsFiltered(DateTime date) {
+    List<String> slots = getAvailableTimeSlots(date);
+
+    // Filter out past time slots if the selected date is today
+    if (_isToday(date)) {
+      slots = _filterPastTimeSlots(slots, date);
+    }
+
+    return slots;
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  List<String> _filterPastTimeSlots(List<String> timeSlots, DateTime date) {
+    final now = DateTime.now();
+
+    return timeSlots.where((timeSlot) {
+      try {
+        final timeParts = timeSlot.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+
+        final slotDateTime =
+            DateTime(date.year, date.month, date.day, hour, minute);
+        // Add a 30-minute buffer - don't allow booking slots that start within 30 minutes
+        return slotDateTime.isAfter(now.add(const Duration(minutes: 30)));
+      } catch (e) {
+        // If parsing fails, include the slot (better to be permissive)
+        return true;
+      }
+    }).toList();
+  }
+
   ClinicSettings copyWith({
     String? documentId,
     String? clinicId,
