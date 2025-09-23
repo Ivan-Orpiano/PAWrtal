@@ -160,6 +160,54 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
     _showSnackBar('Deletion request denied', Colors.orange);
   }
 
+  void _deleteRequest(DeletionRequestItem request) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Color(0xFFE74C3C)),
+            SizedBox(width: 8),
+            Text('Confirm Deletion'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete the ${request.status.toLowerCase()} request from "${request.vetClinicName}"?\n\nThis action cannot be undone.',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF95A5A6),
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _allRequests.removeWhere((item) => item.id == request.id);
+                _filterRequests();
+              });
+              Navigator.pop(context);
+              _showSnackBar(
+                'Request deleted successfully',
+                const Color(0xFFE74C3C),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE74C3C),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -318,6 +366,8 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
       value: _selectedStatus,
       decoration: InputDecoration(
         labelText: 'Status',
+        labelStyle: const TextStyle(color: Colors.black),
+        floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -342,6 +392,8 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
       value: _selectedReason,
       decoration: InputDecoration(
         labelText: 'Reason',
+        labelStyle: const TextStyle(color: Colors.black),
+        floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -605,9 +657,11 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
 
             const SizedBox(height: 8),
 
+            // Action Buttons Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // View Details Button (always shown)
                 TextButton.icon(
                   onPressed: () => _showRequestDetails(request),
                   icon: const Icon(
@@ -621,21 +675,48 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
                     foregroundColor: const Color.fromARGB(255, 255, 255, 255),
                   ),
                 ),
-                if (request.status == 'Pending' ||
-                    request.status == 'Under Review')
-                  ElevatedButton.icon(
-                    onPressed: () => _handleDeletionRequest(request),
-                    icon: const Icon(
-                      Icons.gavel,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                    label: const Text('Process'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE74C3C),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
+
+                // Right side buttons based on status
+                Row(
+                  children: [
+                    // Process button for Pending and Under Review
+                    if (request.status == 'Pending' ||
+                        request.status == 'Under Review')
+                      ElevatedButton.icon(
+                        onPressed: () => _handleDeletionRequest(request),
+                        icon: const Icon(
+                          Icons.gavel,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        label: const Text('Process'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 81, 115, 153),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+
+                    // Delete button for Approved and Denied
+                    if (request.status == 'Approved' ||
+                        request.status == 'Denied') ...[
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _deleteRequest(request),
+                        icon: const Icon(
+                          Icons.delete_forever,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        label: const Text('Delete'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE74C3C),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ],

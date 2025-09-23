@@ -392,102 +392,102 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CrudeAdminAccount(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          height: 56,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color.fromRGBO(81, 115, 153, 0.9),
-                                Color.fromRGBO(81, 115, 153, 0.7),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color.fromRGBO(81, 115, 153, 0.3),
-                                offset: const Offset(0, 2),
-                                blurRadius: 6,
-                                spreadRadius: 0,
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              // Animated background circles
-                              Positioned(
-                                right: -8,
-                                top: -8,
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.15),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: -6,
-                                bottom: -6,
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.1),
-                                  ),
-                                ),
-                              ),
-                              // Main content
-                              Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Icon(
-                                        Icons.admin_panel_settings,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Flexible(
-                                      child: Text(
-                                        "Admin Accounts",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Expanded(
+                    //   child: GestureDetector(
+                    //     onTap: () {
+                    //       Navigator.push(
+                    //         context,
+                    //         MaterialPageRoute(
+                    //           builder: (context) => const CrudeAdminAccount(),
+                    //         ),
+                    //       );
+                    //     },
+                    //     child: Container(
+                    //       height: 56,
+                    //       margin: const EdgeInsets.only(right: 8),
+                    //       decoration: BoxDecoration(
+                    //         gradient: const LinearGradient(
+                    //           colors: [
+                    //             Color.fromRGBO(81, 115, 153, 0.9),
+                    //             Color.fromRGBO(81, 115, 153, 0.7),
+                    //           ],
+                    //           begin: Alignment.topLeft,
+                    //           end: Alignment.bottomRight,
+                    //         ),
+                    //         borderRadius: BorderRadius.circular(16),
+                    //         boxShadow: [
+                    //           BoxShadow(
+                    //             color: const Color.fromRGBO(81, 115, 153, 0.3),
+                    //             offset: const Offset(0, 2),
+                    //             blurRadius: 6,
+                    //             spreadRadius: 0,
+                    //           ),
+                    //         ],
+                    //       ),
+                    //       child: Stack(
+                    //         children: [
+                    //           // Animated background circles
+                    //           Positioned(
+                    //             right: -8,
+                    //             top: -8,
+                    //             child: Container(
+                    //               width: 32,
+                    //               height: 32,
+                    //               decoration: BoxDecoration(
+                    //                 shape: BoxShape.circle,
+                    //                 color: Colors.white.withOpacity(0.15),
+                    //               ),
+                    //             ),
+                    //           ),
+                    //           Positioned(
+                    //             left: -6,
+                    //             bottom: -6,
+                    //             child: Container(
+                    //               width: 24,
+                    //               height: 24,
+                    //               decoration: BoxDecoration(
+                    //                 shape: BoxShape.circle,
+                    //                 color: Colors.white.withOpacity(0.1),
+                    //               ),
+                    //             ),
+                    //           ),
+                    //           // Main content
+                    //           Center(
+                    //             child: Row(
+                    //               mainAxisAlignment: MainAxisAlignment.center,
+                    //               children: [
+                    //                 Container(
+                    //                   padding: const EdgeInsets.all(6),
+                    //                   decoration: BoxDecoration(
+                    //                     color: Colors.white.withOpacity(0.2),
+                    //                     borderRadius: BorderRadius.circular(6),
+                    //                   ),
+                    //                   child: const Icon(
+                    //                     Icons.admin_panel_settings,
+                    //                     color: Colors.white,
+                    //                     size: 18,
+                    //                   ),
+                    //                 ),
+                    //                 const SizedBox(width: 8),
+                    //                 const Flexible(
+                    //                   child: Text(
+                    //                     "Admin Accounts",
+                    //                     style: TextStyle(
+                    //                       color: Colors.white,
+                    //                       fontWeight: FontWeight.w600,
+                    //                       fontSize: 12,
+                    //                     ),
+                    //                     overflow: TextOverflow.ellipsis,
+                    //                   ),
+                    //                 ),
+                    //               ],
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
 
                     // Staff Account Button
                     Expanded(
