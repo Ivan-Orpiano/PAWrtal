@@ -1,5 +1,7 @@
 // lib/init/dependency_injection.dart
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
+import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
+import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -13,4 +15,6 @@ Future<void> initializeDependencies() async {
   Get.put(UserSessionService());
   Get.put(AuthRepository(AppWriteProvider()));
   Get.put(DashboardController());
+  Get.put(MessagingController());
+  // Admin messaging controller will be initialized when needed
 }

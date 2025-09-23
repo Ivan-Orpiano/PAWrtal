@@ -2,13 +2,17 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/mobile/user/pages/schedule_appointment.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
+import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:get/get.dart';
 
 class DashboardNextPage extends StatelessWidget {
   final Clinic clinic;
   final ClinicSettings? clinicSettings;
 
   const DashboardNextPage({
-    super.key, 
+    super.key,
     required this.clinic,
     this.clinicSettings,
   });
@@ -82,7 +86,7 @@ class DashboardNextPage extends StatelessWidget {
 
   Widget _buildGallerySection() {
     List<String> galleryImages = [];
-    
+
     if (clinicSettings != null && clinicSettings!.gallery.isNotEmpty) {
       galleryImages = clinicSettings!.gallery;
     } else if (clinic.image.isNotEmpty) {
@@ -145,7 +149,8 @@ class DashboardNextPage extends StatelessWidget {
     );
   }
 
-  void _showImageDialog(BuildContext context, List<String> images, int initialIndex) {
+  void _showImageDialog(
+      BuildContext context, List<String> images, int initialIndex) {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
@@ -203,7 +208,7 @@ class DashboardNextPage extends StatelessWidget {
 
   Widget _buildServicesSection() {
     List<String> services = [];
-    
+
     if (clinicSettings != null && clinicSettings!.services.isNotEmpty) {
       services = clinicSettings!.services;
     } else if (clinic.services.isNotEmpty) {
@@ -215,7 +220,12 @@ class DashboardNextPage extends StatelessWidget {
     }
 
     if (services.isEmpty) {
-      services = ['General Consultation', 'Vaccination', 'Check-up', 'Grooming'];
+      services = [
+        'General Consultation',
+        'Vaccination',
+        'Check-up',
+        'Grooming'
+      ];
     }
 
     return Column(
@@ -233,7 +243,8 @@ class DashboardNextPage extends StatelessWidget {
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: services.map((service) => _buildServiceChip(service)).toList(),
+            children:
+                services.map((service) => _buildServiceChip(service)).toList(),
           ),
         ),
       ],
@@ -274,11 +285,14 @@ class DashboardNextPage extends StatelessWidget {
 
   IconData _getServiceIcon(String service) {
     String serviceLower = service.toLowerCase();
-    if (serviceLower.contains('vaccination') || serviceLower.contains('vaccine')) {
+    if (serviceLower.contains('vaccination') ||
+        serviceLower.contains('vaccine')) {
       return Icons.vaccines_outlined;
-    } else if (serviceLower.contains('surgery') || serviceLower.contains('operation')) {
+    } else if (serviceLower.contains('surgery') ||
+        serviceLower.contains('operation')) {
       return Icons.local_hospital_outlined;
-    } else if (serviceLower.contains('checkup') || serviceLower.contains('examination')) {
+    } else if (serviceLower.contains('checkup') ||
+        serviceLower.contains('examination')) {
       return Icons.health_and_safety_outlined;
     } else if (serviceLower.contains('grooming')) {
       return Icons.pets_outlined;
@@ -295,11 +309,23 @@ class DashboardNextPage extends StatelessWidget {
     // Mock data for now - you can replace this with real data later
     const double averageRating = 4.8;
     const int totalReviews = 124;
-    
+
     final reviews = [
-      {'name': 'Sarah Johnson', 'rating': 5, 'comment': 'Excellent care for my dog! Very professional staff.'},
-      {'name': 'Mike Chen', 'rating': 4, 'comment': 'Good service, clean facilities. Highly recommend.'},
-      {'name': 'Lisa Garcia', 'rating': 5, 'comment': 'Dr. Smith was wonderful with my cat. Thank you!'},
+      {
+        'name': 'Sarah Johnson',
+        'rating': 5,
+        'comment': 'Excellent care for my dog! Very professional staff.'
+      },
+      {
+        'name': 'Mike Chen',
+        'rating': 4,
+        'comment': 'Good service, clean facilities. Highly recommend.'
+      },
+      {
+        'name': 'Lisa Garcia',
+        'rating': 5,
+        'comment': 'Dr. Smith was wonderful with my cat. Thank you!'
+      },
     ];
 
     return Column(
@@ -312,7 +338,7 @@ class DashboardNextPage extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ),
-        
+
         // Rating summary
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
@@ -337,11 +363,11 @@ class DashboardNextPage extends StatelessWidget {
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < averageRating.floor() 
-                          ? Icons.star 
-                          : index < averageRating 
-                            ? Icons.star_half 
-                            : Icons.star_border,
+                        index < averageRating.floor()
+                            ? Icons.star
+                            : index < averageRating
+                                ? Icons.star_half
+                                : Icons.star_border,
                         color: Colors.amber,
                         size: 20,
                       );
@@ -362,65 +388,66 @@ class DashboardNextPage extends StatelessWidget {
 
         // Recent reviews
         ...reviews.map((review) => Container(
-          margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 4),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+              margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                    child: Text(
-                      review['name'].toString()[0],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          review['name'].toString(),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
+                        child: Text(
+                          review['name'].toString()[0],
                           style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Row(
-                          children: List.generate(5, (index) {
-                            return Icon(
-                              index < (review['rating'] as int) 
-                                ? Icons.star 
-                                : Icons.star_border,
-                              color: Colors.amber,
-                              size: 14,
-                            );
-                          }),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              review['name'].toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Row(
+                              children: List.generate(5, (index) {
+                                return Icon(
+                                  index < (review['rating'] as int)
+                                      ? Icons.star
+                                      : Icons.star_border,
+                                  color: Colors.amber,
+                                  size: 14,
+                                );
+                              }),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    review['comment'].toString(),
+                    style: const TextStyle(fontSize: 14),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                review['comment'].toString(),
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
-        )),
+            )),
 
         // View all reviews button
         Padding(
@@ -446,7 +473,15 @@ class DashboardNextPage extends StatelessWidget {
     if (clinicSettings == null) return const SizedBox.shrink();
 
     final operatingHours = clinicSettings!.operatingHours;
-    final days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    final days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
@@ -479,7 +514,7 @@ class DashboardNextPage extends StatelessWidget {
             final isOpen = dayData?['isOpen'] ?? false;
             final openTime = dayData?['openTime'] ?? '';
             final closeTime = dayData?['closeTime'] ?? '';
-            
+
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
@@ -619,7 +654,7 @@ class DashboardNextPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = _getImageUrl();
-    
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       appBar: AppBar(
@@ -770,27 +805,30 @@ class DashboardNextPage extends StatelessWidget {
                     left: 20, top: 20, bottom: 20, right: 10),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 75, vertical: 15),
-                    backgroundColor: _canMakeAppointment() 
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 75, vertical: 15),
+                    backgroundColor: _canMakeAppointment()
                         ? const Color.fromARGB(255, 81, 115, 153)
                         : Colors.grey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  onPressed: _canMakeAppointment() ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ScheduleAppointment(
-                          clinic: clinic,
-                          clinicSettings: clinicSettings,
-                        ),
-                      ),
-                    );
-                  } : null,
+                  onPressed: _canMakeAppointment()
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ScheduleAppointment(
+                                clinic: clinic,
+                                clinicSettings: clinicSettings,
+                              ),
+                            ),
+                          );
+                        }
+                      : null,
                   child: Text(
-                    _canMakeAppointment() 
+                    _canMakeAppointment()
                         ? "Make an Appointment"
                         : "Clinic Closed",
                     style: const TextStyle(color: Colors.white),
@@ -802,14 +840,16 @@ class DashboardNextPage extends StatelessWidget {
               padding: const EdgeInsets.only(top: 20, bottom: 20, right: 10),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
                   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                onPressed: () {
-                  // Message functionality
+                onPressed: () async {
+                  await _startConversationWithClinic(
+                      context); // Pass context here
                 },
                 child: const Icon(
                   Icons.message_rounded,
@@ -819,6 +859,111 @@ class DashboardNextPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _startConversationWithClinic(BuildContext context) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => const Center(
+          child: CircularProgressIndicator(
+            color: Color.fromARGB(255, 81, 115, 153),
+          ),
+        ),
+      );
+
+      final MessagingController messagingController =
+          Get.find<MessagingController>();
+      final UserSessionService userSession = Get.find<UserSessionService>();
+
+      // Check if user is logged in
+      if (userSession.userId.isEmpty) {
+        Navigator.pop(context); // Close loading dialog
+        _showLoginRequiredDialog(context);
+        return;
+      }
+
+      // Get or create conversation with this clinic
+      final conversation = await messagingController
+          .startConversationWithClinic(clinic.documentId!);
+
+      Navigator.pop(context); // Close loading dialog
+
+      if (conversation != null && context.mounted) {
+        // Navigate to the conversation
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MessagesNextPage(
+              conversation: conversation,
+              receiverId: clinic.documentId!,
+              receiverType: 'clinic',
+              receiverName: clinic.clinicName,
+              receiverImage: clinic.image,
+            ),
+          ),
+        );
+      } else {
+        if (context.mounted) {
+          _showErrorDialog(
+              context, 'Failed to start conversation. Please try again.');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog if still open
+        _showErrorDialog(context, 'Error starting conversation: $e');
+      }
+    }
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Login Required'),
+        content: const Text(
+            'Please log in to start a conversation with this clinic.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              // Navigate to login page
+              // Navigator.pushNamed(context, '/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+            ),
+            child: const Text(
+              'Login',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

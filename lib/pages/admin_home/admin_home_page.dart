@@ -3,7 +3,9 @@ import 'package:capstone_app/mobile/admin/pages/admin_landing_page.dart';
 import 'package:capstone_app/mobile/admin/pages/appointment_list.dart';
 import 'package:capstone_app/mobile/admin/pages/messages.dart';
 import 'package:capstone_app/mobile/admin/pages/staff_account_list.dart';
+import 'package:capstone_app/pages/admin_home/admin_home_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -14,6 +16,7 @@ class AdminHomePage extends StatefulWidget {
 
 class AdminHomePageState extends State<AdminHomePage> {
   int _selectedPage = 0;
+  final AdminHomeController _adminController = Get.find<AdminHomeController>();
 
   void navigateBottomBar(int index) {
     setState(() {
@@ -21,23 +24,42 @@ class AdminHomePageState extends State<AdminHomePage> {
     });
   }
 
-  final List<Widget> _pages = [
-    const AdminLandingPage(),
-    const EnhancedAppointmentListPage(),
-    const MessagesPage(),
-    const StaffAccountsPage(),
-  ];
+  // Build the messages page when needed
+  Widget _buildMessagesPage() {
+    final clinicId = _adminController.clinic.value?.documentId;
+    if (clinicId != null) {
+      return MessagesPage(clinicId: clinicId);
+    } else {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: Color.fromARGB(255, 81, 115, 153),
+            ),
+            SizedBox(height: 16),
+            Text('Loading clinic information...'),
+          ],
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       bottomNavigationBar: GnavBar(
-        selectedIndex: _selectedPage, // Pass the selected index
+        selectedIndex: _selectedPage,
         onTabChange: (index) => navigateBottomBar(index),
       ),
-      body: IndexedStack( // Use IndexedStack to preserve state
+      body: IndexedStack(
         index: _selectedPage,
-        children: _pages,
+        children: [
+          const AdminLandingPage(),
+          const EnhancedAppointmentListPage(),
+          _buildMessagesPage(), // Build when needed, not reactive
+          const StaffAccountsPage(),
+        ],
       ),
     );
   }
