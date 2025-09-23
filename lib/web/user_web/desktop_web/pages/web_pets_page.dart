@@ -262,7 +262,7 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
             children: [
               ShaderMask(
                 shaderCallback: (bounds) =>
-                    LinearGradient(colors: [darkText, deepBlue, primaryTeal])
+                    const LinearGradient(colors: [darkText, deepBlue, primaryTeal])
                         .createShader(bounds),
                 blendMode: BlendMode.srcIn,
                 child: const Text(
@@ -274,7 +274,7 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
+              const Text(
                 'Manage your beloved pets and their information',
                 style: TextStyle(
                     fontSize: 15,
@@ -341,7 +341,7 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
                       decoration: BoxDecoration(
                           color: Colors.grey.withOpacity(0.1),
                           shape: BoxShape.circle),
-                      child: Icon(Icons.clear, size: 16, color: mediumGray),
+                      child: const Icon(Icons.clear, size: 16, color: mediumGray),
                     ),
                   )
                 : null,
@@ -595,14 +595,14 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
                     offset: const Offset(0, 8)),
               ],
             ),
-            child: Icon(Icons.search_off_rounded, size: 72, color: mediumGray),
+            child: const Icon(Icons.search_off_rounded, size: 72, color: mediumGray),
           ),
           const SizedBox(height: 20),
-          Text('No pets found',
+          const Text('No pets found',
               style: TextStyle(
                   fontSize: 20, fontWeight: FontWeight.w700, color: darkText)),
           const SizedBox(height: 10),
-          Padding(
+          const Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               'No pets match your search criteria.\nTry adjusting your search terms.',
