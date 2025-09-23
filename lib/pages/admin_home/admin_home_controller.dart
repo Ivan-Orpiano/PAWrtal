@@ -1,3 +1,5 @@
+import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
+import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -61,17 +63,16 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
   void logout() async {
     try {
       FullScreenDialogLoader.showDialog();
+
+      // Skip all cleanup and just logout
       await authRepository.logout(_getStorage.read("sessionId"));
       _getStorage.erase();
+
       FullScreenDialogLoader.cancelDialog();
       Get.offAllNamed(Routes.login);
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
-        context: Get.overlayContext,
-        title: "Logout Failed",
-        message: e.toString(),
-      );
+      print('Logout error: $e');
     }
   }
 

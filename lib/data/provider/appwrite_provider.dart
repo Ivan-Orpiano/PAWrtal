@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/appwrite.dart' as models;
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -452,7 +455,8 @@ class AppWriteProvider {
     }
   }
 
-  Future<Document> updateClinicSettings(String documentId, Map<String, dynamic> data) async {
+  Future<Document> updateClinicSettings(
+      String documentId, Map<String, dynamic> data) async {
     data['updatedAt'] = DateTime.now().toIso8601String();
     return await databases!.updateDocument(
       databaseId: AppwriteConstants.dbID,
@@ -471,16 +475,18 @@ class AppWriteProvider {
   }
 
   // Upload multiple images for clinic gallery - handles both mobile and web
-  Future<List<models.File>> uploadClinicGalleryImages(List<PlatformFile> files) async {
+  Future<List<models.File>> uploadClinicGalleryImages(
+      List<PlatformFile> files) async {
     final List<models.File> uploadedFiles = [];
-    
+
     for (int i = 0; i < files.length; i++) {
       try {
         final file = files[i];
-        String fileName = "${DateTime.now().millisecondsSinceEpoch}_$i.${file.extension ?? 'jpg'}";
-        
+        String fileName =
+            "${DateTime.now().millisecondsSinceEpoch}_$i.${file.extension ?? 'jpg'}";
+
         InputFile inputFile;
-        
+
         // Handle web vs mobile platforms
         if (file.bytes != null) {
           // Web platform - use bytes
@@ -498,20 +504,20 @@ class AppWriteProvider {
           print("Error: File has neither bytes nor path");
           continue;
         }
-        
+
         final response = await storage!.createFile(
           bucketId: AppwriteConstants.imageBucketID,
           fileId: ID.unique(),
           file: inputFile,
         );
-        
+
         uploadedFiles.add(response);
       } catch (e) {
         print("Error uploading image ${files[i].name}: $e");
         // Continue with other images even if one fails
       }
     }
-    
+
     return uploadedFiles;
   }
 
@@ -533,7 +539,8 @@ class AppWriteProvider {
   // Get image URL from file ID with proper authentication
   String getImageUrl(String fileId) {
     // Simple, direct URL construction for public access
-    final url = '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+    final url =
+        '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
     print("Generated URL: $url");
     return url;
   }
@@ -623,5 +630,398 @@ class AppWriteProvider {
     );
 
     return response;
+  }
+
+  // ============= CONVERSATION METHODS =============
+
+  Future<Document> createConversation(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationsCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<Document?> getOrCreateConversation(
+      String userId, String clinicId) async {
+    try {
+      // First, try to find existing conversation
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        queries: [
+          Query.equal("userId", userId),
+          Query.equal("clinicId", clinicId),
+        ],
+      );
+
+      if (result.documents.isNotEmpty) {
+        return result.documents.first;
+      }
+
+      // If no conversation exists, create new one
+      final conversationData = {
+        'userId': userId,
+        'clinicId': clinicId,
+        'unreadCount': 0,
+        'isActive': true,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      return await createConversation(conversationData);
+    } catch (e) {
+      print("Error getting or creating conversation: $e");
+      return null;
+    }
+  }
+
+  Future<List<Document>> getUserConversations(String userId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationsCollectionID,
+      queries: [
+        Query.equal("userId", userId),
+        Query.equal("isActive", true),
+        Query.orderDesc("updatedAt"),
+      ],
+    );
+    return result.documents;
+  }
+
+  Future<List<Document>> getClinicConversations(String clinicId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationsCollectionID,
+      queries: [
+        Query.equal("clinicId", clinicId),
+        Query.equal("isActive", true),
+        Query.orderDesc("updatedAt"),
+      ],
+    );
+    return result.documents;
+  }
+
+  Future<Document> updateConversation(
+      String documentId, Map<String, dynamic> data) async {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationsCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+// ============= MESSAGE METHODS =============
+
+  Future<Document> createMessage(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.messagesCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<List<Document>> getConversationMessages(String conversationId,
+      {int limit = 50, String? lastMessageId}) async {
+    List<String> queries = [
+      Query.equal("conversationId", conversationId),
+      Query.equal("isDeleted", false),
+      Query.orderDesc("timestamp"),
+      Query.limit(limit),
+    ];
+
+    // For pagination
+    if (lastMessageId != null) {
+      queries.add(Query.cursorBefore(lastMessageId));
+    }
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.messagesCollectionID,
+      queries: queries,
+    );
+
+    return result.documents.reversed.toList(); // Reverse to show oldest first
+  }
+
+  Future<Document> updateMessage(
+      String documentId, Map<String, dynamic> data) async {
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.messagesCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<void> markMessagesAsRead(
+      String conversationId, String receiverId) async {
+    // Get unread messages for this receiver in this conversation
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.messagesCollectionID,
+      queries: [
+        Query.equal("conversationId", conversationId),
+        Query.equal("receiverId", receiverId),
+        Query.equal("isRead", false),
+      ],
+    );
+
+    // Mark each message as read
+    for (var doc in result.documents) {
+      await updateMessage(doc.$id, {'isRead': true});
+    }
+
+    // Update conversation unread count
+    await updateConversation(conversationId, {'unreadCount': 0});
+  }
+
+// ============= CONVERSATION STARTERS METHODS =============
+
+  Future<Document> createConversationStarter(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationStartersCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<List<Document>> getClinicConversationStarters(String clinicId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationStartersCollectionID,
+      queries: [
+        Query.equal("clinicId", clinicId),
+        Query.equal("isActive", true),
+        Query.orderAsc("displayOrder"),
+      ],
+    );
+    return result.documents;
+  }
+
+  Future<Document> updateConversationStarter(
+      String documentId, Map<String, dynamic> data) async {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationStartersCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<void> deleteConversationStarter(String documentId) async {
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationStartersCollectionID,
+      documentId: documentId,
+    );
+  }
+
+// Initialize default conversation starters for a clinic
+  Future<void> initializeDefaultConversationStarters(String clinicId) async {
+    try {
+      print('Creating default conversation starters for clinic: $clinicId');
+
+      // Check if clinic already has starters
+      final existing = await getClinicConversationStarters(clinicId);
+      if (existing.isNotEmpty) {
+        print('Clinic already has ${existing.length} starters');
+        return;
+      }
+
+      // Create default starters WITHOUT starterId field - AppWrite will auto-generate document ID
+      final defaultStarters = [
+        {
+          'clinicId': clinicId,
+          'triggerText': "Book an appointment",
+          'responseText':
+              "I'd be happy to help you book an appointment! What type of service do you need for your pet?",
+          'category': 'appointment',
+          'isActive': true,
+          'displayOrder': 1,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        {
+          'clinicId': clinicId,
+          'triggerText': "What services do you offer?",
+          'responseText':
+              "We offer comprehensive veterinary services including general checkups, vaccinations, surgery, dental care, and emergency services. What specific service are you interested in?",
+          'category': 'services',
+          'isActive': true,
+          'displayOrder': 2,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        {
+          'clinicId': clinicId,
+          'triggerText': "Emergency help",
+          'responseText':
+              "This is an emergency situation. Please call our emergency line immediately or bring your pet to our clinic right away. For immediate assistance, contact us at our emergency number.",
+          'category': 'emergency',
+          'isActive': true,
+          'displayOrder': 3,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        {
+          'clinicId': clinicId,
+          'triggerText': "What are your operating hours?",
+          'responseText':
+              "Our regular operating hours vary by day. You can check our current hours in the clinic information. For emergencies, we have extended support available.",
+          'category': 'general',
+          'isActive': true,
+          'displayOrder': 4,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      ];
+
+      print('Creating ${defaultStarters.length} default starters...');
+
+      for (var starter in defaultStarters) {
+        try {
+          final doc = await createConversationStarter(starter);
+          print(
+              'Created starter: ${starter['triggerText']} with ID: ${doc.$id}');
+        } catch (e) {
+          print('Failed to create starter "${starter['triggerText']}": $e');
+        }
+      }
+
+      print('Default conversation starters creation completed');
+    } catch (e) {
+      print("Error initializing default conversation starters: $e");
+    }
+  }
+
+// ============= USER STATUS METHODS =============
+
+  Future<Document> createOrUpdateUserStatus(
+      String userId, Map<String, dynamic> data) async {
+    try {
+      // First, try to find existing status
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.userStatusCollectionID,
+        queries: [Query.equal("userId", userId)],
+      );
+
+      if (result.documents.isNotEmpty) {
+        // Update existing status
+        return await databases!.updateDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.userStatusCollectionID,
+          documentId: result.documents.first.$id,
+          data: data,
+        );
+      } else {
+        // Create new status
+        data['userId'] = userId;
+        return await databases!.createDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.userStatusCollectionID,
+          documentId: ID.unique(),
+          data: data,
+        );
+      }
+    } catch (e) {
+      print("Error creating or updating user status: $e");
+      rethrow;
+    }
+  }
+
+  Future<Document?> getUserStatus(String userId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.userStatusCollectionID,
+        queries: [Query.equal("userId", userId)],
+      );
+      return result.documents.isNotEmpty ? result.documents.first : null;
+    } catch (e) {
+      print("Error getting user status: $e");
+      return null;
+    }
+  }
+
+  Future<void> setUserOnline(String userId) async {
+    final data = {
+      'isOnline': true,
+      'status': 'online',
+      'lastSeen': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    await createOrUpdateUserStatus(userId, data);
+  }
+
+  Future<void> setUserOffline(String userId) async {
+    final data = {
+      'isOnline': false,
+      'status': 'offline',
+      'lastSeen': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    await createOrUpdateUserStatus(userId, data);
+  }
+
+// ============= REAL-TIME SUBSCRIPTION METHODS =============
+
+  StreamSubscription<models.RealtimeMessage>? _messageSubscription;
+  StreamSubscription<models.RealtimeMessage>? _conversationSubscription;
+  StreamSubscription<models.RealtimeMessage>? _statusSubscription;
+
+// Subscribe to messages in a conversation
+  Stream<models.RealtimeMessage> subscribeToMessages(String conversationId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.messagesCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          // Filter messages for specific conversation
+          return message.payload['conversationId'] == conversationId;
+        });
+  }
+
+// Subscribe to conversation updates
+  Stream<models.RealtimeMessage> subscribeToConversations(String userId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          // Filter conversations for specific user
+          return message.payload['userId'] == userId;
+        });
+  }
+
+// Subscribe to user status updates
+  Stream<models.RealtimeMessage> subscribeToUserStatus(String userId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.userStatusCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          return message.payload['userId'] == userId;
+        });
+  }
+
+// Cleanup subscriptions
+  void disposeMessageSubscriptions() {
+    _messageSubscription?.cancel();
+    _conversationSubscription?.cancel();
+    _statusSubscription?.cancel();
   }
 }
