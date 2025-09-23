@@ -50,9 +50,9 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
 
     if (offset <= 550 && _panelState != PanelState.scrollable) {
       setState(() => _panelState = PanelState.scrollable);
-    } else if (offset > 550 && offset <= 1400 && _panelState != PanelState.positioned) {
+    } else if (offset > 550 && offset <= 1800 && _panelState != PanelState.positioned) {
       setState(() => _panelState = PanelState.positioned);
-    } else if (offset > 1400 && _panelState != PanelState.static) {
+    } else if (offset > 1800 && _panelState != PanelState.static) {
       setState(() => _panelState = PanelState.static);
     }
   }
@@ -64,11 +64,11 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     _scrollController.addListener(() {
       final offset = _scrollController.offset;
 
-      if (offset > 500 && !_showWidget) {
+      if (offset > 550 && !_showWidget) {
         setState(() {
           _showWidget = true;
         });
-      } else if (offset <= 500 && _showWidget) {
+      } else if (offset <= 550 && _showWidget) {
         setState(() {
           _showWidget = false;
         });

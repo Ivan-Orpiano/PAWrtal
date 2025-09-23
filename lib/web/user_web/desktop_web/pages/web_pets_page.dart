@@ -2,12 +2,10 @@ import 'package:capstone_app/web/user_web/components/web_pets_page_components/we
 import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pet_creation_panel.dart';
 import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pet_details_panel.dart';
 import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';
+import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:flutter/material.dart';
-import 'package:multi_split_view/multi_split_view.dart';
 import 'package:get/get.dart';
-
-enum RightPanelView { none, details, create, edit }
 
 class WebPetsPage extends StatefulWidget {
   const WebPetsPage({super.key});
@@ -16,15 +14,35 @@ class WebPetsPage extends StatefulWidget {
   State<WebPetsPage> createState() => _WebPetsPageState();
 }
 
-class _WebPetsPageState extends State<WebPetsPage> {
+class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin {
   late final WebPetsController petsController;
+  final TextEditingController _searchController = TextEditingController();
   
-  RightPanelView rightPanelView = RightPanelView.none;
-  Pet? editingPet;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  // Palette
+  static const Color primaryBlue = Color(0xFF4A6FA5);
+  static const Color primaryTeal = Color(0xFF5B9BD5);
+  static const Color lightTeal = Color(0xFF9FC5E8);
+  static const Color deepBlue = Color(0xFF2F4F7F);
+  static const Color softBlue = Color(0xFF6FA8DC);
+  static const Color lightGray = Color(0xFFF3F4F6);
+  static const Color mediumGray = Color(0xFF9CA3AF);
+  static const Color darkText = Color(0xFF374151);
+  static const Color petGreen = Color(0xFF34D399);
+  static const Color lightPetGreen = Color(0xFFE5F7E5);
 
   @override
   void initState() {
     super.initState();
+    
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!Get.isRegistered<WebPetsController>()) {
         petsController = Get.put(WebPetsController(
@@ -34,50 +52,88 @@ class _WebPetsPageState extends State<WebPetsPage> {
       } else {
         petsController = Get.find();
       }
+      _animationController.forward();
       setState(() {});
     });
-  }
 
-  void showCreatePanel() {
-    setState(() {
-      rightPanelView = RightPanelView.create;
-      editingPet = null;
+    _searchController.addListener(() {
+      if (Get.isRegistered<WebPetsController>()) {
+        petsController.updateSearchQuery(_searchController.text);
+      }
     });
-  }
-
-  void showEditPanel(Pet pet) {
-    setState(() {
-      rightPanelView = RightPanelView.edit;
-      editingPet = pet;
-    });
-  }
-
-  void showDetailsPanel(Pet pet) {
-    setState(() {
-      rightPanelView = RightPanelView.details;
-      petsController.selectPet(pet);
-    });
-  }
-
-  void clearRightPanel() {
-    setState(() {
-      rightPanelView = RightPanelView.none;
-      editingPet = null;
-    });
-    petsController.clearSelection();
-  }
-
-  void onPetActionSuccess() {
-    petsController.refreshPets();
-    clearRightPanel();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
+    _searchController.dispose();
     if (Get.isRegistered<WebPetsController>()) {
       Get.delete<WebPetsController>();
     }
     super.dispose();
+  }
+
+  void _showCreateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 600,
+          constraints: const BoxConstraints(maxHeight: 700),
+          child: WebPetCreationPanel(
+            onSuccess: () {
+              Navigator.of(context).pop();
+              petsController.refreshPets();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(Pet pet) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 600,
+          constraints: const BoxConstraints(maxHeight: 700),
+          child: WebPetCreationPanel(
+            existingPet: pet,
+            onSuccess: () {
+              Navigator.of(context).pop();
+              petsController.refreshPets();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDetailsDialog(Pet pet) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 600,
+          constraints: const BoxConstraints(maxHeight: 700),
+          child: WebPetDetailsPanel(
+            pet: pet,
+            onEdit: () {
+              Navigator.of(context).pop();
+              _showEditDialog(pet);
+            },
+            onDelete: () async {
+              Navigator.of(context).pop();
+              await petsController.deletePet(pet);
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -89,158 +145,303 @@ class _WebPetsPageState extends State<WebPetsPage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Row(
+      backgroundColor: lightGray,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          children: [
+            // Header
+            _buildHeader(),
+            
+            // Content
+            Expanded(
+              child: Container(
+                color: lightGray,
+                child: _buildContent(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > tabletWidth;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            lightPetGreen.withOpacity(0.3),
+            Colors.white
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryTeal.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
         children: [
-          // Left Panel - Pet Cards
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 3,
-                    offset: const Offset(2, 0),
-                  ),
+          // Title bar
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 24 : 16,
+              vertical: 20,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  primaryBlue.withOpacity(0.08),
+                  primaryTeal.withOpacity(0.12),
+                  softBlue.withOpacity(0.06),
                 ],
               ),
-              child: LeftSidePanel(
-                onShowCreate: showCreatePanel,
-                onShowDetails: showDetailsPanel,
-                onClearSelection: clearRightPanel,
-              ),
             ),
+            child: _buildTitleSection(isTablet),
           ),
-          
-          // Right Panel - Pet Details or Add Form
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              child: RightSidePanel(
-                currentView: rightPanelView,
-                editingPet: editingPet,
-                onSuccess: onPetActionSuccess,
-                onShowEdit: showEditPanel,
-                onClearPanel: clearRightPanel,
+
+          // Search bar
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 24 : 16,
+              vertical: 18,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withOpacity(0.8),
+                  lightGray.withOpacity(0.5)
+                ],
               ),
             ),
+            child: _buildSearchBar(),
           ),
         ],
       ),
     );
   }
-}
 
-class LeftSidePanel extends StatefulWidget {
-  final VoidCallback onShowCreate;
-  final Function(Pet) onShowDetails;
-  final VoidCallback onClearSelection;
-
-  const LeftSidePanel({
-    super.key,
-    required this.onShowCreate,
-    required this.onShowDetails,
-    required this.onClearSelection,
-  });
-
-  @override
-  State<LeftSidePanel> createState() => _LeftSidePanelState();
-}
-
-class _LeftSidePanelState extends State<LeftSidePanel> {
-  final TextEditingController _searchController = TextEditingController();
-  
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      Get.find<WebPetsController>().updateSearchQuery(_searchController.text);
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<WebPetsController>();
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildTitleSection(bool isTablet) {
+    return Row(
       children: [
-        const Text(
-          'My Pets',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2C3E50),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                primaryTeal.withOpacity(0.2),
+                primaryBlue.withOpacity(0.15)
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: primaryTeal.withOpacity(0.3), width: 1.5),
           ),
+          child: const Icon(Icons.pets, color: primaryTeal, size: 26),
         ),
-        const SizedBox(height: 24),
-        
+        const SizedBox(width: 18),
         Expanded(
-          child: Obx(() {
-            if (controller.isLoading.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final pets = controller.filteredPets;
-            
-            return GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.8,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    LinearGradient(colors: [darkText, deepBlue, primaryTeal])
+                        .createShader(bounds),
+                blendMode: BlendMode.srcIn,
+                child: const Text(
+                  'My Pets',
+                  style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
+                ),
               ),
-              itemCount: pets.length + 1, // +1 for add button
-              itemBuilder: (context, index) {
-                if (index == pets.length) {
-                  // Add Pet Card
-                  return _buildAddPetCard();
-                }
-                return _buildPetCard(pets[index], controller);
-              },
-            );
-          }),
+              const SizedBox(height: 6),
+              Text(
+                'Manage your beloved pets and their information',
+                style: TextStyle(
+                    fontSize: 15,
+                    color: mediumGray,
+                    fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPetCard(Pet pet, WebPetsController controller) {
-    final isSelected = controller.selectedPet.value?.petId == pet.petId;
+  Widget _buildSearchBar() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, lightPetGreen.withOpacity(0.3)],
+          ),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: primaryTeal.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            hintText: 'Search pets by name, type, or breed...',
+            hintStyle:
+                TextStyle(fontSize: 15, color: mediumGray.withOpacity(0.8)),
+            prefixIcon: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    primaryTeal.withOpacity(0.2),
+                    primaryBlue.withOpacity(0.1)
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search_rounded,
+                  size: 20, color: primaryTeal),
+            ),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.1),
+                          shape: BoxShape.circle),
+                      child: Icon(Icons.clear, size: 16, color: mediumGray),
+                    ),
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > tabletWidth;
     
-    return InkWell(
-      onTap: () {
-        print('Pet card tapped: ${pet.name}'); // Debug print
-        widget.onShowDetails(pet);
+    return Padding(
+      padding: EdgeInsets.all(isTablet ? 24 : 16),
+      child: _buildPetGrid(),
+    );
+  }
+
+  Widget _buildPetGrid() {
+    return Obx(() {
+      if (petsController.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      final filteredPets = petsController.filteredPets;
+      
+      if (filteredPets.isEmpty && _searchController.text.isNotEmpty) {
+        return _buildEmptyState();
+      }
+
+      return _buildResponsivePetGrid(filteredPets);
+    });
+  }
+
+  Widget _buildResponsivePetGrid(List<Pet> pets) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double w = constraints.maxWidth;
+        final double spacing = w > tabletWidth ? 20.0 : 12.0;
+
+        // Columns by width
+        int cols;
+        if (w >= 1600) {
+          cols = 8;
+        } else if (w >= 1400) {
+          cols = 7;
+        } else if (w >= 1200) {
+          cols = 6;
+        } else if (w >= 1000) {
+          cols = 5;
+        } else if (w >= 820) {
+          cols = 4;
+        } else if (w >= 620) {
+          cols = 3;
+        } else {
+          cols = 2;
+        }
+
+        // Compute tile dimensions
+        final double tileWidth = (w - (cols - 1) * spacing) / cols;
+        final double aspectRatio = (cols <= 2) ? 0.75 : 0.8;
+
+        return GridView.builder(
+          itemCount: pets.length + 1, // +1 for add button
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            childAspectRatio: aspectRatio,
+          ),
+          itemBuilder: (context, index) {
+            if (index == pets.length) {
+              return _buildAddPetCard();
+            }
+            return _buildPetCard(pets[index]);
+          },
+        );
       },
+    );
+  }
+
+  Widget _buildPetCard(Pet pet) {
+    return InkWell(
+      onTap: () => _showDetailsDialog(pet),
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
-          border: Border.all(
-            color: isSelected ? const Color(0xFF3498DB) : Colors.grey[300]!,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: Colors.grey[300]!, width: 1),
           boxShadow: [
             BoxShadow(
-              color: isSelected 
-                  ? const Color(0xFF3498DB).withOpacity(0.2)
-                  : Colors.grey.withOpacity(0.1),
-              spreadRadius: isSelected ? 2 : 1,
-              blurRadius: isSelected ? 8 : 4,
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
@@ -330,10 +531,7 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
 
   Widget _buildAddPetCard() {
     return InkWell(
-      onTap: () {
-        print('Add pet card tapped'); // Debug print
-        widget.onShowCreate();
-      },
+      onTap: _showCreateDialog,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
@@ -379,108 +577,56 @@ class _LeftSidePanelState extends State<LeftSidePanel> {
       ),
     );
   }
-}
 
-class RightSidePanel extends StatelessWidget {
-  final RightPanelView currentView;
-  final Pet? editingPet;
-  final VoidCallback onSuccess;
-  final Function(Pet) onShowEdit;
-  final VoidCallback onClearPanel;
-
-  const RightSidePanel({
-    super.key,
-    required this.currentView,
-    this.editingPet,
-    required this.onSuccess,
-    required this.onShowEdit,
-    required this.onClearPanel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<WebPetsController>();
-    
-    switch (currentView) {
-      case RightPanelView.create:
-        return WebPetCreationPanel(
-          onSuccess: onSuccess,
-        );
-        
-      case RightPanelView.edit:
-        return WebPetCreationPanel(
-          existingPet: editingPet,
-          onSuccess: onSuccess,
-        );
-        
-      case RightPanelView.details:
-        return Obx(() {
-          final selectedPet = controller.selectedPet.value;
-          if (selectedPet == null) {
-            return const Center(
-              child: Text("No pet selected"),
-            );
-          }
-          
-          return WebPetDetailsPanel(
-            pet: selectedPet,
-            onEdit: () => onShowEdit(selectedPet),
-            onDelete: () async {
-              await controller.deletePet(selectedPet);
-              onClearPanel();
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                    color: primaryTeal.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8)),
+              ],
+            ),
+            child: Icon(Icons.search_off_rounded, size: 72, color: mediumGray),
+          ),
+          const SizedBox(height: 20),
+          Text('No pets found',
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w700, color: darkText)),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'No pets match your search criteria.\nTry adjusting your search terms.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: mediumGray, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 28),
+          ElevatedButton.icon(
+            onPressed: () {
+              _searchController.clear();
+              setState(() {});
             },
-          );
-        });
-        
-      case RightPanelView.none:
-      default:
-        return _buildWelcomeMessage();
-    }
-  }
-
-  Widget _buildWelcomeMessage() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            icon: const Icon(Icons.clear_all_rounded, color: Colors.white),
+            label: const Text('Clear Search',
+                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
           ),
         ],
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.pets,
-              size: 80,
-              color: Color(0xFF3498DB),
-            ),
-            SizedBox(height: 24),
-            Text(
-              'Welcome to Pet Manager',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Select a pet to view details\nor add a new pet to get started',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
