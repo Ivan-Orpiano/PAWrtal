@@ -450,30 +450,7 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                  // children: [
-                  //   _buildStatusChip(request.status),
-                  //   Spacer(),
-                  //   // Add delete button for approved and denied requests
-                  //   if (request.status == 'Approved' ||
-                  //       request.status == 'Denied') ...[
-                  //     IconButton(
-                  //       onPressed: () => _deleteRequest(request),
-                  //       icon: Icon(
-                  //         Icons.delete_outline,
-                  //         color: Colors.red[600],
-                  //         size: 20,
-                  //       ),
-                  //       tooltip: 'Delete request',
-                  //       constraints: BoxConstraints(
-                  //         minWidth: 32,
-                  //         minHeight: 32,
-                  //       ),
-                  //       padding: EdgeInsets.all(4),
-                  //     ),
-                  //   ],
-                  // ],
-                  ),
+              Row(),
               SizedBox(height: 12),
               Text(
                 request.vetClinicName,
@@ -747,15 +724,6 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         elevation: 0,
         actions: [
-          IconButton(
-            onPressed: () {
-              _showSnackBar(
-                  'Export functionality coming soon!', const Color(0xFF3498DB));
-            },
-            icon: const Icon(Icons.file_download,
-                color: Color.fromARGB(255, 81, 115, 153)),
-            tooltip: 'Export CSV',
-          ),
           IconButton(
             onPressed: () {
               setState(() {

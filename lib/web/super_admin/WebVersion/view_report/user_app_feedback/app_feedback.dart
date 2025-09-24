@@ -351,13 +351,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
               _filterFeedback();
             },
           ),
-          IconButton(
-            icon: Icon(
-              Icons.analytics,
-              color: Color.fromARGB(255, 81, 115, 153),
-            ),
-            onPressed: () => _showAnalytics(),
-          ),
         ],
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       ),
@@ -638,25 +631,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   _buildTypeBadge(feedback.type),
                   Spacer(),
                   _buildStatusBadge(feedback.status),
-                  // Add delete button for resolved and closed feedback
-                  if (feedback.status == FeedbackStatus.resolved ||
-                      feedback.status == FeedbackStatus.closed) ...[
-                    SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () => _deleteFeedback(feedback.id),
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: Colors.red[600],
-                        size: 20,
-                      ),
-                      tooltip: 'Delete feedback',
-                      constraints: BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                      padding: EdgeInsets.all(4),
-                    ),
-                  ],
                 ],
               ),
               SizedBox(height: 12),
@@ -745,6 +719,29 @@ class _ApplicationReportState extends State<ApplicationReport> {
                       ),
                     ],
                   ),
+                ),
+              ],
+              // Add delete button section for resolved and closed feedback
+              if (feedback.status == FeedbackStatus.resolved ||
+                  feedback.status == FeedbackStatus.closed) ...[
+                SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _deleteFeedback(feedback.id),
+                      icon: const Icon(
+                        Icons.delete_forever,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: const Text('Delete'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE74C3C),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -928,35 +925,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
     } else {
       return 'Just now';
     }
-  }
-
-  void _showAnalytics() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: Text('Feedback Analytics'),
-        content: Container(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildAnalyticsItem(
-                  'Total Feedback', feedbackList.length.toString()),
-              _buildAnalyticsItem('Average Response Time', '4.2 hours'),
-              _buildAnalyticsItem('Resolution Rate', '87.5%'),
-              _buildAnalyticsItem('User Satisfaction', '4.6/5.0'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildAnalyticsItem(String label, String value) {
