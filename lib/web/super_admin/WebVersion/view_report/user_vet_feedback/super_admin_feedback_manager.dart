@@ -229,133 +229,119 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
 
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
-      margin: const EdgeInsets.all(16),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          bool isMobile = constraints.maxWidth < 768;
-          return GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: isMobile ? 2 : 4,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: isMobile ? 1.2 : 1.5,
-            children: [
-              _buildStatCard('Total Requests', totalRequests.toString(),
-                  Icons.delete_forever, const Color(0xFF4A90E2)),
-              _buildStatCard('Pending', pendingRequests.toString(),
-                  Icons.pending, const Color(0xFFF39C12)),
-              _buildStatCard('Approved', approvedRequests.toString(),
-                  Icons.check_circle, const Color(0xFF2ECC71)),
-              _buildStatCard('Under Review', underReviewRequests.toString(),
-                  Icons.reviews, const Color(0xFF9B59B6)),
-            ],
-          );
-        },
+      padding: EdgeInsets.all(16),
+      child: Row(
+        children: [
+          _buildStatCard('Total Requests', totalRequests.toString(),
+              Icons.delete_forever, const Color(0xFF4A90E2)),
+          SizedBox(width: 12),
+          _buildStatCard('Pending', pendingRequests.toString(), Icons.pending,
+              const Color(0xFFF39C12)),
+          SizedBox(width: 12),
+          _buildStatCard('Approved', approvedRequests.toString(),
+              Icons.check_circle, const Color(0xFF2ECC71)),
+          SizedBox(width: 12),
+          _buildStatCard('Under Review', underReviewRequests.toString(),
+              Icons.reviews, const Color(0xFF9B59B6)),
+        ],
       ),
     );
   }
 
   Widget _buildStatCard(
       String title, String value, IconData icon, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 6,
+              offset: Offset(0, 2),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF7F8C8D),
-              fontWeight: FontWeight.w500,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 24),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSearchAndFilters() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          bool isMobile = constraints.maxWidth < 768;
-
-          if (isMobile) {
-            return Column(
-              children: [
-                _buildSearchBar(),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _buildStatusDropdown()),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildReasonDropdown()),
-                  ],
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          Focus(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => _filterRequests(),
+              decoration: InputDecoration(
+                hintText: 'Search vet clinics or requesters...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterRequests();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide:
+                      BorderSide(color: const Color.fromRGBO(81, 115, 153, 1)),
                 ),
-              ],
-            );
-          }
-
-          return Row(
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                      color: const Color.fromRGBO(81, 115, 153, 1), width: 2),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+          ),
+          SizedBox(height: 12),
+          Row(
             children: [
-              Expanded(flex: 3, child: _buildSearchBar()),
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildStatusDropdown()),
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildReasonDropdown()),
+              Expanded(child: _buildStatusDropdown()),
+              SizedBox(width: 12),
+              Expanded(child: _buildReasonDropdown()),
             ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return TextField(
-      controller: _searchController,
-      onChanged: (value) => _filterRequests(),
-      decoration: InputDecoration(
-        hintText: 'Search vet clinics or requesters...',
-        prefixIcon: const Icon(Icons.search, color: Color(0xFF517399)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF517399)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -368,11 +354,11 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
         labelText: 'Status',
         labelStyle: const TextStyle(color: Colors.black),
         floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        focusedBorder: OutlineInputBorder(
+        border: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFF517399)),
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       items: ['All', 'Pending', 'Approved', 'Denied', 'Under Review']
           .map((status) => DropdownMenuItem(value: status, child: Text(status)))
@@ -394,11 +380,11 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
         labelText: 'Reason',
         labelStyle: const TextStyle(color: Colors.black),
         floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        focusedBorder: OutlineInputBorder(
+        border: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFF517399)),
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
         ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       items: [
         'All',
@@ -421,372 +407,307 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
 
   Widget _buildRequestList() {
     if (_filteredRequests.isEmpty) {
-      return Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              Icon(Icons.inbox, size: 64, color: Color(0xFF95A5A6)),
-              SizedBox(height: 16),
-              Text(
-                'No deletion requests found',
-                style: TextStyle(fontSize: 18, color: Color(0xFF7F8C8D)),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+            SizedBox(height: 16),
+            Text(
+              'No deletion requests found',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          bool isMobile = constraints.maxWidth < 768;
-          int crossAxisCount =
-              isMobile ? 1 : (constraints.maxWidth > 1200 ? 3 : 2);
-
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: isMobile ? 1.0 : 0.9,
-            ),
-            itemCount: _filteredRequests.length,
-            itemBuilder: (context, index) =>
-                _buildRequestCard(_filteredRequests[index]),
-          );
-        },
-      ),
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: _filteredRequests.length,
+      itemBuilder: (context, index) {
+        final request = _filteredRequests[index];
+        return _buildRequestCard(request);
+      },
     );
   }
 
   Widget _buildRequestCard(DeletionRequestItem request) {
     return Card(
-      elevation: 4,
       color: const Color.fromRGBO(242, 250, 252, 1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      shadowColor: Colors.black.withOpacity(0.1),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    request.vetClinicName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+      margin: EdgeInsets.only(bottom: 12),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showRequestDetails(request),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                  // children: [
+                  //   _buildStatusChip(request.status),
+                  //   Spacer(),
+                  //   // Add delete button for approved and denied requests
+                  //   if (request.status == 'Approved' ||
+                  //       request.status == 'Denied') ...[
+                  //     IconButton(
+                  //       onPressed: () => _deleteRequest(request),
+                  //       icon: Icon(
+                  //         Icons.delete_outline,
+                  //         color: Colors.red[600],
+                  //         size: 20,
+                  //       ),
+                  //       tooltip: 'Delete request',
+                  //       constraints: BoxConstraints(
+                  //         minWidth: 32,
+                  //         minHeight: 32,
+                  //       ),
+                  //       padding: EdgeInsets.all(4),
+                  //     ),
+                  //   ],
+                  // ],
                   ),
+              SizedBox(height: 12),
+              Text(
+                request.vetClinicName,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
                 ),
-                const SizedBox(width: 8),
-                _buildStatusChip(request.status),
-              ],
-            ),
-            const SizedBox(height: 6),
-
-            // Requested By
-            _buildCardInfoRow(
-              Icons.person,
-              'Requested By',
-              request.requestedBy,
-              const Color(0xFF517399),
-            ),
-            const SizedBox(height: 4),
-
-            // Reason
-            _buildCardInfoRow(
-              Icons.info_outline,
-              'Reason',
-              request.reason,
-              const Color(0xFFF39C12),
-            ),
-            const SizedBox(height: 4),
-
-            // Date Requested
-            _buildCardInfoRow(
-              Icons.calendar_today,
-              'Date Requested',
-              '${request.dateRequested.day}/${request.dateRequested.month}/${request.dateRequested.year}',
-              const Color(0xFF7F8C8D),
-            ),
-            const SizedBox(height: 4),
-
-            // Business License
-            _buildCardInfoRow(
-              Icons.business,
-              'License',
-              request.businessLicense,
-              const Color(0xFF9B59B6),
-            ),
-            const SizedBox(height: 8),
-
-            // Description Section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FDFF),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE0E6ED)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              SizedBox(height: 8),
+              Text(
+                request.description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 12),
+              Row(
                 children: [
-                  const Text(
-                    'Description:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF517399),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  Icon(Icons.person, size: 16, color: Colors.grey[500]),
+                  SizedBox(width: 4),
                   Text(
-                    request.description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: Color(0xFF2C3E50),
-                    ),
+                    request.requestedBy,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  SizedBox(width: 16),
+                  Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
+                  SizedBox(width: 4),
+                  Text(
+                    '${request.dateRequested.day}/${request.dateRequested.month}/${request.dateRequested.year}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  SizedBox(width: 16),
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFFF39C12)),
+                  SizedBox(width: 4),
+                  Text(
+                    request.reason,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
+              SizedBox(height: 12),
 
-            // Contact Information
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F8FF),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF517399), width: 1),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.email,
-                          size: 16, color: Color(0xFF517399)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          request.contactEmail,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF2C3E50),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone,
-                          size: 16, color: Color(0xFF517399)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          request.contactPhone,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF2C3E50),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Show denial reason if denied
-            if (request.status == 'Denied' && request.denialReason != null) ...[
-              const SizedBox(height: 8),
+              // Business License and Contact Info
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5E5),
+                  color: const Color(0xFFF0F8FF),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFF6B6B), width: 1),
+                  border: Border.all(color: const Color(0xFF517399), width: 1),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    const Icon(Icons.error_outline,
-                        size: 16, color: Color(0xFFD63031)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Denial Reason: ${request.denialReason}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFFD63031),
+                    Row(
+                      children: [
+                        const Icon(Icons.business,
+                            size: 16, color: Color(0xFF517399)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'License: ${request.businessLicense}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.email,
+                            size: 16, color: Color(0xFF517399)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            request.contactEmail,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone,
+                            size: 16, color: Color(0xFF517399)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            request.contactPhone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ],
 
-            const SizedBox(height: 8),
-
-            // Action Buttons Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // View Details Button (always shown)
-                TextButton.icon(
-                  onPressed: () => _showRequestDetails(request),
-                  icon: const Icon(
-                    Icons.visibility,
-                    size: 16,
-                    color: Colors.white,
+              // Show denial reason if denied
+              if (request.status == 'Denied' &&
+                  request.denialReason != null) ...[
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red[200]!),
                   ),
-                  label: const Text('View Details'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF517399),
-                    foregroundColor: const Color.fromARGB(255, 255, 255, 255),
-                  ),
-                ),
-
-                // Right side buttons based on status
-                Row(
-                  children: [
-                    // Process button for Pending and Under Review
-                    if (request.status == 'Pending' ||
-                        request.status == 'Under Review')
-                      ElevatedButton.icon(
-                        onPressed: () => _handleDeletionRequest(request),
-                        icon: const Icon(
-                          Icons.gavel,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        label: const Text('Process'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 81, 115, 153),
-                          foregroundColor: Colors.white,
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.error_outline,
+                              size: 16, color: Colors.red[600]),
+                          SizedBox(width: 4),
+                          Text(
+                            'Denial Reason',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red[600],
+                            ),
+                          ),
+                        ],
                       ),
-
-                    // Delete button for Approved and Denied
-                    if (request.status == 'Approved' ||
-                        request.status == 'Denied') ...[
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => _deleteRequest(request),
-                        icon: const Icon(
-                          Icons.delete_forever,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        label: const Text('Delete'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE74C3C),
-                          foregroundColor: Colors.white,
-                        ),
+                      SizedBox(height: 8),
+                      Text(
+                        request.denialReason!,
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ],
-            ),
-          ],
+
+              SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      if (request.status == 'Pending' ||
+                          request.status == 'Under Review')
+                        ElevatedButton.icon(
+                          onPressed: () => _handleDeletionRequest(request),
+                          icon: const Icon(
+                            Icons.gavel,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          label: const Text('Process'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      if (request.status == 'Approved' ||
+                          request.status == 'Denied') ...[
+                        SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => _deleteRequest(request),
+                          icon: const Icon(
+                            Icons.delete_forever,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE74C3C),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildCardInfoRow(
-      IconData icon, String label, String? value, Color iconColor) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: iconColor),
-        const SizedBox(width: 8),
-        Text(
-          '$label:',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF7F8C8D),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value ?? '',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2C3E50),
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 
   Widget _buildStatusChip(String status) {
-    Color chipColor;
+    Color color;
     switch (status) {
       case 'Approved':
-        chipColor = const Color(0xFF2ECC71);
+        color = const Color(0xFF2ECC71);
         break;
       case 'Pending':
-        chipColor = const Color(0xFFF39C12);
+        color = const Color(0xFFF39C12);
         break;
       case 'Under Review':
-        chipColor = const Color(0xFF9B59B6);
+        color = const Color(0xFF9B59B6);
         break;
       case 'Denied':
-        chipColor = const Color(0xFFE74C3C);
+        color = const Color(0xFFE74C3C);
         break;
       default:
-        chipColor = const Color(0xFF95A5A6);
+        color = const Color(0xFF95A5A6);
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: chipColor.withOpacity(0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chipColor),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
         status,
         style: TextStyle(
-          color: chipColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -809,6 +730,7 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
           tooltip: 'Back',
         ),
         surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: false,
         title: const Row(
           children: [
             Icon(Icons.delete_forever,
@@ -848,17 +770,12 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
         ],
       ),
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDashboardStats(),
-            const SizedBox(height: 16),
-            _buildSearchAndFilters(),
-            const SizedBox(height: 16),
-            _buildRequestList(),
-          ],
-        ),
+      body: Column(
+        children: [
+          _buildDashboardStats(),
+          _buildSearchAndFilters(),
+          Expanded(child: _buildRequestList()),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -914,10 +831,9 @@ class RequestDetailDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
         width: MediaQuery.of(context).size.width * 0.9,
         constraints: const BoxConstraints(maxWidth: 600),
         padding: const EdgeInsets.all(24),
