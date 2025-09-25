@@ -973,12 +973,12 @@ class AppWriteProvider {
 
 // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
-  StreamSubscription<models.RealtimeMessage>? _messageSubscription;
-  StreamSubscription<models.RealtimeMessage>? _conversationSubscription;
-  StreamSubscription<models.RealtimeMessage>? _statusSubscription;
+  StreamSubscription<RealtimeMessage>? _messageSubscription;
+  StreamSubscription<RealtimeMessage>? _conversationSubscription;
+  StreamSubscription<RealtimeMessage>? _statusSubscription;
 
 // Subscribe to messages in a conversation
-  Stream<models.RealtimeMessage> subscribeToMessages(String conversationId) {
+  Stream<RealtimeMessage> subscribeToMessages(String conversationId) {
     final realtime = Realtime(client);
     return realtime
         .subscribe([
@@ -992,7 +992,7 @@ class AppWriteProvider {
   }
 
 // Subscribe to conversation updates
-  Stream<models.RealtimeMessage> subscribeToConversations(String userId) {
+  Stream<RealtimeMessage> subscribeToConversations(String userId) {
     final realtime = Realtime(client);
     return realtime
         .subscribe([
@@ -1006,7 +1006,7 @@ class AppWriteProvider {
   }
 
 // Subscribe to user status updates
-  Stream<models.RealtimeMessage> subscribeToUserStatus(String userId) {
+  Stream<RealtimeMessage> subscribeToUserStatus(String userId) {
     final realtime = Realtime(client);
     return realtime
         .subscribe([

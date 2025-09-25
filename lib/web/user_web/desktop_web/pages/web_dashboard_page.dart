@@ -24,7 +24,8 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   bool isLoading = true;
   bool _showMap = false;
   String searchQuery = '';
-  String selectedFilter = 'All'; // All, Open, Closed, Nearby, Popular, Recommended
+  String selectedFilter =
+      'All'; // All, Open, Closed, Nearby, Popular, Recommended
 
   @override
   void initState() {
@@ -51,10 +52,11 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       // Load clinic settings for each clinic
       final authRepository = Get.find<AuthRepository>();
       final settingsMap = <String, ClinicSettings?>{};
-      
+
       for (final clinic in clinics) {
         try {
-          final settings = await authRepository.getClinicSettingsByClinicId(clinic.documentId ?? '');
+          final settings = await authRepository
+              .getClinicSettingsByClinicId(clinic.documentId ?? '');
           settingsMap[clinic.documentId ?? ''] = settings;
         } catch (e) {
           print("Error loading settings for clinic ${clinic.clinicName}: $e");
@@ -84,10 +86,12 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       filtered = filtered.where((clinic) {
         final settings = clinicSettingsMap[clinic.documentId ?? ''];
         final services = settings?.services.join(' ') ?? clinic.services;
-        
-        return clinic.clinicName.toLowerCase().contains(searchQuery.toLowerCase()) ||
-               clinic.address.toLowerCase().contains(searchQuery.toLowerCase()) ||
-               services.toLowerCase().contains(searchQuery.toLowerCase());
+
+        return clinic.clinicName
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase()) ||
+            clinic.address.toLowerCase().contains(searchQuery.toLowerCase()) ||
+            services.toLowerCase().contains(searchQuery.toLowerCase());
       }).toList();
     }
 
@@ -108,7 +112,8 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       case 'Available Today':
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return (settings?.isOpen ?? true) && (settings?.isOpenToday() ?? true);
+          return (settings?.isOpen ?? true) &&
+              (settings?.isOpenToday() ?? true);
         }).toList();
         break;
       // Add more filters as needed
@@ -118,13 +123,13 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     filtered.sort((a, b) {
       final aSettings = clinicSettingsMap[a.documentId ?? ''];
       final bSettings = clinicSettingsMap[b.documentId ?? ''];
-      
+
       final aIsOpen = aSettings?.isOpen ?? true;
       final bIsOpen = bSettings?.isOpen ?? true;
-      
+
       if (aIsOpen && !bIsOpen) return -1;
       if (!aIsOpen && bIsOpen) return 1;
-      
+
       // If both have same status, sort by name
       return a.clinicName.compareTo(b.clinicName);
     });
@@ -150,7 +155,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     final filters = [
       'All',
       'Open',
-      'Available Today', 
+      'Available Today',
       'Closed',
       'Nearby',
       'Popular',
@@ -170,28 +175,33 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
                   final filter = filters[index];
                   final isSelected = selectedFilter == filter;
                   final count = _getFilterCount(filter);
-                  
+
                   return GestureDetector(
                     onTap: () => _setFilter(filter),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       child: Column(
                         children: [
                           Text(
-                            count > 0 && filter != 'All' ? '$filter ($count)' : filter,
+                            count > 0 && filter != 'All'
+                                ? '$filter ($count)'
+                                : filter,
                             style: TextStyle(
                               fontSize: 16,
                               color: isSelected ? Colors.black : Colors.grey,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
                           ),
                           if (isSelected)
                             Container(
                               margin: const EdgeInsets.only(top: 4),
                               height: 2,
-                              width: _getTextWidth(
-                                count > 0 && filter != 'All' ? '$filter ($count)' : filter
-                              ),
+                              width: _getTextWidth(count > 0 && filter != 'All'
+                                  ? '$filter ($count)'
+                                  : filter),
                               color: Colors.black,
                             ),
                         ],
@@ -210,9 +220,8 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   double _getTextWidth(String text) {
     final TextPainter textPainter = TextPainter(
       text: TextSpan(
-        text: text, 
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
-      ),
+          text: text,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       maxLines: 1,
       textDirection: TextDirection.ltr,
     )..layout();
@@ -231,7 +240,8 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       case 'Available Today':
         return allClinics.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return (settings?.isOpen ?? true) && (settings?.isOpenToday() ?? true);
+          return (settings?.isOpen ?? true) &&
+              (settings?.isOpenToday() ?? true);
         }).length;
       case 'Closed':
         return allClinics.where((clinic) {
@@ -244,9 +254,13 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   }
 
   Widget _buildMapView() {
-    return const SizedBox(
+    return SizedBox(
       height: 770,
-      child: WebMaps()
+      child: WebMaps(
+        selectedFilter: selectedFilter,
+        searchQuery: searchQuery,
+        onFilterChanged: _setFilter,
+      ),
     );
   }
 
@@ -273,9 +287,9 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                searchQuery.isEmpty 
-                  ? "No clinics match the selected filter" 
-                  : "No clinics found for '$searchQuery'",
+                searchQuery.isEmpty
+                    ? "No clinics match the selected filter"
+                    : "No clinics found for '$searchQuery'",
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.grey[600],
@@ -319,7 +333,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
               ),
             ],
           ),
-          
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: _showMap ? _buildMapView() : _buildClinicList(),
@@ -334,12 +347,13 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           width: 120,
           child: FloatingActionButton.extended(
             backgroundColor: Colors.white,
-            label: _showMap 
-              ? const Text("Show List", style: TextStyle(color: Colors.black)) 
-              : const Text("Show Maps", style: TextStyle(color: Colors.black)),
-            icon: _showMap 
-              ? const Icon(Icons.list_rounded, color: Colors.black) 
-              : const Icon(Icons.map_rounded, color: Colors.black),
+            label: _showMap
+                ? const Text("Show List", style: TextStyle(color: Colors.black))
+                : const Text("Show Maps",
+                    style: TextStyle(color: Colors.black)),
+            icon: _showMap
+                ? const Icon(Icons.list_rounded, color: Colors.black)
+                : const Icon(Icons.map_rounded, color: Colors.black),
             onPressed: () {
               setState(() {
                 _showMap = !_showMap;

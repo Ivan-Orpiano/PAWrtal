@@ -1,6 +1,8 @@
+import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
-import 'package:capstone_app/web/user_web/desktop_web/pages/web_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
@@ -8,10 +10,20 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'vet_popup.dart';
 
 class WebMaps extends StatefulWidget {
-  const WebMaps({super.key});
+  final String selectedFilter;
+  final String searchQuery;
+  final Function(String)? onFilterChanged;
+
+  const WebMaps({
+    super.key,
+    this.selectedFilter = 'All',
+    this.searchQuery = '',
+    this.onFilterChanged,
+  });
 
   @override
   State<WebMaps> createState() => _WebMapsState();
@@ -23,31 +35,11 @@ class _WebMapsState extends State<WebMaps> {
   LatLng? userLocation;
   List<LatLng> routePoints = [];
   final Distance distance = const Distance();
-  final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> markerData = [
-    {
-      "name": "Qualipaws Animal Clinic",
-      "location": const LatLng(14.8131, 121.0453),
-      "description": "Affordable animal care services in SJDM.",
-      "image": "lib/images/qualipaws.jpg",
-      "status": "Open",
-    },
-    {
-      "name": "SM San Jose Del Monte",
-      "location": const LatLng(14.78569, 121.07577),
-      "description": "A shopping mall with pet-friendly facilities.",
-      "image": "lib/images/sm_sjdm.jpg",
-      "status": "Closed",
-    },
-    {
-      "name": "Pet Health Center",
-      "location": const LatLng(14.778830740347956, 121.07446884832339),
-      "description": "Expert pet health services in your neighborhood.",
-      "image": "lib/images/pet_health.jpg",
-      "status": "Full",
-    },
-  ];
+  List<Clinic> allClinics = [];
+  List<Clinic> filteredClinics = [];
+  Map<String, ClinicSettings?> clinicSettingsMap = {};
+  bool isLoading = true;
 
   final sanJoseDelMonteBounds = LatLngBounds(
     const LatLng(14.7500, 121.0000),
@@ -62,6 +54,16 @@ class _WebMapsState extends State<WebMaps> {
   void initState() {
     super.initState();
     fetchLocation();
+    fetchClinicsFromDatabase();
+  }
+
+  @override
+  void didUpdateWidget(WebMaps oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedFilter != widget.selectedFilter ||
+        oldWidget.searchQuery != widget.searchQuery) {
+      _applyFilters();
+    }
   }
 
   Future<void> fetchLocation() async {
@@ -75,6 +77,82 @@ class _WebMapsState extends State<WebMaps> {
         userLocation = fetchedLocation;
       });
     }
+  }
+
+  Future<void> fetchClinicsFromDatabase() async {
+    try {
+      final authRepository = Get.find<AuthRepository>();
+      final clinicsData = await authRepository.getClinicsWithSettings();
+
+      final clinics = <Clinic>[];
+      final settingsMap = <String, ClinicSettings?>{};
+
+      for (final data in clinicsData) {
+        final clinic = data['clinic'] as Clinic;
+        final settings = data['settings'] as ClinicSettings?;
+
+        clinics.add(clinic);
+        settingsMap[clinic.documentId ?? ''] = settings;
+      }
+
+      setState(() {
+        allClinics = clinics;
+        clinicSettingsMap = settingsMap;
+        isLoading = false;
+      });
+
+      _applyFilters();
+    } catch (e) {
+      print("Error fetching clinics from database: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _applyFilters() {
+    var filtered = allClinics;
+
+    // Apply search filter
+    if (widget.searchQuery.isNotEmpty) {
+      filtered = filtered.where((clinic) {
+        final settings = clinicSettingsMap[clinic.documentId ?? ''];
+        final services = settings?.services.join(' ') ?? clinic.services;
+
+        return clinic.clinicName
+                .toLowerCase()
+                .contains(widget.searchQuery.toLowerCase()) ||
+            clinic.address
+                .toLowerCase()
+                .contains(widget.searchQuery.toLowerCase()) ||
+            services.toLowerCase().contains(widget.searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    // Apply status filter
+    switch (widget.selectedFilter) {
+      case 'Open':
+        filtered = filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          return settings?.isOpen ?? true;
+        }).toList();
+        break;
+      case 'Closed':
+        filtered = filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          return !(settings?.isOpen ?? true);
+        }).toList();
+        break;
+      case 'Available Today':
+        filtered = filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          return (settings?.isOpen ?? true) &&
+              (settings?.isOpenToday() ?? true);
+        }).toList();
+        break;
+    }
+
+    setState(() {
+      filteredClinics = filtered;
+    });
   }
 
   Future<Position?> getUserLocation() async {
@@ -104,27 +182,56 @@ class _WebMapsState extends State<WebMaps> {
   }
 
   void moveToNearestMarker() {
-    if (userLocation == null || markerData.isEmpty) return;
+    if (userLocation == null || filteredClinics.isEmpty) return;
 
-    Map<String, dynamic> nearest = markerData.reduce((a, b) {
-      final aDist = calculateDistance(userLocation!, a["location"]);
-      final bDist = calculateDistance(userLocation!, b["location"]);
-      return aDist < bDist ? a : b;
-    });
+    Clinic? nearest;
+    double shortestDistance = double.infinity;
 
-    LatLng nearestLocation = nearest["location"];
-    if (isWithinBounds(nearestLocation)) {
-      _mapController.move(nearestLocation, 17);
-      fetchRoute(nearestLocation);
+    for (final clinic in filteredClinics) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      if (settings?.location != null) {
+        final clinicLocation =
+            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+        final dist = calculateDistance(userLocation!, clinicLocation);
+        if (dist < shortestDistance) {
+          shortestDistance = dist;
+          nearest = clinic;
+        }
+      }
+    }
+
+    if (nearest != null) {
+      final settings = clinicSettingsMap[nearest.documentId ?? ''];
+      if (settings?.location != null) {
+        final nearestLocation =
+            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+        if (isWithinBounds(nearestLocation)) {
+          _mapController.move(nearestLocation, 17);
+          fetchRoute(nearestLocation);
+        }
+      }
     }
   }
 
   List<Marker> getMarkers() {
     if (userLocation == null) return [];
 
-    return markerData.map((data) {
-      final location = data["location"] as LatLng;
+    return filteredClinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      return settings?.location != null;
+    }).map((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? '']!;
+      final location =
+          LatLng(settings.location!['lat']!, settings.location!['lng']!);
       double distanceInKm = calculateDistance(userLocation!, location);
+
+      // Determine marker color based on status
+      Color markerColor = Colors.red;
+      if (settings.isOpen && settings.isOpenToday()) {
+        markerColor = Colors.green;
+      } else if (settings.isOpen && !settings.isOpenToday()) {
+        markerColor = Colors.orange;
+      }
 
       return Marker(
         point: location,
@@ -140,18 +247,20 @@ class _WebMapsState extends State<WebMaps> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              const Icon(Icons.location_on, color: Colors.red, size: 40),
+              Icon(Icons.location_on, color: markerColor, size: 40),
               Positioned(
                 top: 65,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
                     "${distanceInKm.toStringAsFixed(2)} km",
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -187,113 +296,211 @@ class _WebMapsState extends State<WebMaps> {
     }
   }
 
+  Widget _buildLoadingState() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.grey.shade100,
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading clinics...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.grey.shade100,
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.location_off,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.searchQuery.isEmpty
+                  ? "No clinics match the selected filter"
+                  : "No clinics found for '${widget.searchQuery}'",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (userLocation == null || !isWithinBounds(userLocation!)) {
-      return const Center(child: CircularProgressIndicator());
+    if (isLoading) {
+      return _buildLoadingState();
     }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        bool isMobile = constraints.maxWidth < mobileWidth;
-        return Stack(
-            children: [
-              userLocation == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: FlutterMap(
-                        mapController: _mapController,
-                        options: MapOptions(
-                          initialCenter: userLocation!,
-                          initialZoom: 15,
-                          maxZoom: 19,
-                          cameraConstraint: CameraConstraint.contain(
-                            bounds: sanJoseDelMonteBounds,
-                          ),
-                          onTap: (_, __) {
-                            setState(() {
-                              routePoints.clear();
-                              _popupController.hideAllPopups();
-                            });
+
+    if (filteredClinics.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    if (userLocation == null || !isWithinBounds(userLocation!)) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.grey.shade100,
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return LayoutBuilder(builder: (context, constraints) {
+      bool isMobile = constraints.maxWidth < mobileWidth;
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: userLocation!,
+                initialZoom: 15,
+                maxZoom: 19,
+                cameraConstraint: CameraConstraint.contain(
+                  bounds: sanJoseDelMonteBounds,
+                ),
+                onTap: (_, __) {
+                  setState(() {
+                    routePoints.clear();
+                    _popupController.hideAllPopups();
+                  });
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+                  subdomains: const ['a', 'b', 'c', 'd'],
+                ),
+                if (routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: routePoints,
+                        color: Colors.blue,
+                        strokeWidth: 5.0,
+                      ),
+                    ],
+                  ),
+                PopupMarkerLayer(
+                  options: PopupMarkerLayerOptions(
+                    popupController: _popupController,
+                    markers: getMarkers(),
+                    popupDisplayOptions: PopupDisplayOptions(
+                      builder: (BuildContext context, Marker marker) {
+                        final clinic = filteredClinics.firstWhere(
+                          (c) {
+                            final settings =
+                                clinicSettingsMap[c.documentId ?? ''];
+                            if (settings?.location == null) return false;
+                            final clinicLocation = LatLng(
+                                settings!.location!['lat']!,
+                                settings.location!['lng']!);
+                            return clinicLocation == marker.point;
                           },
-                        ),
-                        children: [
-                          // CartoDB Positron (minimal, clean style)
-TileLayer(
-  urlTemplate: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  subdomains: const ['a', 'b', 'c', 'd'],
-),
+                        );
+                        final settings =
+                            clinicSettingsMap[clinic.documentId ?? ''];
 
-// CartoDB Voyager (clean with some POIs)
-TileLayer(
-  urlTemplate: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-  subdomains: const ['a', 'b', 'c', 'd'],
-),
-
-// OpenStreetMap without labels/POIs
-TileLayer(
-  urlTemplate: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-  subdomains: const ['a', 'b', 'c'],
-),
-                          if (routePoints.isNotEmpty)
-                            PolylineLayer(
-                              polylines: [
-                                Polyline(
-                                  points: routePoints,
-                                  color: Colors.blue,
-                                  strokeWidth: 5.0,
-                                ),
-                              ],
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            VetPopup(
+                              clinic: clinic,
+                              clinicSettings: settings,
                             ),
-                          PopupMarkerLayer(
-                            options: PopupMarkerLayerOptions(
-                              popupController: _popupController,
-                              markers: getMarkers(),
-                              popupDisplayOptions: PopupDisplayOptions(
-                                builder: (BuildContext context, Marker marker) {
-                                  final markerInfo = markerData.firstWhere(
-                                      (element) =>
-                                          element["location"] == marker.point);
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      VetPopup(data: markerInfo),
-                                      Container(
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Color.fromARGB(255, 39, 86, 139),
-                                        ),
-                                        child: IconButton(
-                                          icon:
-                                              const Icon(Icons.close, color: Colors.white),
-                                          onPressed: () {
-                                            _popupController.hideAllPopups();
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  );
+                            Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color.fromARGB(255, 39, 86, 139),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white),
+                                onPressed: () {
+                                  _popupController.hideAllPopups();
                                 },
                               ),
                             ),
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: userLocation!,
-                                width: 40,
-                                height: 40,
-                                child: const Icon(Icons.my_location,
-                                    color: Colors.blue, size: 40),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-            ],
-          );
-      }
-    );
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: userLocation!,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(Icons.my_location,
+                          color: Colors.blue, size: 40),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Floating action button for finding nearest clinic
+          if (!isMobile)
+            Positioned(
+              top: 20,
+              right: 20,
+              child: FloatingActionButton(
+                heroTag: "nearest",
+                mini: true,
+                backgroundColor: Colors.white,
+                onPressed: moveToNearestMarker,
+                child: const Icon(
+                  Icons.near_me,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          // Filter info overlay
+          Positioned(
+            top: 20,
+            left: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${filteredClinics.length} clinics ${widget.selectedFilter != 'All' ? '(${widget.selectedFilter})' : ''}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
