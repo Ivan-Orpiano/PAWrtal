@@ -170,50 +170,50 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > tabletWidth;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            lightPetGreen.withOpacity(0.3),
-            Colors.white
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: primaryTeal.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Title bar
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isTablet ? 24 : 16,
-              vertical: 20,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  primaryBlue.withOpacity(0.08),
-                  primaryTeal.withOpacity(0.12),
-                  softBlue.withOpacity(0.06),
-                ],
-              ),
-            ),
-            child: _buildTitleSection(isTablet),
-          ),
+    // return Container(
+    //   decoration: BoxDecoration(
+    //     gradient: LinearGradient(
+    //       begin: Alignment.topLeft,
+    //       end: Alignment.bottomRight,
+    //       colors: [
+    //         Colors.white,
+    //         lightPetGreen.withOpacity(0.3),
+    //         Colors.white
+    //       ],
+    //     ),
+    //     boxShadow: [
+    //       BoxShadow(
+    //         color: primaryTeal.withOpacity(0.15),
+    //         blurRadius: 8,
+    //         offset: const Offset(0, 4),
+    //         spreadRadius: 1,
+    //       ),
+    //     ],
+    //   ),
+    //   child: Column(
+    //     children: [
+    //       // Title bar
+    //       Container(
+    //         padding: EdgeInsets.symmetric(
+    //           horizontal: isTablet ? 24 : 16,
+    //           vertical: 20,
+    //         ),
+    //         decoration: BoxDecoration(
+    //           gradient: LinearGradient(
+    //             begin: Alignment.topLeft,
+    //             end: Alignment.bottomRight,
+    //             colors: [
+    //               primaryBlue.withOpacity(0.08),
+    //               primaryTeal.withOpacity(0.12),
+    //               softBlue.withOpacity(0.06),
+    //             ],
+    //           ),
+    //         ),
+    //         child: _buildTitleSection(isTablet),
+    //       ),
 
           // Search bar
-          Container(
+          return Container(
             padding: EdgeInsets.symmetric(
               horizontal: isTablet ? 24 : 16,
               vertical: 18,
@@ -229,10 +229,10 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
               ),
             ),
             child: _buildSearchBar(),
-          ),
-        ],
-      ),
-    );
+          );
+    //     ],
+    //   ),
+    // );
   }
 
   Widget _buildTitleSection(bool isTablet) {
