@@ -581,17 +581,24 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                   ),
                   inputDecorationTheme: InputDecorationTheme(
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20))
+                      borderRadius: BorderRadius.all(Radius.circular(15))
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20))
+                      borderRadius: BorderRadius.all(Radius.circular(15))
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20))
+                      borderRadius: BorderRadius.all(Radius.circular(15))
                     ),
                   ),
                   menuStyle: MenuStyle(
-                    backgroundColor: WidgetStatePropertyAll(Colors.white)
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15))
+                      )
+                    ),
+                    backgroundColor: WidgetStatePropertyAll(
+                      Colors.white,
+                    )
                   ),
                   dropdownMenuEntries: [
                     DropdownMenuEntry(value: Text(""), label: "Bug"),
