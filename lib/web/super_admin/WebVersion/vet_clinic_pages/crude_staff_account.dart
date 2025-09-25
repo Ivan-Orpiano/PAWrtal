@@ -460,24 +460,11 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
 
             // Action Buttons
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _viewStaffDetails(staff),
-                    icon: const Icon(Icons.visibility, color: Colors.white),
-                    label: const Text('View Details'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: buttonColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 10),
-                Expanded(
+                SizedBox(
+                  width: 110,
                   child: ElevatedButton.icon(
                     onPressed: () => _deleteStaff(staff),
                     icon: const Icon(Icons.delete, color: Colors.white),
