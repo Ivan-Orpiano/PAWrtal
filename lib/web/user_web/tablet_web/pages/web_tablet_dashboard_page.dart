@@ -1,4 +1,5 @@
 import 'package:capstone_app/web/user_web/components/web_dashboard_tiles_updated.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_grid_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_filter.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_tags.dart';
@@ -12,10 +13,12 @@ class WebTabletDashboardPageUpdated extends StatefulWidget {
   const WebTabletDashboardPageUpdated({super.key});
 
   @override
-  State<WebTabletDashboardPageUpdated> createState() => _WebTabletDashboardPageUpdatedState();
+  State<WebTabletDashboardPageUpdated> createState() =>
+      _WebTabletDashboardPageUpdatedState();
 }
 
-class _WebTabletDashboardPageUpdatedState extends State<WebTabletDashboardPageUpdated> {
+class _WebTabletDashboardPageUpdatedState
+    extends State<WebTabletDashboardPageUpdated> {
   final appwrite = AppWriteProvider();
   List<Clinic> clinics = [];
   List<Clinic> filteredClinics = [];
@@ -62,19 +65,18 @@ class _WebTabletDashboardPageUpdatedState extends State<WebTabletDashboardPageUp
         filteredClinics = clinics;
       } else {
         filteredClinics = clinics.where((clinic) {
-          return clinic.clinicName.toLowerCase().contains(query.toLowerCase()) ||
-                 clinic.address.toLowerCase().contains(query.toLowerCase()) ||
-                 clinic.services.toLowerCase().contains(query.toLowerCase());
+          return clinic.clinicName
+                  .toLowerCase()
+                  .contains(query.toLowerCase()) ||
+              clinic.address.toLowerCase().contains(query.toLowerCase()) ||
+              clinic.services.toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
   }
 
   Widget _buildMapView() {
-    return const SizedBox(
-      height: 770,
-      child: WebMaps()
-    );
+    return const SizedBox(height: 770, child: WebMaps());
   }
 
   Widget _buildClinicList() {
@@ -100,9 +102,9 @@ class _WebTabletDashboardPageUpdatedState extends State<WebTabletDashboardPageUp
               ),
               const SizedBox(height: 16),
               Text(
-                searchQuery.isEmpty 
-                  ? "No clinics available" 
-                  : "No clinics found for '$searchQuery'",
+                searchQuery.isEmpty
+                    ? "No clinics available"
+                    : "No clinics found for '$searchQuery'",
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.grey[600],
@@ -121,7 +123,7 @@ class _WebTabletDashboardPageUpdatedState extends State<WebTabletDashboardPageUp
       );
     }
 
-    return WebDashboardTilesUpdated(clinics: filteredClinics);
+    return WebDashboardGridTile(clinics: filteredClinics);
   }
 
   @override
@@ -155,12 +157,13 @@ class _WebTabletDashboardPageUpdatedState extends State<WebTabletDashboardPageUp
           width: 120,
           child: FloatingActionButton.extended(
             backgroundColor: Colors.white,
-            label: _showMap 
-              ? const Text("Show List", style: TextStyle(color: Colors.black)) 
-              : const Text("Show Maps", style: TextStyle(color: Colors.black)),
-            icon: _showMap 
-              ? const Icon(Icons.list_rounded, color: Colors.black) 
-              : const Icon(Icons.map_rounded, color: Colors.black),
+            label: _showMap
+                ? const Text("Show List", style: TextStyle(color: Colors.black))
+                : const Text("Show Maps",
+                    style: TextStyle(color: Colors.black)),
+            icon: _showMap
+                ? const Icon(Icons.list_rounded, color: Colors.black)
+                : const Icon(Icons.map_rounded, color: Colors.black),
             onPressed: () {
               setState(() {
                 _showMap = !_showMap;

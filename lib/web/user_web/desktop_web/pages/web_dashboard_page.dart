@@ -1,9 +1,7 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
-import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/utils/appwrite_constant.dart';
-import 'package:capstone_app/web/user_web/components/web_dashboard_tiles_updated.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_grid_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
@@ -17,11 +15,11 @@ class WebDashboardPage extends StatefulWidget {
 }
 
 class _WebDashboardPageState extends State<WebDashboardPage> {
-  final appwrite = AppWriteProvider();
   List<Clinic> allClinics = [];
   List<Clinic> filteredClinics = [];
   Map<String, ClinicSettings?> clinicSettingsMap = {};
   bool isLoading = true;
+  String? error;
   bool _showMap = false;
   String searchQuery = '';
   String selectedFilter =
@@ -30,51 +28,49 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   @override
   void initState() {
     super.initState();
-    fetchClinics();
+    _fetchClinicsData();
   }
 
-  Future<void> fetchClinics() async {
+  Future<void> _fetchClinicsData() async {
     try {
-      final result = await appwrite.databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicsCollectionID,
-      );
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
 
-      if (!mounted) return;
-
-      // Create clinic objects
-      final clinics = result.documents.map((doc) {
-        final clinic = Clinic.fromMap(doc.data);
-        clinic.documentId = doc.$id;
-        return clinic;
-      }).toList();
-
-      // Load clinic settings for each clinic
       final authRepository = Get.find<AuthRepository>();
+
+      // Fetch all clinics with their settings using the repository method
+      final clinicsWithSettings = await authRepository.getClinicsWithSettings();
+
+      final clinics = <Clinic>[];
       final settingsMap = <String, ClinicSettings?>{};
 
-      for (final clinic in clinics) {
-        try {
-          final settings = await authRepository
-              .getClinicSettingsByClinicId(clinic.documentId ?? '');
-          settingsMap[clinic.documentId ?? ''] = settings;
-        } catch (e) {
-          print("Error loading settings for clinic ${clinic.clinicName}: $e");
-          settingsMap[clinic.documentId ?? ''] = null;
-        }
+      for (final data in clinicsWithSettings) {
+        final clinic = data['clinic'] as Clinic;
+        final settings = data['settings'] as ClinicSettings?;
+
+        clinics.add(clinic);
+        settingsMap[clinic.documentId ?? ''] = settings;
       }
 
-      setState(() {
-        allClinics = clinics;
-        clinicSettingsMap = settingsMap;
-        filteredClinics = _applyFilters(clinics);
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allClinics = clinics;
+          clinicSettingsMap = settingsMap;
+          filteredClinics = _applyFilters(clinics);
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      print("Error fetching clinics: $e");
+      print("Error fetching clinics data: $e");
 
-      if (!mounted) return;
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() {
+          error = "Failed to load clinics data";
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -117,9 +113,21 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         }).toList();
         break;
       // Add more filters as needed
+      case 'Nearby':
+        // For now, just return all clinics
+        // In the future, you can implement location-based filtering
+        break;
+      case 'Popular':
+        // For now, just return all clinics
+        // In the future, you can implement rating/review-based filtering
+        break;
+      case 'Recommended':
+        // For now, just return all clinics
+        // In the future, you can implement recommendation-based filtering
+        break;
     }
 
-    // Sort by status (open clinics first)
+    // Sort by status (open clinics first) and then by name
     filtered.sort((a, b) {
       final aSettings = clinicSettingsMap[a.documentId ?? ''];
       final bSettings = clinicSettingsMap[b.documentId ?? ''];
@@ -127,6 +135,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       final aIsOpen = aSettings?.isOpen ?? true;
       final bIsOpen = bSettings?.isOpen ?? true;
 
+      // Open clinics first
       if (aIsOpen && !bIsOpen) return -1;
       if (!aIsOpen && bIsOpen) return 1;
 
@@ -248,6 +257,18 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           return !(settings?.isOpen ?? true);
         }).length;
+      case 'Nearby':
+        // For future implementation
+        return allClinics.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          return settings?.location != null;
+        }).length;
+      case 'Popular':
+        // For future implementation based on ratings/reviews
+        return 0;
+      case 'Recommended':
+        // For future implementation based on recommendation algorithm
+        return 0;
       default:
         return 0;
     }
@@ -264,80 +285,133 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     );
   }
 
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.only(top: 200),
+        child: Column(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text("Loading clinics..."),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 200),
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              error ?? "Failed to load clinics",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchClinicsData,
+              child: const Text("Retry"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 200),
+        child: Column(
+          children: [
+            Icon(
+              Icons.local_hospital_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              searchQuery.isEmpty
+                  ? "No clinics match the selected filter"
+                  : "No clinics found for '$searchQuery'",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+            if (searchQuery.isNotEmpty || selectedFilter != 'All') ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    searchQuery = '';
+                    selectedFilter = 'All';
+                    filteredClinics = _applyFilters(allClinics);
+                  });
+                },
+                child: const Text("Clear filters"),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildClinicList() {
     if (isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.only(top: 200),
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return _buildLoadingState();
+    }
+
+    if (error != null) {
+      return _buildErrorState();
     }
 
     if (filteredClinics.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 200),
-          child: Column(
-            children: [
-              Icon(
-                Icons.local_hospital_outlined,
-                size: 64,
-                color: Colors.grey[400],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                searchQuery.isEmpty
-                    ? "No clinics match the selected filter"
-                    : "No clinics found for '$searchQuery'",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey[600],
-                ),
-              ),
-              if (searchQuery.isNotEmpty || selectedFilter != 'All') ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      searchQuery = '';
-                      selectedFilter = 'All';
-                      filteredClinics = _applyFilters(allClinics);
-                    });
-                  },
-                  child: const Text("Clear filters"),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
+      return _buildEmptyState();
     }
 
-    return WebDashboardTilesUpdated(clinics: filteredClinics);
+    return WebDashboardGridTile(
+      clinics: filteredClinics,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: ListView(
-        padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
-        children: [
-          Row(
-            children: [
-              _buildWebTagsStyleFilter(),
-              const SizedBox(width: 12),
-              WebSearchBar(
-                onSearchChanged: _filterClinics,
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: _showMap ? _buildMapView() : _buildClinicList(),
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: _fetchClinicsData,
+        child: ListView(
+          padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
+          children: [
+            Row(
+              children: [
+                _buildWebTagsStyleFilter(),
+                const SizedBox(width: 12),
+                WebSearchBar(
+                  onSearchChanged: _filterClinics,
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _showMap ? _buildMapView() : _buildClinicList(),
+            ),
+          ],
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(

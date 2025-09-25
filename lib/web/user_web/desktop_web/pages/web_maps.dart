@@ -40,6 +40,7 @@ class _WebMapsState extends State<WebMaps> {
   List<Clinic> filteredClinics = [];
   Map<String, ClinicSettings?> clinicSettingsMap = {};
   bool isLoading = true;
+  String? error;
 
   final sanJoseDelMonteBounds = LatLngBounds(
     const LatLng(14.7500, 121.0000),
@@ -53,8 +54,7 @@ class _WebMapsState extends State<WebMaps> {
   @override
   void initState() {
     super.initState();
-    fetchLocation();
-    fetchClinicsFromDatabase();
+    _initializeMap();
   }
 
   @override
@@ -66,28 +66,54 @@ class _WebMapsState extends State<WebMaps> {
     }
   }
 
-  Future<void> fetchLocation() async {
-    Position? position = await getUserLocation();
-    if (position != null) {
-      LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
-      if (!isWithinBounds(fetchedLocation)) {
-        fetchedLocation = sanJoseDelMonteBounds.center;
+  Future<void> _initializeMap() async {
+    await Future.wait([
+      _fetchUserLocation(),
+      _fetchClinicsData(),
+    ]);
+  }
+
+  Future<void> _fetchUserLocation() async {
+    try {
+      Position? position = await _getCurrentUserLocation();
+      if (position != null) {
+        LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
+        if (!isWithinBounds(fetchedLocation)) {
+          fetchedLocation = sanJoseDelMonteBounds.center;
+        }
+        setState(() {
+          userLocation = fetchedLocation;
+        });
+      } else {
+        // Default to center of bounds if location not available
+        setState(() {
+          userLocation = sanJoseDelMonteBounds.center;
+        });
       }
+    } catch (e) {
+      print("Error fetching user location: $e");
       setState(() {
-        userLocation = fetchedLocation;
+        userLocation = sanJoseDelMonteBounds.center;
       });
     }
   }
 
-  Future<void> fetchClinicsFromDatabase() async {
+  Future<void> _fetchClinicsData() async {
     try {
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
+
       final authRepository = Get.find<AuthRepository>();
-      final clinicsData = await authRepository.getClinicsWithSettings();
+
+      // Fetch all clinics with their settings in one go
+      final clinicsWithSettings = await authRepository.getClinicsWithSettings();
 
       final clinics = <Clinic>[];
       final settingsMap = <String, ClinicSettings?>{};
 
-      for (final data in clinicsData) {
+      for (final data in clinicsWithSettings) {
         final clinic = data['clinic'] as Clinic;
         final settings = data['settings'] as ClinicSettings?;
 
@@ -95,16 +121,23 @@ class _WebMapsState extends State<WebMaps> {
         settingsMap[clinic.documentId ?? ''] = settings;
       }
 
-      setState(() {
-        allClinics = clinics;
-        clinicSettingsMap = settingsMap;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allClinics = clinics;
+          clinicSettingsMap = settingsMap;
+          isLoading = false;
+        });
 
-      _applyFilters();
+        _applyFilters();
+      }
     } catch (e) {
-      print("Error fetching clinics from database: $e");
-      setState(() => isLoading = false);
+      print("Error fetching clinics data: $e");
+      if (mounted) {
+        setState(() {
+          error = "Failed to load clinics data";
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -150,25 +183,36 @@ class _WebMapsState extends State<WebMaps> {
         break;
     }
 
+    // Only include clinics that have location data set
+    filtered = filtered.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      return settings?.location != null;
+    }).toList();
+
     setState(() {
       filteredClinics = filtered;
     });
   }
 
-  Future<Position?> getUserLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return null;
+  Future<Position?> _getCurrentUserLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return null;
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+      if (permission == LocationPermission.deniedForever) return null;
+
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+    } catch (e) {
+      print("Error getting current location: $e");
+      return null;
     }
-    if (permission == LocationPermission.deniedForever) return null;
-
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
   }
 
   double calculateDistance(LatLng point1, LatLng point2) {
@@ -216,83 +260,119 @@ class _WebMapsState extends State<WebMaps> {
   List<Marker> getMarkers() {
     if (userLocation == null) return [];
 
-    return filteredClinics.where((clinic) {
+    final markers = <Marker>[];
+
+    // Create markers for all filtered clinics that have location data
+    for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      return settings?.location != null;
-    }).map((clinic) {
-      final settings = clinicSettingsMap[clinic.documentId ?? '']!;
+
+      if (settings?.location == null) continue;
+
       final location =
-          LatLng(settings.location!['lat']!, settings.location!['lng']!);
+          LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+
+      // Ensure location is within bounds
+      if (!isWithinBounds(location)) continue;
+
       double distanceInKm = calculateDistance(userLocation!, location);
 
-      // Determine marker color based on status
-      Color markerColor = Colors.red;
-      if (settings.isOpen && settings.isOpenToday()) {
-        markerColor = Colors.green;
-      } else if (settings.isOpen && !settings.isOpenToday()) {
-        markerColor = Colors.orange;
+      // Determine marker color based on clinic status
+      Color markerColor = Colors.red; // Default: closed
+      if (settings.isOpen) {
+        if (settings.isOpenToday()) {
+          markerColor = Colors.green; // Open today
+        } else {
+          markerColor = Colors.orange; // Open but not today
+        }
       }
 
-      return Marker(
-        point: location,
-        width: 70,
-        height: 90,
-        child: GestureDetector(
-          onTap: () {
-            if (userLocation != null) {
-              _popupController.hideAllPopups();
-              fetchRoute(location);
-            }
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(Icons.location_on, color: markerColor, size: 40),
-              Positioned(
-                top: 65,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Text(
-                    "${distanceInKm.toStringAsFixed(2)} km",
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold),
+      markers.add(
+        Marker(
+          point: location,
+          width: 70,
+          height: 90,
+          child: GestureDetector(
+            onTap: () {
+              if (userLocation != null) {
+                _popupController.hideAllPopups();
+                fetchRoute(location);
+              }
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(Icons.location_on, color: markerColor, size: 40),
+                Positioned(
+                  top: 65,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      "${distanceInKm.toStringAsFixed(2)} km",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
-    }).toList();
+    }
+
+    return markers;
   }
 
   Future<void> fetchRoute(LatLng destination) async {
     if (userLocation == null) return;
 
-    String url =
-        "https://router.project-osrm.org/route/v1/driving/${userLocation!.longitude},${userLocation!.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson";
+    try {
+      String url =
+          "https://router.project-osrm.org/route/v1/driving/${userLocation!.longitude},${userLocation!.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson";
 
-    final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      List<dynamic> coordinates = data['routes'][0]['geometry']['coordinates'];
-      List<LatLng> points = coordinates.map((c) => LatLng(c[1], c[0])).toList();
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-      setState(() {
-        routePoints = points;
-        _popupController.hideAllPopups();
-        Future.delayed(const Duration(milliseconds: 100), () {
-          _popupController.showPopupsOnlyFor([
-            getMarkers().firstWhere((marker) => marker.point == destination)
-          ]);
-        });
-      });
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          List<dynamic> coordinates =
+              data['routes'][0]['geometry']['coordinates'];
+          List<LatLng> points =
+              coordinates.map((c) => LatLng(c[1], c[0])).toList();
+
+          setState(() {
+            routePoints = points;
+            _popupController.hideAllPopups();
+          });
+
+          // Show popup after a brief delay
+          Future.delayed(const Duration(milliseconds: 100), () {
+            final targetMarker = getMarkers().firstWhere(
+              (marker) => marker.point == destination,
+              orElse: () => getMarkers().first,
+            );
+            _popupController.showPopupsOnlyFor([targetMarker]);
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching route: $e");
     }
   }
 
@@ -309,6 +389,40 @@ class _WebMapsState extends State<WebMaps> {
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text('Loading clinics...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.grey.shade100,
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              error ?? "Failed to load clinic data",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchClinicsData,
+              child: const Text("Retry"),
+            ),
           ],
         ),
       ),
@@ -340,6 +454,14 @@ class _WebMapsState extends State<WebMaps> {
                 color: Colors.grey[600],
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              "Only clinics with set locations are shown on the map",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
           ],
         ),
       ),
@@ -352,17 +474,30 @@ class _WebMapsState extends State<WebMaps> {
       return _buildLoadingState();
     }
 
+    if (error != null) {
+      return _buildErrorState();
+    }
+
     if (filteredClinics.isEmpty) {
       return _buildEmptyState();
     }
 
-    if (userLocation == null || !isWithinBounds(userLocation!)) {
+    if (userLocation == null) {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.grey.shade100,
         ),
-        child: const Center(child: CircularProgressIndicator()),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Setting up map...'),
+            ],
+          ),
+        ),
       );
     }
 
@@ -410,6 +545,7 @@ class _WebMapsState extends State<WebMaps> {
                     markers: getMarkers(),
                     popupDisplayOptions: PopupDisplayOptions(
                       builder: (BuildContext context, Marker marker) {
+                        // Find the clinic that corresponds to this marker
                         final clinic = filteredClinics.firstWhere(
                           (c) {
                             final settings =
@@ -441,6 +577,9 @@ class _WebMapsState extends State<WebMaps> {
                                     color: Colors.white),
                                 onPressed: () {
                                   _popupController.hideAllPopups();
+                                  setState(() {
+                                    routePoints.clear();
+                                  });
                                 },
                               ),
                             ),
@@ -456,8 +595,18 @@ class _WebMapsState extends State<WebMaps> {
                       point: userLocation!,
                       width: 40,
                       height: 40,
-                      child: const Icon(Icons.my_location,
-                          color: Colors.blue, size: 40),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -489,6 +638,13 @@ class _WebMapsState extends State<WebMaps> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Text(
                 '${filteredClinics.length} clinics ${widget.selectedFilter != 'All' ? '(${widget.selectedFilter})' : ''}',
