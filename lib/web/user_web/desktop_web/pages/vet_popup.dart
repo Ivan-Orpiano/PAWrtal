@@ -344,11 +344,12 @@ class VetPopup extends StatelessWidget {
                             const SizedBox(height: 12),
                           ],
 
-                          // Action Button
+                          // Action Button - Updated for appointments
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: () {
+                                // Navigate to clinic page for appointment booking
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -369,12 +370,22 @@ class VetPopup extends StatelessWidget {
                                 ),
                                 elevation: 2,
                               ),
-                              child: const Text(
-                                "View Details",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    "Book Appointment",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

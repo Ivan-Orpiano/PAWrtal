@@ -5,23 +5,23 @@ import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_pa
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class WebDashboardTileUpdated extends StatefulWidget {
+class WebDashboardTile extends StatefulWidget {
   final Clinic clinic;
   final double tileWidth;
   final double tileHeight;
 
-  const WebDashboardTileUpdated({
+  const WebDashboardTile({
     super.key,
     required this.clinic,
-    required this.tileWidth, 
+    required this.tileWidth,
     double? tileHeight,
   }) : tileHeight = tileHeight ?? tileWidth * 1.4;
 
   @override
-  State<WebDashboardTileUpdated> createState() => _WebDashboardTileUpdatedState();
+  State<WebDashboardTile> createState() => _WebDashboardTileState();
 }
 
-class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
+class _WebDashboardTileState extends State<WebDashboardTile> {
   bool _isLiked = false;
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
@@ -35,7 +35,8 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
   Future<void> _loadClinicSettings() async {
     try {
       final authRepository = Get.find<AuthRepository>();
-      final settings = await authRepository.getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
+      final settings = await authRepository
+          .getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
       setState(() {
         _clinicSettings = settings;
         _isLoadingSettings = false;
@@ -52,7 +53,7 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
   List<String> _getServicesList() {
     // First try clinic settings, then fall back to clinic.services
     List<String> services = [];
-    
+
     if (_clinicSettings != null && _clinicSettings!.services.isNotEmpty) {
       services = _clinicSettings!.services.take(3).toList();
     } else if (widget.clinic.services.isNotEmpty) {
@@ -63,18 +64,21 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
           .take(3)
           .toList();
     }
-    
+
     return services;
   }
 
   // Helper method to get service icons
   IconData _getServiceIcon(String service) {
     String serviceLower = service.toLowerCase();
-    if (serviceLower.contains('vaccination') || serviceLower.contains('vaccine')) {
+    if (serviceLower.contains('vaccination') ||
+        serviceLower.contains('vaccine')) {
       return Icons.vaccines_outlined;
-    } else if (serviceLower.contains('surgery') || serviceLower.contains('operation')) {
+    } else if (serviceLower.contains('surgery') ||
+        serviceLower.contains('operation')) {
       return Icons.local_hospital_outlined;
-    } else if (serviceLower.contains('checkup') || serviceLower.contains('examination')) {
+    } else if (serviceLower.contains('checkup') ||
+        serviceLower.contains('examination')) {
       return Icons.health_and_safety_outlined;
     } else if (serviceLower.contains('grooming')) {
       return Icons.pets_outlined;
@@ -103,10 +107,10 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
 
     final isOpen = _clinicSettings?.isOpen ?? true;
     final isOpenToday = _clinicSettings?.isOpenToday() ?? true;
-    
+
     Color statusColor;
     String statusText;
-    
+
     if (!isOpen) {
       statusColor = Colors.red;
       statusText = "CLOSED";
@@ -141,7 +145,7 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
     }
 
     final todayHours = _clinicSettings!.getTodayHours();
-    
+
     return Text(
       todayHours,
       style: TextStyle(
@@ -152,16 +156,19 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
     );
   }
 
+  String _getProfileImage() {
+    // Use first gallery image from settings, then fallback to clinic.image
+    if (_clinicSettings != null && _clinicSettings!.gallery.isNotEmpty) {
+      return _clinicSettings!.gallery.first;
+    }
+    return widget.clinic.image;
+  }
+
   @override
   Widget build(BuildContext context) {
     final services = _getServicesList();
-    
-    // Get profile image - use first gallery image from settings, then fallback to clinic.image
-    String profileImage = widget.clinic.image;
-    if (_clinicSettings != null && _clinicSettings!.gallery.isNotEmpty) {
-      profileImage = _clinicSettings!.gallery.first;
-    }
-    
+    final profileImage = _getProfileImage();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 30),
       child: InkWell(
@@ -171,7 +178,8 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => WebClinicPageHandlerUpdated(clinic: widget.clinic),
+              builder: (context) =>
+                  WebClinicPageHandlerUpdated(clinic: widget.clinic),
             ),
           );
         },
@@ -225,7 +233,7 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
                             )
                           : const Icon(
                               Icons.favorite_border_rounded,
-                              color: Colors.white,            
+                              color: Colors.white,
                             ),
                       onPressed: () {
                         setState(() {
@@ -298,37 +306,37 @@ class _WebDashboardTileUpdatedState extends State<WebDashboardTileUpdated> {
               ),
               // Services display
               if (services.isNotEmpty)
-              Row(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Text(
-                      "Services",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                Row(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: Text(
+                        "Services",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Row(
-                      children: services.take(2).map((service) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Tooltip(
-                            message: service,
-                            child: Icon(
-                              _getServiceIcon(service),
-                              size: 18,
-                              color: Colors.grey[600],
+                    Expanded(
+                      child: Row(
+                        children: services.take(2).map((service) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Tooltip(
+                              message: service,
+                              child: Icon(
+                                _getServiceIcon(service),
+                                size: 18,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
         ),
