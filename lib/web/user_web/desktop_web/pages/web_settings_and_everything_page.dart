@@ -573,6 +573,41 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                   ),
                 ),
                 const SizedBox(height: 16),
+                const DropdownMenu(
+                  width: 300,
+                  enableSearch: false,
+                  label: Text(
+                    "Select kind of problem"
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(15))
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(15))
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(15))
+                    ),
+                  ),
+                  menuStyle: MenuStyle(
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15))
+                      )
+                    ),
+                    backgroundColor: WidgetStatePropertyAll(
+                      Colors.white,
+                    )
+                  ),
+                  dropdownMenuEntries: [
+                    DropdownMenuEntry(value: Text(""), label: "Bug"),
+                    DropdownMenuEntry(value: Text(""), label: "Feature"),
+                    DropdownMenuEntry(value: Text(""), label: "Complaint"),
+                    DropdownMenuEntry(value: Text(""), label: "Question"),
+                  ],
+                ),
+                const SizedBox(height: 16,),
                 TextField(
                   controller: feedbackController,
                   maxLines: 5,
