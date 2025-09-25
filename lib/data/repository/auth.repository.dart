@@ -167,155 +167,182 @@ class AuthRepository {
 
   // ============= CONVERSATION METHODS =============
 
-Future<models.Document> createConversation(Conversation conversation) =>
-    appWriteProvider.createConversation(conversation.toMap());
+  Future<models.Document> createConversation(Conversation conversation) =>
+      appWriteProvider.createConversation(conversation.toMap());
 
-Future<Conversation?> getOrCreateConversation(String userId, String clinicId) async {
-  final doc = await appWriteProvider.getOrCreateConversation(userId, clinicId);
-  if (doc != null) {
-    var conversation = Conversation.fromMap(doc.data);
-    conversation = conversation.copyWith(documentId: doc.$id);
-    return conversation;
+  Future<Conversation?> getOrCreateConversation(
+      String userId, String clinicId) async {
+    final doc =
+        await appWriteProvider.getOrCreateConversation(userId, clinicId);
+    if (doc != null) {
+      var conversation = Conversation.fromMap(doc.data);
+      conversation = conversation.copyWith(documentId: doc.$id);
+      return conversation;
+    }
+    return null;
   }
-  return null;
-}
 
-Future<List<Conversation>> getUserConversations(String userId) async {
-  final docs = await appWriteProvider.getUserConversations(userId);
-  return docs.map((doc) {
-    final conversation = Conversation.fromMap(doc.data);
-    return conversation.copyWith(documentId: doc.$id);
-  }).toList();
-}
+  Future<List<Conversation>> getUserConversations(String userId) async {
+    final docs = await appWriteProvider.getUserConversations(userId);
+    return docs.map((doc) {
+      final conversation = Conversation.fromMap(doc.data);
+      return conversation.copyWith(documentId: doc.$id);
+    }).toList();
+  }
 
-Future<List<Conversation>> getClinicConversations(String clinicId) async {
-  final docs = await appWriteProvider.getClinicConversations(clinicId);
-  return docs.map((doc) {
-    final conversation = Conversation.fromMap(doc.data);
-    return conversation.copyWith(documentId: doc.$id);
-  }).toList();
-}
+  Future<List<Conversation>> getClinicConversations(String clinicId) async {
+    final docs = await appWriteProvider.getClinicConversations(clinicId);
+    return docs.map((doc) {
+      final conversation = Conversation.fromMap(doc.data);
+      return conversation.copyWith(documentId: doc.$id);
+    }).toList();
+  }
 
-Future<models.Document> updateConversation(Conversation conversation) =>
-    appWriteProvider.updateConversation(
-      conversation.documentId!,
-      conversation.toMap(),
-    );
+  Future<models.Document> updateConversation(Conversation conversation) =>
+      appWriteProvider.updateConversation(
+        conversation.documentId!,
+        conversation.toMap(),
+      );
 
 // ============= MESSAGE METHODS =============
 
-Future<models.Document> createMessage(Message message) =>
-    appWriteProvider.createMessage(message.toMap());
+  Future<models.Document> createMessage(Message message) =>
+      appWriteProvider.createMessage(message.toMap());
 
-Future<List<Message>> getConversationMessages(String conversationId, {int limit = 50, String? lastMessageId}) async {
-  final docs = await appWriteProvider.getConversationMessages(
-    conversationId, 
-    limit: limit, 
-    lastMessageId: lastMessageId
-  );
-  return docs.map((doc) {
-    final message = Message.fromMap(doc.data);
-    return message.copyWith(documentId: doc.$id);
-  }).toList();
-}
+  Future<List<Message>> getConversationMessages(String conversationId,
+      {int limit = 50, String? lastMessageId}) async {
+    final docs = await appWriteProvider.getConversationMessages(conversationId,
+        limit: limit, lastMessageId: lastMessageId);
+    return docs.map((doc) {
+      final message = Message.fromMap(doc.data);
+      return message.copyWith(documentId: doc.$id);
+    }).toList();
+  }
 
-Future<models.Document> updateMessage(Message message) =>
-    appWriteProvider.updateMessage(message.documentId!, message.toMap());
+  Future<models.Document> updateMessage(Message message) =>
+      appWriteProvider.updateMessage(message.documentId!, message.toMap());
 
-Future<void> markMessagesAsRead(String conversationId, String receiverId) =>
-    appWriteProvider.markMessagesAsRead(conversationId, receiverId);
+  Future<void> markMessagesAsRead(String conversationId, String receiverId) =>
+      appWriteProvider.markMessagesAsRead(conversationId, receiverId);
 
 // Send a message and update conversation
-Future<Message> sendMessage({
-  required String conversationId,
-  required String senderId,
-  required String senderType,
-  required String receiverId,
-  required String messageText,
-  String messageType = 'text',
-  String? attachmentUrl,
-}) async {
-  // Create message
-  final message = Message(
-    conversationId: conversationId,
-    senderId: senderId,
-    senderType: senderType,
-    receiverId: receiverId,
-    messageText: messageText,
-    messageType: messageType,
-    attachmentUrl: attachmentUrl,
-  );
+  Future<Message> sendMessage({
+    required String conversationId,
+    required String senderId,
+    required String senderType,
+    required String receiverId,
+    required String messageText,
+    String messageType = 'text',
+    String? attachmentUrl,
+  }) async {
+    // Create message
+    final message = Message(
+      conversationId: conversationId,
+      senderId: senderId,
+      senderType: senderType,
+      receiverId: receiverId,
+      messageText: messageText,
+      messageType: messageType,
+      attachmentUrl: attachmentUrl,
+    );
 
-  final messageDoc = await createMessage(message);
-  final createdMessage = message.copyWith(documentId: messageDoc.$id);
+    final messageDoc = await createMessage(message);
+    final createdMessage = message.copyWith(documentId: messageDoc.$id);
 
-  // Update conversation with last message info
-  await appWriteProvider.updateConversation(conversationId, {
-    'lastMessageId': messageDoc.$id,
-    'lastMessageText': messageText,
-    'lastMessageTime': DateTime.now().toIso8601String(),
-    'unreadCount': 1, // This should be calculated properly in a real implementation
-  });
+    // Update conversation with last message info
+    await appWriteProvider.updateConversation(conversationId, {
+      'lastMessageId': messageDoc.$id,
+      'lastMessageText': messageText,
+      'lastMessageTime': DateTime.now().toIso8601String(),
+      'unreadCount':
+          1, // This should be calculated properly in a real implementation
+    });
 
-  return createdMessage;
-}
+    return createdMessage;
+  }
 
 // ============= CONVERSATION STARTERS METHODS =============
 
-Future<models.Document> createConversationStarter(ConversationStarter starter) =>
-    appWriteProvider.createConversationStarter(starter.toMap());
+  Future<models.Document> createConversationStarter(
+          ConversationStarter starter) =>
+      appWriteProvider.createConversationStarter(starter.toMap());
 
-Future<List<ConversationStarter>> getClinicConversationStarters(String clinicId) async {
-  final docs = await appWriteProvider.getClinicConversationStarters(clinicId);
-  return docs.map((doc) {
-    final starter = ConversationStarter.fromMap(doc.data);
-    return starter.copyWith(documentId: doc.$id);
-  }).toList();
-}
+  Future<List<ConversationStarter>> getClinicConversationStarters(
+      String clinicId) async {
+    final docs = await appWriteProvider.getClinicConversationStarters(clinicId);
+    return docs.map((doc) {
+      final starter = ConversationStarter.fromMap(doc.data);
+      return starter.copyWith(documentId: doc.$id);
+    }).toList();
+  }
 
-Future<models.Document> updateConversationStarter(ConversationStarter starter) =>
-    appWriteProvider.updateConversationStarter(
-      starter.documentId!,
-      starter.toMap(),
-    );
+  Future<models.Document> updateConversationStarter(
+          ConversationStarter starter) =>
+      appWriteProvider.updateConversationStarter(
+        starter.documentId!,
+        starter.toMap(),
+      );
 
-Future<void> deleteConversationStarter(String documentId) =>
-    appWriteProvider.deleteConversationStarter(documentId);
+  Future<void> deleteConversationStarter(String documentId) =>
+      appWriteProvider.deleteConversationStarter(documentId);
 
-Future<void> initializeDefaultConversationStarters(String clinicId) =>
-    appWriteProvider.initializeDefaultConversationStarters(clinicId);
+  Future<void> initializeDefaultConversationStarters(String clinicId) =>
+      appWriteProvider.initializeDefaultConversationStarters(clinicId);
 
 // ============= USER STATUS METHODS =============
 
-Future<models.Document> createOrUpdateUserStatus(UserStatus status) =>
-    appWriteProvider.createOrUpdateUserStatus(status.userId, status.toMap());
+  Future<models.Document> createOrUpdateUserStatus(UserStatus status) =>
+      appWriteProvider.createOrUpdateUserStatus(status.userId, status.toMap());
 
-Future<UserStatus?> getUserStatus(String userId) async {
-  final doc = await appWriteProvider.getUserStatus(userId);
-  if (doc != null) {
-    final status = UserStatus.fromMap(doc.data);
-    return status.copyWith(documentId: doc.$id);
+  Future<UserStatus?> getUserStatus(String userId) async {
+    final doc = await appWriteProvider.getUserStatus(userId);
+    if (doc != null) {
+      final status = UserStatus.fromMap(doc.data);
+      return status.copyWith(documentId: doc.$id);
+    }
+    return null;
   }
-  return null;
-}
 
-Future<void> setUserOnline(String userId) =>
-    appWriteProvider.setUserOnline(userId);
+  Future<void> setUserOnline(String userId) =>
+      appWriteProvider.setUserOnline(userId);
 
-Future<void> setUserOffline(String userId) =>
-    appWriteProvider.setUserOffline(userId);
+  Future<void> setUserOffline(String userId) =>
+      appWriteProvider.setUserOffline(userId);
 
 // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
-Stream<models.RealtimeMessage> subscribeToMessages(String conversationId) =>
-    appWriteProvider.subscribeToMessages(conversationId);
+  Stream<RealtimeMessage> subscribeToMessages(String conversationId) =>
+      appWriteProvider.subscribeToMessages(conversationId);
 
-Stream<models.RealtimeMessage> subscribeToConversations(String userId) =>
-    appWriteProvider.subscribeToConversations(userId);
+  Stream<RealtimeMessage> subscribeToConversations(String userId) =>
+      appWriteProvider.subscribeToConversations(userId);
 
-Stream<models.RealtimeMessage> subscribeToUserStatus(String userId) =>
-    appWriteProvider.subscribeToUserStatus(userId);
+  Stream<RealtimeMessage> subscribeToUserStatus(String userId) =>
+      appWriteProvider.subscribeToUserStatus(userId);
 
-void disposeMessageSubscriptions() =>
-    appWriteProvider.disposeMessageSubscriptions();
+  void disposeMessageSubscriptions() =>
+      appWriteProvider.disposeMessageSubscriptions();
+
+// ============= CLINIC DATA WITH SETTINGS =============
+
+  Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
+    try {
+      final clinics = await getAllClinics();
+      final List<Map<String, dynamic>> clinicsWithSettings = [];
+
+      for (final clinic in clinics) {
+        final settings =
+            await getClinicSettingsByClinicId(clinic.documentId ?? '');
+        clinicsWithSettings.add({
+          'clinic': clinic,
+          'settings': settings,
+        });
+      }
+
+      return clinicsWithSettings;
+    } catch (e) {
+      print("Error fetching clinics with settings: $e");
+      return [];
+    }
+  }
 }
