@@ -50,118 +50,126 @@ class _PetsPageState extends State<PetsPage> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.blue.shade50,
-      body: Column(
-        children: [
-          SizedBox(
-            height: 75,
-            child: Center(
-              child: Text(
-                "Pets",
-                style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold, fontSize: 20),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: Colors.blue.shade50,
+          body: Column(
+            children: [
+              SizedBox(
+                height: 75,
+                child: Center(
+                  child: Text(
+                    "Pets",
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold, fontSize: 20),
+                  ),
+                ),
               ),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              width: double.maxFinite,
-              height: double.maxFinite,
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 230, 230, 230),
-                borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20)),
-              ),
-              child: ListView(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Expanded(
+                child: Container(
+                  width: double.maxFinite,
+                  height: double.maxFinite,
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(255, 230, 230, 230),
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20)),
+                  ),
+                  child: ListView(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            left: 16, top: 10, bottom: 20),
-                        child: Text(
-                          "Your pets",
-                          style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600, fontSize: 22),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            right: 16, top: 10, bottom: 20),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 81, 115, 153),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.grey.shade400,
-                                    spreadRadius: 2,
-                                    blurRadius: 3,
-                                    offset: const Offset(0, 2))
-                              ]),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.filter_list_rounded,
-                              color: Colors.white,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                left: 16, top: 10, bottom: 20),
+                            child: Text(
+                              "Your pets",
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600, fontSize: 22),
                             ),
-                            onPressed: () {},
                           ),
-                        ),
-                      )
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                right: 16, top: 10, bottom: 20),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 81, 115, 153),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.grey.shade400,
+                                        spreadRadius: 2,
+                                        blurRadius: 3,
+                                        offset: const Offset(0, 2))
+                                  ]),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.filter_list_rounded,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {},
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                      Obx(() {
+                        if (petsController.isLoading.value) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+        
+                        if (petsController.pets.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text("No pets yet."),
+                          );
+                        }
+        
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
+                          child: SingleChildScrollView(
+                            child: Wrap(
+                              spacing: 20,
+                              runSpacing: 30,
+                              children: petsController.pets.map((pet) {
+                                return GestureDetector(
+                                  onTap: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => PetsNextPage(pet: pet),
+                                      ),
+                                    );
+        
+                                    if (result == true) {
+                                      Get.find<PetsController>().fetchPets();
+                                    }
+                                  },
+                                  child: MyPetTile(pet: pet),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        );
+                      })
                     ],
                   ),
-                  Obx(() {
-                    if (petsController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (petsController.pets.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Text("No pets yet."),
-                      );
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      child: SingleChildScrollView(
-                        child: Wrap(
-                          spacing: 20,
-                          runSpacing: 30,
-                          children: petsController.pets.map((pet) {
-                            return GestureDetector(
-                              onTap: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => PetsNextPage(pet: pet),
-                                  ),
-                                );
-
-                                if (result == true) {
-                                  Get.find<PetsController>().fetchPets();
-                                }
-                              },
-                              child: MyPetTile(pet: pet),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    );
-                  })
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: const MyFabPets(),
+        ),
+        const Positioned(
+          bottom: 120,
+          right: 20,
+          child: MyFabPets()
+        )
+      ],
     );
   }
 }
