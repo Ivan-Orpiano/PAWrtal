@@ -56,6 +56,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
       isScrollControlled: true,
       builder: (BuildContext context) {
         return Container(
+          color: const Color.fromRGBO(249, 253, 255, 1),
           height: MediaQuery.of(context).size.height * 0.6,
           padding: const EdgeInsets.all(20),
           child: Column(

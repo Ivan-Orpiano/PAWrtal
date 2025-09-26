@@ -36,73 +36,84 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
             ),
           ),
         ),
+        // actions: [
+        //   Padding(
+        //     padding: const EdgeInsets.only(right: 20.0),
+        //     child: PopupMenuButton<String>(
+        //       onSelected: (String value) {
+        //         switch (value) {
+        //           case 'profile':
+        //             Get.snackbar('Info', 'Profile page coming soon',
+        //                 backgroundColor: Colors.blue, colorText: Colors.white);
+        //             break;
+        //           case 'settings':
+        //             controller.navigateToSettings();
+        //             break;
+        //           case 'logout':
+        //             _showLogoutDialog(context);
+        //             break;
+        //         }
+        //       },
+        //       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        //         const PopupMenuItem<String>(
+        //           value: 'profile',
+        //           child: ListTile(
+        //             leading: Icon(Icons.person),
+        //             title: Text('Profile'),
+        //           ),
+        //         ),
+        //         const PopupMenuItem<String>(
+        //           value: 'settings',
+        //           child: ListTile(
+        //             leading: Icon(Icons.settings),
+        //             title: Text('Settings'),
+        //           ),
+        //         ),
+        //         const PopupMenuDivider(),
+        //         const PopupMenuItem<String>(
+        //           value: 'logout',
+        //           child: ListTile(
+        //             leading: Icon(Icons.logout, color: Colors.red),
+        //             title: Text('Log Out', style: TextStyle(color: Colors.red)),
+        //           ),
+        //         ),
+        //       ],
+        //       child: InkWell(
+        //         onTap: () {
+        //           // This will trigger the popup menu
+        //         },
+        //         child: Padding(
+        //           padding: const EdgeInsets.symmetric(
+        //               horizontal: 8.0, vertical: 4.0),
+        //           child: Row(
+        //             mainAxisSize: MainAxisSize.min,
+        //             children: [
+        //               const Icon(Icons.account_circle,
+        //                   color: Color.fromRGBO(81, 115, 153, 0.8)),
+        //               const SizedBox(width: 8),
+        //               Flexible(
+        //                 child: Text(
+        //                   controller.userName,
+        //                   style: const TextStyle(
+        //                       color: Color.fromRGBO(81, 115, 153, 0.8)),
+        //                   overflow: TextOverflow.ellipsis,
+        //                 ),
+        //               ),
+        //             ],
+        //           ),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ],
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: PopupMenuButton<String>(
-              onSelected: (String value) {
-                switch (value) {
-                  case 'profile':
-                    Get.snackbar('Info', 'Profile page coming soon',
-                        backgroundColor: Colors.blue, colorText: Colors.white);
-                    break;
-                  case 'settings':
-                    controller.navigateToSettings();
-                    break;
-                  case 'logout':
-                    _showLogoutDialog(context);
-                    break;
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'profile',
-                  child: ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text('Profile'),
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'settings',
-                  child: ListTile(
-                    leading: Icon(Icons.settings),
-                    title: Text('Settings'),
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem<String>(
-                  value: 'logout',
-                  child: ListTile(
-                    leading: Icon(Icons.logout, color: Colors.red),
-                    title: Text('Log Out', style: TextStyle(color: Colors.red)),
-                  ),
-                ),
-              ],
-              child: InkWell(
-                onTap: () {
-                  // This will trigger the popup menu
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0, vertical: 4.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.account_circle,
-                          color: Color.fromRGBO(81, 115, 153, 0.8)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          controller.userName,
-                          style: const TextStyle(
-                              color: Color.fromRGBO(81, 115, 153, 0.8)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          IconButton(
+            onPressed: () {
+              _showProfileDrawer(context);
+            },
+            icon: const Icon(
+              Icons.menu,
+              color: Color.fromRGBO(81, 115, 153, 0.8),
             ),
           ),
         ],
@@ -201,6 +212,129 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
+  void _showProfileDrawer(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          color: const Color.fromRGBO(249, 253, 255, 1),
+          height: MediaQuery.of(context).size.height * 0.6,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              CircleAvatar(
+                backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                radius: 40,
+                child: Text(
+                  controller.userName.isNotEmpty
+                      ? controller.userName[0].toUpperCase()
+                      : 'D',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                controller.userName,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                controller.userEmail,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 30),
+              Expanded(
+                child: ListView(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.dashboard),
+                      title: const Text('Dashboard'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Already on dashboard
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.local_hospital),
+                      title: const Text('Vet Clinics'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        controller.navigateToVetClinics();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.pets),
+                      title: const Text('Pet Owners'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        controller.navigateToPetOwners();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.analytics),
+                      title: const Text('Reports'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        controller.navigateToReports();
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.person),
+                      title: const Text('Profile'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Get.snackbar('Info', 'Profile page coming soon',
+                            backgroundColor: Colors.blue,
+                            colorText: Colors.white);
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.settings),
+                      title: const Text('Settings'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        controller.navigateToSettings();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text('Logout',
+                          style: TextStyle(color: Colors.red)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showLogoutDialog(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -215,7 +349,9 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: const Text(
+                'Cancel',
+              ),
             ),
             TextButton(
               onPressed: () async {
