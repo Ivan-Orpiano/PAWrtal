@@ -59,6 +59,9 @@ class _ApplicationReportState extends State<ApplicationReport> {
   FeedbackType? selectedType;
   Priority? selectedPriority;
 
+  bool _isVetReportsHovered = false;
+  bool _isSystemReportsHovered = false;
+
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -309,6 +312,99 @@ class _ApplicationReportState extends State<ApplicationReport> {
     );
   }
 
+  Widget _buildSideNavigation() {
+    return Container(
+      width: 60,
+      decoration: const BoxDecoration(
+        color: Color.fromRGBO(248, 253, 255, 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 1,
+            offset: Offset(2, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          Tooltip(
+            message: 'Vet Reports',
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isVetReportsHovered = true),
+              onExit: (_) => setState(() => _isVetReportsHovered = false),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _isVetReportsHovered = true;
+                    _isSystemReportsHovered = false;
+                  });
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VeterinaryReport(),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _isVetReportsHovered
+                        ? const Color.fromARGB(60, 81, 115, 153)
+                        : const Color.fromARGB(26, 239, 244, 249),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.pets,
+                    color: Color.fromRGBO(81, 115, 153, 1),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Tooltip(
+            message: 'System Reports',
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isSystemReportsHovered = true),
+              onExit: (_) => setState(() => _isSystemReportsHovered = false),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _isSystemReportsHovered = false;
+                    _isVetReportsHovered = false;
+                  });
+                  _loadMockData();
+                  _filterFeedback();
+                },
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: true
+                        ? const Color.fromARGB(255, 81, 115, 153)
+                        : const Color.fromARGB(26, 239, 244, 249),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.phone_android_rounded,
+                    color:
+                        true ? Colors.white : Color.fromRGBO(81, 115, 153, 1),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -340,40 +436,23 @@ class _ApplicationReportState extends State<ApplicationReport> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.refresh,
-              color: Color.fromARGB(255, 81, 115, 153),
-            ),
-            onPressed: () {
-              _loadMockData();
-              _filterFeedback();
-            },
-          ),
-        ],
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       ),
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      body: Column(
+      body: Row(
         children: [
-          _buildStatsCards(),
-          _buildFiltersSection(),
-          Expanded(child: _buildFeedbackList()),
+          _buildSideNavigation(),
+          Expanded(
+            child: Column(
+              children: [
+                _buildStatsCards(),
+                _buildFiltersSection(),
+                Expanded(child: _buildFeedbackList()),
+              ],
+            ),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const VetClinicDeletionManager()),
-          );
-        },
-        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        child: const Icon(Icons.pets, color: Color.fromARGB(255, 81, 115, 153)),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

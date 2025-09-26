@@ -3,14 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 
-class VetClinicDeletionManager extends StatefulWidget {
-  const VetClinicDeletionManager({super.key});
+class VeterinaryReport extends StatefulWidget {
+  const VeterinaryReport({super.key});
   @override
-  State<VetClinicDeletionManager> createState() =>
-      _VetClinicDeletionManagerState();
+  State<VeterinaryReport> createState() => _VeterinaryReportState();
 }
 
-class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
+class _VeterinaryReportState extends State<VeterinaryReport> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedStatus = 'All';
   String _selectedReason = 'All';
@@ -19,7 +18,8 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
   final bool _isLoading = false;
   final int _currentPage = 1;
   final int _itemsPerPage = 10;
-
+  bool _isVetReportsHovered = false;
+  bool _isSystemReportsHovered = false;
   @override
   void initState() {
     super.initState();
@@ -214,6 +214,93 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
         content: Text(message),
         backgroundColor: color,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget _buildSideNavigation() {
+    return Container(
+      width: 60,
+      decoration: const BoxDecoration(
+        color: Color.fromRGBO(248, 253, 255, 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 1,
+            offset: Offset(2, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          Tooltip(
+            message: 'Vet Reports',
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isVetReportsHovered = true),
+              onExit: (_) => setState(() => _isVetReportsHovered = false),
+              child: InkWell(
+                onTap: () {
+                  // Already on Vet Reports, so just highlight
+                  setState(() {
+                    _isVetReportsHovered = false;
+                    _isSystemReportsHovered = false;
+                  });
+                },
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 81, 115, 153),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.pets,
+                    color: true // Always active on this page
+                        ? Colors.white
+                        : const Color.fromRGBO(81, 115, 153, 1),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Tooltip(
+            message: 'System Reports',
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isSystemReportsHovered = true),
+              onExit: (_) => setState(() => _isSystemReportsHovered = false),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ApplicationReport(),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _isSystemReportsHovered
+                        ? const Color.fromARGB(60, 81, 115, 153)
+                        : const Color.fromARGB(26, 239, 244, 249),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.phone_android_rounded,
+                    color: Color.fromRGBO(81, 115, 153, 1),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -450,7 +537,28 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.business, size: 20, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Text(
+                          'Request ID: ${request.id}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildStatusChip(request.status),
+                ],
+              ),
               SizedBox(height: 12),
               Text(
                 request.vetClinicName,
@@ -714,7 +822,7 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
                 color: Color.fromARGB(255, 81, 115, 153)),
             SizedBox(width: 8),
             Text(
-              'Vet Clinic Deletion Requests',
+              'Vet Reports',
               style: TextStyle(
                   color: Color.fromARGB(255, 81, 115, 153),
                   fontWeight: FontWeight.bold),
@@ -723,40 +831,24 @@ class _VetClinicDeletionManagerState extends State<VetClinicDeletionManager> {
         ),
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _loadSampleData();
-                _filterRequests();
-              });
-            },
-            icon: const Icon(Icons.refresh,
-                color: Color.fromARGB(255, 81, 115, 153)),
-            tooltip: 'Refresh',
+      ),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      body: Row(
+        children: [
+          // Side Navigation Bar
+          _buildSideNavigation(),
+          // Main Content
+          Expanded(
+            child: Column(
+              children: [
+                _buildDashboardStats(),
+                _buildSearchAndFilters(),
+                Expanded(child: _buildRequestList()),
+              ],
+            ),
           ),
         ],
       ),
-      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      body: Column(
-        children: [
-          _buildDashboardStats(),
-          _buildSearchAndFilters(),
-          Expanded(child: _buildRequestList()),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ApplicationReport()),
-          );
-        },
-        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        child: const Icon(Icons.phone_android_rounded,
-            color: Color.fromARGB(255, 81, 115, 153)),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
