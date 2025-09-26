@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_controller.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
@@ -77,138 +78,125 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                   ),
                 ),
               ],
-              child: Obx(() => InkWell(
-                    onTap: controller.isLoggingOut.value
-                        ? null
-                        : () {
-                            // This will trigger the popup menu
-                          },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0, vertical: 4.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          controller.isLoggingOut.value
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color.fromRGBO(81, 115, 153, 0.8),
-                                    ),
-                                  ),
-                                )
-                              : const Icon(Icons.account_circle,
-                                  color: Color.fromRGBO(81, 115, 153, 0.8)),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              controller.isLoggingOut.value
-                                  ? 'Processing...'
-                                  : controller.userName,
-                              style: const TextStyle(
-                                  color: Color.fromRGBO(81, 115, 153, 0.8)),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+              child: InkWell(
+                onTap: () {
+                  // This will trigger the popup menu
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 4.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.account_circle,
+                          color: Color.fromRGBO(81, 115, 153, 0.8)),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          controller.userName,
+                          style: const TextStyle(
+                              color: Color.fromRGBO(81, 115, 153, 0.8)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  )),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
       ),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-      body: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          return SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: constraints.maxWidth * 0.05,
-                vertical: 20,
-              ),
-              child: constraints.maxWidth > 800
-                  ? IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            return SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: constraints.maxWidth * 0.05,
+                  vertical: 20,
+                ),
+                child: constraints.maxWidth > 800
+                    ? IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: constraints.maxWidth / 3 - 16,
+                                  ),
+                                  child: const VetClinicTile(),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: constraints.maxWidth / 3 - 16,
+                                  ),
+                                  child: const PetOwnerTile(),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: constraints.maxWidth / 3 - 16,
+                                  ),
+                                  child: const ViewReportTile(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
                         children: [
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: constraints.maxWidth / 3 - 16,
-                                ),
-                                child: const VetClinicTile(),
-                              ),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth,
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: VetClinicTile(),
                             ),
                           ),
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: constraints.maxWidth / 3 - 16,
-                                ),
-                                child: const PetOwnerTile(),
-                              ),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth,
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: PetOwnerTile(),
                             ),
                           ),
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: constraints.maxWidth / 3 - 16,
-                                ),
-                                child: const ViewReportTile(),
-                              ),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth,
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: ViewReportTile(),
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : Column(
-                      children: [
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth,
-                          ),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: VetClinicTile(),
-                          ),
-                        ),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth,
-                          ),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: PetOwnerTile(),
-                          ),
-                        ),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth,
-                          ),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: ViewReportTile(),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -220,48 +208,26 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Logout'),
+          backgroundColor: Color.fromARGB(255, 248, 253, 255),
           content: const Text('Are you sure you want to logout?'),
           actions: [
             TextButton(
-              onPressed: controller.isLoggingOut.value
-                  ? null
-                  : () {
-                      Navigator.of(context).pop();
-                    },
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
               child: const Text('Cancel'),
             ),
-            Obx(() => TextButton(
-                  onPressed: controller.isLoggingOut.value
-                      ? null
-                      : () async {
-                          Navigator.of(context).pop();
-                          try {
-                            await controller.logout();
-                          } catch (e) {
-                            // Handle logout error
-                            Get.snackbar(
-                              'Error',
-                              'Failed to logout. Please try again.',
-                              backgroundColor: Colors.red,
-                              colorText: Colors.white,
-                            );
-                          }
-                        },
-                  child: controller.isLoggingOut.value
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.red),
-                          ),
-                        )
-                      : const Text(
-                          'Logout',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                )),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog first
+                // Use LogoutHelper which handles its own loading state and navigation
+                await LogoutHelper.logout();
+              },
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
           ],
         );
       },
