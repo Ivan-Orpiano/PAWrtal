@@ -10,24 +10,30 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isTablet = screenWidth > 600;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
-        toolbarHeight: 70,
+        toolbarHeight: isTablet ? 80 : 70,
         title: Image.asset(
           "lib/images/PAWrtal_logo.png",
-          height: 35,
+          height: isTablet ? 45 : 35,
         ),
         actions: [
           IconButton(
             onPressed: () {
               _showProfileDrawer(context);
             },
-            icon: const Icon(
+            icon: Icon(
               Icons.menu,
-              color: Color.fromRGBO(81, 115, 153, 0.8),
+              color: const Color.fromRGBO(81, 115, 153, 0.8),
+              size: isTablet ? 28 : 24,
             ),
           ),
         ],
@@ -35,29 +41,67 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(top: 20, bottom: 60, left: 16, right: 16),
-          child: Column(
-            children: const [
-              VetClinicTile(),
-              SizedBox(height: 20),
-              PetOwnerTile(),
-              SizedBox(height: 20),
-              ViewReportTile(),
-            ],
-          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? screenWidth * 0.1 : 16,
+            vertical: 20,
+          ).copyWith(bottom: 60),
+          child: _buildMenuTiles(isTablet, isLandscape, screenWidth),
         ),
       ),
     );
   }
 
+  Widget _buildMenuTiles(bool isTablet, bool isLandscape, double screenWidth) {
+    const menuTiles = [
+      VetClinicTile(),
+      PetOwnerTile(),
+      ViewReportTile(),
+    ];
+
+    // For tablets or landscape mode, use grid layout
+    if (isTablet || isLandscape) {
+      final crossAxisCount = isTablet ? 
+        (screenWidth > 900 ? 3 : 2) : 
+        (screenWidth > 700 ? 2 : 1);
+      
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+        childAspectRatio: isTablet ? 1.2 : 1.5,
+        children: menuTiles,
+      );
+    }
+    
+    // For mobile portrait, use column layout
+    return Column(
+      children: menuTiles.map((tile) => 
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: tile,
+        )
+      ).toList(),
+    );
+  }
+
   void _showProfileDrawer(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          padding: const EdgeInsets.all(20),
+          color: const Color.fromRGBO(249, 253, 255, 1),
+          height: screenHeight * (isTablet ? 0.5 : 0.6),
+          padding: EdgeInsets.all(isTablet ? 30 : 20),
           child: Column(
             children: [
               Container(
@@ -68,98 +112,37 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: isTablet ? 25 : 20),
               CircleAvatar(
                 backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                radius: 40,
+                radius: isTablet ? 50 : 40,
                 child: Text(
                   controller.userName.isNotEmpty ? controller.userName[0].toUpperCase() : 'D',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: isTablet ? 32 : 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isTablet ? 20 : 16),
               Text(
                 controller.userName,
-                style: const TextStyle(
-                  fontSize: 20,
+                style: TextStyle(
+                  fontSize: isTablet ? 24 : 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 controller.userEmail,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
                   color: Colors.grey,
                 ),
               ),
-              const SizedBox(height: 30),
+              SizedBox(height: isTablet ? 40 : 30),
               Expanded(
-                child: ListView(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.dashboard),
-                      title: const Text('Dashboard'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Already on dashboard
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.local_hospital),
-                      title: const Text('Vet Clinics'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToVetClinics();
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.pets),
-                      title: const Text('Pet Owners'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToPetOwners();
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.analytics),
-                      title: const Text('Reports'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToReports();
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('Profile'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.snackbar('Info', 'Profile page coming soon',
-                            backgroundColor: Colors.blue, colorText: Colors.white);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.settings),
-                      title: const Text('Settings'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToSettings();
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.red),
-                      title: const Text('Logout', style: TextStyle(color: Colors.red)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showLogoutDialog(context);
-                      },
-                    ),
-                  ],
-                ),
+                child: _buildMenuList(isTablet),
               ),
             ],
           ),
@@ -168,28 +151,117 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
+  Widget _buildMenuList(bool isTablet) {
+    final menuItems = [
+      _buildMenuItem(Icons.dashboard, 'Dashboard', () {
+        Get.back();
+        // Already on dashboard
+      }),
+      _buildMenuItem(Icons.local_hospital, 'Vet Clinics', () {
+        Get.back();
+        controller.navigateToVetClinics();
+      }),
+      _buildMenuItem(Icons.pets, 'Pet Owners', () {
+        Get.back();
+        controller.navigateToPetOwners();
+      }),
+      _buildMenuItem(Icons.analytics, 'Reports', () {
+        Get.back();
+        controller.navigateToReports();
+      }),
+      const Divider(),
+      _buildMenuItem(Icons.person, 'Profile', () {
+        Get.back();
+        Get.snackbar('Info', 'Profile page coming soon',
+            backgroundColor: Colors.blue, colorText: Colors.white);
+      }),
+      _buildMenuItem(Icons.settings, 'Settings', () {
+        Get.back();
+        controller.navigateToSettings();
+      }),
+      _buildMenuItem(Icons.logout, 'Logout', () {
+        Get.back();
+        _showLogoutDialog(Get.context!);
+      }, isDestructive: true),
+    ];
+
+    return ListView(
+      children: menuItems,
+    );
+  }
+
+  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
+    final screenWidth = MediaQuery.of(Get.context!).size.width;
+    final isTablet = screenWidth > 600;
+    
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 20 : 16,
+        vertical: isTablet ? 8 : 4,
+      ),
+      leading: Icon(
+        icon,
+        color: isDestructive ? Colors.red : null,
+        size: isTablet ? 28 : 24,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDestructive ? Colors.red : null,
+          fontSize: isTablet ? 18 : 16,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            'Logout',
+            style: TextStyle(
+              fontSize: isTablet ? 22 : 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              fontSize: isTablet ? 16 : 14,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
                 await controller.logout();
               },
-              child: const Text(
+              child: Text(
                 'Logout',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: isTablet ? 16 : 14,
+                ),
               ),
             ),
           ],

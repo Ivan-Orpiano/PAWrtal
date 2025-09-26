@@ -257,7 +257,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   ),
                   child: Icon(
                     Icons.pets,
-                    color: true // Always active on this page
+                    color: true 
                         ? Colors.white
                         : const Color.fromRGBO(81, 115, 153, 1),
                     size: 24,
