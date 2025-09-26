@@ -10,27 +10,33 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Define breakpoints for responsiveness
+    final isSmallScreen = screenWidth < 600;
+    final isMediumScreen = screenWidth >= 600 && screenWidth < 1200;
+    final isLargeScreen = screenWidth >= 1200;
 
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
-        toolbarHeight: screenHeight * 0.08,
+        toolbarHeight: _getAppBarHeight(screenHeight, isSmallScreen),
         title: Image.asset(
           "lib/images/PAWrtal_logo.png",
-          height: 40,
+          height: _getLogoHeight(isSmallScreen),
         ),
         actions: [
           IconButton(
             onPressed: () {
               _showProfileMenu(context);
             },
-            icon: const Icon(
-              Icons.account_circle,
-              color: Color.fromRGBO(81, 115, 153, 0.8),
-              size: 30,
+            icon: Icon(
+              Icons.menu,
+              color: const Color.fromRGBO(81, 115, 153, 0.8),
+              size: _getIconSize(isSmallScreen),
             ),
           ),
         ],
@@ -38,20 +44,17 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(top: 20, bottom: 60),
+          padding: EdgeInsets.only(
+            top: _getTopPadding(isSmallScreen),
+            bottom: _getBottomPadding(isSmallScreen),
+            left: _getHorizontalPadding(screenWidth),
+            right: _getHorizontalPadding(screenWidth),
+          ),
           child: Column(
             children: [
-              Row(
-                children: const [
-                  Expanded(child: VetClinicTile()),
-                  Expanded(child: PetOwnerTile()),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: ViewReportTile(),
-              ),
+              _buildMenuTiles(isSmallScreen, isMediumScreen, isLargeScreen),
+              SizedBox(height: _getSpacingBetweenTiles(isSmallScreen)),
+              _buildViewReportTile(screenWidth, isSmallScreen),
             ],
           ),
         ),
@@ -59,49 +62,151 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
+  // Responsive helper methods for sizing
+  double _getAppBarHeight(double screenHeight, bool isSmallScreen) {
+    if (isSmallScreen) return screenHeight * 0.07;
+    return screenHeight * 0.08;
+  }
+
+  double _getLogoHeight(bool isSmallScreen) {
+    return isSmallScreen ? 32 : 40;
+  }
+
+  double _getIconSize(bool isSmallScreen) {
+    return isSmallScreen ? 24 : 30;
+  }
+
+  double _getTopPadding(bool isSmallScreen) {
+    return isSmallScreen ? 10 : 20;
+  }
+
+  double _getBottomPadding(bool isSmallScreen) {
+    return isSmallScreen ? 40 : 60;
+  }
+
+  double _getHorizontalPadding(double screenWidth) {
+    if (screenWidth < 600) return 10;
+    if (screenWidth < 1200) return 20;
+    return 40;
+  }
+
+  double _getSpacingBetweenTiles(bool isSmallScreen) {
+    return isSmallScreen ? 15 : 20;
+  }
+
+  // Build menu tiles with responsive layout
+  Widget _buildMenuTiles(bool isSmallScreen, bool isMediumScreen, bool isLargeScreen) {
+    if (isSmallScreen) {
+      // Stack tiles vertically on small screens
+      return Column(
+        children: [
+          const VetClinicTile(),
+          SizedBox(height: _getSpacingBetweenTiles(isSmallScreen)),
+          const PetOwnerTile(),
+        ],
+      );
+    } else {
+      // Keep tiles side by side on medium and large screens
+      return Row(
+        children: const [
+          Expanded(child: VetClinicTile()),
+          Expanded(child: PetOwnerTile()),
+        ],
+      );
+    }
+  }
+
+  // Build view report tile with responsive constraints
+  Widget _buildViewReportTile(double screenWidth, bool isSmallScreen) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: isSmallScreen ? double.infinity : 800,
+      ),
+      child: const ViewReportTile(),
+    );
+  }
+
   void _showProfileMenu(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color.fromARGB(255, 81, 115, 153),
-                  child: Icon(Icons.person, color: Colors.white),
+              // Handle bar for visual indication
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                title: Text(controller.userName),
-                subtitle: Text(controller.userEmail),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  radius: isSmallScreen ? 20 : 24,
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: isSmallScreen ? 20 : 24,
+                  ),
+                ),
+                title: Text(
+                  controller.userName,
+                  style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+                ),
+                subtitle: Text(
+                  controller.userEmail,
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                ),
               ),
               const Divider(),
-              ListTile(
-                leading: const Icon(Icons.person),
-                title: const Text('Profile'),
+              _buildMenuTile(
+                icon: Icons.person,
+                title: 'Profile',
+                isSmallScreen: isSmallScreen,
                 onTap: () {
                   Navigator.pop(context);
                   Get.snackbar('Info', 'Profile page coming soon',
                       backgroundColor: Colors.blue, colorText: Colors.white);
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.settings),
-                title: const Text('Settings'),
+              _buildMenuTile(
+                icon: Icons.settings,
+                title: 'Settings',
+                isSmallScreen: isSmallScreen,
                 onTap: () {
                   Navigator.pop(context);
                   controller.navigateToSettings();
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              _buildMenuTile(
+                icon: Icons.logout,
+                title: 'Logout',
+                isSmallScreen: isSmallScreen,
+                textColor: Colors.red,
+                iconColor: Colors.red,
                 onTap: () {
                   Navigator.pop(context);
                   _showLogoutDialog(context);
                 },
               ),
+              // Add safe area padding at bottom
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
             ],
           ),
         );
@@ -109,28 +214,68 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required bool isSmallScreen,
+    required VoidCallback onTap,
+    Color? textColor,
+    Color? iconColor,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: iconColor,
+        size: isSmallScreen ? 20 : 24,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: textColor,
+          fontSize: isSmallScreen ? 14 : 16,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
+          title: Text(
+            'Logout',
+            style: TextStyle(fontSize: isSmallScreen ? 18 : 20),
+          ),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+              ),
             ),
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
                 await controller.logout();
               },
-              child: const Text(
+              child: Text(
                 'Logout',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: isSmallScreen ? 14 : 16,
+                ),
               ),
             ),
           ],
