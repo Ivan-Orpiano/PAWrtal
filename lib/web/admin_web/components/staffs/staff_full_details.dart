@@ -43,7 +43,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   static const Color darkText = Color(0xFF374151);
   static const Color vetGreen = Color(0xFF34D399);
   static const Color vetOrange = Color(0xFFF59E0B);
-  static const Color vetPurple = Color(0xA855F7);
+  static const Color vetPurple = Color(0x00a855f7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
   @override
@@ -144,7 +144,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
             Container(
               padding: EdgeInsets.all(isDesktop ? 28 : 24),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [primaryBlue, primaryTeal, softBlue],
@@ -254,7 +254,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                     shape: BoxShape.circle,
                     color: lightVetGreen.withOpacity(0.3),
                   ),
-                  child: Icon(Icons.person, size: 45, color: primaryTeal),
+                  child: const Icon(Icons.person, size: 45, color: primaryTeal),
                 ),
         ),
         const SizedBox(height: 16),
@@ -313,7 +313,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: darkText,
@@ -322,7 +322,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 if (subtitle != null)
                   Text(
                     subtitle,
-                    style: TextStyle(color: mediumGray, fontSize: 13),
+                    style: const TextStyle(color: mediumGray, fontSize: 13),
                   ),
               ],
             ),
@@ -480,7 +480,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               children: [
                 TextButton(
                   onPressed: () => setState(() => showDeleteConfirm = false),
-                  child: Text(
+                  child: const Text(
                     'Cancel',
                     style: TextStyle(
                       color: mediumGray,
@@ -509,7 +509,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
+                  child: const Text(
                     'Close',
                     style: TextStyle(
                       color: mediumGray,
@@ -521,7 +521,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 Container(
                   decoration: BoxDecoration(
                     gradient:
-                        LinearGradient(colors: [primaryTeal, primaryBlue]),
+                        const LinearGradient(colors: [primaryTeal, primaryBlue]),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
@@ -561,7 +561,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 Expanded(
                   child: TextButton(
                     onPressed: () => setState(() => showDeleteConfirm = false),
-                    child: Text(
+                    child: const Text(
                       'Cancel',
                       style: TextStyle(
                         color: mediumGray,
@@ -606,7 +606,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 Expanded(
                   child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: Text(
+                    child: const Text(
                       'Close',
                       style: TextStyle(
                         color: mediumGray,
@@ -622,7 +622,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               width: double.infinity,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryTeal, primaryBlue]),
+                  gradient: const LinearGradient(colors: [primaryTeal, primaryBlue]),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
@@ -672,7 +672,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: mediumGray,
                   fontWeight: FontWeight.w600,
@@ -681,7 +681,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: darkText,
@@ -726,7 +726,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         padding: const EdgeInsets.only(left: 40, top: 6),
         child: Text(
           subtitle,
-          style: TextStyle(fontSize: 12, color: mediumGray),
+          style: const TextStyle(fontSize: 12, color: mediumGray),
         ),
       ),
       value: value,

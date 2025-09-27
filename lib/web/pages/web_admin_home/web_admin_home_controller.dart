@@ -2,7 +2,6 @@ import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_clinicpage.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_dashboard.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_messages.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_staffs.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';

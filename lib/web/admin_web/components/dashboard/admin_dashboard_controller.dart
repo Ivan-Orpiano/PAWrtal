@@ -125,7 +125,7 @@ class AdminDashboardController extends GetxController {
 
     } catch (e) {
       print("Error setting up appointment subscription: $e");
-      throw e;
+      rethrow;
     }
   }
 
@@ -134,7 +134,6 @@ class AdminDashboardController extends GetxController {
       print("Real-time update received: ${response.events}");
       
       final payload = response.payload;
-      if (payload == null) return;
 
       // Check if this appointment belongs to our clinic
       final appointmentClinicId = payload['clinicId'];

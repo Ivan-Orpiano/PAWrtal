@@ -1,5 +1,4 @@
 import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';

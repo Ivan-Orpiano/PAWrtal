@@ -9,7 +9,6 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:appwrite/models.dart' as models;
 
 class MessagingController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();

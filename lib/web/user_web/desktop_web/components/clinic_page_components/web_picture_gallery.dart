@@ -224,7 +224,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
           // Large left box
           Flexible(
             flex: 3,
-            child: Container(
+            child: SizedBox(
               height: 520,
               child: _buildGalleryImage(
                 _galleryImages[0],
@@ -249,7 +249,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                   child: _buildGalleryImage(_galleryImages[1]),
                 ),
                 if (_galleryImages.length > 2)
-                Container(
+                SizedBox(
                   height: 255,
                   child: _buildGalleryImage(_galleryImages[2]),
                 ),
@@ -276,7 +276,7 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
                 ),
                 Stack(
                   children: [
-                    Container(
+                    SizedBox(
                       height: 255,
                       child: _buildGalleryImage(
                         _galleryImages.length > 4 ? _galleryImages[4] : _galleryImages[3],

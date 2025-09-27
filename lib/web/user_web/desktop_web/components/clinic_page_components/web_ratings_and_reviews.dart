@@ -44,7 +44,7 @@ class WebRatingsAndReviews extends StatefulWidget {
 }
 
 class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
-  bool _showAllReviews = false;
+  final bool _showAllReviews = false;
   final List<Review> reviews = [
     Review(
       userName: 'Juan',

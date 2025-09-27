@@ -1,6 +1,5 @@
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_clinic_dashboard/vet_review_card.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 Widget buildStarRating(double rating, {double size = 30}) {
   return Row(

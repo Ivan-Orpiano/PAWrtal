@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/services/web_snack_bar_service.dart';
-import 'package:flutter/material.dart';
 
 class WebPetsController extends GetxController {
   final AuthRepository authRepository;

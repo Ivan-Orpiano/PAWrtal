@@ -165,11 +165,11 @@ class WebMobileActiveTab extends StatelessWidget {
                       ],
                     ),
                   ),
-                  ...appointments.map((appointment) => WebMobileAppointmentTile(appointment: appointment)).toList(),
+                  ...appointments.map((appointment) => WebMobileAppointmentTile(appointment: appointment)),
                   const SizedBox(height: 8),
                 ]),
               );
-            }).toList(),
+            }),
             
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
           ],

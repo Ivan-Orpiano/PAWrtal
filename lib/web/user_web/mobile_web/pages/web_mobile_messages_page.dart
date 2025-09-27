@@ -12,7 +12,7 @@ class WebMobileMessagesPage extends StatefulWidget {
 class _WebMobileMessagesPageState extends State<WebMobileMessagesPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: LeftPanel()
     );
   }
@@ -60,7 +60,7 @@ class _LeftSidePanelState extends State<LeftPanel> {
             child: ListView.builder(
               itemCount: 3,
               itemBuilder: (context, index) {
-                return MessageTile();
+                return const MessageTile();
               },
             ),
           )

@@ -167,7 +167,7 @@ class _WebMobilePetCreationSheetState extends State<WebMobilePetCreationSheet> {
                       );
                     }
 
-                    return Container(
+                    return SizedBox(
                       height: 200,
                       width: double.infinity,
                       child: imageWidget,

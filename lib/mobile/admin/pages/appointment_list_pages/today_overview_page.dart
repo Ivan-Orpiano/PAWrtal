@@ -285,7 +285,7 @@ class TodayOverviewPage extends StatelessWidget {
                         ...appointments.map((appointment) => PatientWorkflowTile(
                           appointment: appointment,
                           workflowStage: status,
-                        )).toList(),
+                        )),
                         
                         const SizedBox(height: 8),
                       ],

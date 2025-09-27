@@ -115,7 +115,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
 double getLeftSideWidth(double screenWidth) {
     // Calculate available width after padding and spacing
     final horizontalPadding = getResponsivePadding(screenWidth) * 2; // Both sides
-    final spacingBetween = 125; // The flexible spacing
+    const spacingBetween = 125; // The flexible spacing
     final appointmentPanelWidth = getAppointmentPanelWidth(screenWidth);
     
     // Total available width minus reserved space
@@ -152,7 +152,7 @@ double getLeftSideWidth(double screenWidth) {
   // Alternative method if you want even more control over the layout
   Map<String, double> getResponsiveWidths(double screenWidth) {
     final horizontalPadding = getResponsivePadding(screenWidth) * 2;
-    final spacingBetween = 125;
+    const spacingBetween = 125;
     final totalReservedSpace = horizontalPadding + spacingBetween;
     
     // Define appointment panel width with smooth scaling

@@ -381,7 +381,7 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
             right: 0,
             child: Container(
               height: 80,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.transparent,
               ),
               child: Padding(
@@ -512,10 +512,10 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(
-                                color: const Color.fromRGBO(81, 115, 153, 0.3),
-                                offset: const Offset(0, 2),
+                                color: Color.fromRGBO(81, 115, 153, 0.3),
+                                offset: Offset(0, 2),
                                 blurRadius: 6,
                                 spreadRadius: 0,
                               ),

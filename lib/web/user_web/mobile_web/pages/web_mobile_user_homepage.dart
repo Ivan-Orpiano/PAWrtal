@@ -79,7 +79,7 @@ class _WebMobileUserHomePageState extends State<WebMobileUserHomepage> {
           const SizedBox(width: 8)
         ],
       ),
-      drawer: WebMobileDrawer(),
+      drawer: const WebMobileDrawer(),
       body: Stack(
         children: [
           Scaffold(

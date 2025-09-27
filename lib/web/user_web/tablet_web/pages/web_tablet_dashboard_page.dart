@@ -1,4 +1,3 @@
-import 'package:capstone_app/web/user_web/components/web_dashboard_tiles_updated.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_grid_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_filter.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';

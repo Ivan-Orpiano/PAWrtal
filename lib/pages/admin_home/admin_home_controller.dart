@@ -1,5 +1,3 @@
-import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
-import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -9,7 +7,6 @@ import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:flutter/material.dart';
-import 'package:appwrite/appwrite.dart';
 
 class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
   final AuthRepository authRepository;

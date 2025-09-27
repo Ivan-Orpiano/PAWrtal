@@ -31,10 +31,6 @@ class CreateStaffController extends GetxController {
 
   bool isFormValid = false;
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
 
   @override
   void onReady() async {

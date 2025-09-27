@@ -1,4 +1,3 @@
-import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pets_page_pet_tile.dart';
 import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pet_creation_panel.dart';
 import 'package:capstone_app/web/user_web/components/web_pets_page_components/web_pet_details_panel.dart';
 import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';

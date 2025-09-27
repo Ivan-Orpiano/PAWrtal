@@ -1,5 +1,4 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
-import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_services_updated.dart';
 import 'package:flutter/material.dart';

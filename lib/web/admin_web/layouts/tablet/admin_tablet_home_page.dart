@@ -126,7 +126,7 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
                   Navigator.pop(context); // Close drawer
                 },
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

@@ -1,8 +1,8 @@
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_controller.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/pet_owner_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/view_report_menu_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -36,76 +36,7 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
             ),
           ),
         ),
-        // actions: [
-        //   Padding(
-        //     padding: const EdgeInsets.only(right: 20.0),
-        //     child: PopupMenuButton<String>(
-        //       onSelected: (String value) {
-        //         switch (value) {
-        //           case 'profile':
-        //             Get.snackbar('Info', 'Profile page coming soon',
-        //                 backgroundColor: Colors.blue, colorText: Colors.white);
-        //             break;
-        //           case 'settings':
-        //             controller.navigateToSettings();
-        //             break;
-        //           case 'logout':
-        //             _showLogoutDialog(context);
-        //             break;
-        //         }
-        //       },
-        //       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-        //         const PopupMenuItem<String>(
-        //           value: 'profile',
-        //           child: ListTile(
-        //             leading: Icon(Icons.person),
-        //             title: Text('Profile'),
-        //           ),
-        //         ),
-        //         const PopupMenuItem<String>(
-        //           value: 'settings',
-        //           child: ListTile(
-        //             leading: Icon(Icons.settings),
-        //             title: Text('Settings'),
-        //           ),
-        //         ),
-        //         const PopupMenuDivider(),
-        //         const PopupMenuItem<String>(
-        //           value: 'logout',
-        //           child: ListTile(
-        //             leading: Icon(Icons.logout, color: Colors.red),
-        //             title: Text('Log Out', style: TextStyle(color: Colors.red)),
-        //           ),
-        //         ),
-        //       ],
-        //       child: InkWell(
-        //         onTap: () {
-        //           // This will trigger the popup menu
-        //         },
-        //         child: Padding(
-        //           padding: const EdgeInsets.symmetric(
-        //               horizontal: 8.0, vertical: 4.0),
-        //           child: Row(
-        //             mainAxisSize: MainAxisSize.min,
-        //             children: [
-        //               const Icon(Icons.account_circle,
-        //                   color: Color.fromRGBO(81, 115, 153, 0.8)),
-        //               const SizedBox(width: 8),
-        //               Flexible(
-        //                 child: Text(
-        //                   controller.userName,
-        //                   style: const TextStyle(
-        //                       color: Color.fromRGBO(81, 115, 153, 0.8)),
-        //                   overflow: TextOverflow.ellipsis,
-        //                 ),
-        //               ),
-        //             ],
-        //           ),
-        //         ),
-        //       ),
-        //     ),
-        //   ),
-        // ],
+     
         actions: [
           IconButton(
             onPressed: () {
@@ -291,7 +222,7 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Logout'),
-          backgroundColor: Color.fromARGB(255, 248, 253, 255),
+          backgroundColor: const Color.fromARGB(255, 248, 253, 255),
           content: const Text('Are you sure you want to logout?'),
           actions: [
             TextButton(

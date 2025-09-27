@@ -194,7 +194,7 @@ class AdminMessagingController extends GetxController {
     try {
       print('Setting user offline...');
       await setUserOffline().timeout(
-        Duration(seconds: 2),
+        const Duration(seconds: 2),
         onTimeout: () {
           print('Set user offline timed out');
         },
@@ -465,7 +465,9 @@ class AdminMessagingController extends GetxController {
   Future<void> addConversationStarter() async {
     if (starterTriggerController.text.trim().isEmpty ||
         starterResponseController.text.trim().isEmpty ||
-        currentClinicId.value.isEmpty) return;
+        currentClinicId.value.isEmpty) {
+      return;
+    }
 
     try {
       final starter = ConversationStarter(

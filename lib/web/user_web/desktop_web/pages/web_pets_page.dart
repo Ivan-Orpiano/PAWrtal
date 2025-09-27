@@ -603,7 +603,7 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
                   fontSize: 20, fontWeight: FontWeight.w700, color: darkText)),
           const SizedBox(height: 10),
           const Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               'No pets match your search criteria.\nTry adjusting your search terms.',
               textAlign: TextAlign.center,

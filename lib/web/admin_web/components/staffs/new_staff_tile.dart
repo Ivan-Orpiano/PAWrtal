@@ -61,7 +61,7 @@ class NewStaffTile extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2),
           ),
-          child: Icon(Icons.person_add_alt_1_rounded,
+          child: const Icon(Icons.person_add_alt_1_rounded,
               color: primaryTeal, size: 24),
         ),
         const SizedBox(width: 16),
@@ -70,7 +70,7 @@ class NewStaffTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              const Text(
                 'Add New Staff',
                 style: TextStyle(
                   fontSize: 16,
@@ -85,7 +85,7 @@ class NewStaffTile extends StatelessWidget {
                   color: primaryTeal.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
+                child: const Text(
                   'Create account',
                   style: TextStyle(
                     color: primaryTeal,
@@ -97,7 +97,7 @@ class NewStaffTile extends StatelessWidget {
             ],
           ),
         ),
-        Icon(Icons.add, color: primaryTeal, size: 20),
+        const Icon(Icons.add, color: primaryTeal, size: 20),
       ],
     );
   }
@@ -113,11 +113,11 @@ class NewStaffTile extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2),
           ),
-          child: Icon(Icons.person_add_alt_1_rounded,
+          child: const Icon(Icons.person_add_alt_1_rounded,
               color: primaryTeal, size: 40),
         ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Add New Staff',
           style: TextStyle(
             fontSize: 17,
@@ -132,7 +132,7 @@ class NewStaffTile extends StatelessWidget {
             color: primaryTeal.withOpacity(0.1),
             borderRadius: BorderRadius.circular(15),
           ),
-          child: Text(
+          child: const Text(
             'Create account',
             style: TextStyle(
               color: primaryTeal,
@@ -205,7 +205,7 @@ class NewStaffTile extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.all(isDesktop ? 24 : 20),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [primaryBlue, primaryTeal, softBlue],
@@ -323,7 +323,7 @@ class NewStaffTile extends StatelessWidget {
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          child: Icon(
+                                          child: const Icon(
                                               Icons.local_hospital_rounded,
                                               size: 18,
                                               color: primaryTeal),
@@ -366,7 +366,7 @@ class NewStaffTile extends StatelessWidget {
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          child: Icon(
+                                          child: const Icon(
                                               Icons.calendar_month_rounded,
                                               size: 18,
                                               color: primaryBlue),
@@ -409,7 +409,7 @@ class NewStaffTile extends StatelessWidget {
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          child: Icon(Icons.group_rounded,
+                                          child: const Icon(Icons.group_rounded,
                                               size: 18, color: vetPurple),
                                         ),
                                         const SizedBox(width: 16),
@@ -450,7 +450,7 @@ class NewStaffTile extends StatelessWidget {
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          child: Icon(Icons.message_rounded,
+                                          child: const Icon(Icons.message_rounded,
                                               size: 18, color: vetOrange),
                                         ),
                                         const SizedBox(width: 16),
@@ -507,7 +507,7 @@ class NewStaffTile extends StatelessWidget {
                         children: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(),
-                            child: Text(
+                            child: const Text(
                               'Cancel',
                               style: TextStyle(
                                 color: mediumGray,
@@ -518,7 +518,7 @@ class NewStaffTile extends StatelessWidget {
                           const SizedBox(width: 16),
                           Container(
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
+                              gradient: const LinearGradient(
                                   colors: [primaryTeal, primaryBlue]),
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
@@ -553,8 +553,9 @@ class NewStaffTile extends StatelessWidget {
 
                                 final authorities = <String>[];
                                 if (clinicAuth) authorities.add('Clinic');
-                                if (appointmentAuth)
+                                if (appointmentAuth) {
                                   authorities.add('Appointments');
+                                }
                                 if (staffAuth) authorities.add('Staffs');
                                 if (messagesAuth) authorities.add('Messages');
 
@@ -596,7 +597,7 @@ class NewStaffTile extends StatelessWidget {
   required Uint8List? selectedImageBytes,
   required ValueChanged<Uint8List?> onChange,
 }) {
-  final ImagePicker _picker = ImagePicker();
+  final ImagePicker picker = ImagePicker();
 
   return Column(
     children: [
@@ -606,7 +607,7 @@ class NewStaffTile extends StatelessWidget {
           InkWell(
             onTap: () async {
               try {
-                final XFile? result = await _picker.pickImage(
+                final XFile? result = await picker.pickImage(
                   source: ImageSource.gallery,
                   maxWidth: 1920,
                   maxHeight: 1080,
@@ -649,7 +650,7 @@ class NewStaffTile extends StatelessWidget {
                       : null,
                 ),
                 child: selectedImageBytes == null
-                    ? Icon(Icons.camera_alt_rounded,
+                    ? const Icon(Icons.camera_alt_rounded,
                         size: 36, color: primaryTeal)
                     : null,
               ),
@@ -703,7 +704,7 @@ class NewStaffTile extends StatelessWidget {
                 selectedImageBytes != null
                     ? 'Click to change photo'
                     : 'Click to upload photo',
-                style: TextStyle(
+                style: const TextStyle(
                   color: primaryTeal,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -741,7 +742,7 @@ class NewStaffTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: darkText,
@@ -750,7 +751,7 @@ class NewStaffTile extends StatelessWidget {
                 if (subtitle != null)
                   Text(
                     subtitle,
-                    style: TextStyle(color: mediumGray, fontSize: 13),
+                    style: const TextStyle(color: mediumGray, fontSize: 13),
                   ),
               ],
             ),
@@ -841,7 +842,7 @@ class NewStaffTile extends StatelessWidget {
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
+          labelStyle: const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(

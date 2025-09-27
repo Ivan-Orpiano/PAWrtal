@@ -142,9 +142,9 @@ class _CrudeStaffAccountState extends State<CrudeStaffAccount> {
           // Header Section with Search and Filter
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(249, 253, 255, 1),
-              borderRadius: const BorderRadius.only(
+            decoration: const BoxDecoration(
+              color: Color.fromRGBO(249, 253, 255, 1),
+              borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30),
               ),

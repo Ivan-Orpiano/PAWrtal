@@ -198,7 +198,7 @@ class _StaffTileState extends State<StaffTile>
                                     : null,
                               ),
                               child: widget.staff.imageBytes == null
-                                  ? Icon(
+                                  ? const Icon(
                                       Icons.person,
                                       size: 36,
                                       color: primaryTeal,
@@ -225,7 +225,7 @@ class _StaffTileState extends State<StaffTile>
                                       BoxShadow(
                                         color: vetGreen.withOpacity(0.3),
                                         blurRadius: 8,
-                                        offset: Offset(0, 3),
+                                        offset: const Offset(0, 3),
                                       ),
                                     ],
                                   ),
@@ -254,7 +254,7 @@ class _StaffTileState extends State<StaffTile>
                             foreground: Paint()
                               ..shader = const LinearGradient(
                                 colors: [darkText, primaryTeal],
-                              ).createShader(Rect.fromLTWH(0, 0, 200, 50)),
+                              ).createShader(const Rect.fromLTWH(0, 0, 200, 50)),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -277,7 +277,7 @@ class _StaffTileState extends State<StaffTile>
                           ),
                           child: Text(
                             widget.staff.email,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 11,
                               color: mediumGray,
                               fontWeight: FontWeight.w500,
@@ -432,7 +432,7 @@ class _StaffTileState extends State<StaffTile>
                                     ),
                                     child: Text(
                                       '+${widget.staff.authorities.length - 4} more',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 9,
                                         color: mediumGray,
                                         fontStyle: FontStyle.italic,

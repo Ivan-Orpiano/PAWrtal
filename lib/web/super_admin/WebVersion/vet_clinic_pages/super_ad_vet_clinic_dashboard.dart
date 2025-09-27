@@ -1,9 +1,9 @@
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 
-import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_sort_button.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_sort_button.dart';
 // import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_my_tags.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_search_bar.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_search_bar.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
 import 'package:flutter/material.dart';

@@ -1,6 +1,6 @@
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/pet_owner_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/view_report_menu_tile.dart';
 
 import 'package:flutter/material.dart';
 
