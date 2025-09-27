@@ -12,7 +12,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     // Define breakpoints for responsiveness
     final isSmallScreen = screenWidth < 600;
     final isMediumScreen = screenWidth >= 600 && screenWidth < 1200;
@@ -95,7 +95,8 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
   }
 
   // Build menu tiles with responsive layout
-  Widget _buildMenuTiles(bool isSmallScreen, bool isMediumScreen, bool isLargeScreen) {
+  Widget _buildMenuTiles(
+      bool isSmallScreen, bool isMediumScreen, bool isLargeScreen) {
     if (isSmallScreen) {
       // Stack tiles vertically on small screens
       return Column(
@@ -128,6 +129,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
 
   void _showProfileMenu(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 600;
 
     showModalBottomSheet(
@@ -140,7 +142,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
         return Container(
           padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.6,
+            maxHeight: screenHeight * (isSmallScreen ? 0.35 : 0.3),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -159,10 +161,15 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
                 leading: CircleAvatar(
                   radius: isSmallScreen ? 20 : 24,
                   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: isSmallScreen ? 20 : 24,
+                  child: Text(
+                    controller.userName.isNotEmpty
+                        ? controller.userName[0].toUpperCase()
+                        : 'D',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isSmallScreen ? 16 : 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 title: Text(
@@ -175,25 +182,6 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
                 ),
               ),
               const Divider(),
-              _buildMenuTile(
-                icon: Icons.person,
-                title: 'Profile',
-                isSmallScreen: isSmallScreen,
-                onTap: () {
-                  Navigator.pop(context);
-                  Get.snackbar('Info', 'Profile page coming soon',
-                      backgroundColor: Colors.blue, colorText: Colors.white);
-                },
-              ),
-              _buildMenuTile(
-                icon: Icons.settings,
-                title: 'Settings',
-                isSmallScreen: isSmallScreen,
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.navigateToSettings();
-                },
-              ),
               _buildMenuTile(
                 icon: Icons.logout,
                 title: 'Logout',
