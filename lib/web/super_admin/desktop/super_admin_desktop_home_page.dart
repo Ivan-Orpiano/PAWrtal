@@ -219,7 +219,7 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
       builder: (BuildContext context) {
         return Container(
           color: const Color.fromRGBO(249, 253, 255, 1),
-          height: MediaQuery.of(context).size.height * 0.6,
+          height: MediaQuery.of(context).size.height * 0.35,
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
@@ -265,57 +265,6 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
               Expanded(
                 child: ListView(
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.dashboard),
-                      title: const Text('Dashboard'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Already on dashboard
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.local_hospital),
-                      title: const Text('Vet Clinics'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToVetClinics();
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.pets),
-                      title: const Text('Pet Owners'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToPetOwners();
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.analytics),
-                      title: const Text('Reports'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToReports();
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('Profile'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Get.snackbar('Info', 'Profile page coming soon',
-                            backgroundColor: Colors.blue,
-                            colorText: Colors.white);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.settings),
-                      title: const Text('Settings'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        controller.navigateToSettings();
-                      },
-                    ),
                     ListTile(
                       leading: const Icon(Icons.logout, color: Colors.red),
                       title: const Text('Logout',

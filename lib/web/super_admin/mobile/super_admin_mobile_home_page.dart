@@ -100,7 +100,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
       builder: (BuildContext context) {
         return Container(
           color: const Color.fromRGBO(249, 253, 255, 1),
-          height: screenHeight * (isTablet ? 0.5 : 0.6),
+          height: screenHeight * (isTablet ? 0.35 : 0.4),
           padding: EdgeInsets.all(isTablet ? 30 : 20),
           child: Column(
             children: [
@@ -140,7 +140,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
                   color: Colors.grey,
                 ),
               ),
-              SizedBox(height: isTablet ? 40 : 30),
+              SizedBox(height: isTablet ? 30 : 20),
               Expanded(
                 child: _buildMenuList(isTablet),
               ),
@@ -153,32 +153,6 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
 
   Widget _buildMenuList(bool isTablet) {
     final menuItems = [
-      _buildMenuItem(Icons.dashboard, 'Dashboard', () {
-        Get.back();
-        // Already on dashboard
-      }),
-      _buildMenuItem(Icons.local_hospital, 'Vet Clinics', () {
-        Get.back();
-        controller.navigateToVetClinics();
-      }),
-      _buildMenuItem(Icons.pets, 'Pet Owners', () {
-        Get.back();
-        controller.navigateToPetOwners();
-      }),
-      _buildMenuItem(Icons.analytics, 'Reports', () {
-        Get.back();
-        controller.navigateToReports();
-      }),
-      const Divider(),
-      _buildMenuItem(Icons.person, 'Profile', () {
-        Get.back();
-        Get.snackbar('Info', 'Profile page coming soon',
-            backgroundColor: Colors.blue, colorText: Colors.white);
-      }),
-      _buildMenuItem(Icons.settings, 'Settings', () {
-        Get.back();
-        controller.navigateToSettings();
-      }),
       _buildMenuItem(Icons.logout, 'Logout', () {
         Get.back();
         _showLogoutDialog(Get.context!);

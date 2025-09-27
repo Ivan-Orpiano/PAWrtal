@@ -341,8 +341,25 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   });
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const VeterinaryReport(),
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          const VeterinaryReport(),
+                      transitionDuration: const Duration(milliseconds: 300),
+                      reverseTransitionDuration:
+                          const Duration(milliseconds: 250),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                        const begin = Offset(-1.0, 0.0);
+                        const end = Offset.zero;
+                        const curve = Curves.easeInOut;
+                        var tween = Tween(begin: begin, end: end).chain(
+                          CurveTween(curve: curve),
+                        );
+                        return SlideTransition(
+                          position: animation.drive(tween),
+                          child: child,
+                        );
+                      },
                     ),
                   );
                 },
@@ -1079,14 +1096,9 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 if (widget.feedback.status == FeedbackStatus.resolved ||
                     widget.feedback.status == FeedbackStatus.closed)
                   IconButton(
-                    onPressed: widget.onDelete,
-                    icon: Icon(Icons.delete_outline, color: Colors.red[600]),
-                    tooltip: 'Delete feedback',
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
                   ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close),
-                ),
               ],
             ),
             SizedBox(height: 16),
@@ -1205,6 +1217,16 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   }
 
   Widget _buildAttachmentsSection() {
+    // Filter only image files
+    final imageAttachments = widget.feedback.attachments
+        .where((attachment) => _isImageFile(attachment))
+        .toList();
+
+    // Return empty container if no images
+    if (imageAttachments.isEmpty) {
+      return Container();
+    }
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16),
@@ -1217,48 +1239,249 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Attachments (${widget.feedback.attachments.length})',
+            'Photos (${imageAttachments.length})',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.orange[800],
             ),
           ),
-          SizedBox(height: 8),
-          ...widget.feedback.attachments.map(
-            (attachment) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    _getFileIcon(attachment),
-                    size: 16,
-                    color: Colors.orange[600],
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      attachment,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
+          SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: imageAttachments.map((attachment) {
+                return GestureDetector(
+                  onTap: () => _showImageInFullView(attachment),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                      color: Colors.grey[100],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(7),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Placeholder for actual image - in real implementation, use NetworkImage or AssetImage
+                          Container(
+                            color: Colors.grey[200],
+                            child: Icon(
+                              Icons.image,
+                              size: 40,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          // Hover effect overlay
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.0),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.zoom_in,
+                                  color: Colors.white.withOpacity(0.8),
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Overlay with file name
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.7),
+                                  ],
+                                ),
+                              ),
+                              child: Text(
+                                attachment,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => _downloadAttachment(attachment),
-                    child: Text('Download',
-                        style: TextStyle(
-                          color: const Color.fromARGB(255, 81, 115, 153),
-                        )),
-                  ),
-                ],
-              ),
+                );
+              }).toList(),
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _showImageInFullView(String imageName) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(20),
+        child: Stack(
+          children: [
+            // Full screen image container
+            Center(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.9,
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Image header
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              imageName,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _downloadImage(imageName),
+                            icon:
+                                Icon(Icons.download, color: Color(0xFF517399)),
+                            tooltip: 'Download Image',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[300]),
+                    // Image display area
+                    Flexible(
+                      child: Container(
+                        padding: EdgeInsets.all(20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.image,
+                                  size: 80,
+                                  color: Colors.grey[400],
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'Image Preview',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'In production, actual image would be displayed here',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Close button
+            Positioned(
+              top: 30,
+              right: 30,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: Colors.white, size: 24),
+                  tooltip: 'Close',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _downloadImage(String imageName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Downloading $imageName...'),
+        backgroundColor: Colors.blue[600],
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // TODO: Implement actual image download logic
+    // In production, you would implement the actual download functionality here
+  }
+
+  bool _isImageFile(String filename) {
+    final imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    final extension = filename.split('.').last.toLowerCase();
+    return imageExtensions.contains(extension);
   }
 
   Widget _buildReplySection() {
