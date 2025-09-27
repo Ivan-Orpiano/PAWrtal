@@ -39,7 +39,7 @@ class WebSnackBarService {
           color: Colors.green.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.check_circle,
           color: Colors.green,
           size: 20,
@@ -85,7 +85,7 @@ class WebSnackBarService {
           color: Colors.red.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.error,
           color: Colors.red,
           size: 20,
@@ -131,7 +131,7 @@ class WebSnackBarService {
           color: Colors.blue.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.info,
           color: Colors.blue,
           size: 20,
@@ -177,7 +177,7 @@ class WebSnackBarService {
           color: Colors.orange.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.warning,
           color: Colors.orange,
           size: 20,

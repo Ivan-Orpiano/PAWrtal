@@ -1,4 +1,3 @@
-import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';

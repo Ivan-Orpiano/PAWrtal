@@ -255,11 +255,11 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     color: const Color.fromARGB(255, 81, 115, 153),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.pets,
                     color: true
                         ? Colors.white
-                        : const Color.fromRGBO(81, 115, 153, 1),
+                        : Color.fromRGBO(81, 115, 153, 1),
                     size: 24,
                   ),
                 ),
@@ -333,18 +333,18 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           _buildStatCard('Total Requests', totalRequests.toString(),
               Icons.delete_forever, const Color(0xFF4A90E2)),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           _buildStatCard('Pending', pendingRequests.toString(), Icons.pending,
               const Color(0xFFF39C12)),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           _buildStatCard('Approved', approvedRequests.toString(),
               Icons.check_circle, const Color(0xFF2ECC71)),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           _buildStatCard('Under Review', underReviewRequests.toString(),
               Icons.reviews, const Color(0xFF9B59B6)),
         ],
@@ -356,7 +356,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -364,7 +364,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
             BoxShadow(
               color: Colors.grey.withOpacity(0.1),
               blurRadius: 6,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -385,7 +385,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               title,
               style: TextStyle(
@@ -403,7 +403,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   Widget _buildSearchAndFilters() {
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
           Focus(
@@ -415,7 +415,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear),
+                        icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
                           _filterRequests();
@@ -425,23 +425,23 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide:
-                      BorderSide(color: const Color.fromRGBO(81, 115, 153, 1)),
+                      const BorderSide(color: Color.fromRGBO(81, 115, 153, 1)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                      color: const Color.fromRGBO(81, 115, 153, 1), width: 2),
+                  borderSide: const BorderSide(
+                      color: Color.fromRGBO(81, 115, 153, 1), width: 2),
                 ),
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(child: _buildStatusDropdown()),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(child: _buildReasonDropdown()),
             ],
           ),
@@ -462,7 +462,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           borderSide: const BorderSide(color: Color(0xFF517399)),
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       items: ['All', 'Pending', 'Approved', 'Denied', 'Under Review']
           .map((status) => DropdownMenuItem(value: status, child: Text(status)))
@@ -488,7 +488,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           borderSide: const BorderSide(color: Color(0xFF517399)),
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       items: [
         'All',
@@ -516,7 +516,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'No deletion requests found',
               style: TextStyle(
@@ -531,7 +531,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       itemCount: _filteredRequests.length,
       itemBuilder: (context, index) {
         final request = _filteredRequests[index];
@@ -543,14 +543,14 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   Widget _buildRequestCard(DeletionRequestItem request) {
     return Card(
       color: const Color.fromRGBO(242, 250, 252, 1),
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => _showRequestDetails(request),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -561,7 +561,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     child: Row(
                       children: [
                         Icon(Icons.business, size: 20, color: Colors.grey[600]),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Request ID: ${request.id}',
                           style: TextStyle(
@@ -576,7 +576,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   _buildStatusChip(request.status),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 request.vetClinicName,
                 style: TextStyle(
@@ -585,7 +585,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   color: Colors.grey[800],
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 request.description,
                 style: TextStyle(
@@ -595,32 +595,32 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     request.requestedBy,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     '${request.dateRequested.day}/${request.dateRequested.month}/${request.dateRequested.year}',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
-                  SizedBox(width: 16),
-                  Icon(Icons.info_outline, size: 16, color: Color(0xFFF39C12)),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 16),
+                  const Icon(Icons.info_outline, size: 16, color: Color(0xFFF39C12)),
+                  const SizedBox(width: 4),
                   Text(
                     request.reason,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
 
               // Business License and Contact Info
               Container(
@@ -692,9 +692,9 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               // Show denial reason if denied
               if (request.status == 'Denied' &&
                   request.denialReason != null) ...[
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.red[50],
                     borderRadius: BorderRadius.circular(8),
@@ -707,7 +707,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                         children: [
                           Icon(Icons.error_outline,
                               size: 16, color: Colors.red[600]),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
                             'Denial Reason',
                             style: TextStyle(
@@ -718,7 +718,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
                         request.denialReason!,
                         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
@@ -728,7 +728,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                 ),
               ],
 
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -752,7 +752,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                         ),
                       if (request.status == 'Approved' ||
                           request.status == 'Denied') ...[
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         ElevatedButton.icon(
                           onPressed: () => _deleteRequest(request),
                           icon: const Icon(
@@ -1048,7 +1048,7 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
         children: [
           Icon(
             Icons.gavel,
-            color: const Color(0xFF517399),
+            color: Color(0xFF517399),
           ),
           SizedBox(width: 8),
           Text('Process Deletion Request'),

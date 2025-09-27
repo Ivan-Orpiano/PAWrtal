@@ -88,7 +88,6 @@ class _MyDrawerState extends State<MyDrawer> with SingleTickerProviderStateMixin
     required VoidCallback onTap,
     Color? iconColor,
     Color? textColor,
-    int delay = 0,
   }) {
     return FadeTransition(
       opacity: _fadeAnimation,

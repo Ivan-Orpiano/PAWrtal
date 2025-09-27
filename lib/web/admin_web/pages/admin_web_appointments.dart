@@ -154,9 +154,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
               child: OutlinedButton.icon(
                 onPressed: () => _showDatePicker(controller),
                 icon: const Icon(Icons.date_range, size: 18),
-                label: Obx(() => Text(
+                label: Obx(() => const Text(
                   'Filter by Date',
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 12),
                 )),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),

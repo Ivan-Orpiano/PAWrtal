@@ -1,4 +1,3 @@
-import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/admin/pages/appointment_list.dart';
 import 'package:capstone_app/mobile/admin/pages/clinic_settings_page.dart';
 import 'package:capstone_app/pages/admin_home/admin_home_controller.dart';

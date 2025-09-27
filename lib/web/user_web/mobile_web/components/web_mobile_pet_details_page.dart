@@ -351,9 +351,9 @@ class WebMobilePetDetailsPage extends StatelessWidget {
                       const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.note_alt,
-                  color: const Color.fromARGB(255, 81, 115, 153),
+                  color: Color.fromARGB(255, 81, 115, 153),
                   size: 16,
                 ),
               ),

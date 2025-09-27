@@ -429,9 +429,9 @@ class WebMobileClinicPage extends StatelessWidget {
             onPressed: () {
               // Navigate to full reviews page
             },
-            child: Text(
+            child: const Text(
               'View all $totalReviews reviews',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Color.fromARGB(255, 81, 115, 153),
                 fontWeight: FontWeight.w600,
               ),

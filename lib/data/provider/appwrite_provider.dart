@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/appwrite.dart' as models;
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';

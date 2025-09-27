@@ -128,9 +128,9 @@ class _ClinicSettingsPageState extends State<ClinicSettingsPage>
               children: [
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.business,
-                      color: const Color(0xFF608BC1),
+                      color: Color(0xFF608BC1),
                       size: 24,
                     ),
                     const SizedBox(width: 12),
@@ -333,7 +333,7 @@ class _ClinicSettingsPageState extends State<ClinicSettingsPage>
           ),
           const SizedBox(height: 20),
 
-          ...days.map((day) => _buildDaySchedule(day)).toList(),
+          ...days.map((day) => _buildDaySchedule(day)),
 
           const SizedBox(height: 100), // Bottom padding for FAB
         ],

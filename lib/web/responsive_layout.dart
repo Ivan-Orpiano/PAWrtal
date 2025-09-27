@@ -1,6 +1,5 @@
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 class ResponsiveLayout extends StatelessWidget {
   final Widget Function() desktopBody;

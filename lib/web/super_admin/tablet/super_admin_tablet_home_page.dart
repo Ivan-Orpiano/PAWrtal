@@ -1,7 +1,7 @@
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_controller.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/pet_owner_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/view_report_menu_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -108,8 +108,8 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
       );
     } else {
       // Keep tiles side by side on medium and large screens
-      return Row(
-        children: const [
+      return const Row(
+        children: [
           Expanded(child: VetClinicTile()),
           Expanded(child: PetOwnerTile()),
         ],
@@ -140,6 +140,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
       ),
       builder: (BuildContext context) {
         return Container(
+          color: const Color.fromRGBO(249, 253, 255, 1),
           padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
           constraints: BoxConstraints(
             maxHeight: screenHeight * (isSmallScreen ? 0.35 : 0.3),
@@ -235,6 +236,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
           title: Text(
             'Logout',
             style: TextStyle(fontSize: isSmallScreen ? 18 : 20),

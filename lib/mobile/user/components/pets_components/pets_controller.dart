@@ -23,14 +23,6 @@ class PetsController extends GetxController {
     isLoading.value = true;
     try {
       final userId = session.userId;
-      if (userId == null) {
-        CustomSnackBar.showErrorSnackBar(
-          context: Get.overlayContext,
-          title: "Error",
-          message: "User not logged in. Please log in to view your pets.",
-        );
-        return;
-      }
       final petDocs = await authRepository.getUserPets(userId);
       pets.value = petDocs.map((doc) => Pet.fromMap(doc.data)).toList();
     } catch (e) {

@@ -1507,7 +1507,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     
     Get.snackbar(
       'Review Submitted!',
-      'Thank you for your feedback. Your ${rating}-star review helps other pet owners.',
+      'Thank you for your feedback. Your $rating-star review helps other pet owners.',
       backgroundColor: Colors.green.shade50,
       colorText: Colors.green.shade700,
       icon: const Icon(Icons.check_circle, color: Colors.green),

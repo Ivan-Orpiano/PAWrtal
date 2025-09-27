@@ -370,15 +370,15 @@ class VetPopup extends StatelessWidget {
                                 ),
                                 elevation: 2,
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.calendar_today,
                                     size: 16,
                                   ),
-                                  const SizedBox(width: 8),
-                                  const Text(
+                                  SizedBox(width: 8),
+                                  Text(
                                     "Book Appointment",
                                     style: TextStyle(
                                       fontSize: 14,

@@ -789,8 +789,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
-          todayDecoration: BoxDecoration(
-            color: const Color.fromARGB(255, 81, 115, 153),
+          todayDecoration: const BoxDecoration(
+            color: Color.fromARGB(255, 81, 115, 153),
             shape: BoxShape.circle,
           ),
           // Style for selected day

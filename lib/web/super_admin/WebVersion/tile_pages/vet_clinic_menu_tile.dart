@@ -1,9 +1,9 @@
-import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart';
 import 'package:flutter/material.dart';
 
-class PetOwnerTile extends StatelessWidget {
-  const PetOwnerTile({super.key});
-  
+class VetClinicTile extends StatelessWidget {
+  const VetClinicTile({super.key});
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -33,7 +33,7 @@ class PetOwnerTile extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const UserManagementScreen(),
+          builder: (context) => const SuperAdminVetClinic(),
         ),
       ),
       child: Padding(
@@ -41,7 +41,7 @@ class PetOwnerTile extends StatelessWidget {
         child: Container(
           height: tileHeight,
           width: tileWidth,
-          constraints: BoxConstraints(
+          constraints: const BoxConstraints(
             minHeight: 200,
             maxHeight: 500,
             minWidth: 150,
@@ -70,7 +70,7 @@ class PetOwnerTile extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
-                          'lib/images/user_profile.png',
+                          'lib/images/vet_clinic_icon.png',
                           fit: BoxFit.contain, // Changed to contain to prevent cropping
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
@@ -79,7 +79,7 @@ class PetOwnerTile extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                Icons.person,
+                                Icons.local_hospital,
                                 size: isSmallScreen ? 40 : 60,
                                 color: Colors.grey[600],
                               ),
@@ -100,7 +100,7 @@ class PetOwnerTile extends StatelessWidget {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      'Pet Owners',
+                      'Veterinary Clinic',
                       style: TextStyle(
                         fontSize: isSmallScreen ? 16 : 20,
                         fontWeight: FontWeight.bold,

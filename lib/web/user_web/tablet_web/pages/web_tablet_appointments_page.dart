@@ -11,7 +11,7 @@ class WebTabletAppointmentsPage extends StatefulWidget {
 class _WebTabletAppointmentsPageState extends State<WebTabletAppointmentsPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: EnhancedWebAppointmentsPage(),
     );
   }

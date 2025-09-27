@@ -1,19 +1,19 @@
-import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:flutter/material.dart';
 
-class ViewReportTile extends StatelessWidget {
-  const ViewReportTile({super.key});
-
+class PetOwnerTile extends StatelessWidget {
+  const PetOwnerTile({super.key});
+  
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
     final isMediumScreen = screenSize.width < 1200;
-
+    
     // Responsive sizing
     double tileWidth = screenSize.width * 0.8;
     double tileHeight = screenSize.height * 0.75;
-
+    
     if (isSmallScreen) {
       tileWidth = screenSize.width * 0.9;
       tileHeight = screenSize.height * 0.6;
@@ -21,11 +21,11 @@ class ViewReportTile extends StatelessWidget {
       tileWidth = screenSize.width * 0.85;
       tileHeight = screenSize.height * 0.65;
     }
-
+    
     // Constrain maximum dimensions to prevent excessive sizes on large screens
     tileWidth = tileWidth.clamp(200.0, 400.0);
     tileHeight = tileHeight.clamp(250.0, 500.0);
-
+    
     return InkWell(
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
@@ -33,7 +33,7 @@ class ViewReportTile extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const VeterinaryReport(),
+          builder: (context) => const UserManagementScreen(),
         ),
       ),
       child: Padding(
@@ -41,7 +41,7 @@ class ViewReportTile extends StatelessWidget {
         child: Container(
           height: tileHeight,
           width: tileWidth,
-          constraints: BoxConstraints(
+          constraints: const BoxConstraints(
             minHeight: 200,
             maxHeight: 500,
             minWidth: 150,
@@ -66,14 +66,12 @@ class ViewReportTile extends StatelessWidget {
                       maxWidth: tileWidth * 0.8,
                     ),
                     child: AspectRatio(
-                      aspectRatio:
-                          1.0, // Square aspect ratio for consistent look
+                      aspectRatio: 1.0, // Square aspect ratio for consistent look
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
-                          'lib/images/view_report_icon.png',
-                          fit: BoxFit
-                              .contain, // Changed to contain to prevent cropping
+                          'lib/images/user_profile.png',
+                          fit: BoxFit.contain, // Changed to contain to prevent cropping
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               decoration: BoxDecoration(
@@ -81,7 +79,7 @@ class ViewReportTile extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                Icons.assessment,
+                                Icons.person,
                                 size: isSmallScreen ? 40 : 60,
                                 color: Colors.grey[600],
                               ),
@@ -92,17 +90,17 @@ class ViewReportTile extends StatelessWidget {
                     ),
                   ),
                 ),
-
+                
                 // Spacing between image and text
                 SizedBox(height: isSmallScreen ? 8.0 : 12.0),
-
+                
                 // Flexible text container to prevent overflow
                 Flexible(
                   flex: 1,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      'View Reports',
+                      'Pet Owners',
                       style: TextStyle(
                         fontSize: isSmallScreen ? 16 : 20,
                         fontWeight: FontWeight.bold,

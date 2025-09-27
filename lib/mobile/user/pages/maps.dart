@@ -1,5 +1,4 @@
 import 'package:capstone_app/mobile/user/components/dashboard_components/search_bar.dart';
-import 'package:capstone_app/mobile/user/components/dashboard_components/tags.dart';
 import 'package:flutter/material.dart';
 
 class Maps extends StatelessWidget {

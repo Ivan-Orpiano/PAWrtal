@@ -1,7 +1,8 @@
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_controller.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/pet_owner_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/vet_clinic_menu_tile.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/main_components/view_report_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/pet_owner_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/vet_clinic_menu_tile.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/tile_pages/view_report_menu_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -13,7 +14,8 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isTablet = screenWidth > 600;
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,10 +62,9 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
 
     // For tablets or landscape mode, use grid layout
     if (isTablet || isLandscape) {
-      final crossAxisCount = isTablet ? 
-        (screenWidth > 900 ? 3 : 2) : 
-        (screenWidth > 700 ? 2 : 1);
-      
+      final crossAxisCount =
+          isTablet ? (screenWidth > 900 ? 3 : 2) : (screenWidth > 700 ? 2 : 1);
+
       return GridView.count(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -74,15 +75,15 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
         children: menuTiles,
       );
     }
-    
+
     // For mobile portrait, use column layout
     return Column(
-      children: menuTiles.map((tile) => 
-        Padding(
-          padding: const EdgeInsets.only(bottom: 20),
-          child: tile,
-        )
-      ).toList(),
+      children: menuTiles
+          .map((tile) => Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: tile,
+              ))
+          .toList(),
     );
   }
 
@@ -100,7 +101,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
       builder: (BuildContext context) {
         return Container(
           color: const Color.fromRGBO(249, 253, 255, 1),
-          height: screenHeight * (isTablet ? 0.35 : 0.4),
+          height: screenHeight * (isTablet ? 0.50 : 0.6),
           padding: EdgeInsets.all(isTablet ? 30 : 20),
           child: Column(
             children: [
@@ -117,7 +118,9 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
                 backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                 radius: isTablet ? 50 : 40,
                 child: Text(
-                  controller.userName.isNotEmpty ? controller.userName[0].toUpperCase() : 'D',
+                  controller.userName.isNotEmpty
+                      ? controller.userName[0].toUpperCase()
+                      : 'D',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isTablet ? 32 : 24,
@@ -142,50 +145,37 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
               ),
               SizedBox(height: isTablet ? 30 : 20),
               Expanded(
-                child: _buildMenuList(isTablet),
+                child: ListView(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? 20 : 16,
+                        vertical: isTablet ? 8 : 4,
+                      ),
+                      leading: Icon(
+                        Icons.logout,
+                        color: Colors.red,
+                        size: isTablet ? 28 : 24,
+                      ),
+                      title: Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: isTablet ? 18 : 16,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showLogoutDialog(context);
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildMenuList(bool isTablet) {
-    final menuItems = [
-      _buildMenuItem(Icons.logout, 'Logout', () {
-        Get.back();
-        _showLogoutDialog(Get.context!);
-      }, isDestructive: true),
-    ];
-
-    return ListView(
-      children: menuItems,
-    );
-  }
-
-  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
-    final screenWidth = MediaQuery.of(Get.context!).size.width;
-    final isTablet = screenWidth > 600;
-    
-    return ListTile(
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: isTablet ? 20 : 16,
-        vertical: isTablet ? 8 : 4,
-      ),
-      leading: Icon(
-        icon,
-        color: isDestructive ? Colors.red : null,
-        size: isTablet ? 28 : 24,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isDestructive ? Colors.red : null,
-          fontSize: isTablet ? 18 : 16,
-        ),
-      ),
-      onTap: onTap,
     );
   }
 
@@ -195,11 +185,13 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
+          backgroundColor: const Color.fromARGB(255, 248, 253, 255),
           title: Text(
             'Logout',
             style: TextStyle(
@@ -227,8 +219,9 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
-                await controller.logout();
+                Navigator.of(context).pop(); // Close the dialog first
+                // Use LogoutHelper which handles its own loading state and navigation
+                await LogoutHelper.logout();
               },
               child: Text(
                 'Logout',

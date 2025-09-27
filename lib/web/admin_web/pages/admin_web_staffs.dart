@@ -124,8 +124,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: const [
+        content: const Row(
+          children: [
             Icon(Icons.check_circle, color: Colors.white),
             SizedBox(width: 12),
             Expanded(child: Text('New staff has been added successfully')),
@@ -322,7 +322,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               Expanded(
                 child: ShaderMask(
                   shaderCallback: (bounds) =>
-                      LinearGradient(colors: [darkText, deepBlue, primaryTeal])
+                      const LinearGradient(colors: [darkText, deepBlue, primaryTeal])
                           .createShader(bounds),
                   blendMode: BlendMode.srcIn,
                   child: Text(
@@ -338,7 +338,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             ],
           ),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             'Manage your veterinary clinic staff and permissions',
             style: TextStyle(
                 fontSize: 14, color: mediumGray, fontWeight: FontWeight.w500),
@@ -397,7 +397,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               children: [
                 ShaderMask(
                   shaderCallback: (bounds) =>
-                      LinearGradient(colors: [darkText, deepBlue, primaryTeal])
+                      const LinearGradient(colors: [darkText, deepBlue, primaryTeal])
                           .createShader(bounds),
                   blendMode: BlendMode.srcIn,
                   child: const Text(
@@ -409,7 +409,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
+                const Text(
                   'Manage your veterinary clinic staff and permissions',
                   style: TextStyle(
                       fontSize: 15,
@@ -450,7 +450,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: primaryTeal.withOpacity(0.2)),
             ),
-            child: Text(
+            child: const Text(
               'Filter by permission',
               style: TextStyle(
                   fontSize: 14, color: darkText, fontWeight: FontWeight.w600),
@@ -611,7 +611,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                       decoration: BoxDecoration(
                           color: Colors.grey.withOpacity(0.1),
                           shape: BoxShape.circle),
-                      child: Icon(Icons.clear, size: 16, color: mediumGray),
+                      child: const Icon(Icons.clear, size: 16, color: mediumGray),
                     ),
                   )
                 : null,
@@ -755,15 +755,15 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     offset: const Offset(0, 8)),
               ],
             ),
-            child: Icon(Icons.search_off_rounded, size: 72, color: mediumGray),
+            child: const Icon(Icons.search_off_rounded, size: 72, color: mediumGray),
           ),
           const SizedBox(height: 20),
-          Text('No staff found',
+          const Text('No staff found',
               style: TextStyle(
                   fontSize: 20, fontWeight: FontWeight.w700, color: darkText)),
           const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               'No staff members match your search criteria.\nTry adjusting your search or filters.',
               textAlign: TextAlign.center,

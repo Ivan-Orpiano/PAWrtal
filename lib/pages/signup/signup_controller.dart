@@ -74,8 +74,9 @@ class SignUpController extends GetxController {
     required String password,
     required String name,
   }) async {
-    if (formKey.currentState == null || !formKey.currentState!.validate())
+    if (formKey.currentState == null || !formKey.currentState!.validate()) {
       return;
+    }
     formKey.currentState!.save();
 
     try {

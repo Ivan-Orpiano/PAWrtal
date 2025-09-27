@@ -32,13 +32,13 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   late TabController _tabController;
 
   // Sample data - Replace with your backend API calls
-  List<User> _users = [
+  final List<User> _users = [
     User(
       id: '1',
       name: 'John Doe',
       phoneNumber: '+1234567890',
       email: 'john.doe@email.com',
-      accountCreated: DateTime.now().subtract(Duration(days: 30)),
+      accountCreated: DateTime.now().subtract(const Duration(days: 30)),
       isVerified: true,
     ),
     User(
@@ -46,7 +46,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       name: 'Jane Smith',
       phoneNumber: '+0987654321',
       email: 'jane.smith@email.com',
-      accountCreated: DateTime.now().subtract(Duration(days: 15)),
+      accountCreated: DateTime.now().subtract(const Duration(days: 15)),
       isVerified: true,
     ),
     User(
@@ -54,7 +54,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       name: 'Mike Johnson',
       phoneNumber: '+1122334455',
       email: 'mike.johnson@email.com',
-      accountCreated: DateTime.now().subtract(Duration(days: 5)),
+      accountCreated: DateTime.now().subtract(const Duration(days: 5)),
       isVerified: false,
     ),
     User(
@@ -62,14 +62,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       name: 'Sarah Wilson',
       phoneNumber: '+5566778899',
       email: 'sarah.wilson@email.com',
-      accountCreated: DateTime.now().subtract(Duration(days: 2)),
+      accountCreated: DateTime.now().subtract(const Duration(days: 2)),
       isVerified: false,
     ),
   ];
 
   // Colors
-  final Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
-  final Color accentColor = Color.fromARGB(255, 81, 115, 153);
+  final Color backgroundColor = const Color.fromRGBO(248, 253, 255, 1);
+  final Color accentColor = const Color.fromARGB(255, 81, 115, 153);
 
   @override
   void initState() {
@@ -92,14 +92,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   // TODO: Replace with actual backend API call
   Future<void> deleteUser(String userId) async {
     // Simulate API call delay
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     setState(() {
       _users.removeWhere((user) => user.id == userId);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('User deleted successfully'),
         backgroundColor: Colors.red,
       ),
@@ -127,7 +127,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-          title: Text(
+          title: const Text(
             'Confirm Delete',
             style: TextStyle(color: Color.fromARGB(255, 81, 115, 153)),
           ),
@@ -135,7 +135,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel',
+              child: const Text('Cancel',
                   style: TextStyle(color: Color.fromARGB(255, 81, 115, 153))),
             ),
             ElevatedButton(
@@ -147,7 +147,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                 backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                 foregroundColor: const Color.fromARGB(255, 248, 253, 255),
               ),
-              child: Text('Delete'),
+              child: const Text('Delete'),
             ),
           ],
         );
@@ -160,7 +160,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
     return Scaffold(
       appBar: AppBar(
          surfaceTintColor: Colors.transparent,
-        backgroundColor: Color.fromARGB(255, 248, 253, 255),
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back,
               color: Color.fromARGB(255, 81, 115, 153)),
@@ -173,10 +173,10 @@ class _UserManagementScreenState extends State<UserManagementScreen>
           },
           tooltip: 'Back',
         ),
-        title: Text(
+        title: const Text(
           'Pet Owners',
           style: TextStyle(
-            color: const Color.fromARGB(255, 81, 115, 153),
+            color: Color.fromARGB(255, 81, 115, 153),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -188,14 +188,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
           unselectedLabelColor: const Color.fromARGB(255, 189, 184, 176),
           tabs: [
             Tab(
-              icon: Icon(
+              icon: const Icon(
                 Icons.verified_user,
                 color: Color.fromARGB(255, 81, 115, 153),
               ),
               text: 'Verified Users (${verifiedUsers.length})',
             ),
             Tab(
-              icon: Icon(
+              icon: const Icon(
                 Icons.pending,
                 color: Color.fromARGB(255, 81, 115, 153),
               ),
@@ -234,12 +234,12 @@ class UserListView extends StatelessWidget {
   final bool isVerified;
 
   const UserListView({
-    Key? key,
+    super.key,
     required this.users,
     required this.onUserTap,
     required this.accentColor,
     required this.isVerified,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +253,7 @@ class UserListView extends StatelessWidget {
               size: 64,
               color: accentColor.withOpacity(0.5),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               isVerified
                   ? 'No verified users found'
@@ -269,7 +269,7 @@ class UserListView extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       itemCount: users.length,
       itemBuilder: (context, index) {
         final user = users[index];
@@ -290,18 +290,18 @@ class UserCard extends StatelessWidget {
   final Color accentColor;
 
   const UserCard({
-    Key? key,
+    super.key,
     required this.user,
     required this.onTap,
     required this.accentColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       color: const Color.fromARGB(253, 248, 253, 255),
       shadowColor: Colors.grey.withOpacity(0.2),
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       elevation: 8,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -310,20 +310,20 @@ class UserCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               CircleAvatar(
                 backgroundColor: accentColor,
                 child: Text(
                   user.name.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,7 +336,7 @@ class UserCard extends StatelessWidget {
                         color: accentColor,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       user.email,
                       style: TextStyle(
@@ -344,7 +344,7 @@ class UserCard extends StatelessWidget {
                         color: Colors.grey[600],
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
                       'Created: ${_formatDate(user.accountCreated)}',
                       style: TextStyle(
@@ -359,7 +359,7 @@ class UserCard extends StatelessWidget {
                 user.isVerified ? Icons.verified : Icons.pending,
                 color: user.isVerified ? Colors.green : Colors.orange,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Icon(
                 Icons.arrow_forward_ios,
                 color: accentColor,
@@ -384,11 +384,11 @@ class UserDetailsDialog extends StatelessWidget {
   final Color accentColor;
 
   const UserDetailsDialog({
-    Key? key,
+    super.key,
     required this.user,
     required this.onDelete,
     required this.accentColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -400,7 +400,7 @@ class UserDetailsDialog extends StatelessWidget {
         // width: MediaQuery.of(context).size.width * 0.6,
         // height: MediaQuery.of(context).size.height * 0.4,
         color: const Color.fromARGB(255, 248, 253, 255),
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,14 +412,14 @@ class UserDetailsDialog extends StatelessWidget {
                   radius: 30,
                   child: Text(
                     user.name.substring(0, 1).toUpperCase(),
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,7 +440,7 @@ class UserDetailsDialog extends StatelessWidget {
                                 user.isVerified ? Colors.green : Colors.orange,
                             size: 16,
                           ),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
                             user.isVerified ? 'Verified' : 'Unverified',
                             style: TextStyle(
@@ -457,7 +457,7 @@ class UserDetailsDialog extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.close,
                     color: Color.fromRGBO(248, 253, 255, 1),
                   ),
@@ -465,34 +465,34 @@ class UserDetailsDialog extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _buildDetailRow(Icons.person, 'Name', user.name),
             _buildDetailRow(Icons.phone, 'Phone Number', user.phoneNumber),
             _buildDetailRow(Icons.email, 'Email', user.email),
             _buildDetailRow(Icons.calendar_today, 'Account Created',
                 _formatDate(user.accountCreated)),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
+                  child: const Text(
                     'Close',
                     style: TextStyle(
-                        color: const Color.fromARGB(255, 81, 115, 153)),
+                        color: Color.fromARGB(255, 81, 115, 153)),
                     selectionColor: Color.fromRGBO(248, 253, 255, 1),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: onDelete,
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.delete,
                     size: 18,
-                    color: const Color.fromARGB(255, 248, 253, 255),
+                    color: Color.fromARGB(255, 248, 253, 255),
                   ),
-                  label: Text('Delete User'),
+                  label: const Text('Delete User'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                     foregroundColor: Colors.white,
@@ -508,12 +508,12 @@ class UserDetailsDialog extends StatelessWidget {
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: accentColor, size: 20),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,7 +526,7 @@ class UserDetailsDialog extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(

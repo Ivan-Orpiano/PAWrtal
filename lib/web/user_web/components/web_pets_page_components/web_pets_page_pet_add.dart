@@ -111,7 +111,7 @@ class _WebPetsPagePetAddState extends State<WebPetsPagePetAdd> {
             Row(
               children: [
                 TextButton(
-                  child: Text(
+                  child: const Text(
                     "Add to pets"
                   ),
                   onPressed: () {

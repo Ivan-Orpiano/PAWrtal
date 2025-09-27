@@ -84,7 +84,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
         type: FeedbackType.bug,
         priority: Priority.high,
         status: FeedbackStatus.pending,
-        submittedAt: DateTime.now().subtract(Duration(hours: 2)),
+        submittedAt: DateTime.now().subtract(const Duration(hours: 2)),
         attachments: ['crash_log.txt', 'screenshot.png'],
         appVersion: '2.1.4',
         deviceInfo: 'iPhone 14 Pro, iOS 16.5',
@@ -100,13 +100,13 @@ class _ApplicationReportState extends State<ApplicationReport> {
         type: FeedbackType.feature,
         priority: Priority.medium,
         status: FeedbackStatus.inProgress,
-        submittedAt: DateTime.now().subtract(Duration(days: 1)),
+        submittedAt: DateTime.now().subtract(const Duration(days: 1)),
         attachments: [],
         appVersion: '2.1.4',
         deviceInfo: 'Samsung Galaxy S23, Android 13',
         adminReply:
             'Thank you for the suggestion! Dark mode is currently in development and will be available in version 2.2.0.',
-        repliedAt: DateTime.now().subtract(Duration(hours: 12)),
+        repliedAt: DateTime.now().subtract(const Duration(hours: 12)),
       ),
       UserFeedback(
         id: 'FB003',
@@ -119,13 +119,13 @@ class _ApplicationReportState extends State<ApplicationReport> {
         type: FeedbackType.bug,
         priority: Priority.critical,
         status: FeedbackStatus.resolved,
-        submittedAt: DateTime.now().subtract(Duration(days: 2)),
+        submittedAt: DateTime.now().subtract(const Duration(days: 2)),
         attachments: ['error_screenshot.jpg'],
         appVersion: '2.1.4',
         deviceInfo: 'Google Pixel 7, Android 13',
         adminReply:
             'This issue has been identified and fixed in version 2.1.5. Please update your app from the store.',
-        repliedAt: DateTime.now().subtract(Duration(days: 1)),
+        repliedAt: DateTime.now().subtract(const Duration(days: 1)),
       ),
       UserFeedback(
         id: 'FB004',
@@ -138,13 +138,13 @@ class _ApplicationReportState extends State<ApplicationReport> {
         type: FeedbackType.compliment,
         priority: Priority.low,
         status: FeedbackStatus.closed,
-        submittedAt: DateTime.now().subtract(Duration(days: 3)),
+        submittedAt: DateTime.now().subtract(const Duration(days: 3)),
         attachments: [],
         appVersion: '2.1.3',
         deviceInfo: 'iPad Air, iOS 16.4',
         adminReply:
             'Thank you so much for your kind words! We\'re delighted to hear about your positive experience.',
-        repliedAt: DateTime.now().subtract(Duration(days: 2)),
+        repliedAt: DateTime.now().subtract(const Duration(days: 2)),
       ),
     ];
   }
@@ -203,6 +203,8 @@ class _ApplicationReportState extends State<ApplicationReport> {
         feedback: feedback,
         onReply: (reply) => _handleReply(feedback.id, reply),
         onStatusUpdate: (status) => _updateFeedbackStatus(feedback.id, status),
+        onPriorityUpdate: (priority) =>
+            _updateFeedbackPriority(feedback.id, priority),
         onDelete: () => _deleteFeedback(feedback.id),
       ),
     );
@@ -260,6 +262,139 @@ class _ApplicationReportState extends State<ApplicationReport> {
     _filterFeedback();
   }
 
+  // New method to update feedback priority
+  void _updateFeedbackPriority(String feedbackId, Priority priority) {
+    setState(() {
+      final index = feedbackList.indexWhere((f) => f.id == feedbackId);
+      if (index != -1) {
+        feedbackList[index] = UserFeedback(
+          id: feedbackList[index].id,
+          userId: feedbackList[index].userId,
+          userName: feedbackList[index].userName,
+          userEmail: feedbackList[index].userEmail,
+          subject: feedbackList[index].subject,
+          description: feedbackList[index].description,
+          type: feedbackList[index].type,
+          priority: priority,
+          status: feedbackList[index].status,
+          submittedAt: feedbackList[index].submittedAt,
+          adminReply: feedbackList[index].adminReply,
+          repliedAt: feedbackList[index].repliedAt,
+          attachments: feedbackList[index].attachments,
+          appVersion: feedbackList[index].appVersion,
+          deviceInfo: feedbackList[index].deviceInfo,
+        );
+      }
+    });
+    _filterFeedback();
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Priority updated to ${_getPriorityText(priority)}'),
+        backgroundColor: Colors.green[600],
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // New method for quick priority update from card
+  void _showQuickPriorityUpdate(UserFeedback feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: Text(
+          'Update Priority',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Subject: ${feedback.subject}',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Current Priority: ${_getPriorityText(feedback.priority)}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Select new priority:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...Priority.values.map((priority) => InkWell(
+                  onTap: () {
+                    _updateFeedbackPriority(feedback.id, priority);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: priority == feedback.priority
+                          ? _getPriorityColor(priority).withOpacity(0.2)
+                          : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: priority == feedback.priority
+                            ? _getPriorityColor(priority)
+                            : Colors.grey[300]!,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getPriorityIcon(priority),
+                          color: _getPriorityColor(priority),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _getPriorityText(priority),
+                          style: TextStyle(
+                            fontWeight: priority == feedback.priority
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: priority == feedback.priority
+                                ? _getPriorityColor(priority)
+                                : Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _deleteFeedback(String feedbackId) {
     showDialog(
       context: context,
@@ -295,9 +430,9 @@ class _ApplicationReportState extends State<ApplicationReport> {
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Feedback deleted successfully'),
+                  content: const Text('Feedback deleted successfully'),
                   backgroundColor: Colors.red[600],
-                  duration: Duration(seconds: 2),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             },
@@ -305,7 +440,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
               backgroundColor: Colors.red[600],
               foregroundColor: Colors.white,
             ),
-            child: Text('Delete'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -485,18 +620,18 @@ class _ApplicationReportState extends State<ApplicationReport> {
 
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           _buildStatCard(
               'Pending', pending.toString(), Colors.orange, Icons.pending),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           _buildStatCard(
               'In Progress', inProgress.toString(), Colors.blue, Icons.work),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           _buildStatCard('Resolved', resolved.toString(), Colors.green,
               Icons.check_circle),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           _buildStatCard(
               'Critical', critical.toString(), Colors.red, Icons.warning),
         ],
@@ -508,7 +643,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
       String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -516,7 +651,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
             BoxShadow(
               color: Colors.grey.withOpacity(0.1),
               blurRadius: 6,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -537,7 +672,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               title,
               style: TextStyle(
@@ -555,7 +690,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
   Widget _buildFiltersSection() {
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
           Focus(
@@ -563,10 +698,10 @@ class _ApplicationReportState extends State<ApplicationReport> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search feedback...',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
                 suffixIcon: searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear),
+                        icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
                           searchQuery = '';
@@ -577,15 +712,15 @@ class _ApplicationReportState extends State<ApplicationReport> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide:
-                      BorderSide(color: const Color.fromRGBO(81, 115, 153, 1)),
+                      const BorderSide(color: Color.fromRGBO(81, 115, 153, 1)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                      color: const Color.fromRGBO(81, 115, 153, 1), width: 2),
+                  borderSide: const BorderSide(
+                      color: Color.fromRGBO(81, 115, 153, 1), width: 2),
                 ),
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               onChanged: (value) {
                 searchQuery = value;
@@ -593,7 +728,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
               },
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -608,7 +743,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   (status) => _getStatusText(status),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildFilterDropdown<FeedbackType>(
                   'Type',
@@ -621,7 +756,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   (type) => _getTypeText(type),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildFilterDropdown<Priority>(
                   'Priority',
@@ -658,13 +793,13 @@ class _ApplicationReportState extends State<ApplicationReport> {
           borderSide: const BorderSide(color: Color(0xFF517399)),
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       value: selectedValue,
       items: [
         DropdownMenuItem<T>(
           value: null,
-          child: Text('All'),
+          child: const Text('All'),
         ),
         ...items.map((item) => DropdownMenuItem<T>(
               value: item,
@@ -682,7 +817,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.feedback_outlined, size: 64, color: Colors.grey[400]),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'No feedback found',
               style: TextStyle(
@@ -697,7 +832,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       itemCount: filteredFeedbackList.length,
       itemBuilder: (context, index) {
         final feedback = filteredFeedbackList[index];
@@ -709,27 +844,42 @@ class _ApplicationReportState extends State<ApplicationReport> {
   Widget _buildFeedbackCard(UserFeedback feedback) {
     return Card(
       color: const Color.fromRGBO(242, 250, 252, 1),
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => _showFeedbackDetails(feedback),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  _buildPriorityBadge(feedback.priority),
-                  SizedBox(width: 8),
+                  // Enhanced priority badge with quick edit functionality
+                  InkWell(
+                    onTap: () => _showQuickPriorityUpdate(feedback),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _getPriorityColor(feedback.priority)
+                              .withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: _buildPriorityBadge(feedback.priority),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   _buildTypeBadge(feedback.type),
-                  Spacer(),
+                  const Spacer(),
                   _buildStatusBadge(feedback.status),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 feedback.subject,
                 style: TextStyle(
@@ -738,7 +888,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   color: Colors.grey[800],
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 feedback.description,
                 style: TextStyle(
@@ -748,26 +898,26 @@ class _ApplicationReportState extends State<ApplicationReport> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     feedback.userName,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     _formatDateTime(feedback.submittedAt),
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                   if (feedback.attachments.isNotEmpty) ...[
-                    SizedBox(width: 16),
+                    const SizedBox(width: 16),
                     Icon(Icons.attachment, size: 16, color: Colors.grey[500]),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
                       '${feedback.attachments.length}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -776,9 +926,9 @@ class _ApplicationReportState extends State<ApplicationReport> {
                 ],
               ),
               if (feedback.adminReply != null) ...[
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(8),
@@ -791,7 +941,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                         children: [
                           Icon(Icons.admin_panel_settings,
                               size: 16, color: Colors.blue[600]),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
                             'Admin Reply',
                             style: TextStyle(
@@ -800,7 +950,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                               color: Colors.blue[600],
                             ),
                           ),
-                          Spacer(),
+                          const Spacer(),
                           Text(
                             _formatDateTime(feedback.repliedAt!),
                             style: TextStyle(
@@ -808,7 +958,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
                         feedback.adminReply!,
                         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
@@ -820,7 +970,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
               // Add delete button section for resolved and closed feedback
               if (feedback.status == FeedbackStatus.resolved ||
                   feedback.status == FeedbackStatus.closed) ...[
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
@@ -848,29 +998,11 @@ class _ApplicationReportState extends State<ApplicationReport> {
   }
 
   Widget _buildPriorityBadge(Priority priority) {
-    Color color;
-    IconData icon;
-    switch (priority) {
-      case Priority.critical:
-        color = Colors.red;
-        icon = Icons.error;
-        break;
-      case Priority.high:
-        color = Colors.orange;
-        icon = Icons.warning;
-        break;
-      case Priority.medium:
-        color = Colors.yellow[700]!;
-        icon = Icons.info;
-        break;
-      case Priority.low:
-        color = Colors.grey;
-        icon = Icons.low_priority;
-        break;
-    }
+    Color color = _getPriorityColor(priority);
+    IconData icon = _getPriorityIcon(priority);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -880,7 +1012,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
-          SizedBox(width: 4),
+          const SizedBox(width: 4),
           Text(
             _getPriorityText(priority),
             style: TextStyle(
@@ -889,9 +1021,38 @@ class _ApplicationReportState extends State<ApplicationReport> {
               color: color,
             ),
           ),
+          const SizedBox(width: 4),
+          Icon(Icons.edit, size: 10, color: color.withOpacity(0.7)),
         ],
       ),
     );
+  }
+
+  // Helper methods for priority styling
+  Color _getPriorityColor(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return Colors.red;
+      case Priority.high:
+        return Colors.orange;
+      case Priority.medium:
+        return Colors.yellow[700]!;
+      case Priority.low:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getPriorityIcon(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return Icons.error;
+      case Priority.high:
+        return Icons.warning;
+      case Priority.medium:
+        return Icons.info;
+      case Priority.low:
+        return Icons.low_priority;
+    }
   }
 
   Widget _buildTypeBadge(FeedbackType type) {
@@ -915,7 +1076,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -950,7 +1111,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -1025,11 +1186,11 @@ class _ApplicationReportState extends State<ApplicationReport> {
 
   Widget _buildAnalyticsItem(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
           Text(value,
               style: TextStyle(
                   color: Colors.blue[600], fontWeight: FontWeight.bold)),
@@ -1043,12 +1204,15 @@ class FeedbackDetailsDialog extends StatefulWidget {
   final UserFeedback feedback;
   final Function(String) onReply;
   final Function(FeedbackStatus) onStatusUpdate;
+  final Function(Priority) onPriorityUpdate;
   final VoidCallback onDelete;
 
-  FeedbackDetailsDialog({
+  const FeedbackDetailsDialog({
+    super.key,
     required this.feedback,
     required this.onReply,
     required this.onStatusUpdate,
+    required this.onPriorityUpdate,
     required this.onDelete,
   });
 
@@ -1076,14 +1240,14 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                Expanded(
+                const Expanded(
                   child: Text(
                     'Feedback Details',
                     style: TextStyle(
@@ -1092,16 +1256,15 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                     ),
                   ),
                 ),
-                // Add delete button in header for resolved/closed feedback
                 if (widget.feedback.status == FeedbackStatus.resolved ||
                     widget.feedback.status == FeedbackStatus.closed)
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
+                    icon: const Icon(Icons.close),
                   ),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -1112,7 +1275,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       'Email: ${widget.feedback.userEmail}',
                       'User ID: ${widget.feedback.userId}',
                     ]),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _buildDetailSection('Feedback Information', [
                       'ID: ${widget.feedback.id}',
                       'Subject: ${widget.feedback.subject}',
@@ -1121,24 +1284,24 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       'Status: ${_getStatusText(widget.feedback.status)}',
                       'Submitted: ${_formatFullDateTime(widget.feedback.submittedAt)}',
                     ]),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _buildDetailSection('Technical Information', [
                       'App Version: ${widget.feedback.appVersion}',
                       'Device Info: ${widget.feedback.deviceInfo}',
                     ]),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _buildDescriptionSection(),
                     if (widget.feedback.attachments.isNotEmpty) ...[
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       _buildAttachmentsSection(),
                     ],
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _buildReplySection(),
                   ],
                 ),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildActionButtons(),
           ],
         ),
@@ -1149,7 +1312,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   Widget _buildDetailSection(String title, List<String> items) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color.fromARGB(255, 255, 255, 255),
         borderRadius: BorderRadius.circular(8),
@@ -1166,9 +1329,9 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               color: Colors.grey[800],
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           ...items.map((item) => Padding(
-                padding: EdgeInsets.symmetric(vertical: 2),
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Text(
                   item,
                   style: TextStyle(
@@ -1185,7 +1348,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   Widget _buildDescriptionSection() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.blue[50],
         borderRadius: BorderRadius.circular(8),
@@ -1202,7 +1365,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               color: Colors.blue[800],
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             widget.feedback.description,
             style: TextStyle(
@@ -1217,19 +1380,17 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   }
 
   Widget _buildAttachmentsSection() {
-    // Filter only image files
     final imageAttachments = widget.feedback.attachments
         .where((attachment) => _isImageFile(attachment))
         .toList();
 
-    // Return empty container if no images
     if (imageAttachments.isEmpty) {
       return Container();
     }
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.orange[50],
         borderRadius: BorderRadius.circular(8),
@@ -1246,8 +1407,8 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               color: Colors.orange[800],
             ),
           ),
-          SizedBox(height: 12),
-          Container(
+          const SizedBox(height: 12),
+          SizedBox(
             width: double.infinity,
             child: Wrap(
               spacing: 8,
@@ -1266,7 +1427,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
                           blurRadius: 4,
-                          offset: Offset(0, 2),
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
@@ -1275,7 +1436,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // Placeholder for actual image - in real implementation, use NetworkImage or AssetImage
                           Container(
                             color: Colors.grey[200],
                             child: Icon(
@@ -1284,7 +1444,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                               color: Colors.grey[400],
                             ),
                           ),
-                          // Hover effect overlay
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
@@ -1299,13 +1458,12 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                               ),
                             ),
                           ),
-                          // Overlay with file name
                           Positioned(
                             bottom: 0,
                             left: 0,
                             right: 0,
                             child: Container(
-                              padding: EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                   horizontal: 4, vertical: 2),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -1319,7 +1477,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                               ),
                               child: Text(
                                 attachment,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
@@ -1349,10 +1507,9 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
       barrierColor: Colors.black.withOpacity(0.9),
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(20),
+        insetPadding: const EdgeInsets.all(20),
         child: Stack(
           children: [
-            // Full screen image container
             Center(
               child: Container(
                 constraints: BoxConstraints(
@@ -1366,10 +1523,9 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Image header
                     Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(12),
@@ -1390,18 +1546,17 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                           ),
                           IconButton(
                             onPressed: () => _downloadImage(imageName),
-                            icon:
-                                Icon(Icons.download, color: Color(0xFF517399)),
+                            icon: const Icon(Icons.download,
+                                color: Color(0xFF517399)),
                             tooltip: 'Download Image',
                           ),
                         ],
                       ),
                     ),
                     Divider(height: 1, color: Colors.grey[300]),
-                    // Image display area
                     Flexible(
                       child: Container(
-                        padding: EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(20),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
@@ -1416,7 +1571,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                                   size: 80,
                                   color: Colors.grey[400],
                                 ),
-                                SizedBox(height: 16),
+                                const SizedBox(height: 16),
                                 Text(
                                   'Image Preview',
                                   style: TextStyle(
@@ -1424,7 +1579,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Text(
                                   'In production, actual image would be displayed here',
                                   style: TextStyle(
@@ -1443,7 +1598,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 ),
               ),
             ),
-            // Close button
             Positioned(
               top: 30,
               right: 30,
@@ -1454,7 +1608,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 ),
                 child: IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: Colors.white, size: 24),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 24),
                   tooltip: 'Close',
                 ),
               ),
@@ -1470,12 +1624,9 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
       SnackBar(
         content: Text('Downloading $imageName...'),
         backgroundColor: Colors.blue[600],
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
-
-    // TODO: Implement actual image download logic
-    // In production, you would implement the actual download functionality here
   }
 
   bool _isImageFile(String filename) {
@@ -1487,7 +1638,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   Widget _buildReplySection() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: widget.feedback.adminReply != null
             ? Colors.green[50]
@@ -1511,7 +1662,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                     ? Colors.green[600]
                     : Colors.grey[600],
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 widget.feedback.adminReply != null
                     ? 'Admin Reply'
@@ -1525,7 +1676,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 ),
               ),
               if (widget.feedback.adminReply != null) ...[
-                Spacer(),
+                const Spacer(),
                 Text(
                   'Replied: ${_formatFullDateTime(widget.feedback.repliedAt!)}',
                   style: TextStyle(
@@ -1536,7 +1687,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               ],
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           TextField(
             controller: _replyController,
             maxLines: 4,
@@ -1546,16 +1697,16 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              contentPadding: EdgeInsets.all(12),
+              contentPadding: const EdgeInsets.all(12),
             ),
           ),
           if (widget.feedback.adminReply == null || _isReplying) ...[
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Row(
               children: [
                 ElevatedButton.icon(
                   onPressed: _sendReply,
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.send,
                     color: Colors.white,
                   ),
@@ -1563,12 +1714,12 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       ? 'Send Reply'
                       : 'Update Reply'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromRGBO(81, 115, 153, 1),
+                    backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
                     foregroundColor: Colors.white,
                   ),
                 ),
                 if (_isReplying) ...[
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -1577,7 +1728,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                             widget.feedback.adminReply ?? '';
                       });
                     },
-                    child: Text(
+                    child: const Text(
                       'Cancel',
                       style: TextStyle(color: Colors.white),
                     ),
@@ -1586,18 +1737,18 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               ],
             ),
           ] else ...[
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: () {
                 setState(() {
                   _isReplying = true;
                 });
               },
-              icon: Icon(
+              icon: const Icon(
                 Icons.edit,
                 color: Colors.white,
               ),
-              label: Text('Edit Reply'),
+              label: const Text('Edit Reply'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange[600],
                 foregroundColor: Colors.white,
@@ -1638,80 +1789,112 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
             },
           ),
         ),
-        SizedBox(width: 16),
-        // Add delete button in action buttons for resolved/closed feedback
+        const SizedBox(width: 16),
+        Expanded(
+          child: DropdownButtonFormField<Priority>(
+            dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
+            value: widget.feedback.priority,
+            decoration: InputDecoration(
+              labelText: 'Update Priority',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            items: Priority.values
+                .map(
+                  (priority) => DropdownMenuItem(
+                    value: priority,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getPriorityIcon(priority),
+                          size: 16,
+                          color: _getPriorityColor(priority),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(_getPriorityText(priority)),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (priority) {
+              if (priority != null && priority != widget.feedback.priority) {
+                widget.onPriorityUpdate(priority);
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 16),
         if (widget.feedback.status == FeedbackStatus.resolved ||
             widget.feedback.status == FeedbackStatus.closed)
           ElevatedButton.icon(
             onPressed: widget.onDelete,
-            icon: Icon(
+            icon: const Icon(
               Icons.delete_outline,
               color: Colors.white,
             ),
-            label: Text('Delete'),
+            label: const Text('Delete'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red[600],
               foregroundColor: Colors.white,
             ),
           ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         ElevatedButton(
           onPressed: () => _copyFeedbackInfo(),
-          child: Text('Copy Info'),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
             foregroundColor: Colors.white,
           ),
+          child: const Text('Copy Info'),
         ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         ElevatedButton(
           onPressed: () => _exportFeedback(),
-          child: Text('Export'),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
             foregroundColor: Colors.white,
           ),
+          child: const Text('Export'),
         ),
       ],
     );
   }
 
-  IconData _getFileIcon(String filename) {
-    final extension = filename.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return Icons.image;
-      case 'txt':
-      case 'log':
-        return Icons.description;
-      case 'zip':
-      case 'rar':
-        return Icons.archive;
-      default:
-        return Icons.attachment;
+  // Helper methods for priority styling in dialog
+  Color _getPriorityColor(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return Colors.red;
+      case Priority.high:
+        return Colors.orange;
+      case Priority.medium:
+        return Colors.yellow[700]!;
+      case Priority.low:
+        return Colors.grey;
     }
   }
 
-  void _downloadAttachment(String filename) {
-    // TODO: Implement actual file download logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloading $filename...'),
-        backgroundColor: Colors.blue[600],
-      ),
-    );
+  IconData _getPriorityIcon(Priority priority) {
+    switch (priority) {
+      case Priority.critical:
+        return Icons.error;
+      case Priority.high:
+        return Icons.warning;
+      case Priority.medium:
+        return Icons.info;
+      case Priority.low:
+        return Icons.low_priority;
+    }
   }
 
   void _sendReply() {
     if (_replyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please enter a reply message'),
+          content: const Text('Please enter a reply message'),
           backgroundColor: Colors.red[600],
         ),
       );
@@ -1725,7 +1908,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Reply sent successfully'),
+        content: const Text('Reply sent successfully'),
         backgroundColor: Colors.green[600],
       ),
     );
@@ -1754,17 +1937,16 @@ ${widget.feedback.adminReply != null ? 'Admin Reply:\n${widget.feedback.adminRep
     Clipboard.setData(ClipboardData(text: info));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Feedback information copied to clipboard'),
+        content: const Text('Feedback information copied to clipboard'),
         backgroundColor: Colors.blue[600],
       ),
     );
   }
 
   void _exportFeedback() {
-    // TODO: Implement actual export functionality
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Exporting feedback data...'),
+        content: const Text('Exporting feedback data...'),
         backgroundColor: Colors.green[600],
       ),
     );

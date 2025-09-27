@@ -165,7 +165,7 @@ class CompletedPage extends StatelessWidget {
                         ...appointments.map((appointment) => PatientWorkflowTile(
                           appointment: appointment,
                           workflowStage: 'completed',
-                        )).toList(),
+                        )),
                         
                         const SizedBox(height: 16),
                       ],

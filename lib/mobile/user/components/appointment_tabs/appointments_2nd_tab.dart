@@ -163,11 +163,11 @@ class EnhancedAPSecondTab extends StatelessWidget {
                       ],
                     ),
                   ),
-                  ...appointments.map((appointment) => EnhancedUserAppointmentTile(appointment: appointment)).toList(),
+                  ...appointments.map((appointment) => EnhancedUserAppointmentTile(appointment: appointment)),
                   const SizedBox(height: 8),
                 ]),
               );
-            }).toList(),
+            }),
             
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
           ],
