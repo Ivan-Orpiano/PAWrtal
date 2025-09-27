@@ -529,139 +529,334 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
     );
   }
 
-  Widget _buildFeedbackContent() {
-    final TextEditingController feedbackController = TextEditingController();
+Widget _buildFeedbackContent() {
+  final TextEditingController feedbackController = TextEditingController();
+  List<String> attachedFiles = []; // Track attached files
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Send Feedback',
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
+  return StatefulBuilder(
+    builder: (context, setState) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Send Feedback',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+              ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Help us improve by sharing your thoughts and suggestions',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'What would you like to tell us?',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const DropdownMenu(
+                    width: 300,
+                    enableSearch: false,
+                    label: Text("Select kind of problem"),
+                    inputDecorationTheme: InputDecorationTheme(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(15))
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(15))
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(15))
+                      ),
+                    ),
+                    menuStyle: MenuStyle(
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(15), 
+                            bottomRight: Radius.circular(15)
+                          )
+                        )
+                      ),
+                      backgroundColor: WidgetStatePropertyAll(Colors.white),
+                    ),
+                    dropdownMenuEntries: [
+                      DropdownMenuEntry(value: Text(""), label: "Bug"),
+                      DropdownMenuEntry(value: Text(""), label: "Feature"),
+                      DropdownMenuEntry(value: Text(""), label: "Complaint"),
+                      DropdownMenuEntry(value: Text(""), label: "Question"),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: feedbackController,
+                    maxLines: 5,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your feedback here...',
+                      hintStyle: TextStyle(color: Colors.grey[500]),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // File Attachment Section
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.attach_file, color: Colors.grey[600], size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Attachments',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Attach File Button
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            // For web, you would typically use file_picker package
+                            // This is a placeholder for the file selection logic
+                            _selectFiles(setState, attachedFiles);
+                          },
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Choose Files'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                            side: BorderSide(color: Colors.blue.withOpacity(0.5)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                        
+                        // Display attached files
+                        if (attachedFiles.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Attached Files:',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...attachedFiles.map((fileName) => Container(
+                            margin: const EdgeInsets.only(bottom: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _getFileIcon(fileName),
+                                  size: 16,
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  fileName,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      attachedFiles.remove(fileName);
+                                    });
+                                  },
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 14,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                        ],
+                        
+                        const SizedBox(height: 8),
+                        Text(
+                          'Supported formats: Images (PNG, JPG), Documents (PDF, DOC), Max size: 10MB',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (feedbackController.text.trim().isNotEmpty) {
+                        String message = 'Thank you for your feedback!';
+                        if (attachedFiles.isNotEmpty) {
+                          message += ' ${attachedFiles.length} file(s) attached.';
+                        }
+                        _showSnackbar('Success', message, Colors.green);
+                        feedbackController.clear();
+                        setState(() {
+                          attachedFiles.clear();
+                        });
+                      } else {
+                        _showSnackbar(
+                          'Error',
+                          'Please enter your feedback before submitting',
+                          Colors.orange,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Send Feedback'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+// Helper method to simulate file selection
+void _selectFiles(StateSetter setState, List<String> attachedFiles) {
+  // In a real implementation, you would use file_picker package:
+  // FilePickerResult? result = await FilePicker.platform.pickFiles(
+  //   allowMultiple: true,
+  //   type: FileType.custom,
+  //   allowedExtensions: ['jpg', 'png', 'pdf', 'doc', 'docx'],
+  // );
+  
+  // For demonstration, we'll add sample file names
+  List<String> sampleFiles = [
+    'screenshot.png',
+    'error_log.txt',
+    'bug_report.pdf',
+    'feature_request.doc'
+  ];
+  
+  // Simulate file selection dialog
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Select Files', style: TextStyle(color: Colors.black87)),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: sampleFiles.map((fileName) => ListTile(
+              leading: Icon(_getFileIcon(fileName), color: Colors.blue),
+              title: Text(fileName, style: const TextStyle(color: Colors.black87)),
+              onTap: () {
+                if (!attachedFiles.contains(fileName)) {
+                  setState(() {
+                    attachedFiles.add(fileName);
+                  });
+                }
+                Navigator.of(context).pop();
+                _showSnackbar('Success', 'File "$fileName" attached', Colors.green);
+              },
+            )).toList(),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Help us improve by sharing your thoughts and suggestions',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'What would you like to tell us?',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const DropdownMenu(
-                  width: 300,
-                  enableSearch: false,
-                  label: Text(
-                    "Select kind of problem"
-                  ),
-                  inputDecorationTheme: InputDecorationTheme(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(15))
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(15))
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(15))
-                    ),
-                  ),
-                  menuStyle: MenuStyle(
-                    shape: WidgetStatePropertyAll(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15))
-                      )
-                    ),
-                    backgroundColor: WidgetStatePropertyAll(
-                      Colors.white,
-                    )
-                  ),
-                  dropdownMenuEntries: [
-                    DropdownMenuEntry(value: Text(""), label: "Bug"),
-                    DropdownMenuEntry(value: Text(""), label: "Feature"),
-                    DropdownMenuEntry(value: Text(""), label: "Complaint"),
-                    DropdownMenuEntry(value: Text(""), label: "Question"),
-                  ],
-                ),
-                const SizedBox(height: 16,),
-                TextField(
-                  controller: feedbackController,
-                  maxLines: 5,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: InputDecoration(
-                    hintText: 'Enter your feedback here...',
-                    hintStyle: TextStyle(color: Colors.grey[500]),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.blue),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    if (feedbackController.text.trim().isNotEmpty) {
-                      _showSnackbar(
-                        'Success',
-                        'Thank you for your feedback!',
-                        Colors.green,
-                      );
-                      feedbackController.clear();
-                    } else {
-                      _showSnackbar(
-                        'Error',
-                        'Please enter your feedback before submitting',
-                        Colors.orange,
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Send Feedback'),
-                ),
-              ],
-            ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
         ],
-      ),
-    );
+      );
+    },
+  );
+}
+
+// Helper method to get appropriate icon for file type
+IconData _getFileIcon(String fileName) {
+  String extension = fileName.split('.').last.toLowerCase();
+  switch (extension) {
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+      return Icons.image;
+    case 'pdf':
+      return Icons.picture_as_pdf;
+    case 'doc':
+    case 'docx':
+      return Icons.description;
+    case 'txt':
+      return Icons.text_snippet;
+    default:
+      return Icons.insert_drive_file;
   }
+}
 
   void _showLogoutDialog() {
     showDialog(
