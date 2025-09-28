@@ -716,12 +716,46 @@ class AppWriteProvider {
 // ============= MESSAGE METHODS =============
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
-    return await databases!.createDocument(
+    final messageDoc = await databases!.createDocument(
       databaseId: AppwriteConstants.dbID,
       collectionId: AppwriteConstants.messagesCollectionID,
       documentId: ID.unique(),
       data: data,
     );
+
+    // After creating message, update conversation unread count for the RECEIVER only
+    final conversationId = data['conversationId'];
+    final senderId = data['senderId'];
+    final receiverId = data['receiverId'];
+
+    // Get current conversation
+    try {
+      final conversation = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+      );
+
+      // Only increment unread count for the receiver, not the sender
+      final currentUnreadCount = conversation.data['unreadCount'] ?? 0;
+
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+        data: {
+          'lastMessageId': messageDoc.$id,
+          'lastMessageText': data['messageText'],
+          'lastMessageTime': data['timestamp'],
+          'unreadCount': currentUnreadCount + 1, // Increment for receiver
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error updating conversation after message: $e');
+    }
+
+    return messageDoc;
   }
 
   Future<List<Document>> getConversationMessages(String conversationId,
@@ -757,26 +791,45 @@ class AppWriteProvider {
     );
   }
 
-  Future<void> markMessagesAsRead(
-      String conversationId, String receiverId) async {
-    // Get unread messages for this receiver in this conversation
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.messagesCollectionID,
-      queries: [
-        Query.equal("conversationId", conversationId),
-        Query.equal("receiverId", receiverId),
-        Query.equal("isRead", false),
-      ],
-    );
+  Future<void> markMessagesAsRead(String conversationId, String userId) async {
+    try {
+      // Get unread messages for this user in this conversation
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        queries: [
+          Query.equal("conversationId", conversationId),
+          Query.equal("receiverId", userId), // Only messages TO this user
+          Query.equal("isRead", false),
+        ],
+      );
 
-    // Mark each message as read
-    for (var doc in result.documents) {
-      await updateMessage(doc.$id, {'isRead': true});
+      // Mark each message as read
+      for (var doc in result.documents) {
+        await databases!.updateDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.messagesCollectionID,
+          documentId: doc.$id,
+          data: {'isRead': true},
+        );
+      }
+
+      // Reset unread count to 0 for this conversation
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+        data: {
+          'unreadCount': 0,
+          // DON'T update updatedAt here to avoid reordering
+        },
+      );
+
+      print(
+          'Marked ${result.documents.length} messages as read for user $userId');
+    } catch (e) {
+      print('Error marking messages as read: $e');
     }
-
-    // Update conversation unread count
-    await updateConversation(conversationId, {'unreadCount': 0});
   }
 
 // ============= CONVERSATION STARTERS METHODS =============

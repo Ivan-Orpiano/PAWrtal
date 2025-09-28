@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
@@ -14,7 +15,7 @@ class Messages extends StatefulWidget {
   State<Messages> createState() => _MessagesState();
 }
 
-class _MessagesState extends State<Messages> {
+class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   final MessagingController _messagingController = Get.find<MessagingController>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final TextEditingController _searchController = TextEditingController();
@@ -25,13 +26,46 @@ class _MessagesState extends State<Messages> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Load conversations and set up real-time updates
     _messagingController.loadUserConversations();
+    _setupRealtimeUpdates();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Refresh conversations when app comes to foreground
+    if (state == AppLifecycleState.resumed) {
+      _messagingController.loadUserConversations();
+    }
+  }
+
+  void _setupRealtimeUpdates() {
+    // Subscribe to conversation updates to get real-time message notifications
+    _messagingController.subscribeToConversationUpdates();
+    
+    // Periodically refresh conversations (fallback for real-time)
+    _startPeriodicRefresh();
+  }
+
+  void _startPeriodicRefresh() {
+    // Refresh conversations every 10 seconds when on messages page
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        _messagingController.loadUserConversations();
+        _startPeriodicRefresh(); // Schedule next refresh
+      }
+    });
   }
 
   Future<Map<String, dynamic>> _getConversationData(Conversation conversation) async {
@@ -258,18 +292,34 @@ class _MessagesState extends State<Messages> {
       backgroundColor: Colors.blue.shade50,
       body: Column(
         children: [
-          // Header
+          // Header with refresh button
           Container(
             height: 75,
             padding: const EdgeInsets.only(top: 20),
-            child: Center(
-              child: Text(
-                "Messages",
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      "Messages",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                // Add refresh button
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () {
+                      _messagingController.loadUserConversations();
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
           
@@ -363,13 +413,18 @@ class _MessagesState extends State<Messages> {
                         );
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        itemCount: _messagingController.conversations.length,
-                        itemBuilder: (context, index) {
-                          final conversation = _messagingController.conversations[index];
-                          return _buildConversationTile(conversation);
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          await _messagingController.loadUserConversations();
                         },
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          itemCount: _messagingController.conversations.length,
+                          itemBuilder: (context, index) {
+                            final conversation = _messagingController.conversations[index];
+                            return _buildConversationTile(conversation);
+                          },
+                        ),
                       );
                     }),
                   ),

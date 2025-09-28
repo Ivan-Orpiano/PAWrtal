@@ -225,13 +225,39 @@ class MessagingController extends GetxController {
       // Subscribe to real-time messages
       subscribeToMessages(conversation.documentId!);
 
-      // Mark as read
-      await markConversationAsRead();
+      // Mark as read WITHOUT updating the conversation timestamp
+      await markConversationAsReadSilently(conversation.documentId!);
     } catch (e) {
       Get.snackbar('Error', 'Failed to open conversation: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isLoadingConversation.value = false;
+    }
+  }
+
+  Future<void> markConversationAsReadSilently(String conversationId) async {
+    try {
+      // Only mark messages as read, don't update conversation metadata
+      await _authRepository.markMessagesAsRead(
+          conversationId, _userSession.userId);
+
+      // Update local conversation unread count only
+      if (currentConversation.value != null &&
+          currentConversation.value!.unreadCount > 0) {
+        final updatedConversation =
+            currentConversation.value!.copyWith(unreadCount: 0);
+        currentConversation.value = updatedConversation;
+
+        // Update in list without reordering
+        final index = conversations
+            .indexWhere((c) => c.documentId == updatedConversation.documentId);
+        if (index != -1) {
+          conversations[index] = updatedConversation;
+          // DON'T move to top - keep original position
+        }
+      }
+    } catch (e) {
+      print('Error marking messages as read: $e');
     }
   }
 
@@ -271,32 +297,33 @@ class MessagingController extends GetxController {
       // Clear input immediately for better UX
       if (text == null) messageController.clear();
 
-      // Send message to server (DON'T add to UI immediately - wait for real-time)
+      // Send message to server
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
-        senderType: 'user', // Change to 'admin' for AdminMessagingController
+        senderType: 'user',
         receiverId: currentReceiverId.value,
         messageText: messageText,
         messageType: attachmentUrl != null ? 'image' : 'text',
         attachmentUrl: attachmentUrl,
       );
 
-      // Update conversation in local list
+      // Update conversation in local list and move to top (only for sent messages)
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.timestamp,
+        unreadCount: 0, // Reset unread count for sender
       );
       currentConversation.value = updatedConversation;
 
-      // Update in conversations list
+      // Update in conversations list and move to top
       final index = conversations
           .indexWhere((c) => c.documentId == updatedConversation.documentId);
       if (index != -1) {
-        conversations[index] = updatedConversation;
         conversations.removeAt(index);
-        conversations.insert(0, updatedConversation);
+        conversations.insert(
+            0, updatedConversation); // Move to top for sent messages
       }
 
       // Message will appear in UI when real-time subscription receives it
@@ -407,14 +434,23 @@ class MessagingController extends GetxController {
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToConversationUpdates() {
+    _conversationSubscription?.cancel();
     _conversationSubscription = _authRepository
         .subscribeToConversations(_userSession.userId)
         .listen((realtimeMessage) {
       print('Conversation update received: ${realtimeMessage.events}');
 
-      // Reload conversations when there's an update
+      // When a conversation is updated (new message, etc.), refresh the conversations list
       if (realtimeMessage.events
-          .contains('databases.*.collections.*.documents.*')) {
+          .contains('databases.*.collections.*.documents.*.update')) {
+        print('Conversation updated via real-time, refreshing list...');
+        loadUserConversations();
+      }
+
+      // When a new conversation is created
+      if (realtimeMessage.events
+          .contains('databases.*.collections.*.documents.*.create')) {
+        print('New conversation created via real-time, refreshing list...');
         loadUserConversations();
       }
     });
