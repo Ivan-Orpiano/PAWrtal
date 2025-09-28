@@ -726,6 +726,7 @@ class AppWriteProvider {
     // After creating message, update conversation unread count for the RECEIVER only
     final conversationId = data['conversationId'];
     final senderId = data['senderId'];
+    final senderType = data['senderType'];
     final receiverId = data['receiverId'];
 
     // Get current conversation
@@ -736,20 +737,36 @@ class AppWriteProvider {
         documentId: conversationId,
       );
 
-      // Only increment unread count for the receiver, not the sender
-      final currentUnreadCount = conversation.data['unreadCount'] ?? 0;
+      // Determine which unread count to increment based on receiver type
+      final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
+      final currentClinicUnreadCount =
+          conversation.data['clinicUnreadCount'] ?? 0;
+
+      Map<String, dynamic> updateData = {
+        'lastMessageId': messageDoc.$id,
+        'lastMessageText': data['messageText'],
+        'lastMessageTime': data['timestamp'],
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      // Increment unread count for the receiver only
+      if (senderType == 'user') {
+        // User sent message, increment clinic unread count
+        updateData['clinicUnreadCount'] = currentClinicUnreadCount + 1;
+        updateData['userUnreadCount'] =
+            currentUserUnreadCount; // Keep user count same
+      } else {
+        // Admin/clinic sent message, increment user unread count
+        updateData['userUnreadCount'] = currentUserUnreadCount + 1;
+        updateData['clinicUnreadCount'] =
+            currentClinicUnreadCount; // Keep clinic count same
+      }
 
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.conversationsCollectionID,
         documentId: conversationId,
-        data: {
-          'lastMessageId': messageDoc.$id,
-          'lastMessageText': data['messageText'],
-          'lastMessageTime': data['timestamp'],
-          'unreadCount': currentUnreadCount + 1, // Increment for receiver
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
+        data: updateData,
       );
     } catch (e) {
       print('Error updating conversation after message: $e');

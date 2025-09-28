@@ -106,6 +106,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
       future: _getConversationData(conversation),
       builder: (context, snapshot) {
         final data = snapshot.data ?? {'name': 'Loading...', 'image': '', 'isOnline': false};
+        final hasUnreadMessages = conversation.unreadCount > 0;
         
         return InkWell(
           onTap: () async {
@@ -131,6 +132,12 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              border: hasUnreadMessages 
+                  ? Border.all(
+                      color: const Color.fromARGB(255, 81, 115, 153),
+                      width: 2,
+                    )
+                  : null,
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
@@ -245,10 +252,10 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                               conversation.conversationPreview,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: conversation.unreadCount > 0 
+                                color: hasUnreadMessages 
                                     ? Colors.black87 
                                     : Colors.grey[600],
-                                fontWeight: conversation.unreadCount > 0 
+                                fontWeight: hasUnreadMessages 
                                     ? FontWeight.w600 
                                     : FontWeight.normal,
                               ),
@@ -256,21 +263,14 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (conversation.unreadCount > 0)
+                          if (hasUnreadMessages)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 81, 115, 153),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                conversation.unreadCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Color.fromARGB(255, 81, 115, 153),
+                                shape: BoxShape.circle,
                               ),
                             ),
                         ],
@@ -307,16 +307,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                         fontSize: 20,
                       ),
                     ),
-                  ),
-                ),
-                // Add refresh button
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      _messagingController.loadUserConversations();
-                    },
                   ),
                 ),
               ],

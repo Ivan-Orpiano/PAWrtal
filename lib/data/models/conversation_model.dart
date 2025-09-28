@@ -105,7 +105,7 @@ class Conversation {
     } else if (difference.inMinutes > 0) {
       return '${difference.inMinutes}m';
     } else {
-      return 'now';
+      return 'today';
     }
   }
 }

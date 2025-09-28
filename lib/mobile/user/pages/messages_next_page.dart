@@ -213,7 +213,7 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
               }),
             ),
           
-          // Messages
+          // Messages with Reverse ListView
           Expanded(
             child: Obx(() {
               if (_messagingController.isLoadingConversation.value) {
@@ -231,9 +231,12 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
               return ListView.builder(
                 controller: _messagingController.scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                reverse: true, // This makes newest messages appear at bottom
                 itemCount: _messagingController.currentMessages.length,
                 itemBuilder: (context, index) {
-                  final message = _messagingController.currentMessages[index];
+                  // Reverse the index to show messages in correct order
+                  final reversedIndex = _messagingController.currentMessages.length - 1 - index;
+                  final message = _messagingController.currentMessages[reversedIndex];
                   return _buildMessageBubble(message);
                 },
               );
