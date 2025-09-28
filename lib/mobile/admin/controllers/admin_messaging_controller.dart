@@ -9,7 +9,6 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:appwrite/models.dart' as models;
 
 class AdminMessagingController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
@@ -83,19 +82,12 @@ class AdminMessagingController extends GetxController {
     print('=== AdminMessagingController manual cleanup starting ===');
 
     try {
-      // Step 1: Cancel all subscriptions immediately
       _cancelAllSubscriptions();
-
-      // Step 2: Clear all data
       _clearAllData();
-
-      // Step 3: Set user offline (with short timeout)
       await _setUserOfflineWithTimeout();
-
       print('AdminMessagingController manual cleanup completed successfully');
     } catch (e) {
       print('Error during AdminMessagingController cleanup: $e');
-      // Don't throw - we want logout to continue even if cleanup fails
     }
   }
 
@@ -131,32 +123,12 @@ class AdminMessagingController extends GetxController {
 
     try {
       messageController.dispose();
-    } catch (e) {
-      print('Error disposing messageController: $e');
-    }
-
-    try {
       scrollController.dispose();
-    } catch (e) {
-      print('Error disposing scrollController: $e');
-    }
-
-    try {
       searchController.dispose();
-    } catch (e) {
-      print('Error disposing searchController: $e');
-    }
-
-    try {
       starterTriggerController.dispose();
-    } catch (e) {
-      print('Error disposing starterTriggerController: $e');
-    }
-
-    try {
       starterResponseController.dispose();
     } catch (e) {
-      print('Error disposing starterResponseController: $e');
+      print('Error disposing controllers: $e');
     }
 
     print('Controller disposal completed');
@@ -213,7 +185,6 @@ class AdminMessagingController extends GetxController {
 
       print('=== Initializing Admin Messaging for Clinic: $clinicId ===');
 
-      // First check if collections are configured
       if (!AppwriteConstants.messagingCollectionsConfigured) {
         Get.snackbar(
           'Setup Required',
@@ -229,7 +200,8 @@ class AdminMessagingController extends GetxController {
         loadClinicConversations(clinicId),
         initializeConversationStarters(clinicId),
       ]);
-      subscribeToClinicConversations(clinicId);
+
+      subscribeToClinicConversationUpdates(clinicId);
 
       print('Admin messaging initialized successfully');
     } catch (e) {
@@ -250,22 +222,18 @@ class AdminMessagingController extends GetxController {
 
       print('Loading conversation starters for clinic: $clinicId');
 
-      // Try to load existing starters
       final starters =
           await _authRepository.getClinicConversationStarters(clinicId);
       conversationStarters.value = starters;
 
       print('Found ${starters.length} existing starters');
 
-      // If no starters exist, initialize default ones
       if (starters.isEmpty) {
         print('No starters found, creating default ones...');
         await _authRepository.initializeDefaultConversationStarters(clinicId);
 
-        // Wait a moment for the database to process
         await Future.delayed(const Duration(milliseconds: 500));
 
-        // Reload starters
         final newStarters =
             await _authRepository.getClinicConversationStarters(clinicId);
         conversationStarters.value = newStarters;
@@ -304,6 +272,7 @@ class AdminMessagingController extends GetxController {
       final clinicConversations =
           await _authRepository.getClinicConversations(clinicId);
       conversations.value = clinicConversations;
+      print('Loaded ${clinicConversations.length} clinic conversations');
     } catch (e) {
       Get.snackbar('Error', 'Failed to load conversations: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -312,13 +281,14 @@ class AdminMessagingController extends GetxController {
     }
   }
 
-  Future<void> openConversation(Conversation conversation) async {
+  Future<void> openConversation(
+      Conversation conversation, String receiverId, String receiverType) async {
     try {
       isLoadingConversation.value = true;
 
       currentConversation.value = conversation;
-      currentReceiverId.value = conversation.userId;
-      currentReceiverType.value = 'user';
+      currentReceiverId.value = receiverId;
+      currentReceiverType.value = receiverType;
 
       // Load messages
       await loadConversationMessages(conversation.documentId!);
@@ -326,11 +296,11 @@ class AdminMessagingController extends GetxController {
       // Subscribe to real-time messages
       subscribeToMessages(conversation.documentId!);
 
-      // Mark messages as read
-      await markConversationAsRead();
+      // Mark messages as read ONLY when admin actually opens the conversation
+      await markConversationAsRead(conversation.documentId!);
 
       // Load user status
-      await loadUserStatus(conversation.userId);
+      await loadUserStatus(receiverId);
     } catch (e) {
       Get.snackbar('Error', 'Failed to open conversation: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -347,20 +317,28 @@ class AdminMessagingController extends GetxController {
           await _authRepository.getConversationMessages(conversationId);
       currentMessages.value = messages;
 
-      // Scroll to bottom after loading messages
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (scrollController.hasClients) {
-          scrollController.animateTo(
-            scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      // With reverse ListView, newest messages automatically appear at bottom
+      // No need to scroll since reverse ListView starts at "top" (which is actually bottom)
     } catch (e) {
       Get.snackbar('Error', 'Failed to load messages: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     }
+  }
+
+  void _scrollToBottom() {
+    // With reverse ListView, scrolling to 0 position shows newest messages
+    if (scrollController.hasClients) {
+      scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _scrollToBottomWithRetry([int attempts = 0]) {
+    // Not needed with reverse ListView, but keeping for compatibility
+    _scrollToBottom();
   }
 
   Future<void> sendMessage({String? text, String? attachmentUrl}) async {
@@ -375,35 +353,35 @@ class AdminMessagingController extends GetxController {
       // Clear input immediately for better UX
       if (text == null) messageController.clear();
 
-      // Send message to server (DON'T add to UI immediately - wait for real-time)
+      // Send message as admin
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
-        senderType: 'user', // Change to 'admin' for AdminMessagingController
+        senderType: 'admin',
         receiverId: currentReceiverId.value,
         messageText: messageText,
         messageType: attachmentUrl != null ? 'image' : 'text',
         attachmentUrl: attachmentUrl,
       );
 
-      // Update conversation in local list
+      // Update conversation in local list - admin sent message so their unread count stays 0
+      // The user's unread count will be incremented by the server
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.timestamp,
+        clinicUnreadCount:
+            0, // Admin's unread count stays 0 since they sent the message
       );
       currentConversation.value = updatedConversation;
 
-      // Update in conversations list
+      // Update in conversations list and move to top
       final index = conversations
           .indexWhere((c) => c.documentId == updatedConversation.documentId);
       if (index != -1) {
-        conversations[index] = updatedConversation;
         conversations.removeAt(index);
         conversations.insert(0, updatedConversation);
       }
-
-      // Message will appear in UI when real-time subscription receives it
     } catch (e) {
       Get.snackbar('Error', 'Failed to send message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -412,24 +390,30 @@ class AdminMessagingController extends GetxController {
     }
   }
 
-  Future<void> markConversationAsRead() async {
-    if (currentConversation.value == null) return;
+// Helper method to check if conversation has unread messages for current admin
+  bool hasUnreadMessages(Conversation conversation) {
+    return conversation.clinicUnreadCount > 0;
+  }
 
+  Future<void> markConversationAsRead(String conversationId) async {
     try {
+      // Mark messages as read in database
       await _authRepository.markMessagesAsRead(
-        currentConversation.value!.documentId!,
-        _userSession.userId, // Admin ID
-      );
+          conversationId, _userSession.userId);
 
-      // Update local conversation
-      if (currentConversation.value!.unreadCount > 0) {
+      // Update local conversation unread count
+      if (currentConversation.value != null &&
+          currentConversation.value!.clinicUnreadCount > 0) {
+        // Only reset the CLINIC's unread count, keep user unread count
         final updatedConversation =
-            currentConversation.value!.copyWith(unreadCount: 0);
+            currentConversation.value!.copyWith(clinicUnreadCount: 0
+                // Don't modify userUnreadCount
+                );
         currentConversation.value = updatedConversation;
 
-        // Update in list
-        final index = conversations
-            .indexWhere((c) => c.documentId == updatedConversation.documentId);
+        // Update in conversations list
+        final index =
+            conversations.indexWhere((c) => c.documentId == conversationId);
         if (index != -1) {
           conversations[index] = updatedConversation;
         }
@@ -448,7 +432,6 @@ class AdminMessagingController extends GetxController {
           await _authRepository.getClinicConversationStarters(clinicId);
       conversationStarters.value = starters;
 
-      // If no starters exist, initialize default ones
       if (starters.isEmpty) {
         await _authRepository.initializeDefaultConversationStarters(clinicId);
         final newStarters =
@@ -563,10 +546,74 @@ class AdminMessagingController extends GetxController {
 
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
-  void subscribeToClinicConversations(String clinicId) {
+  void subscribeToClinicConversationUpdates(String clinicId) {
     _conversationSubscription?.cancel();
-    // Note: You'll need to implement clinic-specific conversation subscription
-    // For now, we'll reload conversations periodically or on specific events
+
+    // Subscribe to conversation updates for this clinic
+    _conversationSubscription = _authRepository
+        .subscribeToConversations(
+            clinicId) // This should be modified to handle clinic conversations
+        .listen((realtimeMessage) {
+      print('Real-time clinic conversation event: ${realtimeMessage.events}');
+
+      try {
+        final conversationData = realtimeMessage.payload;
+        final updatedConversation = Conversation.fromMap(conversationData);
+        final conversationWithId =
+            updatedConversation.copyWith(documentId: conversationData['\$id']);
+
+        // Only process conversations for this clinic
+        if (conversationWithId.clinicId == clinicId) {
+          if (realtimeMessage.events
+              .contains('databases.*.collections.*.documents.*.update')) {
+            _handleConversationUpdate(conversationWithId);
+          } else if (realtimeMessage.events
+              .contains('databases.*.collections.*.documents.*.create')) {
+            _handleNewConversation(conversationWithId);
+          }
+        }
+      } catch (e) {
+        print('Error processing clinic conversation update: $e');
+      }
+    });
+  }
+
+  void _handleConversationUpdate(Conversation updatedConversation) {
+    final index = conversations
+        .indexWhere((c) => c.documentId == updatedConversation.documentId);
+
+    if (index != -1) {
+      // Check if this is the current conversation the admin is viewing
+      final isCurrentConversation = currentConversation.value?.documentId ==
+          updatedConversation.documentId;
+
+      if (isCurrentConversation) {
+        // If admin is currently viewing this conversation, reset THEIR unread count to 0
+        // but keep the user's unread count as is
+        final resetClinicUnread =
+            updatedConversation.copyWith(clinicUnreadCount: 0);
+        conversations[index] = resetClinicUnread;
+        currentConversation.value = resetClinicUnread;
+      } else {
+        // If admin is not viewing this conversation, use the actual unread counts from server
+        conversations[index] = updatedConversation;
+      }
+
+      // Move updated conversation to top if it has new messages for the clinic and it's not already at the top
+      if (updatedConversation.clinicUnreadCount > 0 && index != 0) {
+        final conv = conversations.removeAt(index);
+        conversations.insert(0, conv);
+      }
+    }
+  }
+
+  void _handleNewConversation(Conversation newConversation) {
+    // Check if conversation already exists
+    final exists =
+        conversations.any((c) => c.documentId == newConversation.documentId);
+    if (!exists) {
+      conversations.insert(0, newConversation);
+    }
   }
 
   void subscribeToMessages(String conversationId) {
@@ -582,22 +629,32 @@ class AdminMessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
-          // Simple duplicate check - just by document ID
-          final existingIndex = currentMessages
-              .indexWhere((m) => m.documentId == messageWithId.documentId);
+          // More robust duplicate check
+          final existingIndex = currentMessages.indexWhere((m) =>
+              m.documentId == messageWithId.documentId ||
+              (m.messageText == messageWithId.messageText &&
+                  m.senderId == messageWithId.senderId &&
+                  m.timestamp
+                          .difference(messageWithId.timestamp)
+                          .abs()
+                          .inSeconds <
+                      2));
+
           if (existingIndex == -1) {
             currentMessages.add(messageWithId);
 
-            // Scroll to bottom
+            // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (scrollController.hasClients) {
-                scrollController.animateTo(
-                  scrollController.position.maxScrollExtent,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              }
+              _scrollToBottom();
             });
+
+            // If this is a message TO the admin and they're viewing the conversation,
+            // mark it as read immediately (but don't mark their own messages as read)
+            if (messageWithId.receiverId == _userSession.userId &&
+                messageWithId.senderId != _userSession.userId &&
+                currentConversation.value?.documentId == conversationId) {
+              markConversationAsRead(conversationId);
+            }
           }
         } catch (e) {
           print('Error processing real-time message: $e');
@@ -617,8 +674,10 @@ class AdminMessagingController extends GetxController {
   }
 
   int getTotalUnreadCount() {
-    return conversations.fold(
-        0, (total, conversation) => total + conversation.unreadCount);
+    return conversations.fold(0, (total, conversation) {
+      // For admin/clinic, only count their unread messages (clinicUnreadCount)
+      return total + conversation.clinicUnreadCount;
+    });
   }
 
   List<Conversation> get filteredConversations {
@@ -627,7 +686,6 @@ class AdminMessagingController extends GetxController {
     }
 
     // You can implement search logic here based on user names or message content
-    // For now, return all conversations
     return conversations;
   }
 }
