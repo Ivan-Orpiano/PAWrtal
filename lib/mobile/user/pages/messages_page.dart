@@ -16,10 +16,11 @@ class Messages extends StatefulWidget {
 }
 
 class _MessagesState extends State<Messages> with WidgetsBindingObserver {
-  final MessagingController _messagingController = Get.find<MessagingController>();
+  final MessagingController _messagingController =
+      Get.find<MessagingController>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final TextEditingController _searchController = TextEditingController();
-  
+
   final Map<String, dynamic> _clinicCache = {}; // Cache clinic data
   final Map<String, dynamic> _userCache = {}; // Cache user data
 
@@ -27,7 +28,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Load conversations and set up real-time updates
     _messagingController.loadUserConversations();
     _setupRealtimeUpdates();
@@ -43,7 +44,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // Refresh conversations when app comes to foreground
     if (state == AppLifecycleState.resumed) {
       _messagingController.loadUserConversations();
@@ -53,7 +54,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   void _setupRealtimeUpdates() {
     // Subscribe to conversation updates to get real-time message notifications
     _messagingController.subscribeToConversationUpdates();
-    
+
     // Periodically refresh conversations (fallback for real-time)
     _startPeriodicRefresh();
   }
@@ -68,25 +69,27 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
     });
   }
 
-  Future<Map<String, dynamic>> _getConversationData(Conversation conversation) async {
+  Future<Map<String, dynamic>> _getConversationData(
+      Conversation conversation) async {
     String cacheKey = conversation.clinicId;
-    
+
     if (_clinicCache.containsKey(cacheKey)) {
       return _clinicCache[cacheKey];
     }
 
     try {
-      final clinicDoc = await _authRepository.getClinicById(conversation.clinicId);
+      final clinicDoc =
+          await _authRepository.getClinicById(conversation.clinicId);
       if (clinicDoc != null) {
         final clinic = Clinic.fromMap(clinicDoc.data);
         clinic.documentId = clinicDoc.$id;
-        
+
         final conversationData = {
           'name': clinic.clinicName,
           'image': clinic.image,
           'isOnline': false, // Will be updated with real status
         };
-        
+
         _clinicCache[cacheKey] = conversationData;
         return conversationData;
       }
@@ -105,9 +108,12 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
     return FutureBuilder<Map<String, dynamic>>(
       future: _getConversationData(conversation),
       builder: (context, snapshot) {
-        final data = snapshot.data ?? {'name': 'Loading...', 'image': '', 'isOnline': false};
-        final hasUnreadMessages = conversation.unreadCount > 0;
-        
+        final data = snapshot.data ??
+            {'name': 'Loading...', 'image': '', 'isOnline': false};
+
+        // Use userUnreadCount for user side
+        final hasUnreadMessages = conversation.userUnreadCount > 0;
+
         return InkWell(
           onTap: () async {
             // Navigate to conversation
@@ -132,7 +138,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: hasUnreadMessages 
+              border: hasUnreadMessages
                   ? Border.all(
                       color: const Color.fromARGB(255, 81, 115, 153),
                       width: 2,
@@ -165,7 +171,8 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                                   height: 50,
                                   width: 50,
                                   decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 81, 115, 153),
+                                    color:
+                                        const Color.fromARGB(255, 81, 115, 153),
                                     borderRadius: BorderRadius.circular(25),
                                   ),
                                   child: Center(
@@ -218,7 +225,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                   ],
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Conversation Details
                 Expanded(
                   child: Column(
@@ -252,11 +259,11 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                               conversation.conversationPreview,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: hasUnreadMessages 
-                                    ? Colors.black87 
+                                color: hasUnreadMessages
+                                    ? Colors.black87
                                     : Colors.grey[600],
-                                fontWeight: hasUnreadMessages 
-                                    ? FontWeight.w600 
+                                fontWeight: hasUnreadMessages
+                                    ? FontWeight.w600
                                     : FontWeight.normal,
                               ),
                               maxLines: 1,
@@ -266,11 +273,19 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                           if (hasUnreadMessages)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
-                              width: 12,
-                              height: 12,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: const BoxDecoration(
                                 color: Color.fromARGB(255, 81, 115, 153),
                                 shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                conversation.userUnreadCount.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                         ],
@@ -312,7 +327,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
               ],
             ),
           ),
-          
+
           // Main Content
           Expanded(
             child: Container(
@@ -350,7 +365,8 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                           hintText: "Search conversations...",
                           border: InputBorder.none,
                           prefixIcon: Icon(Icons.search),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                         ),
                         onChanged: (value) {
                           // Implement search functionality
@@ -358,7 +374,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  
+
                   // Conversations List
                   Expanded(
                     child: Obx(() {
@@ -411,7 +427,8 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                           padding: const EdgeInsets.only(bottom: 20),
                           itemCount: _messagingController.conversations.length,
                           itemBuilder: (context, index) {
-                            final conversation = _messagingController.conversations[index];
+                            final conversation =
+                                _messagingController.conversations[index];
                             return _buildConversationTile(conversation);
                           },
                         ),

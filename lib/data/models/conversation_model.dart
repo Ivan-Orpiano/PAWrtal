@@ -5,7 +5,9 @@ class Conversation {
   final String? lastMessageId;
   final String? lastMessageText;
   final DateTime? lastMessageTime;
-  final int unreadCount;
+  final int unreadCount; // Keep for backward compatibility
+  final int userUnreadCount; // New field for user's unread count
+  final int clinicUnreadCount; // New field for clinic's unread count
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -18,6 +20,8 @@ class Conversation {
     this.lastMessageText,
     this.lastMessageTime,
     this.unreadCount = 0,
+    this.userUnreadCount = 0,
+    this.clinicUnreadCount = 0,
     this.isActive = true,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -35,6 +39,8 @@ class Conversation {
           ? DateTime.parse(map['lastMessageTime']) 
           : null,
       unreadCount: map['unreadCount'] ?? 0,
+      userUnreadCount: map['userUnreadCount'] ?? 0,
+      clinicUnreadCount: map['clinicUnreadCount'] ?? 0,
       isActive: map['isActive'] ?? true,
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
@@ -49,6 +55,8 @@ class Conversation {
       'lastMessageText': lastMessageText,
       'lastMessageTime': lastMessageTime?.toIso8601String(),
       'unreadCount': unreadCount,
+      'userUnreadCount': userUnreadCount,
+      'clinicUnreadCount': clinicUnreadCount,
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -63,6 +71,8 @@ class Conversation {
     String? lastMessageText,
     DateTime? lastMessageTime,
     int? unreadCount,
+    int? userUnreadCount,
+    int? clinicUnreadCount,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -75,6 +85,8 @@ class Conversation {
       lastMessageText: lastMessageText ?? this.lastMessageText,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
+      userUnreadCount: userUnreadCount ?? this.userUnreadCount,
+      clinicUnreadCount: clinicUnreadCount ?? this.clinicUnreadCount,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -107,5 +119,19 @@ class Conversation {
     } else {
       return 'today';
     }
+  }
+
+  // Get unread count for specific user type
+  int getUnreadCountForUser(String currentUserId, String currentUserType) {
+    if (currentUserType == 'admin' || currentUserId == clinicId) {
+      return clinicUnreadCount;
+    } else {
+      return userUnreadCount;
+    }
+  }
+
+  // Check if conversation has unread messages for specific user
+  bool hasUnreadMessagesForUser(String currentUserId, String currentUserType) {
+    return getUnreadCountForUser(currentUserId, currentUserType) > 0;
   }
 }

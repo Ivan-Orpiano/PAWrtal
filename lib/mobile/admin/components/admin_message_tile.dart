@@ -15,6 +15,9 @@ class AdminMessageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use clinicUnreadCount for admin side
+    final hasUnreadMessages = conversation.clinicUnreadCount > 0;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -27,6 +30,12 @@ class AdminMessageTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              border: hasUnreadMessages 
+                  ? Border.all(
+                      color: const Color.fromARGB(255, 81, 115, 153),
+                      width: 2,
+                    )
+                  : null,
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
@@ -133,10 +142,10 @@ class AdminMessageTile extends StatelessWidget {
                               conversation.conversationPreview,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: conversation.unreadCount > 0 
+                                color: hasUnreadMessages 
                                     ? Colors.black87 
                                     : Colors.grey[600],
-                                fontWeight: conversation.unreadCount > 0 
+                                fontWeight: hasUnreadMessages 
                                     ? FontWeight.w600 
                                     : FontWeight.normal,
                               ),
@@ -146,7 +155,7 @@ class AdminMessageTile extends StatelessWidget {
                           ),
                           
                           // Unread count badge
-                          if (conversation.unreadCount > 0) ...[
+                          if (hasUnreadMessages) ...[
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -158,9 +167,9 @@ class AdminMessageTile extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                conversation.unreadCount > 99 
+                                conversation.clinicUnreadCount > 99 
                                     ? '99+' 
-                                    : conversation.unreadCount.toString(),
+                                    : conversation.clinicUnreadCount.toString(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

@@ -89,7 +89,7 @@ class MessagingController extends GetxController {
       isLoading.value = true;
       final userConversations =
           await _authRepository.getUserConversations(_userSession.userId);
-      
+
       // Only update conversations list, don't mark anything as read
       conversations.value = userConversations;
       print('Loaded ${userConversations.length} conversations');
@@ -148,7 +148,8 @@ class MessagingController extends GetxController {
           _userSession.userId, clinicId);
 
       if (conversation != null) {
-        print('SUCCESS: Conversation created/found: ${conversation.documentId}');
+        print(
+            'SUCCESS: Conversation created/found: ${conversation.documentId}');
         currentConversation.value = conversation;
         currentReceiverId.value = clinicId;
         currentReceiverType.value = 'clinic';
@@ -166,7 +167,8 @@ class MessagingController extends GetxController {
         print('SUCCESS: Conversation setup complete');
         return conversation;
       } else {
-        print('ERROR: Failed to create/get conversation - conversation is null');
+        print(
+            'ERROR: Failed to create/get conversation - conversation is null');
         Get.snackbar(
           'Error',
           'Failed to create conversation. Please check your internet connection and try again.',
@@ -211,7 +213,6 @@ class MessagingController extends GetxController {
 
       // Mark as read ONLY when user actually opens the conversation
       await markConversationAsRead(conversation.documentId!);
-      
     } catch (e) {
       Get.snackbar('Error', 'Failed to open conversation: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -275,12 +276,14 @@ class MessagingController extends GetxController {
         attachmentUrl: attachmentUrl,
       );
 
-      // Update conversation in local list and move to top (only for sent messages)
+      // Update conversation in local list - user sent message so their unread count stays 0
+      // The clinic's unread count will be incremented by the server
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.timestamp,
-        unreadCount: 0, // Reset unread count for sender
+        userUnreadCount:
+            0, // User's unread count stays 0 since they sent the message
       );
       currentConversation.value = updatedConversation;
 
@@ -289,16 +292,19 @@ class MessagingController extends GetxController {
           .indexWhere((c) => c.documentId == updatedConversation.documentId);
       if (index != -1) {
         conversations.removeAt(index);
-        conversations.insert(0, updatedConversation); // Move to top for sent messages
+        conversations.insert(0, updatedConversation);
       }
-
-      // Message will appear in UI when real-time subscription receives it
     } catch (e) {
       Get.snackbar('Error', 'Failed to send message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isSendingMessage.value = false;
     }
+  }
+
+// Helper method to check if conversation has unread messages for current user
+  bool hasUnreadMessages(Conversation conversation) {
+    return conversation.userUnreadCount > 0;
   }
 
   Future<void> sendStarterMessage(ConversationStarter starter) async {
@@ -331,16 +337,22 @@ class MessagingController extends GetxController {
   Future<void> markConversationAsRead(String conversationId) async {
     try {
       // Mark messages as read in database
-      await _authRepository.markMessagesAsRead(conversationId, _userSession.userId);
+      await _authRepository.markMessagesAsRead(
+          conversationId, _userSession.userId);
 
       // Update local conversation unread count
-      if (currentConversation.value != null && 
-          currentConversation.value!.unreadCount > 0) {
-        final updatedConversation = currentConversation.value!.copyWith(unreadCount: 0);
+      if (currentConversation.value != null &&
+          currentConversation.value!.userUnreadCount > 0) {
+        // Only reset the USER's unread count, keep clinic unread count
+        final updatedConversation =
+            currentConversation.value!.copyWith(userUnreadCount: 0
+                // Don't modify clinicUnreadCount
+                );
         currentConversation.value = updatedConversation;
 
         // Update in conversations list
-        final index = conversations.indexWhere((c) => c.documentId == conversationId);
+        final index =
+            conversations.indexWhere((c) => c.documentId == conversationId);
         if (index != -1) {
           conversations[index] = updatedConversation;
         }
@@ -403,14 +415,15 @@ class MessagingController extends GetxController {
       try {
         final conversationData = realtimeMessage.payload;
         final updatedConversation = Conversation.fromMap(conversationData);
-        final conversationWithId = updatedConversation.copyWith(
-          documentId: conversationData['\$id']
-        );
+        final conversationWithId =
+            updatedConversation.copyWith(documentId: conversationData['\$id']);
 
         // Handle different events
-        if (realtimeMessage.events.contains('databases.*.collections.*.documents.*.update')) {
+        if (realtimeMessage.events
+            .contains('databases.*.collections.*.documents.*.update')) {
           _handleConversationUpdate(conversationWithId);
-        } else if (realtimeMessage.events.contains('databases.*.collections.*.documents.*.create')) {
+        } else if (realtimeMessage.events
+            .contains('databases.*.collections.*.documents.*.create')) {
           _handleNewConversation(conversationWithId);
         }
       } catch (e) {
@@ -420,33 +433,28 @@ class MessagingController extends GetxController {
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
-    final index = conversations.indexWhere(
-      (c) => c.documentId == updatedConversation.documentId
-    );
+    final index = conversations
+        .indexWhere((c) => c.documentId == updatedConversation.documentId);
 
     if (index != -1) {
       // Check if this is the current conversation the user is viewing
-      final isCurrentConversation = currentConversation.value?.documentId == updatedConversation.documentId;
-      
+      final isCurrentConversation = currentConversation.value?.documentId ==
+          updatedConversation.documentId;
+
       if (isCurrentConversation) {
-        // If user is currently viewing this conversation, keep unread count as 0
-        // since they can see the messages
-        conversations[index] = updatedConversation.copyWith(unreadCount: 0);
-        // Also update currentConversation
-        currentConversation.value = updatedConversation.copyWith(unreadCount: 0);
+        // If user is currently viewing this conversation, reset THEIR unread count to 0
+        // but keep the clinic's unread count as is
+        final resetUserUnread =
+            updatedConversation.copyWith(userUnreadCount: 0);
+        conversations[index] = resetUserUnread;
+        currentConversation.value = resetUserUnread;
       } else {
-        // If user is not viewing this conversation, use the actual unread count from server
-        // but only if the last message is not from the current user
-        if (updatedConversation.lastMessageTime != null) {
-          // Get the latest message to check who sent it
-          conversations[index] = updatedConversation;
-        } else {
-          conversations[index] = updatedConversation;
-        }
+        // If user is not viewing this conversation, use the actual unread counts from server
+        conversations[index] = updatedConversation;
       }
 
-      // Move updated conversation to top if it has new messages and it's not already at the top
-      if (updatedConversation.lastMessageTime != null && index != 0) {
+      // Move updated conversation to top if it has new messages for the user and it's not already at the top
+      if (updatedConversation.userUnreadCount > 0 && index != 0) {
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
       }
@@ -455,7 +463,8 @@ class MessagingController extends GetxController {
 
   void _handleNewConversation(Conversation newConversation) {
     // Check if conversation already exists
-    final exists = conversations.any((c) => c.documentId == newConversation.documentId);
+    final exists =
+        conversations.any((c) => c.documentId == newConversation.documentId);
     if (!exists) {
       conversations.insert(0, newConversation);
     }
@@ -471,16 +480,20 @@ class MessagingController extends GetxController {
         try {
           final messageData = realtimeMessage.payload;
           final message = Message.fromMap(messageData);
-          final messageWithId = message.copyWith(documentId: messageData['\$id']);
+          final messageWithId =
+              message.copyWith(documentId: messageData['\$id']);
 
           // More robust duplicate check
-          final existingIndex = currentMessages.indexWhere((m) => 
-            m.documentId == messageWithId.documentId ||
-            (m.messageText == messageWithId.messageText && 
-             m.senderId == messageWithId.senderId &&
-             m.timestamp.difference(messageWithId.timestamp).abs().inSeconds < 2)
-          );
-          
+          final existingIndex = currentMessages.indexWhere((m) =>
+              m.documentId == messageWithId.documentId ||
+              (m.messageText == messageWithId.messageText &&
+                  m.senderId == messageWithId.senderId &&
+                  m.timestamp
+                          .difference(messageWithId.timestamp)
+                          .abs()
+                          .inSeconds <
+                      2));
+
           if (existingIndex == -1) {
             currentMessages.add(messageWithId);
 
@@ -491,7 +504,7 @@ class MessagingController extends GetxController {
 
             // If this is a message TO the current user and they're viewing the conversation,
             // mark it as read immediately (but don't mark their own messages as read)
-            if (messageWithId.receiverId == _userSession.userId && 
+            if (messageWithId.receiverId == _userSession.userId &&
                 messageWithId.senderId != _userSession.userId &&
                 currentConversation.value?.documentId == conversationId) {
               markConversationAsRead(conversationId);
@@ -537,7 +550,9 @@ class MessagingController extends GetxController {
   }
 
   int getTotalUnreadCount() {
-    return conversations.fold(
-        0, (total, conversation) => total + conversation.unreadCount);
+    return conversations.fold(0, (total, conversation) {
+      // For user, only count their unread messages (userUnreadCount)
+      return total + conversation.userUnreadCount;
+    });
   }
 }

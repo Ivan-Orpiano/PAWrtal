@@ -115,11 +115,12 @@ class _MessagesPageState extends State<MessagesPage>
               'isOnline': false,
             };
 
-        final hasUnreadMessages = conversation.unreadCount > 0;
+        // Use clinicUnreadCount for admin side
+        final hasUnreadMessages = conversation.clinicUnreadCount > 0;
 
         return InkWell(
           onTap: () async {
-            // Navigate to conversation page instead of dialog
+            // Navigate to conversation page
             await Navigator.push(
               context,
               MaterialPageRoute(
@@ -141,7 +142,7 @@ class _MessagesPageState extends State<MessagesPage>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: hasUnreadMessages 
+              border: hasUnreadMessages
                   ? Border.all(
                       color: const Color.fromARGB(255, 81, 115, 153),
                       width: 2,
@@ -158,7 +159,7 @@ class _MessagesPageState extends State<MessagesPage>
             ),
             child: Row(
               children: [
-                // User Avatar with Status - Match user UI
+                // User Avatar with Status
                 Stack(
                   children: [
                     CircleAvatar(
@@ -177,7 +178,8 @@ class _MessagesPageState extends State<MessagesPage>
                     ),
                     // Online status indicator
                     Obx(() {
-                      final status = _messagingController.getUserStatus(conversation.userId);
+                      final status = _messagingController
+                          .getUserStatus(conversation.userId);
                       if (status?.isOnline == true) {
                         return Positioned(
                           bottom: 0,
@@ -199,7 +201,7 @@ class _MessagesPageState extends State<MessagesPage>
                 ),
                 const SizedBox(width: 12),
 
-                // Conversation Details - Match user UI
+                // Conversation Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,11 +253,21 @@ class _MessagesPageState extends State<MessagesPage>
                           if (hasUnreadMessages)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
-                              width: 12,
-                              height: 12,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: const BoxDecoration(
                                 color: Color.fromARGB(255, 81, 115, 153),
                                 shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                conversation.clinicUnreadCount > 99
+                                    ? '99+'
+                                    : conversation.clinicUnreadCount.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                         ],
@@ -519,7 +531,8 @@ class _ConversationStartersDialog extends StatelessWidget {
                                       ))
                                   .toList(),
                               onChanged: (value) {
-                                messagingController.selectedCategory.value = value!;
+                                messagingController.selectedCategory.value =
+                                    value!;
                               },
                             )),
                       ),
@@ -529,7 +542,8 @@ class _ConversationStartersDialog extends StatelessWidget {
                           messagingController.addConversationStarter();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                          backgroundColor:
+                              const Color.fromARGB(255, 81, 115, 153),
                         ),
                         child: const Text(
                           'Add',
@@ -573,7 +587,8 @@ class _ConversationStartersDialog extends StatelessWidget {
                 return ListView.builder(
                   itemCount: messagingController.conversationStarters.length,
                   itemBuilder: (context, index) {
-                    final starter = messagingController.conversationStarters[index];
+                    final starter =
+                        messagingController.conversationStarters[index];
                     return Card(
                       child: ListTile(
                         title: Text(starter.triggerText),
@@ -588,9 +603,11 @@ class _ConversationStartersDialog extends StatelessWidget {
                             Switch(
                               value: starter.isActive,
                               onChanged: (value) {
-                                messagingController.toggleStarterStatus(starter);
+                                messagingController
+                                    .toggleStarterStatus(starter);
                               },
-                              activeColor: const Color.fromARGB(255, 81, 115, 153),
+                              activeColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),

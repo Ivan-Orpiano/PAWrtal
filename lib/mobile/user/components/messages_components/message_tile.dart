@@ -24,7 +24,8 @@ class MyMessageTile extends StatelessWidget {
           'isOnline': false,
         };
 
-        final hasUnreadMessages = conversation.unreadCount > 0;
+        // Use userUnreadCount for user side
+        final hasUnreadMessages = conversation.userUnreadCount > 0;
 
         return InkWell(
           onTap: () {
@@ -151,11 +152,18 @@ class MyMessageTile extends StatelessWidget {
                           if (hasUnreadMessages) ...[
                             const SizedBox(width: 8),
                             Container(
-                              width: 12,
-                              height: 12,
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: const BoxDecoration(
                                 color: Color.fromARGB(255, 81, 115, 153),
                                 shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                conversation.userUnreadCount.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],

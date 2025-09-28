@@ -664,6 +664,8 @@ class AppWriteProvider {
         'userId': userId,
         'clinicId': clinicId,
         'unreadCount': 0,
+        'userUnreadCount': 0, // Initialize both unread counts
+        'clinicUnreadCount': 0,
         'isActive': true,
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
@@ -723,11 +725,9 @@ class AppWriteProvider {
       data: data,
     );
 
-    // After creating message, update conversation unread count for the RECEIVER only
+    // After creating message, update conversation unread counts properly
     final conversationId = data['conversationId'];
-    final senderId = data['senderId'];
     final senderType = data['senderType'];
-    final receiverId = data['receiverId'];
 
     // Get current conversation
     try {
@@ -737,7 +737,7 @@ class AppWriteProvider {
         documentId: conversationId,
       );
 
-      // Determine which unread count to increment based on receiver type
+      // Get current unread counts
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
       final currentClinicUnreadCount =
           conversation.data['clinicUnreadCount'] ?? 0;
@@ -749,18 +749,20 @@ class AppWriteProvider {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      // Increment unread count for the receiver only
+      // Increment unread count for the RECEIVER only
       if (senderType == 'user') {
-        // User sent message, increment clinic unread count
+        // User sent message, increment clinic's unread count, keep user's count same
         updateData['clinicUnreadCount'] = currentClinicUnreadCount + 1;
-        updateData['userUnreadCount'] =
-            currentUserUnreadCount; // Keep user count same
+        updateData['userUnreadCount'] = currentUserUnreadCount;
       } else {
-        // Admin/clinic sent message, increment user unread count
+        // Admin/clinic sent message, increment user's unread count, keep clinic's count same
         updateData['userUnreadCount'] = currentUserUnreadCount + 1;
-        updateData['clinicUnreadCount'] =
-            currentClinicUnreadCount; // Keep clinic count same
+        updateData['clinicUnreadCount'] = currentClinicUnreadCount;
       }
+
+      // Update total unread count for backward compatibility
+      updateData['unreadCount'] =
+          updateData['userUnreadCount'] + updateData['clinicUnreadCount'];
 
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
@@ -831,15 +833,43 @@ class AppWriteProvider {
         );
       }
 
-      // Reset unread count to 0 for this conversation
+      // Get current conversation to determine user type
+      final conversation = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+      );
+
+      final conversationUserId = conversation.data['userId'];
+      final conversationClinicId = conversation.data['clinicId'];
+      final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
+      final currentClinicUnreadCount =
+          conversation.data['clinicUnreadCount'] ?? 0;
+
+      Map<String, dynamic> updateData = {};
+
+      // Determine which unread count to reset based on who is reading
+      if (userId == conversationUserId) {
+        // User is reading, reset their unread count
+        updateData['userUnreadCount'] = 0;
+        updateData['clinicUnreadCount'] =
+            currentClinicUnreadCount; // Keep clinic count
+      } else {
+        // Admin/clinic is reading, reset their unread count
+        updateData['clinicUnreadCount'] = 0;
+        updateData['userUnreadCount'] =
+            currentUserUnreadCount; // Keep user count
+      }
+
+      // Update total unread count for backward compatibility
+      updateData['unreadCount'] =
+          updateData['userUnreadCount'] + updateData['clinicUnreadCount'];
+
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.conversationsCollectionID,
         documentId: conversationId,
-        data: {
-          'unreadCount': 0,
-          // DON'T update updatedAt here to avoid reordering
-        },
+        data: updateData,
       );
 
       print(
