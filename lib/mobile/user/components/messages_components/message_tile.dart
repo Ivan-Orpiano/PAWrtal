@@ -24,6 +24,9 @@ class MyMessageTile extends StatelessWidget {
           'isOnline': false,
         };
 
+        // Use userUnreadCount for user side
+        final hasUnreadMessages = conversation.userUnreadCount > 0;
+
         return InkWell(
           onTap: () {
             Navigator.push(
@@ -45,6 +48,12 @@ class MyMessageTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              border: hasUnreadMessages 
+                  ? Border.all(
+                      color: const Color.fromARGB(255, 81, 115, 153),
+                      width: 2,
+                    )
+                  : null,
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
@@ -129,10 +138,10 @@ class MyMessageTile extends StatelessWidget {
                               conversation.conversationPreview,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: conversation.unreadCount > 0 
+                                color: hasUnreadMessages 
                                     ? Colors.black87 
                                     : Colors.grey[600],
-                                fontWeight: conversation.unreadCount > 0 
+                                fontWeight: hasUnreadMessages 
                                     ? FontWeight.w600 
                                     : FontWeight.normal,
                               ),
@@ -140,24 +149,19 @@ class MyMessageTile extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (conversation.unreadCount > 0) ...[
+                          if (hasUnreadMessages) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6, 
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 81, 115, 153),
-                                borderRadius: BorderRadius.circular(10),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: const BoxDecoration(
+                                color: Color.fromARGB(255, 81, 115, 153),
+                                shape: BoxShape.circle,
                               ),
                               child: Text(
-                                conversation.unreadCount > 99 
-                                    ? '99+' 
-                                    : conversation.unreadCount.toString(),
+                                conversation.userUnreadCount.toString(),
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -207,7 +211,7 @@ class MyMessageTile extends StatelessWidget {
         return {
           'name': clinic.clinicName,
           'image': clinic.image,
-          'isOnline': false, // Will be updated with real status later
+          'isOnline': false,
         };
       }
     } catch (e) {

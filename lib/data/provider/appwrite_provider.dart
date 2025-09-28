@@ -664,6 +664,8 @@ class AppWriteProvider {
         'userId': userId,
         'clinicId': clinicId,
         'unreadCount': 0,
+        'userUnreadCount': 0, // Initialize both unread counts
+        'clinicUnreadCount': 0,
         'isActive': true,
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
@@ -716,12 +718,63 @@ class AppWriteProvider {
 // ============= MESSAGE METHODS =============
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
-    return await databases!.createDocument(
+    final messageDoc = await databases!.createDocument(
       databaseId: AppwriteConstants.dbID,
       collectionId: AppwriteConstants.messagesCollectionID,
       documentId: ID.unique(),
       data: data,
     );
+
+    // After creating message, update conversation unread counts properly
+    final conversationId = data['conversationId'];
+    final senderType = data['senderType'];
+
+    // Get current conversation
+    try {
+      final conversation = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+      );
+
+      // Get current unread counts
+      final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
+      final currentClinicUnreadCount =
+          conversation.data['clinicUnreadCount'] ?? 0;
+
+      Map<String, dynamic> updateData = {
+        'lastMessageId': messageDoc.$id,
+        'lastMessageText': data['messageText'],
+        'lastMessageTime': data['timestamp'],
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      // Increment unread count for the RECEIVER only
+      if (senderType == 'user') {
+        // User sent message, increment clinic's unread count, keep user's count same
+        updateData['clinicUnreadCount'] = currentClinicUnreadCount + 1;
+        updateData['userUnreadCount'] = currentUserUnreadCount;
+      } else {
+        // Admin/clinic sent message, increment user's unread count, keep clinic's count same
+        updateData['userUnreadCount'] = currentUserUnreadCount + 1;
+        updateData['clinicUnreadCount'] = currentClinicUnreadCount;
+      }
+
+      // Update total unread count for backward compatibility
+      updateData['unreadCount'] =
+          updateData['userUnreadCount'] + updateData['clinicUnreadCount'];
+
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+        data: updateData,
+      );
+    } catch (e) {
+      print('Error updating conversation after message: $e');
+    }
+
+    return messageDoc;
   }
 
   Future<List<Document>> getConversationMessages(String conversationId,
@@ -757,26 +810,73 @@ class AppWriteProvider {
     );
   }
 
-  Future<void> markMessagesAsRead(
-      String conversationId, String receiverId) async {
-    // Get unread messages for this receiver in this conversation
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.messagesCollectionID,
-      queries: [
-        Query.equal("conversationId", conversationId),
-        Query.equal("receiverId", receiverId),
-        Query.equal("isRead", false),
-      ],
-    );
+  Future<void> markMessagesAsRead(String conversationId, String userId) async {
+    try {
+      // Get unread messages for this user in this conversation
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        queries: [
+          Query.equal("conversationId", conversationId),
+          Query.equal("receiverId", userId), // Only messages TO this user
+          Query.equal("isRead", false),
+        ],
+      );
 
-    // Mark each message as read
-    for (var doc in result.documents) {
-      await updateMessage(doc.$id, {'isRead': true});
+      // Mark each message as read
+      for (var doc in result.documents) {
+        await databases!.updateDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.messagesCollectionID,
+          documentId: doc.$id,
+          data: {'isRead': true},
+        );
+      }
+
+      // Get current conversation to determine user type
+      final conversation = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+      );
+
+      final conversationUserId = conversation.data['userId'];
+      final conversationClinicId = conversation.data['clinicId'];
+      final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
+      final currentClinicUnreadCount =
+          conversation.data['clinicUnreadCount'] ?? 0;
+
+      Map<String, dynamic> updateData = {};
+
+      // Determine which unread count to reset based on who is reading
+      if (userId == conversationUserId) {
+        // User is reading, reset their unread count
+        updateData['userUnreadCount'] = 0;
+        updateData['clinicUnreadCount'] =
+            currentClinicUnreadCount; // Keep clinic count
+      } else {
+        // Admin/clinic is reading, reset their unread count
+        updateData['clinicUnreadCount'] = 0;
+        updateData['userUnreadCount'] =
+            currentUserUnreadCount; // Keep user count
+      }
+
+      // Update total unread count for backward compatibility
+      updateData['unreadCount'] =
+          updateData['userUnreadCount'] + updateData['clinicUnreadCount'];
+
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+        data: updateData,
+      );
+
+      print(
+          'Marked ${result.documents.length} messages as read for user $userId');
+    } catch (e) {
+      print('Error marking messages as read: $e');
     }
-
-    // Update conversation unread count
-    await updateConversation(conversationId, {'unreadCount': 0});
   }
 
 // ============= CONVERSATION STARTERS METHODS =============
