@@ -28,18 +28,21 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
           height: isTablet ? 45 : 35,
         ),
         actions: [
-          IconButton(
-            onPressed: () {
-              _showProfileDrawer(context);
-            },
-            icon: Icon(
-              Icons.menu,
-              color: const Color.fromRGBO(81, 115, 153, 0.8),
-              size: isTablet ? 30 : 40,
+          Builder(
+            builder: (context) => IconButton(
+              onPressed: () {
+                Scaffold.of(context).openEndDrawer();
+              },
+              icon: Icon(
+                Icons.menu,
+                color: const Color.fromRGBO(81, 115, 153, 0.8),
+                size: isTablet ? 30 : 40,
+              ),
             ),
           ),
         ],
       ),
+      endDrawer: _buildProfileDrawer(context, screenWidth),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: SingleChildScrollView(
         child: Padding(
@@ -87,198 +90,137 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
-  void _showProfileDrawer(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+  Widget _buildProfileDrawer(BuildContext context, double screenWidth) {
     final isTablet = screenWidth > 600;
+    double drawerWidth = isTablet ? 350 : screenWidth * 0.75;
+    double drawerHeight = MediaQuery.of(context).size.height * 0.50;
 
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black.withOpacity(0.5),
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, animation1, animation2) {
-        return Container();
-      },
-      transitionBuilder: (context, animation1, animation2, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1.0, 0.0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation1,
-            curve: Curves.easeInOut,
-          )),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: isTablet ? 350 : screenWidth * 0.75,
-                height: screenHeight,
+    return Align(
+      alignment: Alignment.topRight,
+      child: SizedBox(
+        width: drawerWidth,
+        height: drawerHeight,
+        child: Drawer(
+          backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(isTablet ? 24 : 20,
+                    isTablet ? 70 : 60, isTablet ? 24 : 20, isTablet ? 35 : 30),
                 decoration: const BoxDecoration(
-                  color: Color.fromRGBO(249, 253, 255, 1),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 10,
-                      offset: Offset(-2, 0),
+                  color: Color.fromARGB(255, 248, 253, 255),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Color.fromARGB(50, 81, 115, 153),
+                      width: 1,
                     ),
-                  ],
+                  ),
                 ),
                 child: Column(
                   children: [
-                    // Header with close button
-                    Container(
-                      padding: EdgeInsets.all(isTablet ? 20 : 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Profile Menu',
-                            style: TextStyle(
-                              fontSize: isTablet ? 20 : 18,
-                              fontWeight: FontWeight.bold,
-                              color: const Color.fromARGB(255, 81, 115, 153),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: Icon(
-                              Icons.close,
-                              size: isTablet ? 28 : 24,
-                              color: const Color.fromARGB(255, 81, 115, 153),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Divider
-                    Divider(
-                      color: Colors.grey[300],
-                      thickness: 1,
-                      height: 1,
-                    ),
-
-                    SizedBox(height: isTablet ? 30 : 24),
-
-                    // Profile section
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: isTablet ? 30 : 20),
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                            radius: isTablet ? 50 : 40,
-                            child: Text(
-                              controller.userName.isNotEmpty
-                                  ? controller.userName[0].toUpperCase()
-                                  : 'S',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isTablet ? 32 : 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: isTablet ? 20 : 16),
-                          Text(
-                            controller.userName.isNotEmpty
-                                ? controller.userName
-                                : 'Super Admin',
-                            style: TextStyle(
-                              fontSize: isTablet ? 24 : 20,
-                              fontWeight: FontWeight.bold,
-                              color: const Color.fromARGB(255, 81, 115, 153),
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            controller.userEmail.isNotEmpty
-                                ? controller.userEmail
-                                : 'admin@pawrtal.com',
-                            style: TextStyle(
-                              fontSize: isTablet ? 16 : 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: isTablet ? 40 : 30),
-
-                    // Menu items
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: isTablet ? 20 : 16),
-                        child: Column(
-                          children: [
-                            const Spacer(),
-                            Container(
-                              width: double.infinity,
-                              margin:
-                                  EdgeInsets.only(bottom: isTablet ? 30 : 20),
-                              child: Card(
-                                elevation: 2,
-                                color: Colors.red[50],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: Colors.red[300]!,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: ListTile(
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: isTablet ? 20 : 16,
-                                    vertical: isTablet ? 8 : 4,
-                                  ),
-                                  leading: Icon(
-                                    Icons.logout,
-                                    color: Colors.red[600],
-                                    size: isTablet ? 28 : 24,
-                                  ),
-                                  title: Text(
-                                    'Logout',
-                                    style: TextStyle(
-                                      color: Colors.red[600],
-                                      fontSize: isTablet ? 18 : 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  trailing: Icon(
-                                    Icons.arrow_forward_ios,
-                                    color: Colors.red[600],
-                                    size: isTablet ? 20 : 16,
-                                  ),
-                                  onTap: () {
-                                    Navigator.of(context).pop();
-                                    _showLogoutDialog(context);
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
+                    CircleAvatar(
+                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                      radius: isTablet ? 45 : 35,
+                      child: Text(
+                        controller.userName.isNotEmpty
+                            ? controller.userName[0].toUpperCase()
+                            : 'S',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isTablet ? 28 : 22,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
+                    SizedBox(height: isTablet ? 18 : 14),
+                    Text(
+                      controller.userName.isNotEmpty
+                          ? controller.userName
+                          : 'Super Admin',
+                      style: TextStyle(
+                        fontSize: isTablet ? 22 : 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(255, 81, 115, 153),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: isTablet ? 6 : 4),
+                    Text(
+                      controller.userEmail.isNotEmpty
+                          ? controller.userEmail
+                          : 'admin@pawrtal.com',
+                      style: TextStyle(
+                        fontSize: isTablet ? 15 : 13,
+                        color: Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-            ),
+              // Menu items section
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: isTablet ? 25 : 20,
+                    horizontal: isTablet ? 16 : 12,
+                  ),
+                  child: Column(
+                    children: [
+                      const Spacer(),
+                      Container(
+                        width: double.infinity,
+                        margin: EdgeInsets.only(bottom: isTablet ? 25 : 20),
+                        child: Card(
+                          elevation: 2,
+                          color: Colors.red[50],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: Colors.red[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: isTablet ? 20 : 16,
+                              vertical: isTablet ? 8 : 4,
+                            ),
+                            leading: Icon(
+                              Icons.logout,
+                              color: Colors.red[600],
+                              size: isTablet ? 26 : 22,
+                            ),
+                            title: Text(
+                              'Logout',
+                              style: TextStyle(
+                                color: Colors.red[600],
+                                fontSize: isTablet ? 17 : 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.arrow_forward_ios,
+                              color: Colors.red[600],
+                              size: isTablet ? 18 : 16,
+                            ),
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer first
+                              _showLogoutDialog(context);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
