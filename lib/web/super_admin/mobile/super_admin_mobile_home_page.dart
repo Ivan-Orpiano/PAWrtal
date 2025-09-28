@@ -12,7 +12,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenHeight = MediaQuery.of(context).size.height * 0.6;
     final isTablet = screenWidth > 600;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
@@ -35,7 +35,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
             icon: Icon(
               Icons.menu,
               color: const Color.fromRGBO(81, 115, 153, 0.8),
-              size: isTablet ? 28 : 24,
+              size: isTablet ? 30 : 40,
             ),
           ),
         ],
@@ -88,91 +88,194 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
   }
 
   void _showProfileDrawer(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final isTablet = screenWidth > 600;
 
-    showModalBottomSheet(
+    showGeneralDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return Container(
-          color: const Color.fromRGBO(249, 253, 255, 1),
-          height: screenHeight * (isTablet ? 0.50 : 0.6),
-          padding: EdgeInsets.all(isTablet ? 30 : 20),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              SizedBox(height: isTablet ? 25 : 20),
-              CircleAvatar(
-                backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                radius: isTablet ? 50 : 40,
-                child: Text(
-                  controller.userName.isNotEmpty
-                      ? controller.userName[0].toUpperCase()
-                      : 'D',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isTablet ? 32 : 24,
-                    fontWeight: FontWeight.bold,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation1, animation2) {
+        return Container();
+      },
+      transitionBuilder: (context, animation1, animation2, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation1,
+            curve: Curves.easeInOut,
+          )),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: isTablet ? 350 : screenWidth * 0.75,
+                height: screenHeight,
+                decoration: const BoxDecoration(
+                  color: Color.fromRGBO(249, 253, 255, 1),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(-2, 0),
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(height: isTablet ? 20 : 16),
-              Text(
-                controller.userName,
-                style: TextStyle(
-                  fontSize: isTablet ? 24 : 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                controller.userEmail,
-                style: TextStyle(
-                  fontSize: isTablet ? 16 : 14,
-                  color: Colors.grey,
-                ),
-              ),
-              SizedBox(height: isTablet ? 30 : 20),
-              Expanded(
-                child: ListView(
+                child: Column(
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: isTablet ? 20 : 16,
-                        vertical: isTablet ? 8 : 4,
+                    // Header with close button
+                    Container(
+                      padding: EdgeInsets.all(isTablet ? 20 : 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Profile Menu',
+                            style: TextStyle(
+                              fontSize: isTablet ? 20 : 18,
+                              fontWeight: FontWeight.bold,
+                              color: const Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: Icon(
+                              Icons.close,
+                              size: isTablet ? 28 : 24,
+                              color: const Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                        ],
                       ),
-                      leading: Icon(
-                        Icons.logout,
-                        color: Colors.red,
-                        size: isTablet ? 28 : 24,
+                    ),
+
+                    // Divider
+                    Divider(
+                      color: Colors.grey[300],
+                      thickness: 1,
+                      height: 1,
+                    ),
+
+                    SizedBox(height: isTablet ? 30 : 24),
+
+                    // Profile section
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: isTablet ? 30 : 20),
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153),
+                            radius: isTablet ? 50 : 40,
+                            child: Text(
+                              controller.userName.isNotEmpty
+                                  ? controller.userName[0].toUpperCase()
+                                  : 'S',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isTablet ? 32 : 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: isTablet ? 20 : 16),
+                          Text(
+                            controller.userName.isNotEmpty
+                                ? controller.userName
+                                : 'Super Admin',
+                            style: TextStyle(
+                              fontSize: isTablet ? 24 : 20,
+                              fontWeight: FontWeight.bold,
+                              color: const Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            controller.userEmail.isNotEmpty
+                                ? controller.userEmail
+                                : 'admin@pawrtal.com',
+                            style: TextStyle(
+                              fontSize: isTablet ? 16 : 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
-                      title: Text(
-                        'Logout',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: isTablet ? 18 : 16,
+                    ),
+
+                    SizedBox(height: isTablet ? 40 : 30),
+
+                    // Menu items
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 20 : 16),
+                        child: Column(
+                          children: [
+                            const Spacer(),
+                            Container(
+                              width: double.infinity,
+                              margin:
+                                  EdgeInsets.only(bottom: isTablet ? 30 : 20),
+                              child: Card(
+                                elevation: 2,
+                                color: Colors.red[50],
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: Colors.red[300]!,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: isTablet ? 20 : 16,
+                                    vertical: isTablet ? 8 : 4,
+                                  ),
+                                  leading: Icon(
+                                    Icons.logout,
+                                    color: Colors.red[600],
+                                    size: isTablet ? 28 : 24,
+                                  ),
+                                  title: Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      color: Colors.red[600],
+                                      fontSize: isTablet ? 18 : 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  trailing: Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: Colors.red[600],
+                                    size: isTablet ? 20 : 16,
+                                  ),
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    _showLogoutDialog(context);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showLogoutDialog(context);
-                      },
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         );
       },
@@ -192,17 +295,29 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
             borderRadius: BorderRadius.circular(15),
           ),
           backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-          title: Text(
-            'Logout',
-            style: TextStyle(
-              fontSize: isTablet ? 22 : 18,
-              fontWeight: FontWeight.bold,
-            ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange[600],
+                size: isTablet ? 28 : 24,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Confirm Logout',
+                style: TextStyle(
+                  fontSize: isTablet ? 22 : 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color.fromARGB(255, 81, 115, 153),
+                ),
+              ),
+            ],
           ),
           content: Text(
-            'Are you sure you want to logout?',
+            'Are you sure you want to logout from your account?',
             style: TextStyle(
               fontSize: isTablet ? 16 : 14,
+              color: Colors.grey[700],
             ),
           ),
           actions: [
@@ -210,24 +325,42 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 20 : 16,
+                  vertical: isTablet ? 12 : 8,
+                ),
+              ),
               child: Text(
                 'Cancel',
                 style: TextStyle(
                   fontSize: isTablet ? 16 : 14,
+                  color: Colors.grey[600],
                 ),
               ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop(); // Close the dialog first
                 // Use LogoutHelper which handles its own loading state and navigation
                 await LogoutHelper.logout();
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 20 : 16,
+                  vertical: isTablet ? 12 : 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: Text(
                 'Logout',
                 style: TextStyle(
-                  color: Colors.red,
                   fontSize: isTablet ? 16 : 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
