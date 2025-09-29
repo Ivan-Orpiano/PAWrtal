@@ -174,14 +174,14 @@ class MyDashboardTile extends StatelessWidget {
                             width: double.infinity,
                             errorBuilder: (context, error, stackTrace) {
                               return Image.asset(
-                                'lib/images/test_image.jpg',
+                                'lib/images/placeholder.png',
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                               );
                             },
                           )
                         : Image.asset(
-                            'lib/images/test_image.jpg',
+                            'lib/images/placeholder.png',
                             fit: BoxFit.cover,
                             width: double.infinity,
                           ),
