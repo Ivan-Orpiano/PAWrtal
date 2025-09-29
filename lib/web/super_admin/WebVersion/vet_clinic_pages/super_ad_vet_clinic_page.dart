@@ -155,21 +155,6 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                           height: 80,
                           child: Row(
                             children: [
-                              // Back button
-                              // IconButton(
-                              //   icon: const Icon(
-                              //     Icons.arrow_back,
-                              //     color: Color.fromARGB(255, 81, 115, 153),
-                              //   ),
-                              //   onPressed: () {
-                              //     Navigator.push(
-                              //       context,
-                              //       MaterialPageRoute(
-                              //           builder: (context) =>
-                              //               const SuperAdminVetClinic()),
-                              //     );
-                              //   },
-                              // ),
                               InkWell(
                                 onTap: () {
                                   Navigator.push(

@@ -14,20 +14,43 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    // Define breakpoints
+    final bool isDesktop = screenWidth > 1024;
+    final bool isTablet = screenWidth > 600 && screenWidth <= 1024;
+    final bool isMobile = screenWidth <= 600;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
-        toolbarHeight: screenHeight * 0.1,
+        toolbarHeight: isDesktop
+            ? screenHeight * 0.1
+            : isTablet
+                ? screenHeight * 0.09
+                : screenHeight * 0.08,
         flexibleSpace: Container(
-          margin: const EdgeInsets.only(top: 15.0),
+          margin: EdgeInsets.only(
+            top: isDesktop
+                ? 15.0
+                : isTablet
+                    ? 12.0
+                    : 10.0,
+          ),
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: screenHeight * 0.08,
-                maxWidth: screenWidth * 0.3,
+                maxHeight: isDesktop
+                    ? screenHeight * 0.08
+                    : isTablet
+                        ? screenHeight * 0.07
+                        : screenHeight * 0.06,
+                maxWidth: isDesktop
+                    ? screenWidth * 0.3
+                    : isTablet
+                        ? screenWidth * 0.4
+                        : screenWidth * 0.5,
               ),
               child: Image.asset(
                 "lib/images/PAWrtal_logo.png",
@@ -42,15 +65,20 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
               onPressed: () {
                 Scaffold.of(context).openEndDrawer();
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.menu,
-                color: Color.fromRGBO(81, 115, 153, 0.8),
+                color: const Color.fromRGBO(81, 115, 153, 0.8),
+                size: isDesktop
+                    ? 24
+                    : isTablet
+                        ? 22
+                        : 20,
               ),
             ),
           ),
         ],
       ),
-      endDrawer: _buildProfileDrawer(context, screenWidth),
+      endDrawer: _buildProfileDrawer(context, screenWidth, screenHeight),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: Container(
         child: LayoutBuilder(
@@ -58,10 +86,18 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
             return SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: constraints.maxWidth * 0.05,
-                  vertical: 20,
+                  horizontal: isDesktop
+                      ? constraints.maxWidth * 0.05
+                      : isTablet
+                          ? constraints.maxWidth * 0.04
+                          : constraints.maxWidth * 0.03,
+                  vertical: isDesktop
+                      ? 20
+                      : isTablet
+                          ? 16
+                          : 12,
                 ),
-                child: constraints.maxWidth > 800
+                child: isDesktop
                     ? IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -106,37 +142,87 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                           ],
                         ),
                       )
-                    : Column(
-                        children: [
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: constraints.maxWidth,
+                    : isTablet
+                        ? IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6.0),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: constraints.maxWidth / 2 - 12,
+                                      ),
+                                      child: Column(
+                                        children: const [
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                vertical: 6.0),
+                                            child: VetClinicTile(),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                vertical: 6.0),
+                                            child: ViewReportTile(),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6.0),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: constraints.maxWidth / 2 - 12,
+                                      ),
+                                      child: const Padding(
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 6.0),
+                                        child: PetOwnerTile(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: VetClinicTile(),
-                            ),
+                          )
+                        : Column(
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: VetClinicTile(),
+                                ),
+                              ),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: PetOwnerTile(),
+                                ),
+                              ),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: ViewReportTile(),
+                                ),
+                              ),
+                            ],
                           ),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: constraints.maxWidth,
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: PetOwnerTile(),
-                            ),
-                          ),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: constraints.maxWidth,
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: ViewReportTile(),
-                            ),
-                          ),
-                        ],
-                      ),
               ),
             );
           },
@@ -145,10 +231,57 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
-  Widget _buildProfileDrawer(BuildContext context, double screenWidth) {
-    // Make drawer width responsive
-    double drawerWidth = screenWidth > 600 ? 320 : screenWidth * 0.85;
-    double drawerHeight = MediaQuery.of(context).size.height * 0.35;
+  Widget _buildProfileDrawer(
+      BuildContext context, double screenWidth, double screenHeight) {
+    // Define breakpoints for drawer sizing
+    final bool isDesktop = screenWidth > 1024;
+    final bool isTablet = screenWidth > 600 && screenWidth <= 1024;
+    final bool isMobile = screenWidth <= 600;
+
+    // Responsive drawer dimensions
+    double drawerWidth = isDesktop
+        ? 340
+        : isTablet
+            ? 300
+            : screenWidth * 0.85;
+
+    // Calculate drawer height dynamically to fit content without hiding
+    double avatarRadius = isDesktop
+        ? 40
+        : isTablet
+            ? 35
+            : 30;
+    double topPadding = isDesktop
+        ? 60
+        : isTablet
+            ? 50
+            : 40;
+    double bottomPadding = isDesktop
+        ? 30
+        : isTablet
+            ? 25
+            : 20;
+    double avatarHeight = (avatarRadius * 2) + 16; // Avatar + spacing
+    double textHeight = isDesktop
+        ? 70
+        : isTablet
+            ? 65
+            : 60; // Name + email
+    double listItemHeight = isDesktop
+        ? 80
+        : isTablet
+            ? 70
+            : 65; // Logout item
+    double paddingSum = topPadding + bottomPadding + 40; // Total padding
+
+    double calculatedHeight =
+        avatarHeight + textHeight + listItemHeight + paddingSum;
+
+    // Ensure minimum and maximum heights
+    double minHeight = screenHeight * 0.25;
+    double maxHeight = screenHeight * 0.4;
+    double drawerHeight = calculatedHeight.clamp(minHeight, maxHeight);
+
     return Align(
       alignment: Alignment.topRight,
       child: SizedBox(
@@ -161,7 +294,20 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
               // Header section with user profile
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop
+                      ? 20
+                      : isTablet
+                          ? 16
+                          : 12,
+                  topPadding,
+                  isDesktop
+                      ? 20
+                      : isTablet
+                          ? 16
+                          : 12,
+                  bottomPadding,
+                ),
                 decoration: const BoxDecoration(
                   color: Color.fromARGB(255, 248, 253, 255),
                   border: Border(
@@ -175,37 +321,55 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                   children: [
                     CircleAvatar(
                       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                      radius: 40,
+                      radius: avatarRadius,
                       child: Text(
                         controller.userName.isNotEmpty
                             ? controller.userName[0].toUpperCase()
                             : 'D',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: isDesktop
+                              ? 24
+                              : isTablet
+                                  ? 20
+                                  : 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(
+                        height: isDesktop
+                            ? 16
+                            : isTablet
+                                ? 12
+                                : 10),
                     Text(
                       controller.userName,
-                      style: const TextStyle(
-                        fontSize: 20,
+                      style: TextStyle(
+                        fontSize: isDesktop
+                            ? 20
+                            : isTablet
+                                ? 18
+                                : 16,
                         fontWeight: FontWeight.bold,
-                        color: Color.fromARGB(255, 81, 115, 153),
+                        color: const Color.fromARGB(255, 81, 115, 153),
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       controller.userEmail,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: isDesktop
+                            ? 14
+                            : isTablet
+                                ? 13
+                                : 12,
                         color: Colors.grey,
                       ),
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
+                      maxLines: isMobile ? 1 : 2,
                     ),
                   ],
                 ),
@@ -213,27 +377,46 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
               // Menu items section
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isDesktop
+                        ? 20
+                        : isTablet
+                            ? 16
+                            : 12,
+                  ),
                   children: [
                     ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 24),
-                      leading: const Icon(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: isDesktop
+                            ? 24
+                            : isTablet
+                                ? 20
+                                : 16,
+                      ),
+                      leading: Icon(
                         Icons.logout,
                         color: Colors.red,
-                        size: 24,
+                        size: isDesktop
+                            ? 24
+                            : isTablet
+                                ? 22
+                                : 20,
                       ),
-                      title: const Text(
+                      title: Text(
                         'Logout',
                         style: TextStyle(
                           color: Colors.red,
-                          fontSize: 16,
+                          fontSize: isDesktop
+                              ? 16
+                              : isTablet
+                                  ? 15
+                                  : 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       onTap: () {
                         Navigator.pop(context); // Close drawer first
-                        _showLogoutDialog(context);
+                        _showLogoutDialog(context, isDesktop, isTablet);
                       },
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -250,22 +433,47 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context, bool isDesktop, bool isTablet) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Logout'),
+          title: Text(
+            'Logout',
+            style: TextStyle(
+              fontSize: isDesktop
+                  ? 20
+                  : isTablet
+                      ? 18
+                      : 16,
+            ),
+          ),
           backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-          content: const Text('Are you sure you want to logout?'),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              fontSize: isDesktop
+                  ? 16
+                  : isTablet
+                      ? 15
+                      : 14,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text(
+              child: Text(
                 'Cancel',
+                style: TextStyle(
+                  fontSize: isDesktop
+                      ? 16
+                      : isTablet
+                          ? 15
+                          : 14,
+                ),
               ),
             ),
             TextButton(
@@ -274,9 +482,16 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                 // Use LogoutHelper which handles its own loading state and navigation
                 await LogoutHelper.logout();
               },
-              child: const Text(
+              child: Text(
                 'Logout',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: isDesktop
+                      ? 16
+                      : isTablet
+                          ? 15
+                          : 14,
+                ),
               ),
             ),
           ],

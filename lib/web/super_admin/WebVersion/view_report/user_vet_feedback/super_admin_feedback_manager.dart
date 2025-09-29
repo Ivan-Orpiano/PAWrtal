@@ -1,3 +1,5 @@
+import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
+import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
@@ -257,9 +259,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   ),
                   child: const Icon(
                     Icons.pets,
-                    color: true
-                        ? Colors.white
-                        : Color.fromRGBO(81, 115, 153, 1),
+                    color:
+                        true ? Colors.white : Color.fromRGBO(81, 115, 153, 1),
                     size: 24,
                   ),
                 ),
@@ -612,7 +613,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                   const SizedBox(width: 16),
-                  const Icon(Icons.info_outline, size: 16, color: Color(0xFFF39C12)),
+                  const Icon(Icons.info_outline,
+                      size: 16, color: Color(0xFFF39C12)),
                   const SizedBox(width: 4),
                   Text(
                     request.reason,
@@ -823,10 +825,18 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           icon: const Icon(Icons.arrow_back,
               color: Color.fromARGB(255, 81, 115, 153)),
           onPressed: () {
+            final width = MediaQuery.of(context).size.width;
+            Widget destination;
+            if (width < 600) {
+              destination = const SuperAdminMobileHomePage();
+            } else if (width < 1000) {
+              destination = const SuperAdminTabletHomePage();
+            } else {
+              destination = const SuperAdminDesktopHomePage();
+            }
             Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (context) => const SuperAdminDesktopHomePage()),
+              MaterialPageRoute(builder: (context) => destination),
             );
           },
           tooltip: 'Back',
