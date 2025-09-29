@@ -36,19 +36,21 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
             ),
           ),
         ),
-     
         actions: [
-          IconButton(
-            onPressed: () {
-              _showProfileDrawer(context);
-            },
-            icon: const Icon(
-              Icons.menu,
-              color: Color.fromRGBO(81, 115, 153, 0.8),
+          Builder(
+            builder: (context) => IconButton(
+              onPressed: () {
+                Scaffold.of(context).openEndDrawer();
+              },
+              icon: const Icon(
+                Icons.menu,
+                color: Color.fromRGBO(81, 115, 153, 0.8),
+              ),
             ),
           ),
         ],
       ),
+      endDrawer: _buildProfileDrawer(context, screenWidth),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: Container(
         child: LayoutBuilder(
@@ -143,75 +145,108 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
-  void _showProfileDrawer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Container(
-          color: const Color.fromRGBO(249, 253, 255, 1),
-          height: MediaQuery.of(context).size.height * 0.35,
-          padding: const EdgeInsets.all(20),
+  Widget _buildProfileDrawer(BuildContext context, double screenWidth) {
+    // Make drawer width responsive
+    double drawerWidth = screenWidth > 600 ? 320 : screenWidth * 0.85;
+    double drawerHeight = MediaQuery.of(context).size.height * 0.35;
+    return Align(
+      alignment: Alignment.topRight,
+      child: SizedBox(
+        width: drawerWidth,
+        height: drawerHeight,
+        child: Drawer(
+          backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
           child: Column(
             children: [
+              // Header section with user profile
               Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              CircleAvatar(
-                backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                radius: 40,
-                child: Text(
-                  controller.userName.isNotEmpty
-                      ? controller.userName[0].toUpperCase()
-                      : 'D',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+                decoration: const BoxDecoration(
+                  color: Color.fromARGB(255, 248, 253, 255),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Color.fromARGB(50, 81, 115, 153),
+                      width: 1,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                controller.userName,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                      radius: 40,
+                      child: Text(
+                        controller.userName.isNotEmpty
+                            ? controller.userName[0].toUpperCase()
+                            : 'D',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      controller.userName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 81, 115, 153),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      controller.userEmail,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                controller.userEmail,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 30),
+              // Menu items section
               Expanded(
                 child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   children: [
                     ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.red),
-                      title: const Text('Logout',
-                          style: TextStyle(color: Colors.red)),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 24),
+                      leading: const Icon(
+                        Icons.logout,
+                        color: Colors.red,
+                        size: 24,
+                      ),
+                      title: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       onTap: () {
-                        Navigator.pop(context);
+                        Navigator.pop(context); // Close drawer first
                         _showLogoutDialog(context);
                       },
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      hoverColor: Colors.red.withOpacity(0.1),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

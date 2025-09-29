@@ -98,7 +98,8 @@ import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home
 import 'package:capstone_app/web/responsive_layout.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
-import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
+import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart'
+    as tablet;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -110,7 +111,7 @@ class WebSuperAdminHomePage extends GetView<WebSuperAdminHomeController> {
     return Scaffold(
       body: ResponsiveLayout(
         desktopBody: () => const SuperAdminDesktopHomePage(),
-        tabletBody: () => const SuperAdminTabletHomePage(),
+        tabletBody: () => const tablet.SuperAdminTabletHomePage(),
         mobileBody: () => const SuperAdminMobileHomePage(),
       ),
     );

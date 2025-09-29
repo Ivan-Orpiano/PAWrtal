@@ -6,6 +6,8 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dash
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_register.dart';
+import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
+import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdminVetClinic extends StatefulWidget {
@@ -21,17 +23,14 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-  
-    double horizontalPadding = screenWidth * 0.05; 
+    double horizontalPadding = screenWidth * 0.05;
     double maxHorizontalPadding = 80;
     double minHorizontalPadding = 16;
-
 
     horizontalPadding =
         horizontalPadding.clamp(minHorizontalPadding, maxHorizontalPadding);
 
-
-    double gridHorizontalPadding = screenWidth * 0.08; 
+    double gridHorizontalPadding = screenWidth * 0.08;
     double maxGridPadding = 80;
     double minGridPadding = 20;
 
@@ -44,10 +43,18 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
           icon: const Icon(Icons.arrow_back,
               color: Color.fromARGB(255, 81, 115, 153)),
           onPressed: () {
+            final width = MediaQuery.of(context).size.width;
+            Widget destination;
+            if (width < 600) {
+              destination = SuperAdminMobileHomePage();
+            } else if (width < 1000) {
+              destination = SuperAdminTabletHomePage();
+            } else {
+              destination = const SuperAdminDesktopHomePage();
+            }
             Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (context) => const SuperAdminDesktopHomePage()),
+              MaterialPageRoute(builder: (context) => destination),
             );
           },
           tooltip: 'Back',
@@ -58,7 +65,7 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
         toolbarHeight: screenHeight * 0.1,
         flexibleSpace: Container(
           margin: EdgeInsets.only(
-            top: screenHeight * 0.02, 
+            top: screenHeight * 0.02,
             left: horizontalPadding * 0.5,
             right: horizontalPadding * 0.5,
           ),
@@ -79,7 +86,7 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
             children: [
               Container(
                 margin: EdgeInsets.only(
-                  top: screenHeight * 0.03, 
+                  top: screenHeight * 0.03,
                   left: horizontalPadding,
                   right: horizontalPadding,
                 ),
@@ -92,8 +99,7 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
                         SuperAdminSortButton(),
                       ],
                     ),
-                    SizedBox(height: 8), 
-        
+                    SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -101,51 +107,41 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
                 child: SingleChildScrollView(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-           
-                      int itemCount =
-                        15; 
+                      int itemCount = 15;
                       int crossAxisCount;
                       double childAspectRatio;
 
-                    
                       if (itemCount == 1) {
-                       
                         crossAxisCount = 1;
                         if (constraints.maxWidth > 800) {
-                          childAspectRatio =
-                              3.0;
+                          childAspectRatio = 3.0;
                         } else if (constraints.maxWidth > 600) {
                           childAspectRatio = 2.5;
                         } else {
-                          childAspectRatio =
-                              2.0; 
+                          childAspectRatio = 2.0;
                         }
                       } else if (itemCount <= 2) {
-         
                         if (constraints.maxWidth > 800) {
                           crossAxisCount = 2;
-                          childAspectRatio = 2.0; 
+                          childAspectRatio = 2.0;
                         } else {
                           crossAxisCount = 1;
                           childAspectRatio = 2.0;
                         }
-                      } else if (itemCount <= 3){
-                       
+                      } else if (itemCount <= 3) {
                         if (constraints.maxWidth > 1000) {
                           crossAxisCount = 3;
-                          childAspectRatio = 1.8; 
-                          } else if (constraints.maxWidth > 600) {
+                          childAspectRatio = 1.8;
+                        } else if (constraints.maxWidth > 600) {
                           crossAxisCount = 2;
                           childAspectRatio = 1.8;
                         } else {
                           crossAxisCount = 1;
                           childAspectRatio = 2.0;
                         }
-
                       } else {
-                 
                         crossAxisCount = 4;
-                        childAspectRatio = 1.5; 
+                        childAspectRatio = 1.5;
 
                         if (constraints.maxWidth < 1400) {
                           crossAxisCount = 3;
@@ -162,7 +158,6 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
                         }
                       }
 
-            
                       double crossAxisSpacing = constraints.maxWidth * 0.02;
                       double mainAxisSpacing = constraints.maxWidth * 0.02;
 
