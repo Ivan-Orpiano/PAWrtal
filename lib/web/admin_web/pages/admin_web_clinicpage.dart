@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/controllers/clinic_settings_controller.dart';
+import 'package:capstone_app/web/admin_web/components/clinic/admin_pin_maps_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -20,7 +21,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
-    
+
     // Initialize controller
     controller = Get.put(ClinicSettingsController(
       authRepository: Get.find<AuthRepository>(),
@@ -67,7 +68,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          controller.clinic.value?.clinicName ?? "Clinic Settings",
+                          controller.clinic.value?.clinicName ??
+                              "Clinic Settings",
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -129,7 +131,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                 ],
               ),
             ),
-            
+
             // Tab bar
             Container(
               color: Colors.white,
@@ -147,7 +149,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                 ],
               ),
             ),
-            
+
             // Tab content
             Expanded(
               child: TabBarView(
@@ -244,11 +246,15 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value ? "Saving..." : "Save Changes"),
+                      label: Text(controller.isSaving.value
+                          ? "Saving..."
+                          : "Save Changes"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -287,12 +293,16 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   runSpacing: 8,
                   children: controller.availableServices.map((service) {
                     return Obx(() => FilterChip(
-                      label: Text(service),
-                      selected: controller.selectedServices.contains(service),
-                      onSelected: (selected) => controller.toggleService(service),
-                      selectedColor: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.2),
-                      checkmarkColor: const Color.fromARGB(255, 81, 115, 153),
-                    ));
+                          label: Text(service),
+                          selected:
+                              controller.selectedServices.contains(service),
+                          onSelected: (selected) =>
+                              controller.toggleService(service),
+                          selectedColor: const Color.fromARGB(255, 81, 115, 153)
+                              .withOpacity(0.2),
+                          checkmarkColor:
+                              const Color.fromARGB(255, 81, 115, 153),
+                        ));
                   }).toList(),
                 ),
                 const SizedBox(height: 24),
@@ -322,7 +332,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                       decoration: BoxDecoration(
                         color: Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.3)),
                       ),
                       child: const Row(
                         children: [
@@ -333,7 +344,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                       ),
                     );
                   }
-                  
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -353,7 +364,9 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                             label: Text(service),
                             onDeleted: () => controller.removeService(service),
                             deleteIcon: const Icon(Icons.close, size: 18),
-                            backgroundColor: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153)
+                                    .withOpacity(0.1),
                           );
                         }).toList(),
                       ),
@@ -375,11 +388,15 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value ? "Saving..." : "Save Services"),
+                      label: Text(controller.isSaving.value
+                          ? "Saving..."
+                          : "Save Services"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -422,7 +439,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                       icon: const Icon(Icons.add_photo_alternate),
                       label: const Text("Add Images"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
                       ),
                     ),
@@ -441,7 +459,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.photo_library, size: 48, color: Colors.grey),
+                            Icon(Icons.photo_library,
+                                size: 48, color: Colors.grey),
                             SizedBox(height: 8),
                             Text("No images uploaded yet"),
                             Text("Click 'Add Images' to get started"),
@@ -450,11 +469,12 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                       ),
                     );
                   }
-                  
+
                   return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
@@ -476,29 +496,37 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
-                                loadingBuilder: (context, child, loadingProgress) {
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
                                   if (loadingProgress == null) return child;
                                   return Container(
                                     color: Colors.grey[200],
                                     child: Center(
                                       child: CircularProgressIndicator(
-                                        value: loadingProgress.expectedTotalBytes != null
-                                            ? loadingProgress.cumulativeBytesLoaded / 
-                                              loadingProgress.expectedTotalBytes!
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
                                             : null,
                                       ),
                                     ),
                                   );
                                 },
                                 errorBuilder: (context, error, stackTrace) {
-                                  print("Error loading image: ${controller.galleryImages[index]}");
+                                  print(
+                                      "Error loading image: ${controller.galleryImages[index]}");
                                   print("Error details: $error");
                                   return Container(
                                     color: Colors.grey[200],
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        const Icon(Icons.error, color: Colors.red),
+                                        const Icon(Icons.error,
+                                            color: Colors.red),
                                         const SizedBox(height: 4),
                                         Text(
                                           "Failed to load",
@@ -565,10 +593,23 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                 ),
                 const SizedBox(height: 16),
                 Obx(() {
-                  final days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                  final days = [
+                    'monday',
+                    'tuesday',
+                    'wednesday',
+                    'thursday',
+                    'friday',
+                    'saturday',
+                    'sunday'
+                  ];
                   return Column(
                     children: days.map((day) {
-                      final dayData = controller.operatingHours[day] ?? {'isOpen': false, 'openTime': '09:00', 'closeTime': '17:00'};
+                      final dayData = controller.operatingHours[day] ??
+                          {
+                            'isOpen': false,
+                            'openTime': '09:00',
+                            'closeTime': '17:00'
+                          };
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
@@ -591,7 +632,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                             Switch(
                               value: dayData['isOpen'] ?? false,
                               onChanged: (value) {
-                                final newData = Map<String, dynamic>.from(dayData);
+                                final newData =
+                                    Map<String, dynamic>.from(dayData);
                                 newData['isOpen'] = value;
                                 controller.updateOperatingHours(day, newData);
                               },
@@ -606,9 +648,12 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                         value: dayData['openTime'] ?? '09:00',
                                         label: "Open",
                                         onChanged: (time) {
-                                          final newData = Map<String, dynamic>.from(dayData);
+                                          final newData =
+                                              Map<String, dynamic>.from(
+                                                  dayData);
                                           newData['openTime'] = time;
-                                          controller.updateOperatingHours(day, newData);
+                                          controller.updateOperatingHours(
+                                              day, newData);
                                         },
                                       ),
                                     ),
@@ -618,9 +663,12 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                         value: dayData['closeTime'] ?? '17:00',
                                         label: "Close",
                                         onChanged: (time) {
-                                          final newData = Map<String, dynamic>.from(dayData);
+                                          final newData =
+                                              Map<String, dynamic>.from(
+                                                  dayData);
                                           newData['closeTime'] = time;
-                                          controller.updateOperatingHours(day, newData);
+                                          controller.updateOperatingHours(
+                                              day, newData);
                                         },
                                       ),
                                     ),
@@ -659,11 +707,15 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value ? "Saving..." : "Save Schedule"),
+                      label: Text(controller.isSaving.value
+                          ? "Saving..."
+                          : "Save Schedule"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -700,23 +752,24 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                           ),
                           const SizedBox(height: 8),
                           Obx(() => DropdownButtonFormField<int>(
-                            value: controller.appointmentDuration.value,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              suffixText: "minutes",
-                            ),
-                            items: [15, 30, 45, 60, 90].map((duration) {
-                              return DropdownMenuItem(
-                                value: duration,
-                                child: Text("$duration minutes"),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                controller.appointmentDuration.value = value;
-                              }
-                            },
-                          )),
+                                value: controller.appointmentDuration.value,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  suffixText: "minutes",
+                                ),
+                                items: [15, 30, 45, 60, 90].map((duration) {
+                                  return DropdownMenuItem(
+                                    value: duration,
+                                    child: Text("$duration minutes"),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    controller.appointmentDuration.value =
+                                        value;
+                                  }
+                                },
+                              )),
                         ],
                       ),
                     ),
@@ -731,23 +784,23 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                           ),
                           const SizedBox(height: 8),
                           Obx(() => DropdownButtonFormField<int>(
-                            value: controller.maxAdvanceBooking.value,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              suffixText: "days",
-                            ),
-                            items: [7, 14, 30, 60, 90].map((days) {
-                              return DropdownMenuItem(
-                                value: days,
-                                child: Text("$days days"),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                controller.maxAdvanceBooking.value = value;
-                              }
-                            },
-                          )),
+                                value: controller.maxAdvanceBooking.value,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  suffixText: "days",
+                                ),
+                                items: [7, 14, 30, 60, 90].map((days) {
+                                  return DropdownMenuItem(
+                                    value: days,
+                                    child: Text("$days days"),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    controller.maxAdvanceBooking.value = value;
+                                  }
+                                },
+                              )),
                         ],
                       ),
                     ),
@@ -785,14 +838,16 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   child: Column(
                     children: [
                       Obx(() => SwitchListTile(
-                        title: const Text("Auto-accept Appointments"),
-                        subtitle: const Text("Automatically approve new appointment requests"),
-                        value: controller.autoAcceptAppointments.value,
-                        onChanged: (value) {
-                          controller.autoAcceptAppointments.value = value;
-                        },
-                        activeColor: const Color.fromARGB(255, 81, 115, 153),
-                      )),
+                            title: const Text("Auto-accept Appointments"),
+                            subtitle: const Text(
+                                "Automatically approve new appointment requests"),
+                            value: controller.autoAcceptAppointments.value,
+                            onChanged: (value) {
+                              controller.autoAcceptAppointments.value = value;
+                            },
+                            activeColor:
+                                const Color.fromARGB(255, 81, 115, 153),
+                          )),
                     ],
                   ),
                 ),
@@ -811,11 +866,15 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value ? "Saving..." : "Save Settings"),
+                      label: Text(controller.isSaving.value
+                          ? "Saving..."
+                          : "Save Settings"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -827,82 +886,60 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             ),
           ),
           const SizedBox(height: 24),
+          // REPLACE THE EXISTING LOCATION SECTION WITH THIS:
           _buildSectionCard(
-            title: "Location",
+            title: "Clinic Location",
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Pin your clinic's location on the map",
+                  "Pin your clinic's location on the map so customers can find you easily",
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[700],
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  height: 300,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.map, size: 48, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text("Map integration coming soon"),
-                        Text("Use the address field for now"),
-                      ],
-                    ),
-                  ),
-                ),
+                // Map interface
+                Obx(() => AdminPinMapsPage(
+                      currentLocation: controller.selectedLocation.value,
+                      onLocationSelected: (location) {
+                        // FIX: set the reactive value directly to avoid calling an undefined method
+                        controller.selectedLocation.value = location;
+                      },
+                    )),
                 const SizedBox(height: 16),
-                Obx(() {
-                  if (controller.selectedLocation.value != null) {
-                    final location = controller.selectedLocation.value!;
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                // Save location button
+                Row(
+                  children: [
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: controller.isSaving.value
+                          ? null
+                          : controller.saveClinicSettings,
+                      icon: controller.isSaving.value
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(controller.isSaving.value
+                          ? "Saving..."
+                          : "Save Location"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.location_on, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Location: ${location['lat']!.toStringAsFixed(6)}, ${location['lng']!.toStringAsFixed(6)}",
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: controller.clearLocation,
-                            icon: const Icon(Icons.clear, color: Colors.red),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
                     ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Text("No location pinned yet"),
-                      ],
-                    ),
-                  );
-                }),
+                  ],
+                ),
               ],
             ),
           ),
@@ -993,7 +1030,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
           ),
         );
         if (time != null) {
-          final formattedTime = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+          final formattedTime =
+              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
           onChanged(formattedTime);
         }
       },
