@@ -1,4 +1,4 @@
-import 'package:capstone_app/mobile/admin/components/appointment_tabs/enhanced_clinic_appointment_controller.dart';
+import 'package:capstone_app/mobile/admin/controllers/enhanced_clinic_appointment_controller.dart';
 import 'package:capstone_app/mobile/admin/components/appointment_tiles/enhanced_clinic_appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -135,61 +135,6 @@ class TodayOverviewPage extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Quick Actions Section
-            // SliverToBoxAdapter(
-            //   child: Container(
-            //     margin: const EdgeInsets.symmetric(horizontal: 16),
-            //     child: Column(
-            //       crossAxisAlignment: CrossAxisAlignment.start,
-            //       children: [
-            //         const Text(
-            //           'Quick Actions',
-            //           style: TextStyle(
-            //             fontSize: 18,
-            //             fontWeight: FontWeight.bold,
-            //             color: Color.fromARGB(255, 81, 115, 153),
-            //           ),
-            //         ),
-            //         const SizedBox(height: 12),
-            //         SingleChildScrollView(
-            //           scrollDirection: Axis.horizontal,
-            //           child: Row(
-            //             children: [
-            //               _buildQuickActionCard(
-            //                 'Emergency\nCheck-in',
-            //                 Icons.emergency,
-            //                 Colors.red,
-            //                 () => _showEmergencyDialog(context),
-            //               ),
-            //               const SizedBox(width: 12),
-            //               _buildQuickActionCard(
-            //                 'Add Walk-in\nPatient',
-            //                 Icons.person_add,
-            //                 Colors.blue,
-            //                 () => _showWalkInDialog(context),
-            //               ),
-            //               const SizedBox(width: 12),
-            //               _buildQuickActionCard(
-            //                 'Schedule\nFollow-up',
-            //                 Icons.event_repeat,
-            //                 Colors.purple,
-            //                 () => _showFollowUpDialog(context),
-            //               ),
-            //               const SizedBox(width: 12),
-            //               _buildQuickActionCard(
-            //                 'View Medical\nRecords',
-            //                 Icons.medical_information,
-            //                 Colors.teal,
-            //                 () => _showMedicalRecordsDialog(context),
-            //               ),
-            //             ],
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 

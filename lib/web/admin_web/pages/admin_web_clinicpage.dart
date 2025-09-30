@@ -1,6 +1,6 @@
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
-import 'package:capstone_app/web/admin_web/controllers/clinic_settings_controller.dart';
+import 'package:capstone_app/web/admin_web/components/clinic/clinic_settings_controller.dart';
 import 'package:capstone_app/web/admin_web/components/clinic/admin_pin_maps_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
