@@ -24,7 +24,6 @@ class MyMessageTile extends StatelessWidget {
           'isOnline': false,
         };
 
-        // Use userUnreadCount for user side
         final hasUnreadMessages = conversation.userUnreadCount > 0;
 
         return InkWell(
@@ -65,7 +64,6 @@ class MyMessageTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Profile Image with Status
                 Stack(
                   children: [
                     ClipRRect(
@@ -100,7 +98,6 @@ class MyMessageTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 
-                // Conversation Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,5 +1,6 @@
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/admin/pages/admin_messages_next_page.dart';
+import 'package:capstone_app/mobile/admin/pages/conversation_starters_page.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -23,21 +24,19 @@ class _MessagesPageState extends State<MessagesPage>
     with WidgetsBindingObserver {
   late final AdminMessagingController _messagingController;
   final AuthRepository _authRepository = Get.find<AuthRepository>();
-  final Map<String, dynamic> _userCache = {}; // Cache user data
+  final Map<String, dynamic> _userCache = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize or get messaging controller
     if (Get.isRegistered<AdminMessagingController>()) {
       _messagingController = Get.find<AdminMessagingController>();
     } else {
       _messagingController = Get.put(AdminMessagingController());
     }
 
-    // Initialize with clinic data
     _messagingController.initializeForClinic(widget.clinicId);
     _setupRealtimeUpdates();
   }
@@ -85,7 +84,7 @@ class _MessagesPageState extends State<MessagesPage>
           'name': user.name,
           'email': user.email,
           'phone': user.phone ?? '',
-          'isOnline': false, // Will be updated with real status
+          'isOnline': false,
         };
 
         _userCache[userId] = userData;
@@ -115,12 +114,10 @@ class _MessagesPageState extends State<MessagesPage>
               'isOnline': false,
             };
 
-        // Use clinicUnreadCount for admin side
         final hasUnreadMessages = conversation.clinicUnreadCount > 0;
 
         return InkWell(
           onTap: () async {
-            // Navigate to conversation page
             await Navigator.push(
               context,
               MaterialPageRoute(
@@ -133,7 +130,6 @@ class _MessagesPageState extends State<MessagesPage>
                 ),
               ),
             );
-            // Refresh conversations when returning
             _messagingController.loadClinicConversations(widget.clinicId);
           },
           child: Container(
@@ -159,7 +155,6 @@ class _MessagesPageState extends State<MessagesPage>
             ),
             child: Row(
               children: [
-                // User Avatar with Status
                 Stack(
                   children: [
                     CircleAvatar(
@@ -176,7 +171,6 @@ class _MessagesPageState extends State<MessagesPage>
                         ),
                       ),
                     ),
-                    // Online status indicator
                     Obx(() {
                       final status = _messagingController
                           .getUserStatus(conversation.userId);
@@ -200,8 +194,6 @@ class _MessagesPageState extends State<MessagesPage>
                   ],
                 ),
                 const SizedBox(width: 12),
-
-                // Conversation Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,10 +278,9 @@ class _MessagesPageState extends State<MessagesPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue.shade50, // Match user UI
+      backgroundColor: Colors.blue.shade50,
       body: Column(
         children: [
-          // Header - Match user UI style
           Container(
             height: 75,
             padding: const EdgeInsets.only(top: 20),
@@ -309,13 +300,11 @@ class _MessagesPageState extends State<MessagesPage>
               ],
             ),
           ),
-
-          // Main Content - Match user UI
           Expanded(
             child: Container(
               width: double.maxFinite,
               decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 248, 253, 255), // Match user UI
+                color: Color.fromARGB(255, 248, 253, 255),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -323,7 +312,6 @@ class _MessagesPageState extends State<MessagesPage>
               ),
               child: Column(
                 children: [
-                  // Search Bar - Match user UI
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Container(
@@ -355,8 +343,6 @@ class _MessagesPageState extends State<MessagesPage>
                       ),
                     ),
                   ),
-
-                  // Conversations List - Match user UI
                   Expanded(
                     child: Obx(() {
                       if (_messagingController.isLoading.value) {
@@ -426,206 +412,19 @@ class _MessagesPageState extends State<MessagesPage>
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: "admin_messages_fab", // Fix hero tag conflict
+        heroTag: "admin_messages_fab",
         backgroundColor: const Color.fromARGB(255, 81, 115, 153),
         onPressed: () {
-          _showConversationStartersDialog();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ConversationStartersPage(),
+            ),
+          );
         },
         child: const Icon(
           Icons.auto_awesome,
           color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  void _showConversationStartersDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => _ConversationStartersDialog(
-        messagingController: _messagingController,
-      ),
-    );
-  }
-}
-
-// Conversation Starters Management Dialog
-class _ConversationStartersDialog extends StatelessWidget {
-  final AdminMessagingController messagingController;
-
-  const _ConversationStartersDialog({
-    required this.messagingController,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(16),
-      child: Container(
-        width: double.maxFinite,
-        height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Conversation Starters',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Add new starter form
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: messagingController.starterTriggerController,
-                    decoration: const InputDecoration(
-                      labelText: 'Trigger Text',
-                      hintText: 'What users will click on',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: messagingController.starterResponseController,
-                    decoration: const InputDecoration(
-                      labelText: 'Response Text',
-                      hintText: 'Automated response message',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Obx(() => DropdownButtonFormField<String>(
-                              value: messagingController.selectedCategory.value,
-                              decoration: const InputDecoration(
-                                labelText: 'Category',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: messagingController.categories
-                                  .map((category) => DropdownMenuItem(
-                                        value: category,
-                                        child: Text(category),
-                                      ))
-                                  .toList(),
-                              onChanged: (value) {
-                                messagingController.selectedCategory.value =
-                                    value!;
-                              },
-                            )),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          messagingController.addConversationStarter();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 81, 115, 153),
-                        ),
-                        child: const Text(
-                          'Add',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Existing starters list
-            const Text(
-              'Current Starters',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            Expanded(
-              child: Obx(() {
-                if (messagingController.isLoadingStarters.value) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color.fromARGB(255, 81, 115, 153),
-                    ),
-                  );
-                }
-
-                if (messagingController.conversationStarters.isEmpty) {
-                  return const Center(
-                    child: Text('No conversation starters yet'),
-                  );
-                }
-
-                return ListView.builder(
-                  itemCount: messagingController.conversationStarters.length,
-                  itemBuilder: (context, index) {
-                    final starter =
-                        messagingController.conversationStarters[index];
-                    return Card(
-                      child: ListTile(
-                        title: Text(starter.triggerText),
-                        subtitle: Text(
-                          '${starter.categoryDisplayName} • ${starter.responseText}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Switch(
-                              value: starter.isActive,
-                              onChanged: (value) {
-                                messagingController
-                                    .toggleStarterStatus(starter);
-                              },
-                              activeColor:
-                                  const Color.fromARGB(255, 81, 115, 153),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                messagingController.deleteConversationStarter(
-                                  starter.documentId!,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              }),
-            ),
-          ],
         ),
       ),
     );
