@@ -27,18 +27,15 @@ class WebAppointmentModal extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             _buildHeader(controller),
             const SizedBox(height: 24),
             
-            // Content
             Expanded(
               child: SingleChildScrollView(
                 child: isMobile ? _buildMobileLayout(controller) : _buildDesktopLayout(controller),
               ),
             ),
             
-            // Actions
             const SizedBox(height: 24),
             _buildActionSection(context, controller),
           ],
@@ -149,7 +146,6 @@ class WebAppointmentModal extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left column
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,7 +157,6 @@ class WebAppointmentModal extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 24),
-        // Right column
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,22 +212,6 @@ class WebAppointmentModal extends StatelessWidget {
               Icons.note,
               'Notes',
               appointment.notes!,
-            ),
-          ],
-          if (appointment.totalCost != null) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              Icons.attach_money,
-              'Total Cost',
-              '₱${appointment.totalCost!.toStringAsFixed(2)}',
-            ),
-          ],
-          if (appointment.isPaid) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              Icons.payment,
-              'Payment Status',
-              'PAID (${appointment.paymentMethod?.toUpperCase() ?? 'UNKNOWN'})',
             ),
           ],
         ],
@@ -295,7 +274,6 @@ class WebAppointmentModal extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           
-          // Timeline
           _buildTimelineItem(
             'Appointment Scheduled',
             appointment.status != 'pending',
@@ -323,7 +301,6 @@ class WebAppointmentModal extends StatelessWidget {
             isLast: true,
           ),
           
-          // Show timing statistics
           if (appointment.waitingTime != null || appointment.serviceDuration != null) ...[
             const SizedBox(height: 16),
             const Divider(),
@@ -563,7 +540,6 @@ class WebAppointmentModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Vitals grid
           GridView.count(
             crossAxisCount: 2,
             childAspectRatio: 3,
@@ -667,6 +643,22 @@ class WebAppointmentModal extends StatelessWidget {
         );
 
       case 'accepted':
+        if (!appointment.isToday) {
+          return Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          );
+        }
+        
         return Row(
           children: [
             Expanded(
@@ -705,36 +697,19 @@ class WebAppointmentModal extends StatelessWidget {
         );
 
       case 'completed':
+      case 'cancelled':
+      case 'declined':
         return Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _printMedicalRecord(),
-                icon: const Icon(Icons.print),
-                label: const Text('Print Record'),
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue,
-                  side: const BorderSide(color: Colors.blue),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
+                child: const Text('Close'),
               ),
             ),
-            if (!appointment.isPaid) ...[
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showPaymentDialog(context, controller),
-                  icon: const Icon(Icons.payment),
-                  label: const Text('Process Payment'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ),
-            ],
           ],
         );
 
@@ -755,97 +730,6 @@ class WebAppointmentModal extends StatelessWidget {
     }
   }
 
-  void _showPaymentDialog(BuildContext context, WebAppointmentController controller) {
-    final amountController = TextEditingController(
-      text: appointment.totalCost?.toString() ?? '',
-    );
-    String paymentMethod = 'cash';
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Process Payment',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 81, 115, 153),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Amount (₱)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              StatefulBuilder(
-                builder: (context, setState) => DropdownButtonFormField<String>(
-                  value: paymentMethod,
-                  decoration: const InputDecoration(
-                    labelText: 'Payment Method',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                    DropdownMenuItem(value: 'card', child: Text('Card')),
-                    DropdownMenuItem(value: 'gcash', child: Text('GCash')),
-                  ],
-                  onChanged: (value) => setState(() => paymentMethod = value!),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (amountController.text.isNotEmpty) {
-                        controller.processPayment(
-                          appointment,
-                          double.parse(amountController.text),
-                          paymentMethod,
-                        );
-                        Navigator.pop(context); // Close payment dialog
-                        Navigator.pop(Get.context!); // Close main modal
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
-                    child: const Text('Process', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _printMedicalRecord() {
-    Navigator.pop(Get.context!);
-    Get.snackbar('Info', 'Medical record printing feature will be implemented');
-  }
-
-  // Helper methods
   List<Color> _getStatusGradient(String status) {
     switch (status) {
       case 'pending':
@@ -856,6 +740,8 @@ class WebAppointmentModal extends StatelessWidget {
         return [Colors.purple, Colors.purple.shade300];
       case 'completed':
         return [Colors.green, Colors.green.shade300];
+      case 'cancelled':
+        return [Colors.grey, Colors.grey.shade300];
       case 'declined':
         return [Colors.red, Colors.red.shade300];
       default:
@@ -873,6 +759,8 @@ class WebAppointmentModal extends StatelessWidget {
         return Colors.purple;
       case 'completed':
         return Colors.green;
+      case 'cancelled':
+        return Colors.grey;
       case 'declined':
         return Colors.red;
       case 'no_show':
@@ -892,6 +780,8 @@ class WebAppointmentModal extends StatelessWidget {
         return 'IN PROGRESS';
       case 'completed':
         return 'COMPLETED';
+      case 'cancelled':
+        return 'CANCELLED';
       case 'declined':
         return 'DECLINED';
       case 'no_show':

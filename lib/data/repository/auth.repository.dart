@@ -344,4 +344,19 @@ class AuthRepository {
       return [];
     }
   }
+
+  // Real-time subscription for user appointments
+  Stream<RealtimeMessage> subscribeToUserAppointments(String userId) {
+    return appWriteProvider.subscribeToUserAppointments(userId);
+  }
+
+  // Real-time subscription for clinic appointments
+  Stream<RealtimeMessage> subscribeToClinicAppointments(String clinicId) {
+    return appWriteProvider.subscribeToClinicAppointments(clinicId);
+  }
+
+  // Get occupied time slots
+  Future<List<String>> getOccupiedTimeSlots(String clinicId, DateTime date) {
+    return appWriteProvider.getOccupiedTimeSlots(clinicId, date);
+  }
 }

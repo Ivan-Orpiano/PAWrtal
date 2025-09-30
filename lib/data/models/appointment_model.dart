@@ -5,12 +5,12 @@ class Appointment {
   final String petId;
   final String service;
   final DateTime dateTime;
-  final String status; // pending, accepted, in_progress, completed, no_show, cancelled
-  final String? notes; // Initial booking notes
+  final String status; // pending, accepted, in_progress, completed, no_show, declined, cancelled
+  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
   
-  // New fields for medical records
+  // Medical record fields
   final DateTime? checkedInAt;
   final DateTime? serviceStartedAt;
   final DateTime? serviceCompletedAt;
@@ -18,13 +18,13 @@ class Appointment {
   final String? treatment;
   final String? prescription;
   final String? vetNotes;
-  final List<String>? attachments; // For photos, documents
-  final double? totalCost;
-  final bool isPaid;
-  final String? paymentMethod;
+  final List<String>? attachments;
+  final double? totalCost;  // Keep but don't use
+  final bool isPaid;  // Keep but don't use
+  final String? paymentMethod;  // Keep but don't use
   final String? followUpInstructions;
   final DateTime? nextAppointmentDate;
-  final Map<String, dynamic>? vitals; // Temperature, weight, etc.
+  final Map<String, dynamic>? vitals;
 
   Appointment({
     this.documentId,
@@ -165,15 +165,33 @@ class Appointment {
     );
   }
 
-  // Helper methods for status checking
+  // Helper methods
   bool get isCompleted => status == 'completed';
   bool get isInProgress => status == 'in_progress';
   bool get isAccepted => status == 'accepted';
   bool get isPending => status == 'pending';
+  bool get isCancelled => status == 'cancelled';
+  bool get isDeclined => status == 'declined';
   bool get hasArrived => checkedInAt != null;
   bool get hasServiceStarted => serviceStartedAt != null;
   bool get hasServiceCompleted => serviceCompletedAt != null;
   bool get hasMedicalRecord => diagnosis != null || treatment != null || prescription != null;
+
+  // Check if appointment is today
+  bool get isToday {
+    final now = DateTime.now();
+    return dateTime.year == now.year &&
+           dateTime.month == now.month &&
+           dateTime.day == now.day;
+  }
+
+  // Check if appointment is in the past
+  bool get isPast {
+    final now = DateTime.now();
+    final appointmentDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final today = DateTime(now.year, now.month, now.day);
+    return appointmentDate.isBefore(today);
+  }
 
   // Get service duration
   Duration? get serviceDuration {

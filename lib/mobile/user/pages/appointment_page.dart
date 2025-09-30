@@ -2,6 +2,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_1st_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_2nd_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_3rd_tab.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_4th_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
 
     if (!Get.isRegistered<EnhancedUserAppointmentController>()) {
       Get.put(EnhancedUserAppointmentController(
@@ -93,7 +94,7 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                         child: Column(
                           children: [
                             Text(
-                              "${stats['pending']}",
+                              "${stats['upcoming']}",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -101,7 +102,7 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                               ),
                             ),
                             Text(
-                              "Pending",
+                              "Upcoming",
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.8),
                                 fontSize: 12,
@@ -130,7 +131,7 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
               ),
               child: Column(
                 children: [
-                  // Enhanced Tab Bar
+                  // Enhanced Tab Bar with 4 tabs
                   Container(
                     margin: const EdgeInsets.only(top: 20, left: 16, right: 16),
                     padding: const EdgeInsets.all(4),
@@ -164,22 +165,28 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                       ),
                       tabs: [
                         Obx(() => _buildTab(
+                          Icons.event_available_rounded,
+                          "Upcoming",
+                          controller.userStats['upcoming'] ?? 0,
+                          Colors.blue,
+                        )),
+                        Obx(() => _buildTab(
                           Icons.pending_rounded,
                           "Pending",
                           controller.userStats['pending'] ?? 0,
                           Colors.orange,
                         )),
                         Obx(() => _buildTab(
-                          Icons.check_rounded,
-                          "Active",
-                          controller.userStats['upcoming'] ?? 0,
+                          Icons.check_circle_rounded,
+                          "Completed",
+                          controller.userStats['completed'] ?? 0,
                           Colors.green,
                         )),
                         Obx(() => _buildTab(
-                          Icons.cancel_rounded,
-                          "Cancelled",
-                          controller.declined.length,
-                          Colors.red,
+                          Icons.history_rounded,
+                          "History",
+                          controller.userStats['history'] ?? 0,
+                          Colors.grey,
                         )),
                       ],
                     ),
@@ -189,9 +196,10 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                     child: TabBarView(
                       controller: _tabController,
                       children: const [
-                        EnhancedAPFirstTab(),
-                        EnhancedAPSecondTab(),
-                        EnhancedAPThirdTab(),
+                        EnhancedAPFirstTab(),  // Upcoming
+                        EnhancedAPSecondTab(), // Pending
+                        EnhancedAPThirdTab(),  // Completed
+                        EnhancedAPFourthTab(), // History
                       ],
                     ),
                   ),
@@ -207,26 +215,32 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
   Widget _buildTab(IconData icon, String text, int count, Color countColor) {
     return Tab(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: IntrinsicWidth(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16),
-              const SizedBox(width: 4),
-              Flexible(child: Text(text, style: const TextStyle(fontSize: 12))),
+              Icon(icon, size: 14),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  text, 
+                  style: const TextStyle(fontSize: 10),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               if (count > 0) ...[
                 const SizedBox(width: 2),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: countColor,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     count.toString(),
                     style: const TextStyle(
-                      fontSize: 9,
+                      fontSize: 8,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),

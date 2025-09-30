@@ -1123,4 +1123,68 @@ class AppWriteProvider {
     _conversationSubscription?.cancel();
     _statusSubscription?.cancel();
   }
+
+  Stream<RealtimeMessage> subscribeToUserAppointments(String userId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.appointmentCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          // Filter appointments for specific user
+          return message.payload['userId'] == userId;
+        });
+  }
+
+  Future<List<String>> getOccupiedTimeSlots(
+      String clinicId, DateTime date) async {
+    try {
+      // Format date to start and end of day
+      final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [
+          Query.equal("clinicId", clinicId),
+          Query.greaterThanEqual("dateTime", startOfDay.toIso8601String()),
+          Query.lessThanEqual("dateTime", endOfDay.toIso8601String()),
+          // Only count non-cancelled appointments
+          Query.notEqual("status", "cancelled"),
+          Query.notEqual("status", "declined"),
+          Query.notEqual("status", "no_show"),
+        ],
+      );
+
+      // Extract time slots from appointments
+      final List<String> occupiedSlots = [];
+      for (var doc in result.documents) {
+        final appointmentDateTime = DateTime.parse(doc.data['dateTime']);
+        // Format time as HH:MM
+        final timeString =
+            '${appointmentDateTime.hour.toString().padLeft(2, '0')}:${appointmentDateTime.minute.toString().padLeft(2, '0')}';
+        occupiedSlots.add(timeString);
+      }
+
+      return occupiedSlots;
+    } catch (e) {
+      print("Error getting occupied time slots: $e");
+      return [];
+    }
+  }
+
+  Stream<RealtimeMessage> subscribeToClinicAppointments(String clinicId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.appointmentCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          // Filter appointments for specific clinic
+          return message.payload['clinicId'] == clinicId;
+        });
+  }
 }

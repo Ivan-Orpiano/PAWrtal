@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/components/appointment_tabs/components/
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+/// Completed Tab - Shows finished appointments with medical records
 class EnhancedAPThirdTab extends StatelessWidget {
   const EnhancedAPThirdTab({super.key});
 
@@ -29,7 +30,7 @@ class EnhancedAPThirdTab extends StatelessWidget {
         );
       }
 
-      final appointments = controller.declined;
+      final appointments = controller.completed;
 
       if (appointments.isEmpty) {
         return Center(
@@ -43,14 +44,14 @@ class EnhancedAPThirdTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
-                  Icons.sentiment_satisfied,
+                  Icons.check_circle,
                   size: 64,
                   color: Colors.green[600],
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                "Great! No Cancelled Here",
+                "No Completed Appointments",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -59,12 +60,40 @@ class EnhancedAPThirdTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Declined or missed appointments will appear here",
+                "Your finished appointments will appear here",
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[500],
                 ),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.green[600],
+                      size: 24,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Tip: After your appointment is completed, you can view medical records and provide feedback here.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green[700],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -76,13 +105,13 @@ class EnhancedAPThirdTab extends StatelessWidget {
         color: const Color.fromARGB(255, 81, 115, 153),
         child: Column(
           children: [
-            // Header
+            // Header with count
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.red, Colors.red.shade300],
+                  colors: [Colors.green, Colors.green.shade300],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -91,7 +120,7 @@ class EnhancedAPThirdTab extends StatelessWidget {
               child: Row(
                 children: [
                   const Icon(
-                    Icons.cancel_outlined,
+                    Icons.check_circle,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -101,7 +130,7 @@ class EnhancedAPThirdTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Declined & Missed',
+                          'Completed Visits',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -109,7 +138,7 @@ class EnhancedAPThirdTab extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${appointments.length} appointment${appointments.length != 1 ? 's' : ''} were not completed',
+                          '${appointments.length} finished appointment${appointments.length != 1 ? 's' : ''}',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 12,
@@ -118,10 +147,25 @@ class EnhancedAPThirdTab extends StatelessWidget {
                       ],
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      appointments.length.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            
+
+            // Appointments list
             Expanded(
               child: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),

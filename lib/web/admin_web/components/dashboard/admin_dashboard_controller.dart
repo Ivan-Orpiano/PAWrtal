@@ -21,7 +21,6 @@ class AdminDashboardController extends GetxController {
     required this.session,
   });
 
-  // Observable variables
   var isLoading = false.obs;
   var clinicData = Rxn<Clinic>();
   var appointments = <Appointment>[].obs;
@@ -33,11 +32,9 @@ class AdminDashboardController extends GetxController {
   var petsCache = <String, Pet>{}.obs;
   var ownersCache = <String, Map<String, dynamic>>{}.obs;
 
-  // Calendar related
   var selectedDate = DateTime.now().obs;
   var calendarAppointments = <DateTime, List<Appointment>>{}.obs;
 
-  // Real-time related
   RealtimeSubscription? _appointmentSubscription;
   Timer? _fallbackTimer;
   var lastUpdateTime = DateTime.now().obs;
@@ -48,13 +45,11 @@ class AdminDashboardController extends GetxController {
     super.onInit();
     initializeDashboard();
     
-    // Refresh data every 5 minutes
     ever(selectedDate, (_) => fetchAppointmentsForDate(selectedDate.value));
   }
 
   @override
   void onClose() {
-    // Clean up subscriptions and timers
     _appointmentSubscription?.close();
     _fallbackTimer?.cancel();
     super.onClose();
@@ -69,7 +64,6 @@ class AdminDashboardController extends GetxController {
       await generateCalendarData();
       await fetchRecentMessages();
       
-      // Initialize real-time updates
       await _initializeRealTimeUpdates();
       
     } catch (e) {
@@ -83,10 +77,7 @@ class AdminDashboardController extends GetxController {
     try {
       if (clinicData.value?.documentId == null) return;
 
-      // Set up real-time subscription for appointments
       await _subscribeToAppointmentUpdates();
-      
-      // Set up fallback polling as backup (every 30 seconds)
       _setupFallbackPolling();
       
       isRealTimeConnected.value = true;
@@ -94,19 +85,16 @@ class AdminDashboardController extends GetxController {
       
     } catch (e) {
       print("Failed to initialize real-time updates: $e");
-      // Fall back to polling if real-time fails
-      _setupFallbackPolling(interval: 15); // More frequent polling as fallback
+      _setupFallbackPolling(interval: 15);
     }
   }
 
   Future<void> _subscribeToAppointmentUpdates() async {
     try {
-      // Close existing subscription if any
       await _appointmentSubscription?.close();
 
       final realtime = Realtime(authRepository.client);
       
-      // Subscribe to appointment collection changes for this clinic
       _appointmentSubscription = realtime.subscribe([
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.appointmentCollectionID}.documents'
       ]);
@@ -118,7 +106,6 @@ class AdminDashboardController extends GetxController {
         onError: (error) {
           print("Real-time subscription error: $error");
           isRealTimeConnected.value = false;
-          // Increase fallback polling frequency on error
           _setupFallbackPolling(interval: 10);
         },
       );
@@ -135,13 +122,11 @@ class AdminDashboardController extends GetxController {
       
       final payload = response.payload;
 
-      // Check if this appointment belongs to our clinic
       final appointmentClinicId = payload['clinicId'];
       if (appointmentClinicId != clinicData.value?.documentId) return;
 
       final appointment = Appointment.fromMap(payload);
       
-      // Handle different types of events
       for (String event in response.events) {
         if (event.contains('.create')) {
           _handleNewAppointment(appointment);
@@ -152,10 +137,8 @@ class AdminDashboardController extends GetxController {
         }
       }
 
-      // Update last update time
       lastUpdateTime.value = DateTime.now();
       
-      // Show notification for new appointments
       if (response.events.any((event) => event.contains('.create'))) {
         _showNewAppointmentNotification(appointment);
       }
@@ -166,21 +149,17 @@ class AdminDashboardController extends GetxController {
   }
 
   void _handleNewAppointment(Appointment appointment) {
-    // Check if appointment already exists to prevent duplicates
     final existingIndex = appointments.indexWhere((a) => a.documentId == appointment.documentId);
     
     if (existingIndex == -1) {
-      // Only add if it doesn't already exist
       appointments.add(appointment);
       print("New appointment added: ${appointment.documentId}");
     } else {
-      // Update existing appointment if it already exists (shouldn't happen for new, but safety check)
       appointments[existingIndex] = appointment;
       appointments.refresh();
       print("Appointment already exists, updated: ${appointment.documentId}");
     }
     
-    // Refresh all related data
     _processTodayAppointments();
     _processUpcomingAppointments();
     _updateAppointmentStats();
@@ -188,13 +167,11 @@ class AdminDashboardController extends GetxController {
   }
 
   void _handleUpdatedAppointment(Appointment appointment) {
-    // Find and update existing appointment
     final index = appointments.indexWhere((a) => a.documentId == appointment.documentId);
     if (index != -1) {
       appointments[index] = appointment;
       appointments.refresh();
       
-      // Refresh related data
       _processTodayAppointments();
       _processUpcomingAppointments();
       _updateAppointmentStats();
@@ -202,7 +179,6 @@ class AdminDashboardController extends GetxController {
       
       print("Appointment updated: ${appointment.documentId}");
     } else {
-      // If appointment doesn't exist, add it (edge case)
       appointments.add(appointment);
       _processTodayAppointments();
       _processUpcomingAppointments();
@@ -213,10 +189,8 @@ class AdminDashboardController extends GetxController {
   }
 
   void _handleDeletedAppointment(Appointment appointment) {
-    // Remove from appointments list
     appointments.removeWhere((a) => a.documentId == appointment.documentId);
     
-    // Refresh related data
     _processTodayAppointments();
     _processUpcomingAppointments();
     _updateAppointmentStats();
@@ -238,7 +212,6 @@ class AdminDashboardController extends GetxController {
       }
       
       if (isUpdate) {
-        // Remove old version and add updated version
         calendarAppointments[date]!.removeWhere((a) => a.documentId == appointment.documentId);
       }
       
@@ -268,6 +241,7 @@ class AdminDashboardController extends GetxController {
       'pending': appointments.where((a) => a.status == 'pending').length,
       'accepted': appointments.where((a) => a.status == 'accepted').length,
       'completed': appointments.where((a) => a.status == 'completed').length,
+      'cancelled': appointments.where((a) => a.status == 'cancelled').length,
       'declined': appointments.where((a) => a.status == 'declined').length,
       'today': todayAppointments.length,
     };
@@ -302,11 +276,9 @@ class AdminDashboardController extends GetxController {
     });
   }
 
-  // Manual refresh method (for pull-to-refresh)
   Future<void> refreshDashboard() async {
     await refreshDashboardData();
     
-    // Try to reconnect real-time if disconnected
     if (!isRealTimeConnected.value) {
       try {
         await _initializeRealTimeUpdates();
@@ -324,7 +296,6 @@ class AdminDashboardController extends GetxController {
       await fetchRecentMessages();
       lastUpdateTime.value = DateTime.now();
       
-      // Clean up any potential duplicates after fetch
       _removeDuplicateAppointments();
     } catch (e) {
       print("Error refreshing dashboard data: $e");
@@ -332,7 +303,6 @@ class AdminDashboardController extends GetxController {
   }
 
   void _removeDuplicateAppointments() {
-    // Remove any duplicate appointments based on documentId
     final uniqueAppointments = <Appointment>[];
     final seenIds = <String>{};
     
@@ -349,7 +319,6 @@ class AdminDashboardController extends GetxController {
     }
   }
 
-  // Rest of your existing methods remain the same...
   Future<void> fetchClinicData() async {
     try {
       final user = await authRepository.getUser();
@@ -386,7 +355,6 @@ class AdminDashboardController extends GetxController {
       final stats = await authRepository.getClinicAppointmentStats(clinicData.value!.documentId!);
       appointmentStats.assignAll(stats);
       
-      // Calculate monthly stats
       final now = DateTime.now();
       final thisMonth = DateTime(now.year, now.month, 1);
       final nextMonth = DateTime(now.year, now.month + 1, 1);
@@ -399,10 +367,6 @@ class AdminDashboardController extends GetxController {
         'thisMonth': monthlyAppointments.length,
         'completed': monthlyAppointments.where((a) => a.status == 'completed').length,
         'pending': monthlyAppointments.where((a) => a.status == 'pending').length,
-        'revenue': monthlyAppointments
-            .where((a) => a.isPaid && a.totalCost != null)
-            .fold(0.0, (sum, a) => sum + (a.totalCost ?? 0.0))
-            .round(),
       });
     } catch (e) {
       print("Error fetching appointment stats: $e");
@@ -411,7 +375,6 @@ class AdminDashboardController extends GetxController {
 
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
-      // Cache pet data
       if (!petsCache.containsKey(appointment.petId)) {
         try {
           final petDoc = await authRepository.getPetById(appointment.petId);
@@ -425,7 +388,6 @@ class AdminDashboardController extends GetxController {
         }
       }
 
-      // Cache owner data
       if (!ownersCache.containsKey(appointment.userId)) {
         try {
           final ownerDoc = await authRepository.getUserById(appointment.userId);
@@ -448,7 +410,6 @@ class AdminDashboardController extends GetxController {
              appointmentDate.day == today.day;
     }).toList();
 
-    // Sort by time
     todayAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     todayAppointments.assignAll(todayAppts);
   }
@@ -460,7 +421,6 @@ class AdminDashboardController extends GetxController {
              (appointment.status == 'accepted' || appointment.status == 'pending');
     }).toList();
 
-    // Sort by date and take next 5
     upcoming.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     upcomingAppointments.assignAll(upcoming.take(5).toList());
   }
@@ -485,13 +445,10 @@ class AdminDashboardController extends GetxController {
   }
 
   Future<void> fetchAppointmentsForDate(DateTime date) async {
-    // This method can be used to fetch appointments for a specific date
-    // when calendar date is selected
+    // Placeholder for future implementation
   }
 
   Future<void> fetchRecentMessages() async {
-    // TODO: Implement when messaging system is ready
-    // For now, add some mock data
     recentMessages.assignAll([
       {
         'id': '1',
@@ -520,43 +477,32 @@ class AdminDashboardController extends GetxController {
     ]);
   }
 
-  // Helper methods
   String getOwnerName(String userId) => ownersCache[userId]?['name'] ?? 'Unknown Owner';
   String getPetName(String petId) => petsCache[petId]?.name ?? petId;
   String getPetType(String petId) => petsCache[petId]?.type ?? 'Unknown Type';
   Pet? getPetForAppointment(String petId) => petsCache[petId];
 
-  // Statistics getters
-  double get todayRevenue {
-    return todayAppointments
-        .where((a) => a.isPaid && a.totalCost != null)
-        .fold(0.0, (sum, appointment) => sum + (appointment.totalCost ?? 0.0));
-  }
-
   int get pendingCount => appointmentStats['pending'] ?? 0;
   int get acceptedCount => appointmentStats['accepted'] ?? 0;
   int get completedCount => appointmentStats['completed'] ?? 0;
+  int get cancelledCount => appointmentStats['cancelled'] ?? 0;
   int get declinedCount => appointmentStats['declined'] ?? 0;
   int get totalAppointments => appointmentStats['total'] ?? 0;
 
-  // Quick actions
   Future<void> quickAcceptAppointment(Appointment appointment) async {
     try {
       await authRepository.updateAppointmentStatus(appointment.documentId!, 'accepted');
-      // Don't need to manually refresh - real-time will handle it
       Get.snackbar("Success", "Appointment accepted!");
     } catch (e) {
       Get.snackbar("Error", "Failed to accept appointment: $e");
     }
   }
 
-  // Navigation methods using your existing WebAdminHomeController
   void navigateToAppointments([String? filter]) {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(2); // Appointments page
+      homeController.setSelectedIndex(2);
       
-      // Set filter if provided
       if (filter != null) {
         Future.delayed(const Duration(milliseconds: 100), () {
           try {
@@ -575,7 +521,7 @@ class AdminDashboardController extends GetxController {
   void navigateToMessages() {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(3); // Messages page
+      homeController.setSelectedIndex(3);
     } catch (e) {
       print("Navigation error: $e");
     }
@@ -584,7 +530,7 @@ class AdminDashboardController extends GetxController {
   void navigateToClinic() {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(1); // Clinic page
+      homeController.setSelectedIndex(1);
     } catch (e) {
       print("Navigation error: $e");
     }
@@ -594,7 +540,6 @@ class AdminDashboardController extends GetxController {
     selectedDate.value = date;
   }
 
-  // Connection status helpers
   String get connectionStatus => isRealTimeConnected.value ? "Connected" : "Polling";
   String get lastUpdateDisplay => "Last update: ${DateFormat('hh:mm:ss a').format(lastUpdateTime.value)}";
 }

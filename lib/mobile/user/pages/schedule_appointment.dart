@@ -8,6 +8,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
+import 'dart:async';
+import 'package:appwrite/appwrite.dart';
 
 import '../../../data/models/appointment_model.dart';
 
@@ -16,7 +18,7 @@ class ScheduleAppointment extends StatefulWidget {
   final ClinicSettings? clinicSettings;
 
   const ScheduleAppointment({
-    super.key, 
+    super.key,
     required this.clinic,
     this.clinicSettings,
   });
@@ -32,6 +34,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   String? selectedPet;
   bool isBooking = false;
   List<String> availableTimeSlots = [];
+  List<String> occupiedTimeSlots = [];
+  StreamSubscription<RealtimeMessage>? _appointmentSubscription;
 
   PetsController? petsController;
 
@@ -40,6 +44,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     super.initState();
     _initializePetsController();
     _updateAvailableTimeSlots();
+    _setupRealtimeSubscription();
+    _fetchOccupiedSlots();
 
     // Add focus listener to refresh pets when page regains focus
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -50,6 +56,94 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         }
       });
       FocusScope.of(context).requestFocus(focusNode);
+    });
+  }
+
+  @override
+  void dispose() {
+    _appointmentSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeSubscription() {
+    try {
+      final clinicId = widget.clinic.documentId ?? '';
+      if (clinicId.isEmpty) return;
+
+      _appointmentSubscription = Get.find<AuthRepository>()
+          .subscribeToClinicAppointments(clinicId)
+          .listen((message) {
+        // When an appointment is created, updated, or deleted, refresh time slots
+        print('Real-time update received: ${message.events}');
+        _fetchOccupiedSlots();
+      });
+    } catch (e) {
+      print('Error setting up realtime subscription: $e');
+    }
+  }
+
+  Future<void> _fetchOccupiedSlots() async {
+    try {
+      final clinicId = widget.clinic.documentId ?? '';
+      if (clinicId.isEmpty) return;
+
+      final slots = await Get.find<AuthRepository>()
+          .getOccupiedTimeSlots(clinicId, today);
+      
+      print('Fetched occupied slots for ${today.toString()}: $slots');
+      
+      setState(() {
+        occupiedTimeSlots = slots;
+      });
+      _updateAvailableTimeSlots();
+    } catch (e) {
+      print('Error fetching occupied slots: $e');
+    }
+  }
+
+  void _onDaySelected(DateTime day, DateTime focusedDay) {
+    if (_isDateSelectable(day)) {
+      setState(() {
+        today = day;
+        selectedTime = null;
+      });
+      _fetchOccupiedSlots(); // Fetch occupied slots for new date
+    }
+  }
+
+  void _updateAvailableTimeSlots() {
+    List<String> slots = [];
+    
+    if (widget.clinicSettings != null) {
+      slots = widget.clinicSettings!.getAvailableTimeSlots(today);
+    } else {
+      slots = [
+        '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00',
+      ];
+    }
+
+    // Filter out past time slots if today
+    if (_isToday(today)) {
+      slots = _filterPastTimeSlots(slots);
+    }
+
+    // IMPORTANT: Filter out occupied time slots
+    final filteredSlots = slots.where((slot) {
+      final isOccupied = occupiedTimeSlots.contains(slot);
+      if (isOccupied) {
+        print('Slot $slot is occupied, filtering out');
+      }
+      return !isOccupied;
+    }).toList();
+
+    print('Available slots after filtering: $filteredSlots');
+    print('Occupied slots: $occupiedTimeSlots');
+
+    setState(() {
+      availableTimeSlots = filteredSlots;
+      if (selectedTime != null && !filteredSlots.contains(selectedTime)) {
+        selectedTime = null;
+      }
     });
   }
 
@@ -71,25 +165,17 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
   List<String> get services {
     // Use services from clinic settings first, then fallback to clinic.services
-    if (widget.clinicSettings != null && widget.clinicSettings!.services.isNotEmpty) {
+    if (widget.clinicSettings != null &&
+        widget.clinicSettings!.services.isNotEmpty) {
       return widget.clinicSettings!.services;
     }
-    
+
     if (widget.clinic.services.isEmpty) {
       return ['General Consultation', 'Vaccination', 'Check-up', 'Grooming'];
     }
     return widget.clinic.services.split(',').map((s) => s.trim()).toList();
   }
 
-  void _onDaySelected(DateTime day, DateTime focusedDay) {
-    if (_isDateSelectable(day)) {
-      setState(() {
-        today = day;
-        selectedTime = null; // Reset selected time when date changes
-      });
-      _updateAvailableTimeSlots();
-    }
-  }
 
   bool _isDateSelectable(DateTime day) {
     // Check if date is in the past
@@ -105,9 +191,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       }
 
       // Check max advance booking
-      final maxAdvanceDate = DateTime.now().add(
-        Duration(days: widget.clinicSettings!.maxAdvanceBooking)
-      );
+      final maxAdvanceDate = DateTime.now()
+          .add(Duration(days: widget.clinicSettings!.maxAdvanceBooking));
       if (day.isAfter(maxAdvanceDate)) {
         return false;
       }
@@ -125,59 +210,36 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
   String _getDayName(int weekday) {
     switch (weekday) {
-      case 1: return 'monday';
-      case 2: return 'tuesday';
-      case 3: return 'wednesday';
-      case 4: return 'thursday';
-      case 5: return 'friday';
-      case 6: return 'saturday';
-      case 7: return 'sunday';
-      default: return 'monday';
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
     }
   }
 
-  void _updateAvailableTimeSlots() {
-    List<String> slots = [];
-    
-    if (widget.clinicSettings != null) {
-      slots = widget.clinicSettings!.getAvailableTimeSlotsFiltered(today);
-    } else {
-      // Fallback to default time slots with filtering
-      slots = [
-        '9:00 AM',
-        '10:00 AM',
-        '11:00 AM',
-        '1:00 PM',
-        '2:00 PM',
-        '3:00 PM',
-        '4:00 PM',
-      ];
-      
-      // Filter out past time slots if the selected date is today
-      if (_isToday(today)) {
-        slots = _filterPastTimeSlots(slots);
-      }
-    }
-
-    setState(() {
-      availableTimeSlots = slots;
-      // Reset selected time if it's no longer available
-      if (selectedTime != null && !slots.contains(selectedTime)) {
-        selectedTime = null;
-      }
-    });
-  }
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
-    return date.year == now.year && 
-           date.month == now.month && 
-           date.day == now.day;
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
   }
 
   List<String> _filterPastTimeSlots(List<String> timeSlots) {
     final now = DateTime.now();
-    
+
     return timeSlots.where((timeSlot) {
       try {
         final slotDateTime = parseTimeStringToDateTime(today, timeSlot);
@@ -231,7 +293,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
     // Check if clinic is accepting appointments
     if (widget.clinicSettings != null && !widget.clinicSettings!.isOpen) {
-      _showSnackBar("This clinic is currently not accepting appointments", isError: true);
+      _showSnackBar("This clinic is currently not accepting appointments",
+          isError: true);
       return;
     }
 
@@ -248,7 +311,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         petId: selectedPet!,
         service: selectedService!,
         dateTime: selectedDateTime,
-        status: widget.clinicSettings?.autoAcceptAppointments == true ? 'accepted' : 'pending',
+        status: widget.clinicSettings?.autoAcceptAppointments == true
+            ? 'accepted'
+            : 'pending',
       );
 
       await Get.find<AuthRepository>().createAppointment(appointment);
@@ -279,8 +344,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   }
 
   void _showSuccessDialog() {
-    final isAutoAccepted = widget.clinicSettings?.autoAcceptAppointments == true;
-    
+    final isAutoAccepted =
+        widget.clinicSettings?.autoAcceptAppointments == true;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -293,11 +359,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
             Text('Success!'),
           ],
         ),
-        content: Text(
-          isAutoAccepted
+        content: Text(isAutoAccepted
             ? 'Your appointment has been automatically confirmed!'
-            : 'Your appointment has been booked successfully. You will receive a confirmation once the clinic reviews your request.'
-        ),
+            : 'Your appointment has been booked successfully. You will receive a confirmation once the clinic reviews your request.'),
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -412,7 +476,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   @override
   Widget build(BuildContext context) {
     final canBookAppointments = widget.clinicSettings?.isOpen ?? true;
-    
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
       body: Column(
@@ -491,7 +555,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                           focusedDay: today,
                           firstDay: DateTime.now(),
                           lastDay: DateTime.now().add(Duration(
-                            days: widget.clinicSettings?.maxAdvanceBooking ?? 90,
+                            days:
+                                widget.clinicSettings?.maxAdvanceBooking ?? 90,
                           )),
                           headerStyle: HeaderStyle(
                             formatButtonVisible: false,
@@ -511,9 +576,11 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                               color: Color.fromARGB(255, 81, 115, 153),
                               shape: BoxShape.circle,
                             ),
-                            weekendTextStyle: TextStyle(color: Colors.grey[600]),
+                            weekendTextStyle:
+                                TextStyle(color: Colors.grey[600]),
                             outsideDaysVisible: false,
-                            disabledTextStyle: TextStyle(color: Colors.grey[400]),
+                            disabledTextStyle:
+                                TextStyle(color: Colors.grey[400]),
                           ),
                           enabledDayPredicate: _isDateSelectable,
                           onDaySelected: _onDaySelected,
@@ -526,26 +593,31 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: availableTimeSlots.isEmpty
-                          ? Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                            ? Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: Colors.orange.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.info_outline,
+                                        color: Colors.orange[700]),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Text(
+                                          'No available times for this date'),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Wrap(
+                                children: availableTimeSlots
+                                    .map(_buildTimeSlot)
+                                    .toList(),
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.info_outline, color: Colors.orange[700]),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: Text('No available times for this date'),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : Wrap(
-                              children: availableTimeSlots.map(_buildTimeSlot).toList(),
-                            ),
                       ),
 
                       // Service selection
@@ -603,8 +675,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                   SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child:
-                                        CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   ),
                                   SizedBox(width: 12),
                                   Text('Loading pets...'),
@@ -631,11 +703,13 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                               hintText: 'Choose your pet',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -654,7 +728,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                       child: Row(
                                         children: [
                                           Icon(Icons.pets,
-                                              size: 20, color: Colors.grey[600]),
+                                              size: 20,
+                                              color: Colors.grey[600]),
                                           const SizedBox(width: 8),
                                           Text(pet.name),
                                         ],

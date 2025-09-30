@@ -1,6 +1,6 @@
 // enhanced_appointment_list.dart
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/mobile/admin/components/appointment_tabs/enhanced_clinic_appointment_controller.dart';
+import 'package:capstone_app/mobile/admin/controllers/enhanced_clinic_appointment_controller.dart';
 import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/completed_page.dart';
 import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/in_progress_page.dart';
 import 'package:capstone_app/mobile/admin/pages/appointment_list_pages/pending_page.dart';

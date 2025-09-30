@@ -18,11 +18,9 @@ class WebAppointmentStats extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with date and revenue
           _buildHeader(controller),
           const SizedBox(height: 20),
           
-          // Stats cards
           if (isMobile)
             _buildMobileStatsGrid(controller)
           else if (isTablet)
@@ -72,7 +70,7 @@ class WebAppointmentStats extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  "Today's Overview",
+                  "Appointment Management",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -99,13 +97,13 @@ class WebAppointmentStats extends StatelessWidget {
             child: Column(
               children: [
                 const Icon(
-                  Icons.attach_money,
+                  Icons.calendar_today,
                   color: Colors.white,
                   size: 24,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '₱${controller.todayRevenue.toStringAsFixed(0)}',
+                  '${controller.appointmentStats['total']}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -113,11 +111,35 @@ class WebAppointmentStats extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "Today's Revenue",
+                  "Total Appointments",
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 12,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: controller.isRealTimeConnected.value 
+                            ? Colors.green 
+                            : Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      controller.connectionStatus,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -152,7 +174,7 @@ class WebAppointmentStats extends StatelessWidget {
             children: [
               Expanded(child: _buildStatCard('Completed', stats['completed']!, Icons.check_circle, Colors.teal)),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Declined', stats['declined']!, Icons.cancel, Colors.red)),
+              Expanded(child: _buildStatCard('Cancelled', stats['cancelled']!, Icons.cancel, Colors.grey)),
             ],
           ),
         ],
@@ -181,7 +203,7 @@ class WebAppointmentStats extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(child: _buildStatCard('Completed', stats['completed']!, Icons.check_circle, Colors.teal)),
               const SizedBox(width: 16),
-              Expanded(child: _buildStatCard('Declined', stats['declined']!, Icons.cancel, Colors.red)),
+              Expanded(child: _buildStatCard('Cancelled', stats['cancelled']!, Icons.cancel, Colors.grey)),
             ],
           ),
         ],
@@ -204,7 +226,7 @@ class WebAppointmentStats extends StatelessWidget {
           const SizedBox(width: 20),
           Expanded(child: _buildStatCard('Completed', stats['completed']!, Icons.check_circle, Colors.teal, isDesktop: true)),
           const SizedBox(width: 20),
-          Expanded(child: _buildStatCard('Declined', stats['declined']!, Icons.cancel, Colors.red, isDesktop: true)),
+          Expanded(child: _buildStatCard('Cancelled', stats['cancelled']!, Icons.cancel, Colors.grey, isDesktop: true)),
         ],
       );
     });
@@ -292,155 +314,6 @@ class WebAppointmentStats extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class WebAppointmentQuickActions extends StatelessWidget {
-  const WebAppointmentQuickActions({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 768;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color.fromARGB(255, 81, 115, 153),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (isMobile)
-            _buildMobileQuickActions()
-          else
-            _buildDesktopQuickActions(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileQuickActions() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildQuickActionCard('Emergency\nCheck-in', Icons.emergency, Colors.red, () => _showEmergencyDialog())),
-            const SizedBox(width: 12),
-            Expanded(child: _buildQuickActionCard('Walk-in\nPatient', Icons.person_add, Colors.blue, () => _showWalkInDialog())),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildQuickActionCard('Schedule\nFollow-up', Icons.event_repeat, Colors.purple, () => _showFollowUpDialog())),
-            const SizedBox(width: 12),
-            Expanded(child: _buildQuickActionCard('Medical\nRecords', Icons.medical_information, Colors.teal, () => _showMedicalRecordsDialog())),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDesktopQuickActions() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildQuickActionCard('Emergency Check-in', Icons.emergency, Colors.red, () => _showEmergencyDialog()),
-          const SizedBox(width: 12),
-          _buildQuickActionCard('Add Walk-in Patient', Icons.person_add, Colors.blue, () => _showWalkInDialog()),
-          const SizedBox(width: 12),
-          _buildQuickActionCard('Schedule Follow-up', Icons.event_repeat, Colors.purple, () => _showFollowUpDialog()),
-          const SizedBox(width: 12),
-          _buildQuickActionCard('View Medical Records', Icons.medical_information, Colors.teal, () => _showMedicalRecordsDialog()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 140,
-        height: 100,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Quick action methods
-  void _showEmergencyDialog() {
-    Get.snackbar(
-      'Emergency Check-in',
-      'Emergency check-in feature will be implemented',
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
-  }
-
-  void _showWalkInDialog() {
-    Get.snackbar(
-      'Walk-in Patient',
-      'Walk-in patient registration feature will be implemented',
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
-  }
-
-  void _showFollowUpDialog() {
-    Get.snackbar(
-      'Schedule Follow-up',
-      'Follow-up scheduling feature will be implemented',
-      backgroundColor: Colors.purple,
-      colorText: Colors.white,
-    );
-  }
-
-  void _showMedicalRecordsDialog() {
-    Get.snackbar(
-      'Medical Records',
-      'Medical records viewer will be implemented',
-      backgroundColor: Colors.teal,
-      colorText: Colors.white,
     );
   }
 }
