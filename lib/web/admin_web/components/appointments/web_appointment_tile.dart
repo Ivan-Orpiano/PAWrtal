@@ -61,7 +61,6 @@ class WebAppointmentTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header row
         Row(
           children: [
             _buildPetAvatar(),
@@ -93,7 +92,6 @@ class WebAppointmentTile extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         
-        // Appointment details
         Row(
           children: [
             Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
@@ -116,11 +114,9 @@ class WebAppointmentTile extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         
-        // Progress indicator
         _buildProgressIndicator(),
         const SizedBox(height: 12),
         
-        // Action buttons
         _buildActionButtons(controller, isMobile: true),
       ],
     );
@@ -129,11 +125,9 @@ class WebAppointmentTile extends StatelessWidget {
   Widget _buildDesktopLayout(WebAppointmentController controller, bool isTablet) {
     return Row(
       children: [
-        // Pet info section
         _buildPetAvatar(),
         const SizedBox(width: 16),
         
-        // Main info
         Expanded(
           flex: 3,
           child: Column(
@@ -175,7 +169,6 @@ class WebAppointmentTile extends StatelessWidget {
           ),
         ),
         
-        // Appointment details
         Expanded(
           flex: 2,
           child: Column(
@@ -233,7 +226,6 @@ class WebAppointmentTile extends StatelessWidget {
           ),
         ),
         
-        // Progress and actions
         Expanded(
           flex: isTablet ? 2 : 3,
           child: Column(
@@ -372,6 +364,22 @@ class WebAppointmentTile extends StatelessWidget {
         );
 
       case 'accepted':
+        // Only show action buttons if appointment is today
+        if (!appointment.isToday) {
+          return SizedBox(
+            height: buttonHeight,
+            child: OutlinedButton(
+              onPressed: () => _showAppointmentDetails(Get.context!),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.blue,
+                side: const BorderSide(color: Colors.blue),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: Text('View Details', style: TextStyle(fontSize: fontSize)),
+            ),
+          );
+        }
+        
         return Row(
           children: [
             Expanded(
@@ -461,41 +469,19 @@ class WebAppointmentTile extends StatelessWidget {
         );
 
       case 'completed':
-        return Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: buttonHeight,
-                child: OutlinedButton(
-                  onPressed: () => _showAppointmentDetails(Get.context!),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.teal,
-                    side: const BorderSide(color: Colors.teal),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: Text('View', style: TextStyle(fontSize: fontSize)),
-                ),
-              ),
+      case 'cancelled':
+      case 'declined':
+        return SizedBox(
+          height: buttonHeight,
+          child: OutlinedButton(
+            onPressed: () => _showAppointmentDetails(Get.context!),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey,
+              side: const BorderSide(color: Colors.grey),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
-            if (!appointment.isPaid) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: buttonHeight,
-                  child: ElevatedButton(
-                    onPressed: () => _showPaymentDialog(controller),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: Text('Payment', style: TextStyle(fontSize: fontSize)),
-                  ),
-                ),
-              ),
-            ],
-          ],
+            child: Text('View Details', style: TextStyle(fontSize: fontSize)),
+          ),
         );
 
       default:
@@ -552,7 +538,6 @@ class WebAppointmentTile extends StatelessWidget {
     final weightController = TextEditingController();
     final bpController = TextEditingController();
     final hrController = TextEditingController();
-    final rrController = TextEditingController();
     final notesController = TextEditingController();
 
     Get.dialog(
@@ -683,7 +668,6 @@ class WebAppointmentTile extends StatelessWidget {
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
     final notesController = TextEditingController();
-    final costController = TextEditingController();
 
     Get.dialog(
       Dialog(
@@ -704,12 +688,22 @@ class WebAppointmentTile extends StatelessWidget {
                     color: Color.fromARGB(255, 81, 115, 153),
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'Leave fields empty to set as "N/A"',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 TextField(
                   controller: diagnosisController,
                   decoration: const InputDecoration(
-                    labelText: 'Diagnosis *',
+                    labelText: 'Diagnosis (Optional)',
                     border: OutlineInputBorder(),
+                    hintText: 'Leave empty for N/A',
                   ),
                   maxLines: 2,
                 ),
@@ -717,8 +711,9 @@ class WebAppointmentTile extends StatelessWidget {
                 TextField(
                   controller: treatmentController,
                   decoration: const InputDecoration(
-                    labelText: 'Treatment *',
+                    labelText: 'Treatment (Optional)',
                     border: OutlineInputBorder(),
+                    hintText: 'Leave empty for N/A',
                   ),
                   maxLines: 2,
                 ),
@@ -726,8 +721,9 @@ class WebAppointmentTile extends StatelessWidget {
                 TextField(
                   controller: prescriptionController,
                   decoration: const InputDecoration(
-                    labelText: 'Prescription',
+                    labelText: 'Prescription (Optional)',
                     border: OutlineInputBorder(),
+                    hintText: 'Leave empty for N/A',
                   ),
                   maxLines: 2,
                 ),
@@ -735,19 +731,11 @@ class WebAppointmentTile extends StatelessWidget {
                 TextField(
                   controller: notesController,
                   decoration: const InputDecoration(
-                    labelText: 'Veterinary Notes',
+                    labelText: 'Veterinary Notes (Optional)',
                     border: OutlineInputBorder(),
+                    hintText: 'Leave empty for N/A',
                   ),
                   maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: costController,
-                  decoration: const InputDecoration(
-                    labelText: 'Total Cost (₱)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -760,28 +748,19 @@ class WebAppointmentTile extends StatelessWidget {
                     const SizedBox(width: 16),
                     ElevatedButton(
                       onPressed: () {
-                        if (diagnosisController.text.isNotEmpty && 
-                            treatmentController.text.isNotEmpty) {
-                          controller.completeServiceWithRecord(
-                            appointment: appointment,
-                            diagnosis: diagnosisController.text,
-                            treatment: treatmentController.text,
-                            prescription: prescriptionController.text.isNotEmpty 
-                              ? prescriptionController.text : null,
-                            vetNotes: notesController.text.isNotEmpty 
-                              ? notesController.text : null,
-                            totalCost: costController.text.isNotEmpty 
-                              ? double.parse(costController.text) : null,
-                          );
-                          Get.back();
-                        } else {
-                          Get.snackbar("Error", "Diagnosis and Treatment are required");
-                        }
+                        controller.completeServiceWithRecord(
+                          appointment: appointment,
+                          diagnosis: diagnosisController.text.isEmpty ? null : diagnosisController.text,
+                          treatment: treatmentController.text.isEmpty ? null : treatmentController.text,
+                          prescription: prescriptionController.text.isEmpty ? null : prescriptionController.text,
+                          vetNotes: notesController.text.isEmpty ? null : notesController.text,
+                        );
+                        Get.back();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
-                      child: const Text('Complete', style: TextStyle(color: Colors.white)),
+                      child: const Text('Complete Service', style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -793,90 +772,6 @@ class WebAppointmentTile extends StatelessWidget {
     );
   }
 
-  void _showPaymentDialog(WebAppointmentController controller) {
-    final amountController = TextEditingController(
-      text: appointment.totalCost?.toString() ?? '',
-    );
-    String paymentMethod = 'cash';
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Process Payment',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 81, 115, 153),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Amount (₱)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              StatefulBuilder(
-                builder: (context, setState) => DropdownButtonFormField<String>(
-                  value: paymentMethod,
-                  decoration: const InputDecoration(
-                    labelText: 'Payment Method',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                    DropdownMenuItem(value: 'card', child: Text('Card')),
-                    DropdownMenuItem(value: 'gcash', child: Text('GCash')),
-                  ],
-                  onChanged: (value) => setState(() => paymentMethod = value!),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (amountController.text.isNotEmpty) {
-                        controller.processPayment(
-                          appointment,
-                          double.parse(amountController.text),
-                          paymentMethod,
-                        );
-                        Get.back();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
-                    child: const Text('Process', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Helper methods
   List<Color> _getStatusGradient(String status) {
     switch (status) {
       case 'pending':
@@ -887,6 +782,8 @@ class WebAppointmentTile extends StatelessWidget {
         return [Colors.purple, Colors.purple.shade300];
       case 'completed':
         return [Colors.green, Colors.green.shade300];
+      case 'cancelled':
+        return [Colors.grey, Colors.grey.shade300];
       case 'declined':
         return [Colors.red, Colors.red.shade300];
       default:
@@ -904,6 +801,8 @@ class WebAppointmentTile extends StatelessWidget {
         return Colors.purple;
       case 'completed':
         return Colors.green;
+      case 'cancelled':
+        return Colors.grey;
       case 'declined':
         return Colors.red;
       case 'no_show':
@@ -927,6 +826,8 @@ class WebAppointmentTile extends StatelessWidget {
         return 'IN PROGRESS';
       case 'completed':
         return 'COMPLETED';
+      case 'cancelled':
+        return 'CANCELLED';
       case 'declined':
         return 'DECLINED';
       case 'no_show':

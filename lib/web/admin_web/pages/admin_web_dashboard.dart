@@ -19,7 +19,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   void initState() {
     super.initState();
     
-    // Initialize controller if not already registered
     if (!Get.isRegistered<AdminDashboardController>()) {
       Get.put(AdminDashboardController(
         authRepository: Get.find<AuthRepository>(),
@@ -49,15 +48,12 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Section
                 _buildHeader(controller, isMobile),
                 const SizedBox(height: 24),
                 
-                // Quick Stats Cards
                 _buildQuickStats(controller, isMobile, isTablet),
                 const SizedBox(height: 32),
                 
-                // Main Content Grid
                 if (isMobile)
                   _buildMobileLayout(controller)
                 else if (isTablet)
@@ -99,14 +95,21 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.dashboard, color: Colors.white, size: 28),
-              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.dashboard_rounded, color: Colors.white, size: 32),
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      controller.clinicData.value?.clinicName ?? 'Veterinary Dashboard',
+                      controller.clinicData.value?.clinicName ?? 'Admin Dashboard',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: isMobile ? 20 : 24,
@@ -132,10 +135,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.attach_money, color: Colors.white, size: 24),
+                      const Icon(Icons.pets, color: Colors.white, size: 24),
                       const SizedBox(height: 8),
                       Text(
-                        '₱${controller.todayRevenue.toStringAsFixed(0)}',
+                        '${controller.todayAppointments.length}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -143,14 +146,13 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                         ),
                       ),
                       Text(
-                        "Today's Revenue",
+                        "Today's Patients",
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.8),
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Real-time status indicator
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -191,10 +193,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.attach_money, color: Colors.white, size: 20),
+                  const Icon(Icons.pets, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    "Today's Revenue: ₱${controller.todayRevenue.toStringAsFixed(0)}",
+                    "Today's Patients: ${controller.todayAppointments.length}",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -540,7 +542,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   Widget _buildRecentMessages(AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
       title: 'Recent Messages',
-      subtitle: '${controller.recentMessages.length} unread',
+      subtitle: '${controller.recentMessages.where((m) => !m['isRead']).length} unread',
       icon: Icons.message,
       child: controller.recentMessages.isEmpty
           ? _buildEmptyState('No recent messages', Icons.message)
@@ -779,12 +781,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
           outsideDaysVisible: false,
           weekendTextStyle: const TextStyle(color: Colors.red),
           holidayTextStyle: const TextStyle(color: Colors.red),
-          // Style for disabled past days
           disabledTextStyle: TextStyle(
             color: Colors.grey.shade400,
             decoration: TextDecoration.lineThrough,
           ),
-          // Style for today
           todayTextStyle: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -793,7 +793,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             color: Color.fromARGB(255, 81, 115, 153),
             shape: BoxShape.circle,
           ),
-          // Style for selected day
           selectedTextStyle: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -802,7 +801,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             color: Colors.blue.shade600,
             shape: BoxShape.circle,
           ),
-          // Style for days with events
           markerDecoration: BoxDecoration(
             color: Colors.green.shade400,
             shape: BoxShape.circle,
@@ -819,12 +817,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
           ),
         ),
         enabledDayPredicate: (day) {
-          // Disable past days (before today)
           final dayDate = DateTime(day.year, day.month, day.day);
           return !dayDate.isBefore(todayDate);
         },
         onDaySelected: (selectedDay, focusedDay) {
-          // Only allow selection of today or future dates
           final selectedDate = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
           if (!selectedDate.isBefore(todayDate)) {
             controller.setSelectedDate(selectedDay);
@@ -833,7 +829,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         selectedDayPredicate: (day) {
           return isSameDay(controller.selectedDate.value, day);
         },
-        // Custom builders for better control
         calendarBuilders: CalendarBuilders(
           disabledBuilder: (context, day, focusedDay) {
             return Container(
@@ -987,6 +982,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return Colors.purple;
       case 'completed':
         return Colors.green;
+      case 'cancelled':
+        return Colors.grey;
       case 'declined':
         return Colors.red;
       default:
@@ -1004,6 +1001,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return 'IN PROGRESS';
       case 'completed':
         return 'COMPLETED';
+      case 'cancelled':
+        return 'CANCELLED';
       case 'declined':
         return 'DECLINED';
       default:

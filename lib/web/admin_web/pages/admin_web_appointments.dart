@@ -23,6 +23,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
     Tab(text: 'Scheduled'),
     Tab(text: 'In Progress'),
     Tab(text: 'Completed'),
+    Tab(text: 'Cancelled'),
     Tab(text: 'Declined'),
   ];
 
@@ -32,6 +33,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
     'scheduled',
     'in_progress',
     'completed',
+    'cancelled',
     'declined',
   ];
 
@@ -41,7 +43,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
     _tabController = TabController(length: _tabs.length, vsync: this);
     _searchController = TextEditingController();
 
-    // Initialize controller
     if (!Get.isRegistered<WebAppointmentController>()) {
       Get.put(WebAppointmentController(
         authRepository: Get.find<AuthRepository>(),
@@ -49,7 +50,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
       ));
     }
 
-    // Listen to tab changes
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         final controller = Get.find<WebAppointmentController>();
@@ -75,22 +75,12 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
       backgroundColor: const Color.fromARGB(255, 245, 245, 245),
       body: Column(
         children: [
-          // Header and Stats
           const WebAppointmentStats(),
           
-          // Quick Actions (only on desktop)
-          if (!isMobile) ...[
-            // const WebAppointmentQuickActions(),
-            const SizedBox(height: 20),
-          ],
-          
-          // Search and Filter Bar
           _buildSearchAndFilterBar(isMobile),
           
-          // Tab Bar
           _buildTabBar(isMobile, isTablet),
           
-          // Content Area
           Expanded(
             child: _buildTabContent(isMobile),
           ),
@@ -183,7 +173,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
   Widget _buildDesktopSearchBar(WebAppointmentController controller) {
     return Row(
       children: [
-        // Search field
         Expanded(
           flex: 3,
           child: TextField(
@@ -212,7 +201,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
         ),
         const SizedBox(width: 16),
         
-        // Date filter
         OutlinedButton.icon(
           onPressed: () => _showDatePicker(controller),
           icon: const Icon(Icons.date_range),
@@ -227,7 +215,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
         ),
         const SizedBox(width: 16),
         
-        // Refresh button
         OutlinedButton.icon(
           onPressed: () => controller.refreshAppointments(),
           icon: const Icon(Icons.refresh),
@@ -238,7 +225,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
         ),
         const SizedBox(width: 16),
         
-        // Results count
         Obx(() => Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -293,7 +279,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
             _buildTab('Scheduled', stats['scheduled']!, Icons.schedule),
             _buildTab('In Progress', stats['in_progress']!, Icons.medical_services),
             _buildTab('Completed', stats['completed']!, Icons.check_circle),
-            _buildTab('Declined', stats['declined']!, Icons.cancel),
+            _buildTab('Cancelled', stats['cancelled']!, Icons.cancel),
+            _buildTab('Declined', stats['declined']!, Icons.cancel_outlined),
           ],
         );
       }),
@@ -364,7 +351,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
             final appointment = appointments[index];
             return WebAppointmentTile(
               appointment: appointment,
-              isSelected: false, // You can implement selection logic here
+              isSelected: false,
             );
           },
         ),
@@ -391,7 +378,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
       case 'scheduled':
         icon = Icons.schedule;
         title = 'No Scheduled Appointments';
-        subtitle = 'Accepted appointments will appear here.';
+        subtitle = 'Accepted appointments for future dates will appear here.';
         break;
       case 'in_progress':
         icon = Icons.medical_services_outlined;
@@ -403,10 +390,15 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
         title = 'No Completed Services';
         subtitle = 'Completed treatments will appear here.';
         break;
+      case 'cancelled':
+        icon = Icons.event_busy;
+        title = 'No Cancelled Appointments';
+        subtitle = 'User-cancelled appointments will appear here.';
+        break;
       case 'declined':
         icon = Icons.cancel_outlined;
         title = 'No Declined Appointments';
-        subtitle = 'Declined appointments will appear here.';
+        subtitle = 'Appointments you declined will appear here.';
         break;
       default:
         icon = Icons.help_outline;
@@ -433,13 +425,16 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -471,6 +466,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
         return Colors.purple;
       case 'Completed':
         return Colors.teal;
+      case 'Cancelled':
+        return Colors.grey;
       case 'Declined':
         return Colors.red;
       default:
