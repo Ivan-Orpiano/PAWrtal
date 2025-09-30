@@ -19,6 +19,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false, 
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
@@ -29,16 +30,16 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
         ),
         actions: [
           Builder(
-            builder: (context) => IconButton(
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
-              icon: Icon(
-                Icons.menu,
-                color: const Color.fromRGBO(81, 115, 153, 0.8),
-                size: isTablet ? 30 : 40,
-              ),
-            ),
+        builder: (context) => IconButton(
+          onPressed: () {
+            Scaffold.of(context).openEndDrawer();
+          },
+          icon: Icon(
+            Icons.menu,
+            color: const Color.fromRGBO(81, 115, 153, 0.8),
+            size: isTablet ? 30 : 40,
+          ),
+        ),
           ),
         ],
       ),

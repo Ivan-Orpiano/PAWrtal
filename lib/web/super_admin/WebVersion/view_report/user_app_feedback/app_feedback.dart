@@ -1,5 +1,7 @@
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
+import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
+import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -564,11 +566,19 @@ class _ApplicationReportState extends State<ApplicationReport> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back,
               color: Color.fromARGB(255, 81, 115, 153)),
-          onPressed: () {
+         onPressed: () {
+            final width = MediaQuery.of(context).size.width;
+            Widget destination;
+            if (width < 600) {
+              destination = const SuperAdminMobileHomePage();
+            } else if (width < 1000) {
+              destination = const SuperAdminTabletHomePage();
+            } else {
+              destination = const SuperAdminDesktopHomePage();
+            }
             Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (context) => const SuperAdminDesktopHomePage()),
+              MaterialPageRoute(builder: (context) => destination),
             );
           },
           tooltip: 'Back',

@@ -14,19 +14,15 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Define breakpoints for responsiveness
-    final isSmallScreen = screenWidth < 768;
-    final isMediumScreen = screenWidth >= 768;
-
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
-        toolbarHeight: _getAppBarHeight(screenHeight, isSmallScreen),
+        toolbarHeight: screenHeight * 0.08,
         title: Image.asset(
           "lib/images/PAWrtal_logo.png",
-          height: _getLogoHeight(isSmallScreen),
+          height: 40,
         ),
         actions: [
           Builder(
@@ -34,30 +30,38 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
               onPressed: () {
                 Scaffold.of(context).openEndDrawer();
               },
-              icon: Icon(
+              icon: const Icon(
                 Icons.menu,
-                color: const Color.fromRGBO(81, 115, 153, 0.8),
-                size: _getIconSize(isSmallScreen),
+                color: Color.fromRGBO(81, 115, 153, 0.8),
+                size: 30,
               ),
             ),
           ),
         ],
       ),
-      endDrawer: _buildProfileDrawer(context, screenWidth),
+      endDrawer: _buildProfileDrawer(context, screenWidth, screenHeight),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.only(
-            top: _getTopPadding(isSmallScreen),
-            bottom: _getBottomPadding(isSmallScreen),
-            left: _getHorizontalPadding(screenWidth),
-            right: _getHorizontalPadding(screenWidth),
+          padding: const EdgeInsets.only(
+            top: 20,
+            bottom: 60,
+            left: 20,
+            right: 20,
           ),
           child: Column(
             children: [
-              _buildMenuTiles(isSmallScreen, isMediumScreen),
-              SizedBox(height: _getSpacingBetweenTiles(isSmallScreen)),
-              _buildViewReportTile(screenWidth, isSmallScreen),
+              const Row(
+                children: [
+                  Expanded(child: VetClinicTile()),
+                  Expanded(child: PetOwnerTile()),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: const ViewReportTile(),
+              ),
             ],
           ),
         ),
@@ -65,77 +69,28 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
-  // Responsive helper methods for sizing
-  double _getAppBarHeight(double screenHeight, bool isSmallScreen) {
-    if (isSmallScreen) return screenHeight * 0.07;
-    return screenHeight * 0.08;
-  }
+  Widget _buildProfileDrawer(
+      BuildContext context, double screenWidth, double screenHeight) {
+    // Responsive drawer width based on tablet screen size
+    double drawerWidth = screenWidth * 0.35; // 35% of screen width
+    if (drawerWidth < 300) drawerWidth = 300; // Minimum width
+    if (drawerWidth > 400) drawerWidth = 400; // Maximum width
 
-  double _getLogoHeight(bool isSmallScreen) {
-    return isSmallScreen ? 32 : 40;
-  }
+    // Drawer height responsive to screen height
+    double drawerHeight = screenHeight * 0.5;
 
-  double _getIconSize(bool isSmallScreen) {
-    return isSmallScreen ? 24 : 30;
-  }
+    // Calculate responsive sizing based on drawer dimensions
+    double avatarRadius = drawerWidth * 0.1; // 10% of drawer width
+    if (avatarRadius < 30) avatarRadius = 30;
+    if (avatarRadius > 40) avatarRadius = 40;
 
-  double _getTopPadding(bool isSmallScreen) {
-    return isSmallScreen ? 10 : 20;
-  }
+    double titleFontSize = drawerWidth * 0.05;
+    if (titleFontSize < 16) titleFontSize = 16;
+    if (titleFontSize > 20) titleFontSize = 20;
 
-  double _getBottomPadding(bool isSmallScreen) {
-    return isSmallScreen ? 40 : 60;
-  }
-
-  double _getHorizontalPadding(double screenWidth) {
-    if (screenWidth < 768) return 10;
-    return 20;
-  }
-
-  double _getSpacingBetweenTiles(bool isSmallScreen) {
-    return isSmallScreen ? 15 : 20;
-  }
-
-  // Build menu tiles with responsive layout
-  Widget _buildMenuTiles(bool isSmallScreen, bool isMediumScreen) {
-    if (isSmallScreen) {
-      // Stack tiles vertically on small screens
-      return Column(
-        children: [
-          const VetClinicTile(),
-          SizedBox(height: _getSpacingBetweenTiles(isSmallScreen)),
-          const PetOwnerTile(),
-        ],
-      );
-    } else {
-      // Keep tiles side by side on medium and large screens
-      return const Row(
-        children: [
-          Expanded(child: VetClinicTile()),
-          Expanded(child: PetOwnerTile()),
-        ],
-      );
-    }
-  }
-
-  // Build view report tile with responsive constraints
-  Widget _buildViewReportTile(double screenWidth, bool isSmallScreen) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: isSmallScreen ? double.infinity : 800,
-      ),
-      child: const ViewReportTile(),
-    );
-  }
-
-  Widget _buildProfileDrawer(BuildContext context, double screenWidth) {
-    final isSmallScreen = screenWidth < 768;
-
-    // Make drawer width responsive for tablet
-    double drawerWidth = isSmallScreen ? screenWidth * 0.75 : 350;
-
-    double drawerHeight =
-        MediaQuery.of(context).size.height * 0.5; // 50% of screen height
+    double emailFontSize = drawerWidth * 0.035;
+    if (emailFontSize < 12) emailFontSize = 12;
+    if (emailFontSize > 14) emailFontSize = 14;
 
     return Align(
       alignment: Alignment.topRight,
@@ -144,137 +99,145 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
         height: drawerHeight,
         child: Drawer(
           backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
-          child: Column(
-            children: [
-              // Header section with user profile - Fixed height
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(
-                  isSmallScreen ? 16 : 20,
-                  isSmallScreen ? 40 : 50,
-                  isSmallScreen ? 16 : 20,
-                  isSmallScreen ? 20 : 25,
-                ),
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 248, 253, 255),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Color.fromARGB(50, 81, 115, 153),
-                      width: 1,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Column(
+                children: [
+                  // Header section with user profile
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.fromLTRB(
+                      drawerWidth * 0.06,
+                      drawerHeight * 0.08,
+                      drawerWidth * 0.06,
+                      drawerHeight * 0.04,
                     ),
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                      radius: isSmallScreen ? 30 : 35,
-                      child: Text(
-                        controller.userName.isNotEmpty
-                            ? controller.userName[0].toUpperCase()
-                            : 'S',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isSmallScreen ? 18 : 22,
-                          fontWeight: FontWeight.bold,
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(255, 248, 253, 255),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Color.fromARGB(50, 81, 115, 153),
+                          width: 1,
                         ),
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 10 : 12),
-                    Text(
-                      controller.userName.isNotEmpty
-                          ? controller.userName
-                          : 'Super Admin',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 16 : 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromARGB(255, 81, 115, 153),
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: isSmallScreen ? 2 : 4),
-                    Text(
-                      controller.userEmail.isNotEmpty
-                          ? controller.userEmail
-                          : 'admin@pawrtal.com',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 11 : 13,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              // Menu items section - Uses remaining space
-              Expanded(
-                child: Column(
-                  children: [
-                    // Spacer to push logout button to bottom
-                    const Spacer(),
-                    // Logout button container - Fixed at bottom
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                      child: Card(
-                        elevation: 2,
-                        color: Colors.red[50],
-                        margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Colors.red[300]!,
-                            width: 1,
-                          ),
-                        ),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 16 : 20,
-                            vertical: isSmallScreen ? 8 : 12,
-                          ),
-                          leading: Icon(
-                            Icons.logout,
-                            color: Colors.red[600],
-                            size: isSmallScreen ? 20 : 24,
-                          ),
-                          title: Text(
-                            'Logout',
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor:
+                              const Color.fromARGB(255, 81, 115, 153),
+                          radius: avatarRadius,
+                          child: Text(
+                            controller.userName.isNotEmpty
+                                ? controller.userName[0].toUpperCase()
+                                : 'S',
                             style: TextStyle(
-                              color: Colors.red[600],
-                              fontSize: isSmallScreen ? 14 : 16,
-                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              fontSize: avatarRadius * 0.6,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          trailing: Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.red[600],
-                            size: isSmallScreen ? 14 : 16,
+                        ),
+                        SizedBox(height: drawerHeight * 0.02),
+                        Text(
+                          controller.userName.isNotEmpty
+                              ? controller.userName
+                              : 'Super Admin',
+                          style: TextStyle(
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: const Color.fromARGB(255, 81, 115, 153),
                           ),
-                          onTap: () {
-                            Navigator.pop(context); // Close drawer first
-                            _showLogoutDialog(context);
-                          },
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: drawerHeight * 0.008),
+                        Text(
+                          controller.userEmail.isNotEmpty
+                              ? controller.userEmail
+                              : 'admin@pawrtal.com',
+                          style: TextStyle(
+                            fontSize: emailFontSize,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Spacer to push logout button to bottom
+                  const Spacer(),
+                  // Logout button container - Fixed at bottom with responsive sizing
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(drawerWidth * 0.05),
+                    child: Card(
+                      elevation: 2,
+                      color: Colors.red[50],
+                      margin: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: Colors.red[300]!,
+                          width: 1,
                         ),
                       ),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: drawerWidth * 0.06,
+                          vertical: drawerHeight * 0.02,
+                        ),
+                        leading: Icon(
+                          Icons.logout,
+                          color: Colors.red[600],
+                          size: drawerWidth * 0.065,
+                        ),
+                        title: Text(
+                          'Logout',
+                          style: TextStyle(
+                            color: Colors.red[600],
+                            fontSize: drawerWidth * 0.045,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.red[600],
+                          size: drawerWidth * 0.045,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showLogoutDialog(context, screenWidth);
+                        },
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 768;
+  void _showLogoutDialog(BuildContext context, double screenWidth) {
+    // Responsive dialog sizing
+    double iconSize = screenWidth * 0.025;
+    if (iconSize < 22) iconSize = 22;
+    if (iconSize > 28) iconSize = 28;
+
+    double titleFontSize = screenWidth * 0.022;
+    if (titleFontSize < 18) titleFontSize = 18;
+    if (titleFontSize > 22) titleFontSize = 22;
+
+    double contentFontSize = screenWidth * 0.018;
+    if (contentFontSize < 14) contentFontSize = 14;
+    if (contentFontSize > 18) contentFontSize = 18;
 
     showDialog(
       context: context,
@@ -290,13 +253,13 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
               Icon(
                 Icons.warning_amber_rounded,
                 color: Colors.orange[600],
-                size: isSmallScreen ? 22 : 26,
+                size: iconSize,
               ),
               const SizedBox(width: 12),
               Text(
                 'Confirm Logout',
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 16 : 20,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.bold,
                   color: const Color.fromARGB(255, 81, 115, 153),
                 ),
@@ -306,7 +269,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
           content: Text(
             'Are you sure you want to logout from your account?',
             style: TextStyle(
-              fontSize: isSmallScreen ? 14 : 16,
+              fontSize: contentFontSize,
               color: Colors.grey[700],
             ),
           ),
@@ -317,30 +280,29 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
               },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 14 : 18,
-                  vertical: isSmallScreen ? 8 : 10,
+                  horizontal: screenWidth * 0.02,
+                  vertical: 10,
                 ),
               ),
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
+                  fontSize: contentFontSize,
                   color: Colors.grey[600],
                 ),
               ),
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog first
-                // Use LogoutHelper which handles its own loading state and navigation
+                Navigator.of(context).pop();
                 await LogoutHelper.logout();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[600],
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 14 : 18,
-                  vertical: isSmallScreen ? 8 : 10,
+                  horizontal: screenWidth * 0.02,
+                  vertical: 10,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -349,7 +311,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
               child: Text(
                 'Logout',
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
+                  fontSize: contentFontSize,
                   fontWeight: FontWeight.w600,
                 ),
               ),
