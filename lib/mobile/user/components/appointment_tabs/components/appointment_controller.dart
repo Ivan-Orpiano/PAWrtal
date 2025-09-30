@@ -187,7 +187,7 @@ class EnhancedUserAppointmentController extends GetxController {
   String getUserFriendlyStatus(Appointment appointment) {
     switch (appointment.status) {
       case 'pending':
-        return 'Pending Review';
+        return 'Pending Appointment';
       case 'accepted':
         return 'Confirmed';
       case 'in_progress':
