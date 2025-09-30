@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
@@ -27,17 +30,66 @@ class WebAppointmentController extends GetxController {
   var clinicSettings = Rx<ClinicSettings?>(null);
   var pets = <Pet>[].obs;
   var availableTimes = <String>[].obs;
+  var occupiedTimeSlots = <String>[].obs;
+  StreamSubscription<RealtimeMessage>? _appointmentSubscription;
 
   @override
   void onInit() {
     super.onInit();
     _loadClinicSettings();
     _loadUserPets();
+    _setupRealtimeSubscription();
+  }
+
+  @override
+  void onClose() {
+    _appointmentSubscription?.cancel();
+    super.onClose();
+  }
+
+  void _setupRealtimeSubscription() {
+    try {
+      final clinicId = clinic.documentId ?? '';
+      if (clinicId.isEmpty) return;
+
+      _appointmentSubscription = authRepository
+          .subscribeToClinicAppointments(clinicId)
+          .listen((message) {
+        // When an appointment is created, updated, or deleted, refresh time slots
+        print('Real-time update received: ${message.events}');
+        if (selectedDateTime.value != null) {
+          _fetchOccupiedSlots();
+        }
+      });
+    } catch (e) {
+      print('Error setting up realtime subscription: $e');
+    }
+  }
+
+  // ADD THIS METHOD
+  Future<void> _fetchOccupiedSlots() async {
+    if (selectedDateTime.value == null) return;
+
+    try {
+      final clinicId = clinic.documentId ?? '';
+      if (clinicId.isEmpty) return;
+
+      final slots = await authRepository.getOccupiedTimeSlots(
+          clinicId, selectedDateTime.value!);
+
+      print('Fetched occupied slots for ${selectedDateTime.value}: $slots');
+
+      occupiedTimeSlots.value = slots;
+      _updateAvailableTimeSlots();
+    } catch (e) {
+      print('Error fetching occupied slots: $e');
+    }
   }
 
   Future<void> _loadClinicSettings() async {
     try {
-      final settings = await authRepository.getClinicSettingsByClinicId(clinic.documentId ?? '');
+      final settings = await authRepository
+          .getClinicSettingsByClinicId(clinic.documentId ?? '');
       clinicSettings.value = settings;
     } catch (e) {
       print("Error loading clinic settings: $e");
@@ -48,7 +100,7 @@ class WebAppointmentController extends GetxController {
     try {
       isLoading.value = true;
       final userId = session.userId;
-      
+
       if (userId.isNotEmpty) {
         final petDocs = await authRepository.getUserPets(userId);
         pets.assignAll(petDocs.map((doc) => Pet.fromMap(doc.data)).toList());
@@ -61,10 +113,11 @@ class WebAppointmentController extends GetxController {
   }
 
   List<String> get services {
-    if (clinicSettings.value != null && clinicSettings.value!.services.isNotEmpty) {
+    if (clinicSettings.value != null &&
+        clinicSettings.value!.services.isNotEmpty) {
       return clinicSettings.value!.services;
     }
-    
+
     if (clinic.services.isEmpty) {
       return ['General Consultation', 'Vaccination', 'Check-up', 'Grooming'];
     }
@@ -85,9 +138,8 @@ class WebAppointmentController extends GetxController {
       }
 
       // Check max advance booking
-      final maxAdvanceDate = DateTime.now().add(
-        Duration(days: clinicSettings.value!.maxAdvanceBooking)
-      );
+      final maxAdvanceDate = DateTime.now()
+          .add(Duration(days: clinicSettings.value!.maxAdvanceBooking));
       if (day.isAfter(maxAdvanceDate)) {
         return false;
       }
@@ -105,21 +157,29 @@ class WebAppointmentController extends GetxController {
 
   String _getDayName(int weekday) {
     switch (weekday) {
-      case 1: return 'monday';
-      case 2: return 'tuesday';
-      case 3: return 'wednesday';
-      case 4: return 'thursday';
-      case 5: return 'friday';
-      case 6: return 'saturday';
-      case 7: return 'sunday';
-      default: return 'monday';
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
     }
   }
 
   void onDateSelected(DateTime date) {
     selectedDateTime.value = date;
-    selectedTime.value = null; // Reset selected time when date changes
-    _updateAvailableTimeSlots();
+    selectedTime.value = null;
+    _fetchOccupiedSlots();
   }
 
   void _updateAvailableTimeSlots() {
@@ -129,11 +189,11 @@ class WebAppointmentController extends GetxController {
     }
 
     List<String> slots = [];
-    
+
     if (clinicSettings.value != null) {
-      slots = clinicSettings.value!.getAvailableTimeSlotsFiltered(selectedDateTime.value!);
+      slots = clinicSettings.value!
+          .getAvailableTimeSlotsFiltered(selectedDateTime.value!);
     } else {
-      // Fallback to default time slots
       slots = [
         '09:00',
         '10:00',
@@ -143,16 +203,17 @@ class WebAppointmentController extends GetxController {
         '15:00',
         '16:00',
       ];
-      
-      // Filter out past time slots if the selected date is today
+
       if (_isToday(selectedDateTime.value!)) {
         slots = _filterPastTimeSlots(slots);
       }
     }
 
+    // Filter out occupied time slots
+    slots = slots.where((slot) => !occupiedTimeSlots.contains(slot)).toList();
+
     availableTimes.assignAll(slots);
-    
-    // Reset selected time if it's no longer available
+
     if (selectedTime.value != null && !slots.contains(selectedTime.value)) {
       selectedTime.value = null;
     }
@@ -160,27 +221,26 @@ class WebAppointmentController extends GetxController {
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
-    return date.year == now.year && 
-           date.month == now.month && 
-           date.day == now.day;
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
   }
 
   List<String> _filterPastTimeSlots(List<String> timeSlots) {
     final now = DateTime.now();
-    
+
     return timeSlots.where((timeSlot) {
       try {
         final timeParts = timeSlot.split(':');
         final hour = int.parse(timeParts[0]);
         final minute = int.parse(timeParts[1]);
-        
+
         final slotDateTime = DateTime(
-          selectedDateTime.value!.year, 
-          selectedDateTime.value!.month, 
-          selectedDateTime.value!.day, 
-          hour, 
-          minute
-        );
+            selectedDateTime.value!.year,
+            selectedDateTime.value!.month,
+            selectedDateTime.value!.day,
+            hour,
+            minute);
         // Add a 30-minute buffer - don't allow booking slots that start within 30 minutes
         return slotDateTime.isAfter(now.add(const Duration(minutes: 30)));
       } catch (e) {
@@ -204,38 +264,43 @@ class WebAppointmentController extends GetxController {
 
   bool get canBookAppointment {
     return selectedDateTime.value != null &&
-           selectedTime.value != null &&
-           selectedService.value != null &&
-           selectedPet.value != null &&
-           !isBooking.value &&
-           (clinicSettings.value?.isOpen ?? true);
+        selectedTime.value != null &&
+        selectedService.value != null &&
+        selectedPet.value != null &&
+        !isBooking.value &&
+        (clinicSettings.value?.isOpen ?? true);
   }
 
   String? get bookingValidationMessage {
     if (clinicSettings.value != null && !clinicSettings.value!.isOpen) {
       return 'This clinic is currently not accepting appointments';
     }
-    
+
     if (selectedDateTime.value == null) {
       return 'Please select a date';
     }
-    
+
     if (availableTimes.isEmpty) {
       return 'No available times for this date';
     }
-    
+
     if (selectedTime.value == null) {
       return 'Please select a time';
     }
-    
+
+    // Check if selected time is now occupied (race condition protection)
+    if (occupiedTimeSlots.contains(selectedTime.value)) {
+      return 'This time slot was just booked. Please select another time.';
+    }
+
     if (selectedService.value == null) {
       return 'Please select a service';
     }
-    
+
     if (selectedPet.value == null) {
       return 'Please select a pet';
     }
-    
+
     return null;
   }
 
@@ -245,7 +310,7 @@ class WebAppointmentController extends GetxController {
     final userId = session.userId;
     if (userId.isEmpty) {
       Get.snackbar(
-        "Error", 
+        "Error",
         "User not logged in",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
@@ -261,7 +326,7 @@ class WebAppointmentController extends GetxController {
       final timeParts = selectedTime.value!.split(':');
       final hour = int.parse(timeParts[0]);
       final minute = int.parse(timeParts[1]);
-      
+
       final appointmentDateTime = DateTime(
         selectedDateTime.value!.year,
         selectedDateTime.value!.month,
@@ -276,17 +341,19 @@ class WebAppointmentController extends GetxController {
         petId: selectedPet.value!.name, // Using pet name as ID for now
         service: selectedService.value!,
         dateTime: appointmentDateTime,
-        status: clinicSettings.value?.autoAcceptAppointments == true ? 'accepted' : 'pending',
+        status: clinicSettings.value?.autoAcceptAppointments == true
+            ? 'accepted'
+            : 'pending',
       );
 
       await authRepository.createAppointment(appointment);
 
       // Show success message
       Get.snackbar(
-        "Success", 
+        "Success",
         clinicSettings.value?.autoAcceptAppointments == true
-          ? "Appointment automatically confirmed!"
-          : "Appointment booked successfully! You will receive confirmation once the clinic reviews your request.",
+            ? "Appointment automatically confirmed!"
+            : "Appointment booked successfully! You will receive confirmation once the clinic reviews your request.",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
@@ -299,10 +366,9 @@ class WebAppointmentController extends GetxController {
       selectedService.value = null;
       selectedPet.value = null;
       availableTimes.clear();
-
     } catch (e) {
       Get.snackbar(
-        "Error", 
+        "Error",
         "Failed to book appointment: $e",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,

@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appointment_components/web_appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -16,7 +17,7 @@ class EnhancedWebAppointmentsPage extends StatefulWidget {
 }
 
 class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPage> {
-  int selectedTabIndex = 0; // 0: Pending, 1: Active, 2: Cancelled
+  int selectedTabIndex = 0; // 0: Upcoming, 1: Pending, 2: Completed, 3: History
   final double tabletWidth = 1100;
   late EnhancedUserAppointmentController appointmentController;
 
@@ -82,11 +83,13 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
         return Row(
           children: [
+            _buildAppointmentColumn("Upcoming", appointmentController.upcoming, Colors.blue, Icons.event_available),
+            const SizedBox(width: 16),
             _buildAppointmentColumn("Pending", appointmentController.pending, Colors.orange, Icons.pending_actions),
             const SizedBox(width: 16),
-            _buildAppointmentColumn("Active", appointmentController.accepted, Colors.green, Icons.check_circle),
+            _buildAppointmentColumn("Completed", appointmentController.completed, Colors.green, Icons.check_circle),
             const SizedBox(width: 16),
-            _buildAppointmentColumn("Cancelled", appointmentController.declined, Colors.red, Icons.cancel),
+            _buildAppointmentColumn("History", appointmentController.history, Colors.grey, Icons.history),
           ],
         );
       }),
@@ -123,9 +126,10 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
       ),
       child: Obx(() => Row(
         children: [
-          _buildTabButton(0, Icons.pending_actions, "Pending", Colors.orange, appointmentController.pending.length),
-          _buildTabButton(1, Icons.check_circle, "Active", Colors.green, appointmentController.accepted.length),
-          _buildTabButton(2, Icons.cancel, "Cancelled", Colors.red, appointmentController.declined.length),
+          _buildTabButton(0, Icons.event_available, "Upcoming", Colors.blue, appointmentController.upcoming.length),
+          _buildTabButton(1, Icons.pending_actions, "Pending", Colors.orange, appointmentController.pending.length),
+          _buildTabButton(2, Icons.check_circle, "Completed", Colors.green, appointmentController.completed.length),
+          _buildTabButton(3, Icons.history, "History", Colors.grey, appointmentController.history.length),
         ],
       )),
     );
@@ -199,25 +203,32 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
       switch (selectedTabIndex) {
         case 0:
+          appointments = appointmentController.upcoming;
+          emptyTitle = "No Upcoming Appointments";
+          emptyMessage = "Your confirmed future appointments will appear here";
+          emptyIcon = Icons.event_available;
+          emptyColor = Colors.blue;
+          break;
+        case 1:
           appointments = appointmentController.pending;
           emptyTitle = "No Pending Appointments";
-          emptyMessage = "Appointments waiting for clinic approval will appear here";
+          emptyMessage = "Appointments awaiting clinic approval will appear here";
           emptyIcon = Icons.pending_actions;
           emptyColor = Colors.orange;
           break;
-        case 1:
-          appointments = appointmentController.accepted;
-          emptyTitle = "No Active Appointments";
-          emptyMessage = "Confirmed and ongoing appointments will appear here";
+        case 2:
+          appointments = appointmentController.completed;
+          emptyTitle = "No Completed Appointments";
+          emptyMessage = "Your finished appointments will appear here";
           emptyIcon = Icons.check_circle;
           emptyColor = Colors.green;
           break;
-        case 2:
-          appointments = appointmentController.declined;
-          emptyTitle = "Great! No Cancelled Here";
-          emptyMessage = "Declined or missed appointments will appear here";
-          emptyIcon = Icons.sentiment_satisfied;
-          emptyColor = Colors.red;
+        case 3:
+          appointments = appointmentController.history;
+          emptyTitle = "No History";
+          emptyMessage = "Cancelled or declined appointments will appear here";
+          emptyIcon = Icons.history;
+          emptyColor = Colors.grey;
           break;
         default:
           appointments = [];
@@ -250,7 +261,14 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: appointments.length,
-                itemBuilder: (context, index) => _buildWebAppointmentTile(appointments[index]),
+                itemBuilder: (context, index) => WebAppointmentTile(
+                  appointment: appointments[index],
+                  onTap: () => _showAppointmentDialog(
+                    appointments[index],
+                    appointmentController.getClinicForAppointment(appointments[index]),
+                    appointmentController.getPetForAppointment(appointments[index]),
+                  ),
+                ),
               ),
             ),
           ],
@@ -282,7 +300,14 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: appointments.length,
-                    itemBuilder: (context, index) => _buildWebAppointmentTile(appointments[index]),
+                    itemBuilder: (context, index) => WebAppointmentTile(
+                      appointment: appointments[index],
+                      onTap: () => _showAppointmentDialog(
+                        appointments[index],
+                        appointmentController.getClinicForAppointment(appointments[index]),
+                        appointmentController.getPetForAppointment(appointments[index]),
+                      ),
+                    ),
                   ),
             ),
           ],
@@ -384,222 +409,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     );
   }
 
-  Widget _buildWebAppointmentTile(Appointment appointment) {
-    final clinic = appointmentController.getClinicForAppointment(appointment);
-    final pet = appointmentController.getPetForAppointment(appointment);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showAppointmentDialog(appointment, clinic, pet),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(appointment.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _getStatusColor(appointment.status).withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getStatusIcon(appointment.status),
-                            size: 16,
-                            color: _getStatusColor(appointment.status),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            appointmentController.getUserFriendlyStatus(appointment),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: _getStatusColor(appointment.status),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    // Add Rate & Review button for completed appointments
-                    if (appointment.status == 'completed') ...[
-                      IconButton(
-                        onPressed: () => _showRatingDialog(appointment, clinic, pet),
-                        icon: const Icon(Icons.rate_review),
-                        color: Colors.amber,
-                        tooltip: 'Rate & Review',
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Icon(
-                      Icons.keyboard_arrow_right_rounded,
-                      color: Colors.grey.shade400,
-                    ),
-                  ],
-                ),
-                
-                // Progress bar for non-declined appointments
-                if (appointment.status != 'declined' && appointment.status != 'no_show') ...[
-                  const SizedBox(height: 12),
-                  LinearProgressIndicator(
-                    value: appointmentController.getAppointmentProgress(appointment),
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor(appointment.status)),
-                    minHeight: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    appointmentController.getAppointmentStage(appointment),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-                
-                const SizedBox(height: 16),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _getStatusColor(appointment.status).withOpacity(0.1),
-                            _getStatusColor(appointment.status).withOpacity(0.05),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _getStatusColor(appointment.status).withOpacity(0.2),
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.local_hospital,
-                        color: _getStatusColor(appointment.status),
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            clinic?.clinicName ?? 'Unknown Clinic',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.medical_services_outlined,
-                                size: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  appointment.service,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.pets_rounded,
-                                size: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  pet?.name ?? appointment.petId,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.1)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        color: Colors.blue.shade600,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            DateFormat('MMMM dd, yyyy').format(appointment.dateTime),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                          Text(
-                            DateFormat('h:mm a').format(appointment.dateTime),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEnhancedAppointmentBar(bool isCompact) {
     DateTime now = DateTime.now();
     String formattedDate = DateFormat('MMM dd, yyyy').format(now);
@@ -646,9 +455,9 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
+            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
             _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
-            _buildStatusChip("Active", "${stats['upcoming']}", Colors.green),
-            _buildStatusChip("Cancelled", "${appointmentController.declined.length}", Colors.red),
+            _buildStatusChip("Completed", "${stats['completed']}", Colors.green),
           ],
         ),
       ],
@@ -682,11 +491,13 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         ),
         Row(
           children: [
+            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
+            const SizedBox(width: 12),
             _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
             const SizedBox(width: 12),
-            _buildStatusChip("Active", "${stats['upcoming']}", Colors.green),
+            _buildStatusChip("Completed", "${stats['completed']}", Colors.green),
             const SizedBox(width: 12),
-            _buildStatusChip("Cancelled", "${appointmentController.declined.length}", Colors.red),
+            _buildStatusChip("History", "${stats['history']}", Colors.grey),
           ],
         ),
       ],
@@ -779,6 +590,8 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
       case 'declined':
       case 'no_show':
         return Colors.red;
+      case 'cancelled':
+        return Colors.grey;
       default:
         return Colors.grey;
     }
@@ -798,6 +611,8 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         return Icons.cancel;
       case 'no_show':
         return Icons.person_off;
+      case 'cancelled':
+        return Icons.cancel_outlined;
       default:
         return Icons.help_outline;
     }
@@ -805,27 +620,30 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
   String _getTabTitle(int index) {
     switch (index) {
-      case 0: return "Pending";
-      case 1: return "Active";
-      case 2: return "Cancelled";
+      case 0: return "Upcoming";
+      case 1: return "Pending";
+      case 2: return "Completed";
+      case 3: return "History";
       default: return "Unknown";
     }
   }
 
   IconData _getTabIcon(int index) {
     switch (index) {
-      case 0: return Icons.pending_actions;
-      case 1: return Icons.check_circle;
-      case 2: return Icons.cancel;
+      case 0: return Icons.event_available;
+      case 1: return Icons.pending_actions;
+      case 2: return Icons.check_circle;
+      case 3: return Icons.history;
       default: return Icons.event;
     }
   }
 
   Color _getTabColor(int index) {
     switch (index) {
-      case 0: return Colors.orange;
-      case 1: return Colors.green;
-      case 2: return Colors.red;
+      case 0: return Colors.blue;
+      case 1: return Colors.orange;
+      case 2: return Colors.green;
+      case 3: return Colors.grey;
       default: return Colors.grey;
     }
   }
@@ -838,6 +656,8 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
   }
 
   Widget _buildAppointmentDialog(Appointment appointment, Clinic? clinic, Pet? pet) {
+    Color statusColor = _getStatusColor(appointment.status);
+    
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -850,14 +670,13 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         clipBehavior: Clip.hardEdge,
         child: Column(
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    _getStatusColor(appointment.status).withOpacity(0.1),
-                    _getStatusColor(appointment.status).withOpacity(0.05),
+                    statusColor.withOpacity(0.1),
+                    statusColor.withOpacity(0.05),
                   ],
                 ),
                 borderRadius: const BorderRadius.only(
@@ -879,7 +698,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(appointment.status).withOpacity(0.2),
+                      color: statusColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -888,7 +707,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                         Icon(
                           _getStatusIcon(appointment.status),
                           size: 16,
-                          color: _getStatusColor(appointment.status),
+                          color: statusColor,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -896,7 +715,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: _getStatusColor(appointment.status),
+                            color: statusColor,
                           ),
                         ),
                       ],
@@ -905,14 +724,12 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                 ],
               ),
             ),
-            // Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Basic Information
                     _buildDialogSection("Appointment Information", [
                       _buildDialogDetailRow(Icons.local_hospital, "Clinic", clinic?.clinicName ?? 'Unknown Clinic'),
                       _buildDialogDetailRow(Icons.location_on, "Address", clinic?.address ?? 'Address not available'),
@@ -924,7 +741,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                       _buildDialogDetailRow(Icons.access_time, "Time", DateFormat('h:mm a').format(appointment.dateTime)),
                     ]),
 
-                    // Medical Information (if completed)
                     if (appointment.status == 'completed' && appointment.hasMedicalRecord) ...[
                       const SizedBox(height: 20),
                       _buildDialogSection("Medical Record", [
@@ -939,22 +755,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                       ]),
                     ],
 
-                    // Payment Information (if completed)
-                    if (appointment.status == 'completed' && appointment.totalCost != null) ...[
-                      const SizedBox(height: 20),
-                      _buildDialogSection("Payment Information", [
-                        _buildDialogDetailRow(Icons.attach_money, "Total Cost", '₱${appointment.totalCost!.toStringAsFixed(2)}'),
-                        _buildDialogDetailRow(
-                          appointment.isPaid ? Icons.check_circle : Icons.pending,
-                          "Payment Status",
-                          appointment.isPaid ? 'Paid' : 'Pending',
-                        ),
-                        if (appointment.paymentMethod != null)
-                          _buildDialogDetailRow(Icons.payment, "Payment Method", appointment.paymentMethod!.toUpperCase()),
-                      ]),
-                    ],
-
-                    // Booking Information
                     const SizedBox(height: 20),
                     _buildDialogSection("Booking Information", [
                       _buildDialogDetailRow(Icons.event, "Booked on", DateFormat('MMM dd, yyyy • h:mm a').format(appointment.createdAt)),
@@ -962,7 +762,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                         _buildDialogDetailRow(Icons.update, "Last updated", DateFormat('MMM dd, yyyy • h:mm a').format(appointment.updatedAt)),
                     ]),
 
-                    // Notes (if available)
                     if (appointment.notes != null && appointment.notes!.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       _buildDialogSection("Notes", [
@@ -983,8 +782,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                     ],
 
                     const SizedBox(height: 30),
-
-                    // Action Buttons
                     _buildDialogActionButtons(appointment, clinic, pet),
                   ],
                 ),
@@ -1075,13 +872,12 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
   Widget _buildDialogActionButtons(Appointment appointment, Clinic? clinic, Pet? pet) {
     return Column(
       children: [
-        // Rate & Review button for completed appointments
         if (appointment.status == 'completed')
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                Navigator.pop(context); // Close current dialog
+                Navigator.pop(context);
                 _showRatingDialog(appointment, clinic, pet);
               },
               icon: const Icon(Icons.rate_review),
@@ -1101,7 +897,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         if (appointment.status == 'completed')
           const SizedBox(height: 12),
 
-        // Cancel button for eligible appointments
         if (appointmentController.canCancelAppointment(appointment))
           SizedBox(
             width: double.infinity,
@@ -1124,7 +919,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
         if (appointmentController.canCancelAppointment(appointment))
           const SizedBox(height: 12),
         
-        // Contact clinic button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -1145,7 +939,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     );
   }
 
-    void _showCancelDialog(Appointment appointment) {
+  void _showCancelDialog(Appointment appointment) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1160,7 +954,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pop(context); // Close appointment dialog too
+              Navigator.pop(context);
               appointmentController.cancelAppointment(appointment.documentId!);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -1271,7 +1065,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -1305,14 +1098,12 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
                   ),
                 ),
 
-                // Content
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Appointment Info Summary
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -1364,7 +1155,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
                         const SizedBox(height: 24),
 
-                        // Rating Section
                         const Text(
                           'How would you rate your experience?',
                           style: TextStyle(
@@ -1410,7 +1200,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
                         const SizedBox(height: 24),
 
-                        // Review Section
                         const Text(
                           'Share your experience (Optional)',
                           style: TextStyle(
@@ -1441,7 +1230,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
                         const SizedBox(height: 24),
 
-                        // Submit Button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1501,9 +1289,7 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
   }
 
   void _submitRating(Appointment appointment, int rating, String review, Clinic? clinic) {
-    // Here you would typically send the rating and review to your backend
-    // For now, we'll just show a success message
-    Navigator.pop(context); // Close rating dialog
+    Navigator.pop(context);
     
     Get.snackbar(
       'Review Submitted!',
@@ -1516,12 +1302,6 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
       borderRadius: 12,
     );
 
-    // You can add additional logic here to:
-    // 1. Save the rating to your database
-    // 2. Update the appointment model to include rating info
-    // 3. Send the review to the clinic
-    // 4. Update any clinic rating averages
-    
     print('Rating submitted: $rating stars');
     print('Review: $review');
     print('Appointment ID: ${appointment.documentId}');

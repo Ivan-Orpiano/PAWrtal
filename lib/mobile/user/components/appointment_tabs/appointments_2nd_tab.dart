@@ -2,8 +2,8 @@ import 'package:capstone_app/mobile/user/components/appointment_tabs/components/
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
+/// Pending Tab - Shows appointments awaiting clinic approval
 class EnhancedAPSecondTab extends StatelessWidget {
   const EnhancedAPSecondTab({super.key});
 
@@ -30,9 +30,7 @@ class EnhancedAPSecondTab extends StatelessWidget {
         );
       }
 
-      final appointments = controller.accepted;
-      final todayAppointments = controller.todayAppointments.where((a) => 
-        a.status == 'accepted' || a.status == 'in_progress').toList();
+      final appointments = controller.pending;
 
       if (appointments.isEmpty) {
         return Center(
@@ -42,18 +40,18 @@ class EnhancedAPSecondTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
-                  Icons.check_circle_outline,
+                  Icons.pending_actions,
                   size: 64,
-                  color: Colors.green[600],
+                  color: Colors.orange[600],
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                "No Active Appointments",
+                "No Pending Appointments",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -62,132 +60,126 @@ class EnhancedAPSecondTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Confirmed and ongoing appointments will appear here",
+                "Appointments awaiting clinic approval will appear here",
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[500],
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange[600],
+                      size: 24,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Tip: New appointments will appear here until the clinic reviews and approves them.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[700],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         );
       }
 
-      // Group appointments by status for better organization
-      final groupedAppointments = <Map<String, dynamic>>[
-        {'title': 'Today\'s Appointments', 'appointments': todayAppointments, 'color': Colors.blue},
-        {'title': 'Confirmed Appointments', 'appointments': controller.upcoming, 'color': Colors.green},
-        {'title': 'In Treatment', 'appointments': controller.inProgress, 'color': Colors.purple},
-        {'title': 'Recently Completed', 'appointments': controller.completed, 'color': Colors.teal},
-      ];
-
       return RefreshIndicator(
         onRefresh: controller.fetchAppointments,
         color: const Color.fromARGB(255, 81, 115, 153),
-        child: CustomScrollView(
-          slivers: [
-            // Stats header
-            SliverToBoxAdapter(
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [const Color.fromARGB(255, 81, 115, 153), Colors.blue.shade400],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            // Header with count
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange, Colors.orange.shade300],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.event_available,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Active Appointments',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            '${appointments.length} appointment${appointments.length != 1 ? 's' : ''} • ${todayAppointments.length} today',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            
-            // Grouped appointments
-            ...groupedAppointments.map((group) {
-              final appointments = group['appointments'] as List;
-              if (appointments.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-              
-              return SliverList(
-                delegate: SliverChildListDelegate([
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.pending_actions,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          _getGroupIcon(group['title'] as String),
-                          color: group['color'] as Color,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${group['title']} (${appointments.length})',
+                        const Text(
+                          'Pending Approval',
                           style: TextStyle(
-                            fontSize: 16,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            color: group['color'],
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '${appointments.length} appointment${appointments.length != 1 ? 's' : ''} waiting for clinic approval',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  ...appointments.map((appointment) => EnhancedUserAppointmentTile(appointment: appointment)),
-                  const SizedBox(height: 8),
-                ]),
-              );
-            }),
-            
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      appointments.length.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Appointments list
+            Expanded(
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 16),
+                itemCount: appointments.length,
+                itemBuilder: (context, index) {
+                  final appointment = appointments[index];
+                  return EnhancedUserAppointmentTile(appointment: appointment);
+                },
+              ),
+            ),
           ],
         ),
       );
     });
-  }
-
-  IconData _getGroupIcon(String title) {
-    switch (title) {
-      case 'Today\'s Appointments':
-        return Icons.today;
-      case 'Confirmed Appointments':
-        return Icons.event_available;
-      case 'In Treatment':
-        return Icons.medical_services;
-      case 'Recently Completed':
-        return Icons.check_circle;
-      default:
-        return Icons.event;
-    }
   }
 }

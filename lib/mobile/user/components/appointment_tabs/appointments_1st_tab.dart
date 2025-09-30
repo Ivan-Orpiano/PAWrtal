@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/components/appointment_tabs/components/
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+/// Upcoming Tab - Shows accepted appointments scheduled for the future
 class EnhancedAPFirstTab extends StatelessWidget {
   const EnhancedAPFirstTab({super.key});
 
@@ -29,7 +30,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
         );
       }
 
-      final appointments = controller.pending;
+      final appointments = controller.upcoming;
 
       if (appointments.isEmpty) {
         return Center(
@@ -39,18 +40,18 @@ class EnhancedAPFirstTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
-                  Icons.pending_actions,
+                  Icons.calendar_today,
                   size: 64,
-                  color: Colors.orange[600],
+                  color: Colors.blue[600],
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                "No Pending Appointments",
+                "No Upcoming Appointments",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -59,7 +60,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Appointments waiting for clinic approval will appear here",
+                "Your confirmed future appointments will appear here",
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[500],
@@ -69,6 +70,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
                 decoration: BoxDecoration(
                   color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -83,7 +85,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Tip: Book a new appointment and it will appear here until the clinic reviews it.",
+                      "Tip: Book a new appointment and once it's approved by the clinic, it will appear here.",
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.blue[700],
@@ -109,7 +111,10 @@ class EnhancedAPFirstTab extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.orange, Colors.orange.shade300],
+                  colors: [
+                    const Color.fromARGB(255, 81, 115, 153),
+                    Colors.blue.shade400
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -118,7 +123,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
               child: Row(
                 children: [
                   const Icon(
-                    Icons.pending_actions,
+                    Icons.event_available,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -128,7 +133,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Pending Review',
+                          'Upcoming Appointments',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -136,7 +141,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${appointments.length} appointment${appointments.length != 1 ? 's' : ''} waiting for clinic approval',
+                          '${appointments.length} confirmed appointment${appointments.length != 1 ? 's' : ''}',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 12,
@@ -162,7 +167,7 @@ class EnhancedAPFirstTab extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Appointments list
             Expanded(
               child: ListView.builder(
