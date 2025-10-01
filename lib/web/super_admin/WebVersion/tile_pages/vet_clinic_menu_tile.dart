@@ -9,11 +9,11 @@ class VetClinicTile extends StatelessWidget {
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
     final isMediumScreen = screenSize.width < 1200;
-    
+
     // Responsive sizing
     double tileWidth = screenSize.width * 0.8;
     double tileHeight = screenSize.height * 0.75;
-    
+
     if (isSmallScreen) {
       tileWidth = screenSize.width * 0.9;
       tileHeight = screenSize.height * 0.6;
@@ -21,11 +21,11 @@ class VetClinicTile extends StatelessWidget {
       tileWidth = screenSize.width * 0.85;
       tileHeight = screenSize.height * 0.65;
     }
-    
+
     // Constrain maximum dimensions to prevent excessive sizes on large screens
     tileWidth = tileWidth.clamp(200.0, 400.0);
     tileHeight = tileHeight.clamp(250.0, 500.0);
-    
+
     return InkWell(
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
@@ -33,7 +33,7 @@ class VetClinicTile extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const SuperAdminVetClinic(),
+          builder: (context) => const SuperAdminVetClinicDashboard  (),
         ),
       ),
       child: Padding(
@@ -66,12 +66,14 @@ class VetClinicTile extends StatelessWidget {
                       maxWidth: tileWidth * 0.8,
                     ),
                     child: AspectRatio(
-                      aspectRatio: 1.0, // Square aspect ratio for consistent look
+                      aspectRatio:
+                          1.0, // Square aspect ratio for consistent look
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
                           'lib/images/vet_clinic_icon.png',
-                          fit: BoxFit.contain, // Changed to contain to prevent cropping
+                          fit: BoxFit
+                              .contain, // Changed to contain to prevent cropping
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               decoration: BoxDecoration(
@@ -90,10 +92,10 @@ class VetClinicTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 // Spacing between image and text
                 SizedBox(height: isSmallScreen ? 8.0 : 12.0),
-                
+
                 // Flexible text container to prevent overflow
                 Flexible(
                   flex: 1,
