@@ -571,7 +571,7 @@ class _ApplicationReportState extends State<ApplicationReport> {
             Widget destination;
             if (width < 600) {
               destination = const SuperAdminMobileHomePage();
-            } else if (width < 1000) {
+            } else if (width >= 480 && width < 1000)  {
               destination = const SuperAdminTabletHomePage();
             } else {
               destination = const SuperAdminDesktopHomePage();

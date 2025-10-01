@@ -161,7 +161,7 @@ class _SuperAdminVetClinicPageState extends State<SuperAdminVetClinicPage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const SuperAdminDesktopHomePage(),
+                                          const SuperAdminVetClinicDashboard(),
                                     ),
                                   );
                                 },

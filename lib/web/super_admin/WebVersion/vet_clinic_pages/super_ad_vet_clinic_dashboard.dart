@@ -10,14 +10,16 @@ import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page
 import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
 import 'package:flutter/material.dart';
 
-class SuperAdminVetClinic extends StatefulWidget {
-  const SuperAdminVetClinic({super.key});
+class SuperAdminVetClinicDashboard extends StatefulWidget {
+  const SuperAdminVetClinicDashboard({super.key});
 
   @override
-  State<SuperAdminVetClinic> createState() => _SuperAdminVetClinic();
+  State<SuperAdminVetClinicDashboard> createState() =>
+      _SuperAdminVetClinicDashboard();
 }
 
-class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
+class _SuperAdminVetClinicDashboard
+    extends State<SuperAdminVetClinicDashboard> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -47,7 +49,7 @@ class _SuperAdminVetClinic extends State<SuperAdminVetClinic> {
             Widget destination;
             if (width < 600) {
               destination = SuperAdminMobileHomePage();
-            } else if (width < 1000) {
+            } else if (width >= 480 && width < 1000){
               destination = SuperAdminTabletHomePage();
             } else {
               destination = const SuperAdminDesktopHomePage();
