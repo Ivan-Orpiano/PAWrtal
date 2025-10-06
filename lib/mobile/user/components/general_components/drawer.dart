@@ -420,7 +420,7 @@ class _MyDrawerState extends State<MyDrawer> with SingleTickerProviderStateMixin
                             ),
                             _buildAnimatedListTile(
                               icon: Icons.help_outline_rounded,
-                              title: "Send Feedback",
+                              title: "Give Feedback",
                               onTap: () {
                                 Navigator.of(context).pop();
                                 Navigator.of(context).push(

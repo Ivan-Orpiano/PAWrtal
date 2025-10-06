@@ -184,13 +184,13 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                         ),
                         SizedBox(
                           width: double.infinity,
-                          child: _popupItem("Help", () {
+                          child: _popupItem("Help & Support", () {
                             _navigateToSettings(2);
                           }),
                         ),
                         SizedBox(
                           width: double.infinity,
-                          child: _popupItem("Send feedback", () {
+                          child: _popupItem("Give feedback", () {
                             _navigateToSettings(3);
                           }),
                         ),
