@@ -1,33 +1,50 @@
 import 'package:flutter/material.dart';
 
 class SuperAdminSearchBar extends StatelessWidget {
-  const SuperAdminSearchBar({super.key});
+  final Function(String)? onChanged;
+
+  const SuperAdminSearchBar({
+    super.key,
+    this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
-        child: Container(
-          decoration: BoxDecoration(
-              color: const Color.fromRGBO(248, 253, 255, 1),
-              borderRadius: BorderRadius.circular(50),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.grey.shade400,
-                    blurRadius: 2,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 2))
-              ]),
-          child: const Padding(
-            padding: EdgeInsets.only(top: 5, left: 10, right: 10, bottom: 2),
-            child: TextField(
-              decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "Search",
-                  prefixIcon: Icon(Icons.search)),
-            ),
+    return TextField(
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: 'Search clinics...',
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        prefixIcon: Icon(
+          Icons.search,
+          color: Colors.grey[600],
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.grey[300]!,
+            width: 1,
           ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color.fromARGB(255, 81, 115, 153),
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
         ),
       ),
     );

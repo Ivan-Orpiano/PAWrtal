@@ -1,5 +1,7 @@
+import 'package:capstone_app/pages/super_admin_home/super_admin_home_binding.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class VetClinicTile extends StatelessWidget {
   const VetClinicTile({super.key});
@@ -30,12 +32,12 @@ class VetClinicTile extends StatelessWidget {
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
       hoverColor: Colors.transparent,
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const SuperAdminVetClinicDashboard  (),
-        ),
-      ),
+        onTap: () {
+          Get.to(
+            () => const SuperAdminVetClinicDashboard(),
+            binding: SuperAdminHomeBinding(),
+          );
+        },
       child: Padding(
         padding: EdgeInsets.all(isSmallScreen ? 8.0 : 5.0),
         child: Container(
