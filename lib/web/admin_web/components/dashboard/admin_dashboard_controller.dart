@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -382,32 +383,110 @@ class AdminDashboardController extends GetxController {
     }
   }
 
+  Future<void> _fetchOwnerData(String userId) async {
+    if (!ownersCache.containsKey(userId)) {
+      try {
+        final ownerDoc = await authRepository.getUserById(userId);
+        if (ownerDoc != null) {
+          // Create a proper User object
+          final user = User.fromMap(ownerDoc.data);
+          ownersCache[userId] = {
+            'name': user.name,
+            'email': user.email,
+            'phone': user.phone,
+          };
+        } else {
+          // Add fallback data to prevent repeated fetching
+          ownersCache[userId] = {
+            'name': 'User #${userId.substring(0, 6)}',
+            'email': 'N/A',
+            'phone': 'N/A',
+          };
+        }
+      } catch (e) {
+        print("Error fetching owner $userId: $e");
+        // Add fallback data
+        ownersCache[userId] = {
+          'name': 'User #${userId.substring(0, 6)}',
+          'email': 'N/A',
+          'phone': 'N/A',
+        };
+      }
+    }
+  }
+
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
-      if (!petsCache.containsKey(appointment.petId)) {
+      if (!petsCache.containsKey(appointment.petId) &&
+          appointment.petId.isNotEmpty) {
         try {
-          final petDoc = await authRepository.getPetById(appointment.petId);
-          if (petDoc != null) {
-            final pet = Pet.fromMap(petDoc.data);
-            pet.documentId = petDoc.$id;
+          // First try to fetch by name
+          final petByName =
+              await authRepository.getPetByName(appointment.petId);
+          if (petByName != null) {
+            final pet = Pet.fromMap(petByName.data);
+            pet.documentId = petByName.$id;
             petsCache[appointment.petId] = pet;
+            continue;
           }
+
+          // If name lookup failed and ID is valid, try by ID
+          if (_isValidDocumentId(appointment.petId)) {
+            final petDoc = await authRepository.getPetById(appointment.petId);
+            if (petDoc != null) {
+              final pet = Pet.fromMap(petDoc.data);
+              pet.documentId = petDoc.$id;
+              petsCache[appointment.petId] = pet;
+              continue;
+            }
+          }
+
+          // If both lookups failed, create a fallback pet with the ID/name as the pet name
+          print("Creating fallback pet data for ID/Name: ${appointment.petId}");
+          petsCache[appointment.petId] = Pet(
+            petId: appointment.petId,
+            userId: appointment.userId,
+            name: appointment.petId, // Use the ID/name as the pet name
+            type: 'Unknown',
+            breed: 'Unknown',
+          );
         } catch (e) {
           print("Error fetching pet ${appointment.petId}: $e");
+          // Create a more user-friendly fallback entry
+          petsCache[appointment.petId] = Pet(
+            petId: appointment.petId,
+            userId: appointment.userId,
+            name: _formatPetName(appointment.petId), // Format the name nicely
+            type: 'Unknown',
+            breed: 'Unknown',
+          );
         }
       }
 
       if (!ownersCache.containsKey(appointment.userId)) {
-        try {
-          final ownerDoc = await authRepository.getUserById(appointment.userId);
-          if (ownerDoc != null) {
-            ownersCache[appointment.userId] = ownerDoc.data;
-          }
-        } catch (e) {
-          print("Error fetching owner ${appointment.userId}: $e");
-        }
+        await _fetchOwnerData(appointment.userId);
       }
     }
+  }
+
+  String _formatPetName(String rawName) {
+    // Remove any special characters except spaces
+    final cleaned = rawName.replaceAll(RegExp(r'[^\w\s]'), '');
+
+    // Split by camelCase, underscores, or dashes
+    final words = cleaned.split(RegExp(r'(?=[A-Z])|[_-]'));
+
+    // Capitalize each word and join with spaces
+    return words
+        .where((word) => word.isNotEmpty)
+        .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
+        .join(' ');
+  }
+
+  bool _isValidDocumentId(String id) {
+    if (id.isEmpty || id.length > 36) return false;
+    final validIdRegex = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$');
+    return validIdRegex.hasMatch(id);
   }
 
   void _processTodayAppointments() {
@@ -496,10 +575,30 @@ class AdminDashboardController extends GetxController {
     ]);
   }
 
-  String getOwnerName(String userId) =>
-      ownersCache[userId]?['name'] ?? 'Unknown Owner';
-  String getPetName(String petId) => petsCache[petId]?.name ?? petId;
-  String getPetType(String petId) => petsCache[petId]?.type ?? 'Unknown Type';
+  String getOwnerName(String userId) {
+    if (!ownersCache.containsKey(userId)) {
+      // Trigger a fetch if we don't have the data
+      _fetchOwnerData(userId);
+      return 'Loading...';
+    }
+    return ownersCache[userId]?['name'] ?? 'User #${userId.substring(0, 6)}';
+  }
+
+  String getPetName(String petId) {
+    final pet = petsCache[petId];
+    if (pet != null) {
+      if (pet.name.isNotEmpty) {
+        return pet.name;
+      }
+      return _formatPetName(petId);
+    }
+    return _formatPetName(petId);
+  }
+
+  String getPetType(String petId) {
+    return petsCache[petId]?.type ?? 'Not Available';
+  }
+
   Pet? getPetForAppointment(String petId) => petsCache[petId];
 
   int get pendingCount => appointmentStats['pending'] ?? 0;

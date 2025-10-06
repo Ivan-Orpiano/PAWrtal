@@ -62,9 +62,24 @@ class AuthRepository {
   }
 
   Future<List<Appointment>> getClinicAppointments(String clinicId) async {
-    final rawAppointments =
-        await appWriteProvider.getClinicAppointments(clinicId);
-    return rawAppointments.map((data) => Appointment.fromMap(data)).toList();
+    try {
+      final rawAppointments =
+          await appWriteProvider.getClinicAppointments(clinicId);
+      return rawAppointments.map((data) {
+        // Add error handling for each appointment conversion
+        try {
+          return Appointment.fromMap(Map<String, dynamic>.from(data));
+        } catch (e) {
+          print('Error converting appointment data: $e');
+          print('Problematic data: $data');
+          // Return a default appointment or rethrow based on your needs
+          throw Exception('Invalid appointment data: $e');
+        }
+      }).toList();
+    } catch (e) {
+      print('Error in getClinicAppointments: $e');
+      return [];
+    }
   }
 
   Future<Map<String, int>> getClinicAppointmentStats(String clinicId) =>
@@ -107,8 +122,24 @@ class AuthRepository {
   }
 
   Future<List<Appointment>> getUserAppointments(String userId) async {
-    final rawAppointments = await appWriteProvider.getUserAppointments(userId);
-    return rawAppointments.map((data) => Appointment.fromMap(data)).toList();
+    try {
+      final rawAppointments =
+          await appWriteProvider.getUserAppointments(userId);
+      return rawAppointments.map((data) {
+        // Add error handling for each appointment conversion
+        try {
+          return Appointment.fromMap(Map<String, dynamic>.from(data));
+        } catch (e) {
+          print('Error converting appointment data: $e');
+          print('Problematic data: $data');
+          // Return a default appointment or rethrow based on your needs
+          throw Exception('Invalid appointment data: $e');
+        }
+      }).toList();
+    } catch (e) {
+      print('Error in getUserAppointments: $e');
+      return [];
+    }
   }
 
   Future<models.Document> createMedicalRecord(MedicalRecord medicalRecord) {

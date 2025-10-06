@@ -204,7 +204,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         bannerIcon = Icons.cancel;
       } else {
         bannerColor = Colors.orange;
-        bannerText = 'This clinic is currently closed for appointments';
+        bannerText = 'This clinic is closed today';
         bannerIcon = Icons.schedule;
       }
       
