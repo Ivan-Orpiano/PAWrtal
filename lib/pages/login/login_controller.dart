@@ -60,6 +60,8 @@ class LoginController extends GetxController {
     isFormValid = formKey.currentState!.validate();
     if (!isFormValid) return;
 
+    String? sessionId; // Track session for cleanup
+
     try {
       formKey.currentState!.save();
       FullScreenDialogLoader.showDialog();
@@ -73,6 +75,9 @@ class LoginController extends GetxController {
       if (session == null) {
         throw Exception("Login failed: Session data is missing");
       }
+
+      // CRITICAL: Store session ID for potential cleanup
+      sessionId = session.$id;
       final userId = session.userId;
 
       final user = value["user"];
@@ -97,11 +102,11 @@ class LoginController extends GetxController {
 
       // check if account is staff
       if (!matched) {
-        final staffDoc = await authRepository.getStaffByClinicId(userEmail);
-        if (staffDoc != null) {
-          role = staffDoc.data["role"];
-          _getStorage.write("staffId", staffDoc.$id);
-          _getStorage.write("clinicId", staffDoc.data["clinicId"]);
+        final staff = await authRepository.getStaffByUserId(userId);
+        if (staff != null) {
+          role = staff.role;
+          _getStorage.write("staffId", staff.documentId);
+          _getStorage.write("clinicId", staff.clinicId);
           matched = true;
         }
       }
@@ -110,7 +115,7 @@ class LoginController extends GetxController {
       if (!matched) {
         final userDoc = await authRepository.getUserById(userId);
         if (userDoc != null) {
-          role = userDoc.data["role"]; // role should be "user"
+          role = userDoc.data["role"];
           _getStorage.write("customerId", userDoc.$id);
           matched = true;
         }
@@ -122,7 +127,18 @@ class LoginController extends GetxController {
         matched = true;
       }
 
-      if (!matched) throw Exception("No role found for this account");
+      if (!matched) {
+        // CRITICAL: Clean up session before throwing error
+        try {
+          if (sessionId != null) {
+            await authRepository.logout(sessionId);
+            print('Cleaned up session for unmatched role');
+          }
+        } catch (cleanupError) {
+          print('Error cleaning up session: $cleanupError');
+        }
+        throw Exception("No role found for this account");
+      }
 
       _getStorage.write("role", role);
 
@@ -145,6 +161,16 @@ class LoginController extends GetxController {
         Get.offAllNamed(Routes.userHome);
       }
     } catch (e) {
+      // CRITICAL: Clean up any created session on error
+      if (sessionId != null) {
+        try {
+          await authRepository.logout(sessionId);
+          print('Session cleaned up after error');
+        } catch (cleanupError) {
+          print('Error cleaning up session: $cleanupError');
+        }
+      }
+
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showErrorSnackBar(
           context: Get.overlayContext,

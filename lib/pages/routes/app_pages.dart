@@ -12,6 +12,7 @@ import 'package:capstone_app/pages/signup/signup_binding.dart';
 import 'package:capstone_app/pages/signup/signup_page.dart';
 import 'package:capstone_app/pages/splash/splash_binding.dart';
 import 'package:capstone_app/pages/splash/splash_page.dart';
+
 // Web imports
 import 'package:capstone_app/web/pages/web_login/web_login_binding.dart';
 import 'package:capstone_app/web/pages/web_login/web_login_page.dart';
@@ -23,6 +24,11 @@ import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_binding.dar
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_page.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_binding.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_page.dart';
+// Staff imports - ADD THESE
+import 'package:capstone_app/web/admin_web/components/staffs/staff_main_wrapper.dart';
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -62,13 +68,26 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.superAdminHome,
-      page: () => kIsWeb ? const WebSuperAdminHomePage() : const SuperAdminHomePage(),
+      page: () =>
+          kIsWeb ? const WebSuperAdminHomePage() : const SuperAdminHomePage(),
       binding: kIsWeb ? WebSuperAdminHomeBinding() : SuperAdminHomeBinding(),
     ),
     GetPage(
       name: _Paths.createStaff,
       page: () => const StaffAccountCreationPage(),
       binding: CreateStaffBinding(),
-    )
+    ),
+    // Staff Home - ADD THIS
+    GetPage(
+      name: _Paths.staffHome,
+      page: () => const StaffMainWrapper(),
+      binding: BindingsBuilder(() {
+        // Initialize dependencies for staff
+        Get.lazyPut<AppWriteProvider>(() => AppWriteProvider());
+        Get.lazyPut<AuthRepository>(
+            () => AuthRepository(Get.find<AppWriteProvider>()));
+        Get.lazyPut<UserSessionService>(() => UserSessionService());
+      }),
+    ),
   ];
 }

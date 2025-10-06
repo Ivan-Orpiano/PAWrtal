@@ -136,8 +136,9 @@ class _LoginPageState extends State<LoginPage> {
                                               style: const TextStyle(
                                                   color: Colors.white),
                                             ),
-                                            backgroundColor:
-                                                value ? Colors.green : Colors.red,
+                                            backgroundColor: value
+                                                ? Colors.green
+                                                : Colors.red,
                                           ));
                                         });
                                       }

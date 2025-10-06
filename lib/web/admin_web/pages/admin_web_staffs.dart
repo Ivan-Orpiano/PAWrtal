@@ -1,7 +1,16 @@
+import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'dart:typed_data';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/data/models/staff_model.dart' as StaffModel;
+import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/new_staff_tile.dart';
+import 'package:capstone_app/web/admin_web/components/staffs/email_template_editor.dart';
+import 'package:get_storage/get_storage.dart';
 
 class AdminWebStaffs extends StatefulWidget {
   const AdminWebStaffs({super.key});
@@ -12,12 +21,20 @@ class AdminWebStaffs extends StatefulWidget {
 
 class _AdminWebStaffsState extends State<AdminWebStaffs>
     with TickerProviderStateMixin {
+  final GetStorage _getStorage = GetStorage();
   final TextEditingController _searchController = TextEditingController();
+  final AuthRepository _authRepository = Get.find<AuthRepository>();
+  final UserSessionService _session = Get.find<UserSessionService>();
+
   String? selectedTag;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Palette
+  Clinic? _clinic;
+  ClinicSettings? _clinicSettings;
+  List<StaffModel.Staff> staffList = [];
+  bool _isLoading = true;
+
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
   static const Color lightTeal = Color(0xFF9FC5E8);
@@ -28,7 +45,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   static const Color darkText = Color(0xFF374151);
   static const Color vetGreen = Color(0xFF34D399);
   static const Color vetOrange = Color(0xFFF59E0B);
-  static const Color vetPurple = Color(0xFF6A1B9A); // opaque purple
+  static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
   final List<String> tags = const [
@@ -36,59 +53,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     'Appointments',
     'Staffs',
     'Messages'
-  ];
-
-  // Sample data
-  List<Staff> staffList = [
-    Staff(
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@vetclinic.com',
-      phone: '+1 555-0101',
-      authorities: ['Clinic', 'Appointments'],
-      imageBytes: null,
-    ),
-    Staff(
-      name: 'Dr. Michael Chen',
-      email: 'michael.chen@vetclinic.com',
-      phone: '+1 555-0102',
-      authorities: ['Appointments'],
-      imageBytes: null,
-    ),
-    Staff(
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@vetclinic.com',
-      phone: '+1 555-0103',
-      authorities: ['Appointments', 'Messages'],
-      imageBytes: null,
-    ),
-    Staff(
-      name: 'James Wilson',
-      email: 'james.wilson@vetclinic.com',
-      phone: '+1 555-0104',
-      authorities: ['Staffs', 'Clinic'],
-      imageBytes: null,
-    ),
-    Staff(
-      name: 'Dr. Lisa Anderson',
-      email: 'lisa.anderson@vetclinic.com',
-      phone: '+1 555-0105',
-      authorities: ['Clinic'],
-      imageBytes: null,
-    ),
-    Staff(
-      name: 'Robert Taylor',
-      email: 'robert.taylor@vetclinic.com',
-      phone: '+1 555-0106',
-      authorities: ['Staffs', 'Messages'],
-      imageBytes: null,
-    ),
-    Staff(
-      name: 'Dr. Amanda White',
-      email: 'amanda.white@vetclinic.com',
-      phone: '+1 555-0107',
-      authorities: ['Clinic', 'Appointments', 'Staffs', 'Messages'],
-      imageBytes: null,
-    ),
   ];
 
   @override
@@ -101,6 +65,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
     _animationController.forward();
+
+    _loadClinicAndStaff();
   }
 
   @override
@@ -110,54 +76,216 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     super.dispose();
   }
 
-  void _addNewStaff(String name, String email, List<String> authorities,
-      Uint8List? imageBytes) {
-    setState(() {
-      staffList.add(Staff(
+  Future<void> _loadClinicAndStaff() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Get clinic
+      final clinicDoc =
+          await _authRepository.getClinicByAdminId(_session.userId);
+      if (clinicDoc != null) {
+        _clinic = Clinic.fromMap(clinicDoc.data);
+        _clinic!.documentId = clinicDoc.$id;
+
+        // Get clinic settings
+        _clinicSettings = await _authRepository
+            .getClinicSettingsByClinicId(_clinic!.documentId!);
+
+        // Get staff for this clinic
+        final staff =
+            await _authRepository.getClinicStaff(_clinic!.documentId!);
+        setState(() {
+          staffList = staff;
+        });
+      }
+    } catch (e) {
+      print('Error loading clinic and staff: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load staff: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _addNewStaff(
+    String name,
+    String email,
+    String phone,
+    List<String> authorities,
+    Uint8List? imageBytes,
+  ) async {
+    if (_clinic == null) return;
+
+    try {
+      final password = await _showPasswordDialog();
+      if (password == null || password.isEmpty) return;
+
+      String? imageUrl;
+      // Upload image if needed
+
+      print('Calling createStaffAccount...');
+      final result = await _authRepository.createStaffAccount(
         name: name,
         email: email,
-        phone: null,
+        password: password,
+        clinicId: _clinic!.documentId!,
         authorities: authorities,
-        imageBytes: imageBytes,
-      ));
-    });
+        createdBy: _session.userId,
+        image: imageUrl ?? '',
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
+      print('Staff creation result: $result');
+
+      if (result['success'] == true) {
+        // Show success message
+        Get.snackbar(
+          'Success',
+          'Staff account created! You need to log back in.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: vetGreen,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+
+        // Force logout and redirect to login
+        await Future.delayed(const Duration(seconds: 2));
+        _getStorage.erase(); // Clear all stored data
+        Get.offAllNamed('/login');
+      }
+    } catch (e) {
+      print('Error creating staff: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to create staff: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+    }
+  }
+
+  Future<String?> _showPasswordDialog() async {
+    final controller = TextEditingController();
+
+    return await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set Initial Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(child: Text('New staff has been added successfully')),
+            const Text('Create a temporary password for this staff member.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                hintText: 'Minimum 8 characters',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'The staff member should change this password after first login.',
+              style: TextStyle(fontSize: 12, color: mediumGray),
+            ),
           ],
         ),
-        backgroundColor: vetGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.length >= 8) {
+                Navigator.pop(context, controller.text);
+              } else {
+                Get.snackbar(
+                  'Invalid Password',
+                  'Password must be at least 8 characters',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryTeal,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Create'),
+          ),
+        ],
       ),
     );
   }
 
-  void _updateStaffAuthorities(Staff staff, List<String> newAuthorities) {
-    setState(() {
-      final index = staffList.indexOf(staff);
-      if (index != -1) {
-        staffList[index] = Staff(
-          name: staff.name,
-          email: staff.email,
-          phone: staff.phone,
-          authorities: newAuthorities,
-          imageBytes: staff.imageBytes,
-        );
-      }
-    });
+  Future<void> _updateStaffAuthorities(
+      StaffModel.Staff staff, List<String> newAuthorities) async {
+    try {
+      await _authRepository.updateStaffAuthorities(
+        staff.documentId!,
+        newAuthorities,
+      );
+
+      await _loadClinicAndStaff();
+
+      Get.snackbar(
+        'Success',
+        'Permissions updated successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: vetGreen,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print('Error updating authorities: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update permissions: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
-  void _removeStaff(Staff staff) {
-    setState(() => staffList.remove(staff));
+  Future<void> _removeStaff(StaffModel.Staff staff) async {
+    try {
+      await _authRepository.deactivateStaffAccount(
+        staff.documentId!,
+        staff.userId,
+      );
+
+      await _loadClinicAndStaff();
+
+      Get.snackbar(
+        'Success',
+        'Staff account deactivated',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: vetOrange,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print('Error removing staff: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to remove staff: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
-  List<Staff> get filteredStaffs {
+  List<StaffModel.Staff> get filteredStaffs {
     final query = _searchController.text.trim().toLowerCase();
     return staffList.where((staff) {
       final matchesSearch = query.isEmpty ||
@@ -176,13 +304,37 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     final isMedium = screenWidth > 768;
     final isSmall = screenWidth <= 768;
 
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: lightGray,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_clinic == null) {
+      return const Scaffold(
+        backgroundColor: lightGray,
+        body: Center(
+          child: Text('Clinic not found. Please contact support.'),
+        ),
+      );
+    }
+
+    if (_clinicSettings == null) {
+      return const Scaffold(
+        backgroundColor: lightGray,
+        body: Center(
+          child: Text('Clinic settings not found. Please contact support.'),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: lightGray,
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Column(
           children: [
-            // Header + filters
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -205,7 +357,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               ),
               child: Column(
                 children: [
-                  // Title bar
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: isMedium ? 24 : 16,
@@ -225,12 +376,22 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     child: _buildTitleSection(isLarge, isMedium, isSmall),
                   ),
 
-                  // Filters/search — responsive, never overlaps
+                  // Email Template Editor
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMedium ? 24 : 16,
+                      vertical: 12,
+                    ),
+                    child: EmailTemplateEditor(
+                      clinicSettings: _clinicSettings!,
+                      onTemplateUpdated: _loadClinicAndStaff,
+                    ),
+                  ),
+
                   LayoutBuilder(
                     builder: (context, cons) {
                       final w = cons.maxWidth;
-                      final wideHeader =
-                          w >= 1100; // side-by-side on wide, stacked on smaller
+                      final wideHeader = w >= 1100;
                       return Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: isMedium ? 24 : 16,
@@ -272,8 +433,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                 ],
               ),
             ),
-
-            // Grid
             Expanded(
               child: Container(
                 color: lightGray,
@@ -282,7 +441,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                   child: filteredStaffs.isEmpty &&
                           _searchController.text.isNotEmpty
                       ? _buildEmptyState()
-                      : _buildStaffGrid(), // <— updated grid below
+                      : _buildStaffGrid(),
                 ),
               ),
             ),
@@ -294,7 +453,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
   Widget _buildTitleSection(bool isLarge, bool isMedium, bool isSmall) {
     if (!isMedium) {
-      // Mobile
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -321,9 +479,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               const SizedBox(width: 12),
               Expanded(
                 child: ShaderMask(
-                  shaderCallback: (bounds) =>
-                      const LinearGradient(colors: [darkText, deepBlue, primaryTeal])
-                          .createShader(bounds),
+                  shaderCallback: (bounds) => const LinearGradient(
+                          colors: [darkText, deepBlue, primaryTeal])
+                      .createShader(bounds),
                   blendMode: BlendMode.srcIn,
                   child: Text(
                     'Staff Management',
@@ -338,13 +496,12 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Manage your veterinary clinic staff and permissions',
-            style: TextStyle(
+          Text(
+            'Manage ${_clinic?.clinicName ?? "your clinic"}\'s staff and permissions',
+            style: const TextStyle(
                 fontSize: 14, color: mediumGray, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 16),
-          // Mobile stats
           Row(
             children: [
               Expanded(
@@ -359,7 +516,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               Expanded(
                 child: _buildMobileStatCard(
                   'Active',
-                  staffList.length.toString(),
+                  staffList.where((s) => s.isActive).length.toString(),
                   Icons.check_circle_rounded,
                   const [vetGreen, primaryTeal],
                 ),
@@ -369,7 +526,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         ],
       );
     } else {
-      // Desktop / tablet
       return Row(
         children: [
           Container(
@@ -396,9 +552,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ShaderMask(
-                  shaderCallback: (bounds) =>
-                      const LinearGradient(colors: [darkText, deepBlue, primaryTeal])
-                          .createShader(bounds),
+                  shaderCallback: (bounds) => const LinearGradient(
+                          colors: [darkText, deepBlue, primaryTeal])
+                      .createShader(bounds),
                   blendMode: BlendMode.srcIn,
                   child: const Text(
                     'Staff Management',
@@ -409,9 +565,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Manage your veterinary clinic staff and permissions',
-                  style: TextStyle(
+                Text(
+                  'Manage ${_clinic?.clinicName ?? "your clinic"}\'s staff and permissions',
+                  style: const TextStyle(
                       fontSize: 15,
                       color: mediumGray,
                       fontWeight: FontWeight.w500),
@@ -423,15 +579,17 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             _buildStatCard('Total Staff', staffList.length.toString(),
                 Icons.people_rounded, const [primaryBlue, softBlue]),
             const SizedBox(width: 18),
-            _buildStatCard('Active', staffList.length.toString(),
-                Icons.check_circle_rounded, const [vetGreen, primaryTeal]),
+            _buildStatCard(
+              'Active',
+              staffList.where((s) => s.isActive).length.toString(),
+              Icons.check_circle_rounded,
+              const [vetGreen, primaryTeal],
+            ),
           ],
         ],
       );
     }
   }
-
-  // ---------- Filters & Search ----------
 
   Widget _buildFilterTags() {
     return SingleChildScrollView(
@@ -459,9 +617,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           const SizedBox(width: 16),
           ...tags.map((tag) {
             final bool isSelected = tag == selectedTag;
-
             IconData icon;
             List<Color> colors;
+
             switch (tag) {
               case 'Clinic':
                 icon = Icons.local_hospital_rounded;
@@ -609,9 +767,11 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     icon: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.clear, size: 16, color: mediumGray),
+                        color: Colors.grey.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          const Icon(Icons.clear, size: 16, color: mediumGray),
                     ),
                   )
                 : null,
@@ -623,8 +783,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       ),
     );
   }
-
-  // ---------- KPI cards (header) ----------
 
   Widget _buildStatCard(
       String label, String value, IconData icon, List<Color> colors) {
@@ -643,9 +801,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         border: Border.all(color: colors.first.withOpacity(0.3), width: 2),
         boxShadow: [
           BoxShadow(
-              color: colors.first.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4)),
+            color: colors.first.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -678,9 +837,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               Text(
                 label,
                 style: TextStyle(
-                    fontSize: 13,
-                    color: colors.first.withOpacity(0.9),
-                    fontWeight: FontWeight.w600),
+                  fontSize: 13,
+                  color: colors.first.withOpacity(0.9),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -706,9 +866,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         border: Border.all(color: colors.first.withOpacity(0.3), width: 2),
         boxShadow: [
           BoxShadow(
-              color: colors.first.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 3)),
+            color: colors.first.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -728,9 +889,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           Text(
             label,
             style: TextStyle(
-                fontSize: 11,
-                color: colors.first.withOpacity(0.9),
-                fontWeight: FontWeight.w600),
+              fontSize: 11,
+              color: colors.first.withOpacity(0.9),
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -750,17 +912,21 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                    color: primaryTeal.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8)),
+                  color: primaryTeal.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
               ],
             ),
-            child: const Icon(Icons.search_off_rounded, size: 72, color: mediumGray),
+            child: const Icon(Icons.search_off_rounded,
+                size: 72, color: mediumGray),
           ),
           const SizedBox(height: 20),
-          const Text('No staff found',
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w700, color: darkText)),
+          const Text(
+            'No staff found',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.w700, color: darkText),
+          ),
           const SizedBox(height: 10),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 32),
@@ -791,14 +957,12 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     );
   }
 
-  // ================== RESPONSIVE GRID (no overflows, up to 8 cols) ==================
   Widget _buildStaffGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double w = constraints.maxWidth;
         final double spacing = w > 768 ? 20.0 : 12.0;
 
-        // Columns by width (8 on wide web)
         int cols;
         if (w >= 1600) {
           cols = 8;
@@ -818,13 +982,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           cols = 1;
         }
 
-        // Compute tile width
         final double tileWidth = (w - (cols - 1) * spacing) / cols;
-
-        // Base aspect ratio for the usual height feel
         final double baseRatio = (cols <= 2) ? 0.66 : 0.62;
 
-        // Minimum heights so small widths never overflow
         final double minH = (cols <= 1)
             ? 340
             : (cols == 2)
@@ -841,42 +1001,25 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                                     ? 220
                                     : 210;
 
-        // --- EXTRA HEIGHT when permission chips wrap -------------------------
-        // Estimate max number of chips across all visible tiles.
         int maxChips = 0;
         for (final s in filteredStaffs) {
           if (s.authorities.length > maxChips) maxChips = s.authorities.length;
         }
-        // If there is no staff, still include "Add New Staff" tile (no chips).
         if (maxChips < 0) maxChips = 0;
 
-        // Very safe average width for a permission chip (icon + text + padding).
-        // "Appointments" is the longest; 96 keeps us safe across fonts/scales.
         const double chipW = 96.0;
         const double chipGap = 8.0;
-
-        // Inner content width inside the card (subtract typical horizontal padding).
         final double innerW = tileWidth - 48.0;
-
-        // How many lines will the chips need at this width?
-        // (At least one line; add gaps between chips.)
         final double chipsTotalW =
             maxChips > 0 ? (maxChips * chipW + (maxChips - 1) * chipGap) : 0.0;
         final int chipLines =
             (chipsTotalW > 0 && innerW > 0) ? (chipsTotalW / innerW).ceil() : 1;
-
-        // Add extra height for each additional line of chips (beyond the first).
-        // 28–30px per wrapped line is usually enough; add a small cushion.
         final double extraForWrap =
             (chipLines > 1) ? (chipLines - 1) * 30.0 : 0.0;
 
-        // Base height from aspect ratio
-        final double heightFromBase = tileWidth / baseRatio;
-
-        // Final height respects min height and any extra needed for wrapping
-        double finalHeight = heightFromBase;
+        double finalHeight = tileWidth / baseRatio;
         if (finalHeight < minH) finalHeight = minH;
-        finalHeight += extraForWrap + 6; // tiny cushion to kill 1–3px warnings
+        finalHeight += extraForWrap + 6;
 
         final double finalRatio = tileWidth / finalHeight;
 
@@ -890,7 +1033,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           ),
           itemBuilder: (context, index) {
             if (index == filteredStaffs.length) {
-              return NewStaffTile(onStaffCreated: _addNewStaff);
+              return NewStaffTile(
+                clinicSettings: _clinicSettings!,
+                onStaffCreated: _addNewStaff,
+              );
             }
             final staff = filteredStaffs[index];
             return StaffTile(

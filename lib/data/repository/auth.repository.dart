@@ -3,6 +3,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
 
@@ -358,5 +359,123 @@ class AuthRepository {
   // Get occupied time slots
   Future<List<String>> getOccupiedTimeSlots(String clinicId, DateTime date) {
     return appWriteProvider.getOccupiedTimeSlots(clinicId, date);
+  }
+
+  // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
+
+  /// Create a complete staff account
+  Future<Map<String, dynamic>> createStaffAccount({
+    required String name,
+    required String email,
+    required String password,
+    required String clinicId,
+    required List<String> authorities,
+    String? department,
+    String? image,
+    String? phone,
+    String? createdBy,
+  }) {
+    return appWriteProvider.createStaffAccount(
+      name: name,
+      email: email,
+      password: password,
+      clinicId: clinicId,
+      authorities: authorities,
+      department: department,
+      image: image,
+      phone: phone,
+      createdBy: createdBy,
+    );
+  }
+
+  /// Get all staff for a clinic
+  Future<List<Staff>> getClinicStaff(String clinicId) async {
+    final docs = await appWriteProvider.getClinicStaff(clinicId);
+    return docs.map((doc) {
+      final staff = Staff.fromMap(doc.data);
+      staff.documentId = doc.$id;
+      return staff;
+    }).toList();
+  }
+
+  /// Get staff by user ID
+  Future<Staff?> getStaffByUserId(String userId) async {
+    final doc = await appWriteProvider.getStaffByUserId(userId);
+    if (doc != null) {
+      final staff = Staff.fromMap(doc.data);
+      staff.documentId = doc.$id;
+      return staff;
+    }
+    return null;
+  }
+
+  /// Update staff authorities/permissions
+  Future<void> updateStaffAuthorities(
+    String staffDocumentId,
+    List<String> authorities,
+  ) async {
+    await appWriteProvider.updateStaffAuthorities(staffDocumentId, authorities);
+  }
+
+  /// Update staff information
+  Future<void> updateStaffInfo({
+    required String staffDocumentId,
+    String? name,
+    String? department,
+    String? image,
+    List<String>? authorities,
+  }) async {
+    await appWriteProvider.updateStaffInfo(
+      staffDocumentId: staffDocumentId,
+      name: name,
+      department: department,
+      image: image,
+      authorities: authorities,
+    );
+  }
+
+  /// Deactivate staff account
+  Future<void> deactivateStaffAccount(String staffDocumentId, String userId) {
+    return appWriteProvider.deactivateStaffAccount(staffDocumentId, userId);
+  }
+
+  /// Delete staff account permanently
+  Future<void> deleteStaffAccountPermanently(String staffDocumentId) {
+    return appWriteProvider.deleteStaffAccount(staffDocumentId);
+  }
+
+  /// Update clinic settings email template
+  Future<void> updateClinicSettingsEmailTemplate(
+    String clinicSettingsDocumentId,
+    String newTemplate,
+  ) async {
+    await appWriteProvider.updateClinicSettingsEmailTemplate(
+      clinicSettingsDocumentId,
+      newTemplate,
+    );
+  }
+
+  /// Update all staff emails when template changes
+  Future<void> updateAllStaffEmailsForClinic(
+    String clinicId,
+    String newTemplate,
+  ) {
+    return appWriteProvider.updateAllStaffEmailsForClinic(
+        clinicId, newTemplate);
+  }
+
+  /// Staff login
+  Future<Map<String, dynamic>> staffLogin(String email, String password) {
+    return appWriteProvider.staffLogin(email, password);
+  }
+
+  /// Check if staff has authority
+  Future<bool> checkStaffAuthority(String userId, String authority) {
+    return appWriteProvider.checkStaffAuthority(userId, authority);
+  }
+
+  /// Get staff statistics
+  Future<Map<String, int>> getClinicStaffStats(String clinicId) {
+    return appWriteProvider.getClinicStaffStats(clinicId);
   }
 }
