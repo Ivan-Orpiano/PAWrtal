@@ -106,7 +106,7 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
     }
 
     final isOpen = _clinicSettings?.isOpen ?? true;
-    final isOpenToday = _clinicSettings?.isOpenToday() ?? true;
+    final isOpenNow = _clinicSettings?.isOpenNow() ?? true;
 
     Color statusColor;
     String statusText;
@@ -114,9 +114,9 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
     if (!isOpen) {
       statusColor = Colors.red;
       statusText = "CLOSED";
-    } else if (!isOpenToday) {
+    } else if (!isOpenNow) {
       statusColor = Colors.orange;
-      statusText = "CLOSED TODAY";
+      statusText = "CLOSED NOW";
     } else {
       statusColor = Colors.green;
       statusText = "OPEN";

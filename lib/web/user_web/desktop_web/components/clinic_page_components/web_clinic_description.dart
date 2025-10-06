@@ -81,7 +81,7 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
     }
 
     final isOpen = _clinicSettings!.isOpen;
-    final isOpenToday = _clinicSettings!.isOpenToday();
+    final isOpenNow = _clinicSettings!.isOpenNow();
     final todayHours = _clinicSettings!.getTodayHours();
 
     Color statusColor;
@@ -92,9 +92,9 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
       statusColor = Colors.red;
       statusText = "Currently Closed";
       statusIcon = Icons.cancel;
-    } else if (!isOpenToday) {
+    } else if (!isOpenNow) {
       statusColor = Colors.orange;
-      statusText = "Closed Today";
+      statusText = "Closed Now";
       statusIcon = Icons.schedule;
     } else {
       statusColor = Colors.green;
