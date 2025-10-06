@@ -1,6 +1,7 @@
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
+import 'package:capstone_app/web/user_web/responsive_page_handlers/web_settings_and_everything_page_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/pages/user_home/user_home_controller.dart';
 import 'package:get/get.dart';
@@ -381,31 +382,54 @@ class _MyDrawerState extends State<MyDrawer> with SingleTickerProviderStateMixin
                         Expanded(
                           child: Column(
                             children: [
-                              _buildAnimatedListTile(
-                                icon: Icons.person_rounded, 
-                                title: "Profile", 
-                                onTap: () {}
-                              ),
-                              _buildAnimatedListTile(
-                                icon: Icons.settings_rounded,
-                                title: "Settings",
-                                onTap: () {},
-                              ),
-                              _buildAnimatedListTile(
-                                icon: Icons.info_outline_rounded,
-                                title: "About Us",
-                                onTap: () {},
-                              ),
-                              _buildAnimatedListTile(
-                                icon: Icons.help_outline_rounded,
-                                title: "Help & Support",
-                                onTap: () {},
-                              ),
-                              _buildAnimatedListTile(
-                                icon: Icons.privacy_tip_outlined,
-                                title: "Privacy Policy",
-                                onTap: () {},
-                              ),
+                            _buildAnimatedListTile(
+                              icon: Icons.person_rounded, 
+                              title: "Profile", 
+                              onTap: () {
+                                Navigator.of(context).pop(); // Close drawer
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const WebSettingsAndEverythingPageHandler(initialIndex: 0),
+                                  ),
+                                );
+                              }
+                            ),
+                            _buildAnimatedListTile(
+                              icon: Icons.settings_rounded,
+                              title: "Settings",
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const WebSettingsAndEverythingPageHandler(initialIndex: 1),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildAnimatedListTile(
+                              icon: Icons.info_outline_rounded,
+                              title: "Help",
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const WebSettingsAndEverythingPageHandler(initialIndex: 2),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildAnimatedListTile(
+                              icon: Icons.help_outline_rounded,
+                              title: "Send Feedback",
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const WebSettingsAndEverythingPageHandler(initialIndex: 3),
+                                  ),
+                                );
+                              },
+                            ),
                             ],
                           ),
                         ),
