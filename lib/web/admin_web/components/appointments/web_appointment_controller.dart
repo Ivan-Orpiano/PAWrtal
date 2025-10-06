@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 
+import 'appointment_view_mode.dart';
+
 class WebAppointmentController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
@@ -38,11 +40,14 @@ class WebAppointmentController extends GetxController {
   var lastUpdateTime = DateTime.now().obs;
   var isRealTimeConnected = false.obs;
 
+  var viewMode = AppointmentViewMode.today.obs;
+  var selectedCalendarDate = Rxn<DateTime>();
+
   @override
   void onInit() {
     super.onInit();
     fetchClinicData();
-    
+
     // Listen to changes
     ever(selectedTab, (_) => updateFilteredAppointments());
     ever(searchQuery, (_) => updateFilteredAppointments());
@@ -59,7 +64,7 @@ class WebAppointmentController extends GetxController {
   Future<void> fetchClinicData() async {
     try {
       isLoading.value = true;
-      
+
       final user = await authRepository.getUser();
       if (user == null) return;
 
@@ -83,10 +88,9 @@ class WebAppointmentController extends GetxController {
 
       await _subscribeToAppointmentUpdates();
       _setupFallbackPolling();
-      
+
       isRealTimeConnected.value = true;
       print("Real-time updates initialized for appointments");
-      
     } catch (e) {
       print("Failed to initialize real-time updates: $e");
       _setupFallbackPolling(interval: 15);
@@ -98,7 +102,7 @@ class WebAppointmentController extends GetxController {
       await _appointmentSubscription?.close();
 
       final realtime = Realtime(authRepository.client);
-      
+
       _appointmentSubscription = realtime.subscribe([
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.appointmentCollectionID}.documents'
       ]);
@@ -113,7 +117,6 @@ class WebAppointmentController extends GetxController {
           _setupFallbackPolling(interval: 10);
         },
       );
-
     } catch (e) {
       print("Error setting up appointment subscription: $e");
       rethrow;
@@ -123,14 +126,14 @@ class WebAppointmentController extends GetxController {
   void _handleAppointmentRealTimeUpdate(RealtimeMessage response) {
     try {
       print("Real-time update received: ${response.events}");
-      
+
       final payload = response.payload;
       final appointmentClinicId = payload['clinicId'];
-      
+
       if (appointmentClinicId != clinicData.value?.documentId) return;
 
       final appointment = Appointment.fromMap(payload);
-      
+
       for (String event in response.events) {
         if (event.contains('.create')) {
           _handleNewAppointment(appointment);
@@ -142,19 +145,19 @@ class WebAppointmentController extends GetxController {
       }
 
       lastUpdateTime.value = DateTime.now();
-      
+
       if (response.events.any((event) => event.contains('.create'))) {
         _showNewAppointmentNotification(appointment);
       }
-
     } catch (e) {
       print("Error handling real-time update: $e");
     }
   }
 
   void _handleNewAppointment(Appointment appointment) {
-    final existingIndex = appointments.indexWhere((a) => a.documentId == appointment.documentId);
-    
+    final existingIndex =
+        appointments.indexWhere((a) => a.documentId == appointment.documentId);
+
     if (existingIndex == -1) {
       appointments.add(appointment);
       print("New appointment added: ${appointment.documentId}");
@@ -162,12 +165,13 @@ class WebAppointmentController extends GetxController {
       appointments[existingIndex] = appointment;
       appointments.refresh();
     }
-    
+
     updateFilteredAppointments();
   }
 
   void _handleUpdatedAppointment(Appointment appointment) {
-    final index = appointments.indexWhere((a) => a.documentId == appointment.documentId);
+    final index =
+        appointments.indexWhere((a) => a.documentId == appointment.documentId);
     if (index != -1) {
       appointments[index] = appointment;
       appointments.refresh();
@@ -210,7 +214,8 @@ class WebAppointmentController extends GetxController {
     if (clinicData.value?.documentId == null) return;
 
     try {
-      final result = await authRepository.getClinicAppointments(clinicData.value!.documentId!);
+      final result = await authRepository
+          .getClinicAppointments(clinicData.value!.documentId!);
       appointments.assignAll(result);
       await _fetchRelatedData();
       updateFilteredAppointments();
@@ -250,18 +255,35 @@ class WebAppointmentController extends GetxController {
   void updateFilteredAppointments() {
     List<Appointment> filtered = appointments.toList();
 
-    // Filter by tab/status
+    // If a calendar date is selected, filter by that date first
+    if (selectedCalendarDate.value != null) {
+      final selectedDate = selectedCalendarDate.value!;
+      filtered = filtered.where((appointment) {
+        final appointmentDate = appointment.dateTime;
+        return appointmentDate.year == selectedDate.year &&
+            appointmentDate.month == selectedDate.month &&
+            appointmentDate.day == selectedDate.day;
+      }).toList();
+    } else {
+      // Otherwise filter by view mode for tabs that should respect it
+      // Pending and Scheduled always show all
+      if (selectedTab.value != 'pending' && selectedTab.value != 'scheduled') {
+        filtered = _getFilteredAppointmentsForStats();
+      }
+    }
+
     switch (selectedTab.value) {
       case 'today':
-        // Show all appointments for today (pending, accepted, in_progress)
-        filtered = filtered.where((appointment) => appointment.isToday).toList();
+        filtered =
+            filtered.where((appointment) => appointment.isToday).toList();
         break;
       case 'pending':
         filtered = filtered.where((a) => a.status == 'pending').toList();
         break;
       case 'scheduled':
-        // Only show accepted appointments that are NOT today
-        filtered = filtered.where((a) => a.status == 'accepted' && !a.isToday).toList();
+        filtered = filtered
+            .where((a) => a.status == 'accepted' && !a.isToday)
+            .toList();
         break;
       case 'in_progress':
         filtered = filtered.where((a) => a.status == 'in_progress').toList();
@@ -284,23 +306,23 @@ class WebAppointmentController extends GetxController {
         final ownerName = getOwnerName(appointment.userId).toLowerCase();
         final service = appointment.service.toLowerCase();
         final query = searchQuery.value.toLowerCase();
-        
-        return petName.contains(query) || 
-               ownerName.contains(query) || 
-               service.contains(query);
+
+        return petName.contains(query) ||
+            ownerName.contains(query) ||
+            service.contains(query);
       }).toList();
     }
 
-    // Sort by date (most recent first)
     filtered.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-
     filteredAppointments.assignAll(filtered);
   }
 
   // Helper methods
-  String getOwnerName(String userId) => ownersCache[userId]?['name'] ?? 'Unknown Owner';
+  String getOwnerName(String userId) =>
+      ownersCache[userId]?['name'] ?? 'Unknown Owner';
   String getPetName(String petId) => petsCache[petId]?.name ?? petId;
-  String getPetBreed(String petId) => petsCache[petId]?.breed ?? 'Unknown Breed';
+  String getPetBreed(String petId) =>
+      petsCache[petId]?.breed ?? 'Unknown Breed';
   String getPetType(String petId) => petsCache[petId]?.type ?? 'Unknown Type';
   Pet? getPetForAppointment(String petId) => petsCache[petId];
 
@@ -309,25 +331,99 @@ class WebAppointmentController extends GetxController {
     return appointments.where((appointment) => appointment.isToday).toList();
   }
 
-  List<Appointment> get pending => appointments.where((a) => a.status == 'pending').toList();
-  List<Appointment> get scheduled => appointments.where((a) => a.status == 'accepted' && !a.isToday).toList();
-  List<Appointment> get inProgress => appointments.where((a) => a.status == 'in_progress').toList();
-  List<Appointment> get completed => appointments.where((a) => a.status == 'completed').toList();
-  List<Appointment> get cancelled => appointments.where((a) => a.status == 'cancelled').toList();
-  List<Appointment> get declined => appointments.where((a) => a.status == 'declined').toList();
+  List<Appointment> get pending =>
+      appointments.where((a) => a.status == 'pending').toList();
+  List<Appointment> get scheduled =>
+      appointments.where((a) => a.status == 'accepted' && !a.isToday).toList();
+  List<Appointment> get inProgress =>
+      appointments.where((a) => a.status == 'in_progress').toList();
+  List<Appointment> get completed =>
+      appointments.where((a) => a.status == 'completed').toList();
+  List<Appointment> get cancelled =>
+      appointments.where((a) => a.status == 'cancelled').toList();
+  List<Appointment> get declined =>
+      appointments.where((a) => a.status == 'declined').toList();
 
   // Statistics
   Map<String, int> get appointmentStats {
+    List<Appointment> filteredForStats = _getFilteredAppointmentsForStats();
+
     return {
-      'total': appointments.length,
+      'total': filteredForStats.length,
       'today': todayAppointments.length,
-      'pending': pending.length,
-      'scheduled': scheduled.length,
-      'in_progress': inProgress.length,
-      'completed': completed.length,
-      'cancelled': cancelled.length,
-      'declined': declined.length,
+      'pending': filteredForStats.where((a) => a.status == 'pending').length,
+      'scheduled': filteredForStats
+          .where((a) => a.status == 'accepted' && !a.isToday)
+          .length,
+      'in_progress':
+          filteredForStats.where((a) => a.status == 'in_progress').length,
+      'completed':
+          filteredForStats.where((a) => a.status == 'completed').length,
+      'cancelled':
+          filteredForStats.where((a) => a.status == 'cancelled').length,
+      'declined': filteredForStats.where((a) => a.status == 'declined').length,
     };
+  }
+
+  List<Appointment> _getFilteredAppointmentsForStats() {
+    final now = DateTime.now();
+    // Get all pending appointments first
+    final pendingAppointments =
+        appointments.where((a) => a.status == 'pending').toList();
+
+    // Get time-filtered non-pending appointments
+    List<Appointment> timeFilteredAppointments;
+    switch (viewMode.value) {
+      case AppointmentViewMode.today:
+        timeFilteredAppointments = appointments
+            .where((a) => a.isToday && a.status != 'pending')
+            .toList();
+
+      case AppointmentViewMode.thisWeek:
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+        timeFilteredAppointments = appointments.where((a) {
+          if (a.status == 'pending') return false;
+          final date =
+              DateTime(a.dateTime.year, a.dateTime.month, a.dateTime.day);
+          return date.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+              date.isBefore(endOfWeek.add(const Duration(days: 1)));
+        }).toList();
+
+      case AppointmentViewMode.thisMonth:
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        final endOfMonth = DateTime(now.year, now.month + 1, 0);
+        timeFilteredAppointments = appointments.where((a) {
+          if (a.status == 'pending') return false;
+          final date =
+              DateTime(a.dateTime.year, a.dateTime.month, a.dateTime.day);
+          return date.isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
+              date.isBefore(endOfMonth.add(const Duration(days: 1)));
+        }).toList();
+
+      case AppointmentViewMode.allTime:
+        timeFilteredAppointments =
+            appointments.where((a) => a.status != 'pending').toList();
+    }
+
+    // Combine pending appointments with time-filtered appointments
+    return [...pendingAppointments, ...timeFilteredAppointments];
+  }
+
+  void setViewMode(AppointmentViewMode mode) {
+    viewMode.value = mode;
+    selectedCalendarDate.value =
+        null; // Clear calendar selection when changing view mode
+    updateFilteredAppointments();
+  }
+
+  void setCalendarDate(DateTime? date) {
+    selectedCalendarDate.value = date;
+    if (date != null) {
+      viewMode.value = AppointmentViewMode
+          .today; // Switch to daily view when selecting from calendar
+    }
+    updateFilteredAppointments();
   }
 
   // Appointment actions
@@ -350,12 +446,26 @@ class WebAppointmentController extends GetxController {
     }
 
     await _updateAppointmentStatus(appointment, 'accepted');
-    Get.snackbar("Success", "Appointment accepted! Time slot has been reserved.");
+    Get.snackbar(
+        "Success", "Appointment accepted! Time slot has been reserved.");
   }
 
-  Future<void> declineAppointment(Appointment appointment) async {
-    await _updateAppointmentStatus(appointment, 'declined');
-    Get.snackbar("Success", "Appointment declined. Patient will be notified.");
+  Future<void> declineAppointment(Appointment appointment, String notes) async {
+    if (appointment.documentId == null) return;
+
+    try {
+      final updatedAppointment = appointment.copyWith(
+        status: 'declined',
+        notes: notes,
+        updatedAt: DateTime.now(),
+      );
+
+      await updateFullAppointment(updatedAppointment);
+      Get.snackbar(
+          "Success", "Appointment declined. Patient will be notified.");
+    } catch (e) {
+      Get.snackbar("Error", "Failed to decline appointment: $e");
+    }
   }
 
   Future<void> checkInPatient(Appointment appointment) async {
@@ -369,9 +479,10 @@ class WebAppointmentController extends GetxController {
       checkedInAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-    
+
     await updateFullAppointment(updatedAppointment);
-    Get.snackbar("Success", "${getPetName(appointment.petId)} has been checked in!");
+    Get.snackbar(
+        "Success", "${getPetName(appointment.petId)} has been checked in!");
   }
 
   Future<void> startService(Appointment appointment) async {
@@ -379,9 +490,10 @@ class WebAppointmentController extends GetxController {
       serviceStartedAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-    
+
     await updateFullAppointment(updatedAppointment);
-    Get.snackbar("Info", "Service started for ${getPetName(appointment.petId)}");
+    Get.snackbar(
+        "Info", "Service started for ${getPetName(appointment.petId)}");
   }
 
   Future<void> completeServiceWithRecord({
@@ -412,7 +524,8 @@ class WebAppointmentController extends GetxController {
     // Create medical record
     final user = await authRepository.getUser();
     if (user != null) {
-      final medicalRecord = MedicalRecord.fromAppointment(updatedAppointment, user.$id);
+      final medicalRecord =
+          MedicalRecord.fromAppointment(updatedAppointment, user.$id);
       await authRepository.createMedicalRecord(medicalRecord);
     }
 
@@ -420,7 +533,8 @@ class WebAppointmentController extends GetxController {
   }
 
   Future<void> markNoShow(Appointment appointment) async {
-    if (!appointment.isToday) {
+    // Check if appointment is in the past
+    if (appointment.dateTime.isAfter(DateTime.now())) {
       Get.snackbar("Error", "Cannot mark as no-show for future appointments");
       return;
     }
@@ -436,20 +550,23 @@ class WebAppointmentController extends GetxController {
     String? excludeAppointmentId,
   }) async {
     try {
-      final allAppointments = await authRepository.getClinicAppointments(clinicId);
-      
+      final allAppointments =
+          await authRepository.getClinicAppointments(clinicId);
+
       // Check for accepted appointments at the same date/time
       final conflictingAppointments = allAppointments.where((apt) {
         // Exclude the current appointment if checking for update
-        if (excludeAppointmentId != null && apt.documentId == excludeAppointmentId) {
+        if (excludeAppointmentId != null &&
+            apt.documentId == excludeAppointmentId) {
           return false;
         }
-        
+
         // Only check accepted appointments
         if (apt.status != 'accepted') return false;
-        
+
         // Check if same date and time (within 30-minute window)
-        final timeDifference = apt.dateTime.difference(dateTime).inMinutes.abs();
+        final timeDifference =
+            apt.dateTime.difference(dateTime).inMinutes.abs();
         return timeDifference < 30; // 30-minute slots
       }).toList();
 
@@ -467,9 +584,11 @@ class WebAppointmentController extends GetxController {
     }
 
     try {
-      await authRepository.updateFullAppointment(appointment.documentId!, appointment.toMap());
-      
-      final index = appointments.indexWhere((a) => a.documentId == appointment.documentId);
+      await authRepository.updateFullAppointment(
+          appointment.documentId!, appointment.toMap());
+
+      final index = appointments
+          .indexWhere((a) => a.documentId == appointment.documentId);
       if (index != -1) {
         appointments[index] = appointment;
         appointments.refresh();
@@ -480,16 +599,19 @@ class WebAppointmentController extends GetxController {
     }
   }
 
-  Future<void> _updateAppointmentStatus(Appointment appointment, String status) async {
+  Future<void> _updateAppointmentStatus(
+      Appointment appointment, String status) async {
     if (appointment.documentId == null) {
       Get.snackbar("Error", "Cannot update appointment: Missing document ID");
       return;
     }
 
     try {
-      await authRepository.updateAppointmentStatus(appointment.documentId!, status);
-      
-      final index = appointments.indexWhere((a) => a.documentId == appointment.documentId);
+      await authRepository.updateAppointmentStatus(
+          appointment.documentId!, status);
+
+      final index = appointments
+          .indexWhere((a) => a.documentId == appointment.documentId);
       if (index != -1) {
         appointments[index] = appointment.copyWith(
           status: status,

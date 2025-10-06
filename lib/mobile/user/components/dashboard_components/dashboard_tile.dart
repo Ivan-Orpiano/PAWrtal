@@ -16,7 +16,7 @@ class MyDashboardTile extends StatelessWidget {
 
   Widget _buildStatusBadge() {
     final isOpen = clinicSettings?.isOpen ?? true;
-    final isOpenToday = clinicSettings?.isOpenToday() ?? true;
+    final isOpenNow = clinicSettings?.isOpenNow() ?? true;
     
     Color statusColor;
     String statusText;
@@ -24,9 +24,9 @@ class MyDashboardTile extends StatelessWidget {
     if (!isOpen) {
       statusColor = Colors.red;
       statusText = "CLOSED";
-    } else if (!isOpenToday) {
+    } else if (!isOpenNow) {
       statusColor = Colors.orange;
-      statusText = "CLOSED TODAY";
+      statusText = "CLOSED NOW";
     } else {
       statusColor = Colors.green;
       statusText = "OPEN";

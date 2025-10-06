@@ -135,36 +135,68 @@ class ClinicSettings {
 
   // ========== STAFF EMAIL TEMPLATE METHODS ==========
 
-  /// Generate staff email from template based on staff name
   String generateStaffEmail(String staffName) {
     final cleanName = staffName
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]'), '')
         .replaceAll(' ', '.');
 
-    // If template starts with @, prepend the name
     if (staffEmailTemplate.startsWith('@')) {
       return '$cleanName$staffEmailTemplate';
     }
 
-    // Otherwise use the template as-is (for backward compatibility)
     return staffEmailTemplate.replaceAll('{name}', cleanName);
   }
 
-  /// Validate email template format
   static bool isValidEmailTemplate(String template) {
-    // Template must contain @ and have domain after it
     return template.contains('@') &&
         template.split('@').length == 2 &&
         template.split('@')[1].isNotEmpty;
   }
 
-  // ========== EXISTING HELPER METHODS ==========
+  // ========== EXISTING HELPER METHODS (UPDATED) ==========
 
+  /// Check if clinic is open on today's day of week
   bool isOpenToday() {
     final today = DateTime.now().weekday;
     final dayName = _getDayName(today);
     return operatingHours[dayName]?['isOpen'] ?? false;
+  }
+
+  /// NEW: Check if clinic is currently open (considering both day AND time)
+  bool isOpenNow() {
+    // First check if clinic is generally accepting appointments
+    if (!isOpen) return false;
+    
+    final now = DateTime.now();
+    final dayName = _getDayName(now.weekday);
+    final dayHours = operatingHours[dayName];
+    
+    // Check if clinic is open on this day
+    if (dayHours?['isOpen'] != true) return false;
+    
+    // Parse operating hours
+    try {
+      final openTime = dayHours?['openTime'] as String;
+      final closeTime = dayHours?['closeTime'] as String;
+      
+      final openParts = openTime.split(':');
+      final closeParts = closeTime.split(':');
+      
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      
+      final openDateTime = DateTime(now.year, now.month, now.day, openHour, openMinute);
+      final closeDateTime = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
+      
+      // Check if current time is within operating hours
+      return now.isAfter(openDateTime) && now.isBefore(closeDateTime);
+    } catch (e) {
+      print('Error parsing operating hours: $e');
+      return false;
+    }
   }
 
   String getTodayHours() {
@@ -176,6 +208,21 @@ class ClinicSettings {
       return '${dayHours?['openTime']} - ${dayHours?['closeTime']}';
     }
     return 'Closed';
+  }
+
+  /// NEW: Get current status with more detail
+  String getDetailedStatus() {
+    if (!isOpen) return 'Closed for appointments';
+    if (!isOpenToday()) return 'Closed today';
+    if (!isOpenNow()) {
+      // Clinic is open today but outside operating hours
+      final today = DateTime.now().weekday;
+      final dayName = _getDayName(today);
+      final dayHours = operatingHours[dayName];
+      final openTime = dayHours?['openTime'] ?? '';
+      return 'Closed now (Opens at $openTime)';
+    }
+    return 'Open now';
   }
 
   String _getDayName(int weekday) {

@@ -37,9 +37,9 @@ class WebAppointmentTile extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected 
-                ? const Color.fromARGB(255, 81, 115, 153)
-                : _getStatusBorderColor(appointment.status),
+              color: isSelected
+                  ? const Color.fromARGB(255, 81, 115, 153)
+                  : _getStatusBorderColor(appointment.status),
               width: isSelected ? 2 : 1.5,
             ),
             boxShadow: [
@@ -51,7 +51,9 @@ class WebAppointmentTile extends StatelessWidget {
               ),
             ],
           ),
-          child: isMobile ? _buildMobileLayout(controller) : _buildDesktopLayout(controller, isTablet),
+          child: isMobile
+              ? _buildMobileLayout(controller)
+              : _buildDesktopLayout(controller, isTablet),
         ),
       ),
     );
@@ -91,7 +93,6 @@ class WebAppointmentTile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        
         Row(
           children: [
             Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
@@ -113,21 +114,19 @@ class WebAppointmentTile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        
         _buildProgressIndicator(),
         const SizedBox(height: 12),
-        
         _buildActionButtons(controller, isMobile: true),
       ],
     );
   }
 
-  Widget _buildDesktopLayout(WebAppointmentController controller, bool isTablet) {
+  Widget _buildDesktopLayout(
+      WebAppointmentController controller, bool isTablet) {
     return Row(
       children: [
         _buildPetAvatar(),
         const SizedBox(width: 16),
-        
         Expanded(
           flex: 3,
           child: Column(
@@ -168,7 +167,6 @@ class WebAppointmentTile extends StatelessWidget {
             ],
           ),
         ),
-        
         Expanded(
           flex: 2,
           child: Column(
@@ -208,7 +206,8 @@ class WebAppointmentTile extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.medical_services, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.medical_services,
+                      size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -225,7 +224,6 @@ class WebAppointmentTile extends StatelessWidget {
             ],
           ),
         ),
-        
         Expanded(
           flex: isTablet ? 2 : 3,
           child: Column(
@@ -285,13 +283,16 @@ class WebAppointmentTile extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildProgressDot('Scheduled', appointment.status != 'pending', Colors.blue),
+        _buildProgressDot(
+            'Scheduled', appointment.status != 'pending', Colors.blue),
         _buildProgressLine(appointment.hasArrived),
         _buildProgressDot('Arrived', appointment.hasArrived, Colors.orange),
         _buildProgressLine(appointment.hasServiceStarted),
-        _buildProgressDot('Treatment', appointment.hasServiceStarted, Colors.purple),
+        _buildProgressDot(
+            'Treatment', appointment.hasServiceStarted, Colors.purple),
         _buildProgressLine(appointment.hasServiceCompleted),
-        _buildProgressDot('Complete', appointment.hasServiceCompleted, Colors.green),
+        _buildProgressDot(
+            'Complete', appointment.hasServiceCompleted, Colors.green),
       ],
     );
   }
@@ -318,10 +319,55 @@ class WebAppointmentTile extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(WebAppointmentController controller, {bool isMobile = false}) {
+  Widget _buildActionButtons(WebAppointmentController controller,
+      {bool isMobile = false}) {
     final buttonHeight = isMobile ? 32.0 : 36.0;
     final fontSize = isMobile ? 11.0 : 12.0;
-    
+
+    // Check if appointment is past and still in accepted status
+    final isPastAccepted =
+        appointment.isPast && appointment.status == 'accepted';
+
+    if (isPastAccepted) {
+      // Past accepted appointments that weren't marked
+      return Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: buttonHeight,
+              child: OutlinedButton(
+                onPressed: () => controller.markNoShow(appointment),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child:
+                    Text('Mark No Show', style: TextStyle(fontSize: fontSize)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: SizedBox(
+              height: buttonHeight,
+              child: ElevatedButton(
+                onPressed: () => _showPastAppointmentCompleteDialog(controller),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child:
+                    Text('Mark Complete', style: TextStyle(fontSize: fontSize)),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     switch (appointment.status) {
       case 'pending':
         return Row(
@@ -330,11 +376,7 @@ class WebAppointmentTile extends StatelessWidget {
               child: SizedBox(
                 height: buttonHeight,
                 child: OutlinedButton(
-                  onPressed: () => _showConfirmDialog(
-                    'Decline Appointment',
-                    'Are you sure you want to decline this appointment?',
-                    () => controller.declineAppointment(appointment),
-                  ),
+                  onPressed: () => _showDeclineDialog(controller, appointment),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
@@ -364,7 +406,6 @@ class WebAppointmentTile extends StatelessWidget {
         );
 
       case 'accepted':
-        // Only show action buttons if appointment is today
         if (!appointment.isToday) {
           return SizedBox(
             height: buttonHeight,
@@ -379,7 +420,7 @@ class WebAppointmentTile extends StatelessWidget {
             ),
           );
         }
-        
+
         return Row(
           children: [
             Expanded(
@@ -460,7 +501,8 @@ class WebAppointmentTile extends StatelessWidget {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-                    child: Text('Complete', style: TextStyle(fontSize: fontSize)),
+                    child:
+                        Text('Complete', style: TextStyle(fontSize: fontSize)),
                   ),
                 ),
               ),
@@ -507,7 +549,8 @@ class WebAppointmentTile extends StatelessWidget {
     );
   }
 
-  void _showConfirmDialog(String title, String content, VoidCallback onConfirm) {
+  void _showConfirmDialog(
+      String title, String content, VoidCallback onConfirm) {
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -529,6 +572,138 @@ class WebAppointmentTile extends StatelessWidget {
             child: const Text('Confirm', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showDeclineDialog(
+      WebAppointmentController controller, Appointment appointment) {
+    String selectedReason = '';
+    final customReasonController = TextEditingController();
+
+    final predefinedReasons = [
+      'Time slot already booked',
+      'Clinic at full capacity',
+      'Service not available',
+      'Emergency override needed',
+      'Insufficient information provided',
+      'Other (specify below)',
+    ];
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.cancel,
+                            color: Colors.red, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Decline Appointment',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Please select or provide a reason for declining this appointment:',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Predefined reasons
+                  ...predefinedReasons.map((reason) {
+                    return RadioListTile<String>(
+                      title: Text(reason, style: const TextStyle(fontSize: 14)),
+                      value: reason,
+                      groupValue: selectedReason,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedReason = value!;
+                        });
+                      },
+                      activeColor: const Color.fromARGB(255, 81, 115, 153),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    );
+                  }).toList(),
+
+                  const SizedBox(height: 16),
+
+                  // Custom reason text field
+                  TextField(
+                    controller: customReasonController,
+                    decoration: InputDecoration(
+                      labelText: 'Custom reason (optional)',
+                      hintText: 'Enter additional details...',
+                      border: const OutlineInputBorder(),
+                      enabled: selectedReason == 'Other (specify below)' ||
+                          selectedReason.isNotEmpty,
+                    ),
+                    maxLines: 3,
+                    maxLength: 200,
+                  ),
+
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: selectedReason.isEmpty
+                            ? null
+                            : () {
+                                String finalReason = selectedReason;
+                                if (customReasonController.text.isNotEmpty) {
+                                  finalReason = selectedReason ==
+                                          'Other (specify below)'
+                                      ? customReasonController.text
+                                      : '$selectedReason - ${customReasonController.text}';
+                                }
+
+                                Get.back();
+                                controller.declineAppointment(
+                                    appointment, finalReason);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: const Text('Decline Appointment',
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -629,13 +804,20 @@ class WebAppointmentTile extends StatelessWidget {
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: () {
-                      if (tempController.text.isNotEmpty && weightController.text.isNotEmpty) {
+                      if (tempController.text.isNotEmpty &&
+                          weightController.text.isNotEmpty) {
                         final vitals = {
                           'temperature': double.parse(tempController.text),
                           'weight': double.parse(weightController.text),
-                          'bloodPressure': bpController.text.isNotEmpty ? bpController.text : null,
-                          'heartRate': hrController.text.isNotEmpty ? int.parse(hrController.text) : null,
-                          'additionalNotes': notesController.text.isNotEmpty ? notesController.text : null,
+                          'bloodPressure': bpController.text.isNotEmpty
+                              ? bpController.text
+                              : null,
+                          'heartRate': hrController.text.isNotEmpty
+                              ? int.parse(hrController.text)
+                              : null,
+                          'additionalNotes': notesController.text.isNotEmpty
+                              ? notesController.text
+                              : null,
                           'recordedAt': DateTime.now().toIso8601String(),
                         };
 
@@ -652,7 +834,8 @@ class WebAppointmentTile extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                     ),
-                    child: const Text('Save', style: TextStyle(color: Colors.white)),
+                    child: const Text('Save',
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -750,17 +933,26 @@ class WebAppointmentTile extends StatelessWidget {
                       onPressed: () {
                         controller.completeServiceWithRecord(
                           appointment: appointment,
-                          diagnosis: diagnosisController.text.isEmpty ? null : diagnosisController.text,
-                          treatment: treatmentController.text.isEmpty ? null : treatmentController.text,
-                          prescription: prescriptionController.text.isEmpty ? null : prescriptionController.text,
-                          vetNotes: notesController.text.isEmpty ? null : notesController.text,
+                          diagnosis: diagnosisController.text.isEmpty
+                              ? null
+                              : diagnosisController.text,
+                          treatment: treatmentController.text.isEmpty
+                              ? null
+                              : treatmentController.text,
+                          prescription: prescriptionController.text.isEmpty
+                              ? null
+                              : prescriptionController.text,
+                          vetNotes: notesController.text.isEmpty
+                              ? null
+                              : notesController.text,
                         );
                         Get.back();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
-                      child: const Text('Complete Service', style: TextStyle(color: Colors.white)),
+                      child: const Text('Complete Service',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -768,6 +960,59 @@ class WebAppointmentTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showPastAppointmentCompleteDialog(WebAppointmentController controller) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Complete Past Appointment',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                'This appointment has already passed. How would you like to mark it?'),
+            SizedBox(height: 16),
+            Text(
+              'Note: This action is for record-keeping purposes.',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton(
+            onPressed: () {
+              Get.back();
+              // Mark as complete with minimal info
+              controller.completeServiceWithRecord(
+                appointment: appointment,
+                diagnosis: 'Appointment completed retrospectively',
+                treatment: 'N/A',
+              );
+            },
+            child: const Text('Quick Complete'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _showCompleteServiceDialog(controller);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Complete with Details',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

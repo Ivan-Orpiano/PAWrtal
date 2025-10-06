@@ -21,7 +21,7 @@ class DashboardNextPage extends StatelessWidget {
     if (clinicSettings == null) return const SizedBox.shrink();
 
     final isOpen = clinicSettings!.isOpen;
-    final isOpenToday = clinicSettings!.isOpenToday();
+    final isOpenNow = clinicSettings!.isOpenNow();
     final todayHours = clinicSettings!.getTodayHours();
 
     Color statusColor;
@@ -32,9 +32,9 @@ class DashboardNextPage extends StatelessWidget {
       statusColor = Colors.red;
       statusText = "Currently Closed";
       statusIcon = Icons.cancel;
-    } else if (!isOpenToday) {
+    } else if (!isOpenNow) {
       statusColor = Colors.orange;
-      statusText = "Closed Today";
+      statusText = "Closed Now";
       statusIcon = Icons.schedule;
     } else {
       statusColor = Colors.green;

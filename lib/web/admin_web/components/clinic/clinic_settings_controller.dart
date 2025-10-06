@@ -71,18 +71,18 @@ class ClinicSettingsController extends GetxController {
     initializeData();
   }
 
-  @override
-  void onClose() {
-    // Dispose controllers
-    clinicNameController.dispose();
-    addressController.dispose();
-    contactController.dispose();
-    emailController.dispose();
-    descriptionController.dispose();
-    emergencyContactController.dispose();
-    specialInstructionsController.dispose();
-    super.onClose();
-  }
+  // @override
+  // void onClose() {
+  //   // Dispose controllers
+  //   clinicNameController.dispose();
+  //   addressController.dispose();
+  //   contactController.dispose();
+  //   emailController.dispose();
+  //   descriptionController.dispose();
+  //   emergencyContactController.dispose();
+  //   specialInstructionsController.dispose();
+  //   super.onClose();
+  // }
 
   Future<void> initializeData() async {
     try {

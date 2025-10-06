@@ -18,7 +18,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   @override
   void initState() {
     super.initState();
-    
+
     if (!Get.isRegistered<AdminDashboardController>()) {
       Get.put(AdminDashboardController(
         authRepository: Get.find<AuthRepository>(),
@@ -50,10 +50,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               children: [
                 _buildHeader(controller, isMobile),
                 const SizedBox(height: 24),
-                
                 _buildQuickStats(controller, isMobile, isTablet),
                 const SizedBox(height: 32),
-                
                 if (isMobile)
                   _buildMobileLayout(controller)
                 else if (isTablet)
@@ -101,7 +99,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.dashboard_rounded, color: Colors.white, size: 32),
+                child: const Icon(Icons.dashboard_rounded,
+                    color: Colors.white, size: 32),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -109,7 +108,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      controller.clinicData.value?.clinicName ?? 'Admin Dashboard',
+                      controller.clinicData.value?.clinicName ??
+                          'Admin Dashboard',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: isMobile ? 20 : 24,
@@ -160,8 +160,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: controller.isRealTimeConnected.value 
-                                  ? Colors.green 
+                              color: controller.isRealTimeConnected.value
+                                  ? Colors.green
                                   : Colors.orange,
                               shape: BoxShape.circle,
                             ),
@@ -212,7 +212,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildQuickStats(AdminDashboardController controller, bool isMobile, bool isTablet) {
+  Widget _buildQuickStats(
+      AdminDashboardController controller, bool isMobile, bool isTablet) {
     final stats = [
       {
         'title': 'Today\'s Appointments',
@@ -223,7 +224,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         'onTap': () => controller.navigateToAppointments('today'),
       },
       {
-        'title': 'Pending Review',
+        'title': 'Pending Appointments',
         'value': controller.pendingCount.toString(),
         'subtitle': 'Need approval',
         'icon': Icons.pending_actions,
@@ -231,17 +232,23 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         'onTap': () => controller.navigateToAppointments('pending'),
       },
       {
-        'title': 'This Month',
-        'value': controller.monthlyStats['thisMonth']?.toString() ?? '0',
-        'subtitle': 'Total appointments',
-        'icon': Icons.calendar_month,
+        'title': 'Today\'s In Progress',
+        'value': controller.todayAppointments
+            .where((a) => a.status == 'in_progress')
+            .length
+            .toString(),
+        'subtitle': 'Currently being treated',
+        'icon': Icons.medical_services,
         'color': Colors.purple,
-        'onTap': () => controller.navigateToAppointments(),
+        'onTap': () => controller.navigateToAppointments('in_progress'),
       },
       {
-        'title': 'Completed',
-        'value': controller.completedCount.toString(),
-        'subtitle': 'Successfully treated',
+        'title': 'Today\'s Completed',
+        'value': controller.todayAppointments
+            .where((a) => a.status == 'completed')
+            .length
+            .toString(),
+        'subtitle': 'Finished appointments today',
         'icon': Icons.check_circle,
         'color': Colors.green,
         'onTap': () => controller.navigateToAppointments('completed'),
@@ -335,7 +342,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   child: Icon(stat['icon'], color: stat['color'], size: 20),
                 ),
                 const Spacer(),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey[400]),
               ],
             ),
             const SizedBox(height: 12),
@@ -431,18 +439,21 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildTodaySchedule(AdminDashboardController controller, bool isMobile) {
+  Widget _buildTodaySchedule(
+      AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
       title: 'Today\'s Schedule',
       subtitle: '${controller.todayAppointments.length} appointments',
       icon: Icons.today,
       child: controller.todayAppointments.isEmpty
-          ? _buildEmptyState('No appointments scheduled for today', Icons.event_available)
+          ? _buildEmptyState(
+              'No appointments scheduled for today', Icons.event_available)
           : Column(
               children: controller.todayAppointments.take(5).map((appointment) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildAppointmentItem(controller, appointment, isMobile),
+                  child:
+                      _buildAppointmentItem(controller, appointment, isMobile),
                 );
               }).toList(),
             ),
@@ -451,13 +462,15 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildAppointmentItem(AdminDashboardController controller, Appointment appointment, bool isMobile) {
+  Widget _buildAppointmentItem(AdminDashboardController controller,
+      Appointment appointment, bool isMobile) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _getStatusColor(appointment.status).withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _getStatusColor(appointment.status).withOpacity(0.3)),
+        border: Border.all(
+            color: _getStatusColor(appointment.status).withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -521,14 +534,15 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                 SizedBox(
                   height: 24,
                   child: ElevatedButton(
-                    onPressed: () => controller.quickAcceptAppointment(appointment),
+                    onPressed: () =>
+                        controller.quickAcceptAppointment(appointment),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       minimumSize: const Size(0, 24),
                     ),
-                    child: const Text('Accept', 
-                      style: TextStyle(fontSize: 10, color: Colors.white)),
+                    child: const Text('Accept',
+                        style: TextStyle(fontSize: 10, color: Colors.white)),
                   ),
                 ),
               ],
@@ -539,10 +553,12 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildRecentMessages(AdminDashboardController controller, bool isMobile) {
+  Widget _buildRecentMessages(
+      AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
       title: 'Recent Messages',
-      subtitle: '${controller.recentMessages.where((m) => !m['isRead']).length} unread',
+      subtitle:
+          '${controller.recentMessages.where((m) => !m['isRead']).length} unread',
       icon: Icons.message,
       child: controller.recentMessages.isEmpty
           ? _buildEmptyState('No recent messages', Icons.message)
@@ -561,14 +577,18 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   Widget _buildMessageItem(Map<String, dynamic> message, bool isMobile) {
     final isUnread = !message['isRead'];
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isUnread ? Colors.blue.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+        color: isUnread
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isUnread ? Colors.blue.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+          color: isUnread
+              ? Colors.blue.withOpacity(0.3)
+              : Colors.grey.withOpacity(0.2),
         ),
       ),
       child: Row(
@@ -578,7 +598,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             radius: 20,
             child: Text(
               message['senderName'][0].toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 12),
@@ -592,7 +613,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                       child: Text(
                         message['senderName'],
                         style: TextStyle(
-                          fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                          fontWeight:
+                              isUnread ? FontWeight.bold : FontWeight.w600,
                           fontSize: 14,
                         ),
                       ),
@@ -619,7 +641,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                 if (message['petName'] != null) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -651,7 +674,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildUpcomingAppointments(AdminDashboardController controller, bool isMobile) {
+  Widget _buildUpcomingAppointments(
+      AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
       title: 'Upcoming Appointments',
       subtitle: 'Next ${controller.upcomingAppointments.length} scheduled',
@@ -662,7 +686,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               children: controller.upcomingAppointments.map((appointment) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildUpcomingAppointmentItem(controller, appointment, isMobile),
+                  child: _buildUpcomingAppointmentItem(
+                      controller, appointment, isMobile),
                 );
               }).toList(),
             ),
@@ -671,11 +696,13 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildUpcomingAppointmentItem(AdminDashboardController controller, Appointment appointment, bool isMobile) {
-    final daysDifference = appointment.dateTime.difference(DateTime.now()).inDays;
+  Widget _buildUpcomingAppointmentItem(AdminDashboardController controller,
+      Appointment appointment, bool isMobile) {
+    final daysDifference =
+        appointment.dateTime.difference(DateTime.now()).inDays;
     final isToday = daysDifference == 0;
     final isTomorrow = daysDifference == 1;
-    
+
     String dateLabel;
     if (isToday) {
       dateLabel = 'Today';
@@ -738,7 +765,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -763,7 +791,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   Widget _buildAppointmentCalendar(AdminDashboardController controller) {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    
+
     return _buildDashboardCard(
       title: 'Appointment Calendar',
       subtitle: 'Monthly overview',
@@ -774,7 +802,9 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         focusedDay: controller.selectedDate.value,
         calendarFormat: CalendarFormat.month,
         eventLoader: (day) {
-          return controller.calendarAppointments[DateTime(day.year, day.month, day.day)] ?? [];
+          return controller.calendarAppointments[
+                  DateTime(day.year, day.month, day.day)] ??
+              [];
         },
         startingDayOfWeek: StartingDayOfWeek.monday,
         calendarStyle: CalendarStyle(
@@ -821,7 +851,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
           return !dayDate.isBefore(todayDate);
         },
         onDaySelected: (selectedDay, focusedDay) {
-          final selectedDate = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+          final selectedDate =
+              DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
           if (!selectedDate.isBefore(todayDate)) {
             controller.setSelectedDate(selectedDay);
           }
@@ -851,13 +882,15 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             if (events.isNotEmpty) {
               final dayDate = DateTime(day.year, day.month, day.day);
               final isPastDay = dayDate.isBefore(todayDate);
-              
+
               return Positioned(
                 bottom: 1,
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isPastDay ? Colors.grey.shade400 : Colors.green.shade400,
+                    color: isPastDay
+                        ? Colors.grey.shade400
+                        : Colors.green.shade400,
                   ),
                   width: 6,
                   height: 6,
@@ -902,7 +935,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                  color:
+                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

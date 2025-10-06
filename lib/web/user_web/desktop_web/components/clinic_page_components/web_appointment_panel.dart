@@ -146,7 +146,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     final settings = controller.clinicSettings.value!;
     if (!settings.isOpen) {
       return Colors.red;
-    } else if (!settings.isOpenToday()) {
+    } else if (!settings.isOpenNow()) {
       return Colors.orange;
     } else {
       return const Color(0xFF5173B8);
@@ -161,7 +161,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     final settings = controller.clinicSettings.value!;
     if (!settings.isOpen) {
       return Icons.cancel;
-    } else if (!settings.isOpenToday()) {
+    } else if (!settings.isOpenNow()) {
       return Icons.schedule;
     } else {
       return Icons.calendar_today;
@@ -176,8 +176,8 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     final settings = controller.clinicSettings.value!;
     if (!settings.isOpen) {
       return 'Currently closed';
-    } else if (!settings.isOpenToday()) {
-      return 'Closed today';
+    } else if (!settings.isOpenNow()) {
+      return 'Closed Now';
     } else {
       return 'Open - ${settings.getTodayHours()}';
     }
@@ -190,7 +190,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       }
       
       final settings = controller.clinicSettings.value!;
-      if (settings.isOpen && settings.isOpenToday()) {
+      if (settings.isOpen && settings.isOpenNow()) {
         return const SizedBox.shrink();
       }
       
@@ -204,7 +204,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         bannerIcon = Icons.cancel;
       } else {
         bannerColor = Colors.orange;
-        bannerText = 'This clinic is closed today';
+        bannerText = 'This clinic is currently closed for appointments';
         bannerIcon = Icons.schedule;
       }
       
