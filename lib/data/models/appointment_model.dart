@@ -57,7 +57,7 @@ class Appointment {
   factory Appointment.fromMap(Map<String, dynamic> map) {
     return Appointment(
       documentId: map['\$id'],
-      userId: map['userId'] ?? '',
+      userId: map['userId'],
       clinicId: map['clinicId'] ?? '',
       petId: map['petId'] ?? '',
       service: map['service'] ?? '',

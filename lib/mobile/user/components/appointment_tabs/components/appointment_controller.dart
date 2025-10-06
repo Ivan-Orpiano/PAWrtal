@@ -21,7 +21,7 @@ class EnhancedUserAppointmentController extends GetxController {
   var appointments = <Appointment>[].obs;
   var clinics = <String, Clinic>{}.obs;
   var pets = <String, Pet>{}.obs;
-  
+
   // Real-time subscription
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
 
@@ -44,9 +44,8 @@ class EnhancedUserAppointmentController extends GetxController {
       final userId = session.userId;
       if (userId.isEmpty) return;
 
-      _appointmentSubscription = authRepository
-          .subscribeToUserAppointments(userId)
-          .listen((message) {
+      _appointmentSubscription =
+          authRepository.subscribeToUserAppointments(userId).listen((message) {
         _handleRealtimeUpdate(message);
       });
     } catch (e) {
@@ -58,28 +57,35 @@ class EnhancedUserAppointmentController extends GetxController {
     final payload = message.payload;
     final eventType = message.events.first;
 
+    print('Realtime update received: $eventType'); // Debug log
+    print('Payload: $payload'); // Debug log
+
     if (eventType.contains('create')) {
-      // New appointment created
       _addOrUpdateAppointment(payload);
+      print('Added new appointment'); // Debug log
     } else if (eventType.contains('update')) {
-      // Appointment updated
       _addOrUpdateAppointment(payload);
+      print('Updated appointment'); // Debug log
     } else if (eventType.contains('delete')) {
-      // Appointment deleted
       appointments.removeWhere((a) => a.documentId == payload['\$id']);
+      print('Deleted appointment'); // Debug log
     }
+
+    // Force refresh of the appointments list
+    appointments.refresh();
   }
 
   void _addOrUpdateAppointment(Map<String, dynamic> payload) {
     final appointment = Appointment.fromMap(payload);
-    final index = appointments.indexWhere((a) => a.documentId == appointment.documentId);
-    
+    final index =
+        appointments.indexWhere((a) => a.documentId == appointment.documentId);
+
     if (index != -1) {
       appointments[index] = appointment;
     } else {
       appointments.add(appointment);
     }
-    
+
     // Fetch related data if not cached
     _fetchRelatedDataForAppointment(appointment);
   }
@@ -97,7 +103,6 @@ class EnhancedUserAppointmentController extends GetxController {
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
       await _fetchRelatedData();
-
     } catch (e) {
       Get.snackbar("Error", "Failed to load appointments: $e");
     } finally {
@@ -127,9 +132,12 @@ class EnhancedUserAppointmentController extends GetxController {
     for (final petName in petNames) {
       if (!pets.containsKey(petName) && petName.isNotEmpty) {
         try {
-          final pet = await authRepository.getPetByName(petName);
-          if (pet != null) {
-            pets[petName] = pet as Pet;
+          final petDoc = await authRepository.getPetByName(petName);
+          if (petDoc != null) {
+            // Create Pet object from document data
+            final pet = Pet.fromMap(petDoc.data);
+            pet.documentId = petDoc.$id;
+            pets[petName] = pet;
           }
         } catch (e) {
           print('Error fetching pet $petName: $e');
@@ -140,9 +148,11 @@ class EnhancedUserAppointmentController extends GetxController {
 
   Future<void> _fetchRelatedDataForAppointment(Appointment appointment) async {
     // Fetch clinic if not cached
-    if (!clinics.containsKey(appointment.clinicId) && appointment.clinicId.isNotEmpty) {
+    if (!clinics.containsKey(appointment.clinicId) &&
+        appointment.clinicId.isNotEmpty) {
       try {
-        final clinicDoc = await authRepository.getClinicById(appointment.clinicId);
+        final clinicDoc =
+            await authRepository.getClinicById(appointment.clinicId);
         if (clinicDoc != null) {
           final clinic = Clinic.fromMap(clinicDoc.data);
           clinic.documentId = clinicDoc.$id;
@@ -156,9 +166,12 @@ class EnhancedUserAppointmentController extends GetxController {
     // Fetch pet if not cached
     if (!pets.containsKey(appointment.petId) && appointment.petId.isNotEmpty) {
       try {
-        final pet = await authRepository.getPetByName(appointment.petId);
-        if (pet != null) {
-          pets[appointment.petId] = pet as Pet;
+        final petDoc = await authRepository.getPetByName(appointment.petId);
+        if (petDoc != null) {
+          // Create Pet object from document data
+          final pet = Pet.fromMap(petDoc.data);
+          pet.documentId = petDoc.$id;
+          pets[appointment.petId] = pet;
         }
       } catch (e) {
         print('Error fetching pet: $e');
@@ -169,27 +182,29 @@ class EnhancedUserAppointmentController extends GetxController {
   // Enhanced filtering with new tab structure
   List<Appointment> get upcoming {
     final now = DateTime.now();
-    return appointments.where((a) => 
-      a.status == 'accepted' && 
-      a.dateTime.isAfter(now)).toList()
+    return appointments
+        .where((a) => a.status == 'accepted' && a.dateTime.isAfter(now))
+        .toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   }
-  
+
   List<Appointment> get pending {
     return appointments.where((a) => a.status == 'pending').toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
-  
+
   List<Appointment> get completed {
     return appointments.where((a) => a.status == 'completed').toList()
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
   }
-  
+
   List<Appointment> get history {
-    return appointments.where((a) => 
-      a.status == 'cancelled' || 
-      a.status == 'declined' || 
-      a.status == 'no_show').toList()
+    return appointments
+        .where((a) =>
+            a.status == 'cancelled' ||
+            a.status == 'declined' ||
+            a.status == 'no_show')
+        .toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
@@ -197,14 +212,14 @@ class EnhancedUserAppointmentController extends GetxController {
   List<Appointment> get inProgress {
     return appointments.where((a) => a.status == 'in_progress').toList();
   }
-  
+
   List<Appointment> get todayAppointments {
     final today = DateTime.now();
     return appointments.where((appointment) {
       final appointmentDate = appointment.dateTime;
       return appointmentDate.year == today.year &&
-             appointmentDate.month == today.month &&
-             appointmentDate.day == today.day;
+          appointmentDate.month == today.month &&
+          appointmentDate.day == today.day;
     }).toList();
   }
 
@@ -213,9 +228,9 @@ class EnhancedUserAppointmentController extends GetxController {
       isLoading.value = true;
       await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
       // Real-time will handle the update
-      
+
       Get.snackbar(
-        "Success", 
+        "Success",
         "Appointment cancelled successfully",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
@@ -223,7 +238,7 @@ class EnhancedUserAppointmentController extends GetxController {
       );
     } catch (e) {
       Get.snackbar(
-        "Error", 
+        "Error",
         "Failed to cancel appointment: $e",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
@@ -260,7 +275,8 @@ class EnhancedUserAppointmentController extends GetxController {
       case 'accepted':
         return 'Confirmed - Please arrive on time';
       case 'in_progress':
-        if (appointment.checkedInAt != null && appointment.serviceStartedAt == null) {
+        if (appointment.checkedInAt != null &&
+            appointment.serviceStartedAt == null) {
           return 'Checked in - Waiting for treatment';
         } else if (appointment.serviceStartedAt != null) {
           return 'Currently receiving treatment';
@@ -301,8 +317,10 @@ class EnhancedUserAppointmentController extends GetxController {
   }
 
   bool canCancelAppointment(Appointment appointment) {
-    return (appointment.status == 'pending' || appointment.status == 'accepted') && 
-           appointment.dateTime.isAfter(DateTime.now().add(const Duration(hours: 2)));
+    return (appointment.status == 'pending' ||
+            appointment.status == 'accepted') &&
+        appointment.dateTime
+            .isAfter(DateTime.now().add(const Duration(hours: 2)));
   }
 
   double getAppointmentProgress(Appointment appointment) {

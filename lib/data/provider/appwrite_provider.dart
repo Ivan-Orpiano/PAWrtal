@@ -211,13 +211,25 @@ class AppWriteProvider {
   }
 
   Future<List<Map<String, dynamic>>> getUserAppointments(String userId) async {
-    final res = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.appointmentCollectionID,
-      queries: [Query.equal("userId", userId)],
-    );
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [Query.equal("userId", userId)],
+      );
 
-    return res.documents.map((doc) => doc.data).toList();
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+                'createdAt': doc.$createdAt,
+                'updatedAt': doc.$updatedAt,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getUserAppointments: $e');
+      return [];
+    }
   }
 
   Future<dynamic> logout(String sessionId) async {
@@ -269,18 +281,25 @@ class AppWriteProvider {
 
   Future<List<Map<String, dynamic>>> getClinicAppointments(
       String clinicId) async {
-    final res = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.appointmentCollectionID,
-      queries: [Query.equal("clinicId", clinicId)],
-    );
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [Query.equal("clinicId", clinicId)],
+      );
 
-    return res.documents
-        .map((doc) => {
-              ...doc.data,
-              '\$id': doc.$id, // Include document ID for updates
-            })
-        .toList();
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+                'createdAt': doc.$createdAt,
+                'updatedAt': doc.$updatedAt,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getClinicAppointments: $e');
+      return [];
+    }
   }
 
   Future<Map<String, int>> getClinicAppointmentStats(String clinicId) async {
