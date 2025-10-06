@@ -6,7 +6,7 @@ class ClinicSettings {
   late bool isOpen;
   late Map<String, Map<String, dynamic>> operatingHours;
   late List<String> gallery;
-  late Map<String, double>? location; // {lat: double, lng: double}
+  late Map<String, double>? location;
   late List<String> services;
   late int appointmentDuration;
   late int maxAdvanceBooking;
@@ -15,6 +15,7 @@ class ClinicSettings {
   late bool autoAcceptAppointments;
   late String createdAt;
   late String updatedAt;
+  late String staffEmailTemplate;
 
   ClinicSettings({
     this.documentId,
@@ -31,14 +32,15 @@ class ClinicSettings {
     this.autoAcceptAppointments = false,
     String? createdAt,
     String? updatedAt,
+    String? staffEmailTemplate,
   })  : operatingHours = operatingHours ?? _getDefaultOperatingHours(),
         gallery = gallery ?? [],
         services = services ?? [],
         createdAt = createdAt ?? DateTime.now().toIso8601String(),
-        updatedAt = updatedAt ?? DateTime.now().toIso8601String();
+        updatedAt = updatedAt ?? DateTime.now().toIso8601String(),
+        staffEmailTemplate = staffEmailTemplate ?? '@clinic.vet';
 
   static Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
-    // Updated return type
     return {
       'monday': {'isOpen': true, 'openTime': '09:00', 'closeTime': '17:00'},
       'tuesday': {'isOpen': true, 'openTime': '09:00', 'closeTime': '17:00'},
@@ -66,11 +68,11 @@ class ClinicSettings {
       autoAcceptAppointments: map['autoAcceptAppointments'] ?? false,
       createdAt: map['createdAt'] ?? DateTime.now().toIso8601String(),
       updatedAt: map['updatedAt'] ?? DateTime.now().toIso8601String(),
+      staffEmailTemplate: map['staffEmailTemplate'] ?? '@clinic.vet',
     );
   }
 
   static Map<String, Map<String, dynamic>> _parseOperatingHours(dynamic hours) {
-    // Updated return type
     if (hours == null) return _getDefaultOperatingHours();
     if (hours is String) {
       try {
@@ -127,10 +129,38 @@ class ClinicSettings {
       'autoAcceptAppointments': autoAcceptAppointments,
       'createdAt': createdAt,
       'updatedAt': DateTime.now().toIso8601String(),
+      'staffEmailTemplate': staffEmailTemplate,
     };
   }
 
-  // Helper methods
+  // ========== STAFF EMAIL TEMPLATE METHODS ==========
+
+  /// Generate staff email from template based on staff name
+  String generateStaffEmail(String staffName) {
+    final cleanName = staffName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .replaceAll(' ', '.');
+
+    // If template starts with @, prepend the name
+    if (staffEmailTemplate.startsWith('@')) {
+      return '$cleanName$staffEmailTemplate';
+    }
+
+    // Otherwise use the template as-is (for backward compatibility)
+    return staffEmailTemplate.replaceAll('{name}', cleanName);
+  }
+
+  /// Validate email template format
+  static bool isValidEmailTemplate(String template) {
+    // Template must contain @ and have domain after it
+    return template.contains('@') &&
+        template.split('@').length == 2 &&
+        template.split('@')[1].isNotEmpty;
+  }
+
+  // ========== EXISTING HELPER METHODS ==========
+
   bool isOpenToday() {
     final today = DateTime.now().weekday;
     final dayName = _getDayName(today);
@@ -201,7 +231,6 @@ class ClinicSettings {
   List<String> getAvailableTimeSlotsFiltered(DateTime date) {
     List<String> slots = getAvailableTimeSlots(date);
 
-    // Filter out past time slots if the selected date is today
     if (_isToday(date)) {
       slots = _filterPastTimeSlots(slots, date);
     }
@@ -227,10 +256,8 @@ class ClinicSettings {
 
         final slotDateTime =
             DateTime(date.year, date.month, date.day, hour, minute);
-        // Add a 30-minute buffer - don't allow booking slots that start within 30 minutes
         return slotDateTime.isAfter(now.add(const Duration(minutes: 30)));
       } catch (e) {
-        // If parsing fails, include the slot (better to be permissive)
         return true;
       }
     }).toList();
@@ -251,6 +278,7 @@ class ClinicSettings {
     bool? autoAcceptAppointments,
     String? createdAt,
     String? updatedAt,
+    String? staffEmailTemplate,
   }) {
     return ClinicSettings(
       documentId: documentId ?? this.documentId,
@@ -268,6 +296,7 @@ class ClinicSettings {
           autoAcceptAppointments ?? this.autoAcceptAppointments,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      staffEmailTemplate: staffEmailTemplate ?? this.staffEmailTemplate,
     );
   }
 }

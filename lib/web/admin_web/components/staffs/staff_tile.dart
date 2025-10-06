@@ -1,25 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'staff_full_details.dart';
-
-class Staff {
-  final String name;
-  final String email;
-  final String? phone;
-  final List<String> authorities;
-  final Uint8List? imageBytes;
-
-  Staff({
-    required this.name,
-    required this.email,
-    this.phone,
-    required this.authorities,
-    this.imageBytes,
-  });
-}
+import 'package:capstone_app/data/models/staff_model.dart' as StaffModel;
 
 class StaffTile extends StatefulWidget {
-  final Staff staff;
+  final StaffModel.Staff staff;
   final void Function(List<String>) onUpdate;
   final VoidCallback onRemove;
 
@@ -51,9 +36,6 @@ class _StaffTileState extends State<StaffTile>
   static const Color darkText = Color(0xFF374151);
   static const Color vetGreen = Color(0xFF34D399);
   static const Color vetOrange = Color(0xFFF59E0B);
-  // FIX: make purple opaque (ARGB -> 0xFF + A855F7)
-  static const Color vetPurple50 = Color(0x80A855F7); // 50% opacity
-  // Opaque purple (#A855F7)
   static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
@@ -76,16 +58,24 @@ class _StaffTileState extends State<StaffTile>
   }
 
   void _showStaffDetails() {
+    // Parse image bytes if available
+    Uint8List? imageBytes;
+    if (widget.staff.image.isNotEmpty) {
+      // If image is a URL, we can't convert it to bytes directly
+      // The StaffFullDetails will handle URL display
+      imageBytes = null;
+    }
+
     showDialog(
       context: context,
       builder: (_) => StaffFullDetails(
         staffName: widget.staff.name,
         email: widget.staff.email,
-        phone: widget.staff.phone,
+        phone: null, // Staff model doesn't have phone
         initialAuthorities: widget.staff.authorities,
         onAuthoritiesUpdated: widget.onUpdate,
         onRemove: widget.onRemove,
-        imageBytes: widget.staff.imageBytes,
+        imageBytes: imageBytes,
       ),
     );
   }
@@ -164,8 +154,7 @@ class _StaffTileState extends State<StaffTile>
                               height: 76,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                // Avoid single-color gradient when image exists
-                                gradient: widget.staff.imageBytes == null
+                                gradient: widget.staff.image.isEmpty
                                     ? LinearGradient(
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -189,15 +178,14 @@ class _StaffTileState extends State<StaffTile>
                                     offset: Offset(0, _isHovered ? 4 : 2),
                                   ),
                                 ],
-                                image: widget.staff.imageBytes != null
+                                image: widget.staff.image.isNotEmpty
                                     ? DecorationImage(
-                                        image: MemoryImage(
-                                            widget.staff.imageBytes!),
+                                        image: NetworkImage(widget.staff.image),
                                         fit: BoxFit.cover,
                                       )
                                     : null,
                               ),
-                              child: widget.staff.imageBytes == null
+                              child: widget.staff.image.isEmpty
                                   ? const Icon(
                                       Icons.person,
                                       size: 36,
@@ -254,7 +242,8 @@ class _StaffTileState extends State<StaffTile>
                             foreground: Paint()
                               ..shader = const LinearGradient(
                                 colors: [darkText, primaryTeal],
-                              ).createShader(const Rect.fromLTWH(0, 0, 200, 50)),
+                              ).createShader(
+                                  const Rect.fromLTWH(0, 0, 200, 50)),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -350,7 +339,6 @@ class _StaffTileState extends State<StaffTile>
                                   spacing: 4,
                                   runSpacing: 4,
                                   alignment: WrapAlignment.center,
-                                  // FIX: show up to 4 permissions
                                   children: widget.staff.authorities
                                       .take(4)
                                       .map((auth) {
@@ -365,7 +353,7 @@ class _StaffTileState extends State<StaffTile>
                                         icon = Icons.calendar_month;
                                         colors = [primaryBlue, softBlue];
                                         break;
-                                      case 'Staffs': // keep exact label
+                                      case 'Staffs':
                                         icon = Icons.group;
                                         colors = [vetPurple, deepBlue];
                                         break;
@@ -414,7 +402,6 @@ class _StaffTileState extends State<StaffTile>
                                     );
                                   }).toList(),
                                 ),
-                              // FIX: adjust "+N more" threshold/math for 4 visible
                               if (widget.staff.authorities.length > 4)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
