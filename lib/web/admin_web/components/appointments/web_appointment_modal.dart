@@ -611,7 +611,7 @@ class WebAppointmentModal extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  controller.declineAppointment(appointment);
+                  controller.declineAppointment(appointment, 'Appointment declined by clinic staff');
                 },
                 icon: const Icon(Icons.close),
                 label: const Text('Decline'),

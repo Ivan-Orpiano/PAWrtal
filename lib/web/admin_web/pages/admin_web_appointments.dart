@@ -5,6 +5,7 @@ import 'package:capstone_app/web/admin_web/components/appointments/web_appointme
 import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class AdminWebAppointments extends StatefulWidget {
   const AdminWebAppointments({super.key});
@@ -13,7 +14,8 @@ class AdminWebAppointments extends StatefulWidget {
   State<AdminWebAppointments> createState() => _AdminWebAppointmentsState();
 }
 
-class _AdminWebAppointmentsState extends State<AdminWebAppointments> with SingleTickerProviderStateMixin {
+class _AdminWebAppointmentsState extends State<AdminWebAppointments>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late TextEditingController _searchController;
 
@@ -76,11 +78,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
       body: Column(
         children: [
           const WebAppointmentStats(),
-          
           _buildSearchAndFilterBar(isMobile),
-          
           _buildTabBar(isMobile, isTablet),
-          
           Expanded(
             child: _buildTabContent(isMobile),
           ),
@@ -91,7 +90,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
 
   Widget _buildSearchAndFilterBar(bool isMobile) {
     final controller = Get.find<WebAppointmentController>();
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -107,7 +106,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
           ),
         ],
       ),
-      child: isMobile ? _buildMobileSearchBar(controller) : _buildDesktopSearchBar(controller),
+      child: isMobile
+          ? _buildMobileSearchBar(controller)
+          : _buildDesktopSearchBar(controller),
     );
   }
 
@@ -145,9 +146,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
                 onPressed: () => _showDatePicker(controller),
                 icon: const Icon(Icons.date_range, size: 18),
                 label: Obx(() => const Text(
-                  'Filter by Date',
-                  style: TextStyle(fontSize: 12),
-                )),
+                      'Filter by Date',
+                      style: TextStyle(fontSize: 12),
+                    )),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -200,21 +201,20 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
           ),
         ),
         const SizedBox(width: 16),
-        
         OutlinedButton.icon(
-          onPressed: () => _showDatePicker(controller),
-          icon: const Icon(Icons.date_range),
+          onPressed: () => _showCalendarPicker(controller),
+          icon: const Icon(Icons.calendar_today),
           label: Obx(() => Text(
-            controller.selectedDateFilter.value.day == DateTime.now().day
-                ? 'Today'
-                : 'Custom Date',
-          )),
+                controller.selectedCalendarDate.value != null
+                    ? DateFormat('MMM dd, yyyy')
+                        .format(controller.selectedCalendarDate.value!)
+                    : 'Select Date',
+              )),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
         const SizedBox(width: 16),
-        
         OutlinedButton.icon(
           onPressed: () => controller.refreshAppointments(),
           icon: const Icon(Icons.refresh),
@@ -224,28 +224,27 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
           ),
         ),
         const SizedBox(width: 16),
-        
         Obx(() => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '${controller.filteredAppointments.length} results',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color.fromARGB(255, 81, 115, 153),
-            ),
-          ),
-        )),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${controller.filteredAppointments.length} results',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color.fromARGB(255, 81, 115, 153),
+                ),
+              ),
+            )),
       ],
     );
   }
 
   Widget _buildTabBar(bool isMobile, bool isTablet) {
     final controller = Get.find<WebAppointmentController>();
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -277,7 +276,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
             _buildTab('Today', stats['today']!, Icons.today),
             _buildTab('Pending', stats['pending']!, Icons.pending),
             _buildTab('Scheduled', stats['scheduled']!, Icons.schedule),
-            _buildTab('In Progress', stats['in_progress']!, Icons.medical_services),
+            _buildTab(
+                'In Progress', stats['in_progress']!, Icons.medical_services),
             _buildTab('Completed', stats['completed']!, Icons.check_circle),
             _buildTab('Cancelled', stats['cancelled']!, Icons.cancel),
             _buildTab('Declined', stats['declined']!, Icons.cancel_outlined),
@@ -323,14 +323,18 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
 
   Widget _buildTabContent(bool isMobile) {
     final controller = Get.find<WebAppointmentController>();
-    
+
     return TabBarView(
       controller: _tabController,
-      children: _tabValues.map((tabValue) => _buildAppointmentsList(controller, tabValue, isMobile)).toList(),
+      children: _tabValues
+          .map((tabValue) =>
+              _buildAppointmentsList(controller, tabValue, isMobile))
+          .toList(),
     );
   }
 
-  Widget _buildAppointmentsList(WebAppointmentController controller, String tabValue, bool isMobile) {
+  Widget _buildAppointmentsList(
+      WebAppointmentController controller, String tabValue, bool isMobile) {
     return Obx(() {
       if (controller.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
@@ -363,7 +367,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
     IconData icon;
     String title;
     String subtitle;
-    
+
     switch (tabValue) {
       case 'today':
         icon = Icons.event_available;
@@ -448,9 +452,22 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments> with Single
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    
+
     if (picked != null) {
       controller.setDateFilter(picked);
+    }
+  }
+
+  void _showCalendarPicker(WebAppointmentController controller) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: controller.selectedCalendarDate.value ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    if (picked != null) {
+      controller.setCalendarDate(picked);
     }
   }
 
