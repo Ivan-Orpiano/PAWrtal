@@ -11,10 +11,11 @@ class MyFabPets extends StatefulWidget {
 class _MyFabPetsState extends State<MyFabPets> {
 
   void _petCardCreationPopUp() {
-    showModalBottomSheet(
-      isScrollControlled: true,
-      context: context,
-      builder: (context) => PetCardCreation()
+    Navigator.push(
+      context, 
+      MaterialPageRoute(
+        builder: (context) => PetCardCreation(),
+      )
     );
   }
 

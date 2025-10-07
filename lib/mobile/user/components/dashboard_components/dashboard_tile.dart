@@ -116,7 +116,6 @@ class MyDashboardTile extends StatelessWidget {
   }
 
   String _getImageUrl() {
-    // Use first gallery image from settings, then fallback to clinic.image
     if (clinicSettings != null && clinicSettings!.gallery.isNotEmpty) {
       return clinicSettings!.gallery.first;
     }
@@ -141,16 +140,16 @@ class MyDashboardTile extends StatelessWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade400,
-              blurRadius: 1,
+              color: Colors.grey.shade300,
+              blurRadius: 8,
               spreadRadius: 1,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 3),
             )
           ],
         ),
@@ -161,12 +160,18 @@ class MyDashboardTile extends StatelessWidget {
             Stack(
               children: [
                 Container(
-                  height: 220,
+                  height: 200,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12)
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
                     child: imageUrl.isNotEmpty
                         ? Image.network(
                             imageUrl,
@@ -197,41 +202,64 @@ class MyDashboardTile extends StatelessWidget {
 
             // Clinic info
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Clinic name
-                  Text(
-                    clinic.clinicName,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22,
-                      color: const Color.fromARGB(255, 81, 115, 153),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Clinic name and rating row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          clinic.clinicName,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            color: const Color.fromARGB(255, 81, 115, 153),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          SizedBox(width: 3),
+                          Text(
+                            "5.0",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
 
                   // Address
                   Text(
                     clinic.address,
                     style: GoogleFonts.dmSans(
                       fontStyle: FontStyle.italic,
-                      fontSize: 14,
+                      fontSize: 13,
+                      color: Colors.grey[700],
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   // Hours
                   _buildHoursDisplay(),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   // Services
                   if (services.isNotEmpty)
@@ -253,7 +281,7 @@ class MyDashboardTile extends StatelessWidget {
                                   message: service,
                                   child: Icon(
                                     _getServiceIcon(service),
-                                    size: 16,
+                                    size: 18,
                                     color: Colors.grey[600],
                                   ),
                                 ),
@@ -263,33 +291,6 @@ class MyDashboardTile extends StatelessWidget {
                         ),
                       ],
                     ),
-
-                  const SizedBox(height: 8),
-
-                  // Bottom info
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.house_outlined, size: 16),
-                          const SizedBox(width: 3),
-                          Text("4 Rooms", style: GoogleFonts.dmSans(fontSize: 12)),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.medical_services, size: 16),
-                          const SizedBox(width: 3),
-                          Text("1 Veterinarian", style: GoogleFonts.dmSans(fontSize: 12)),
-                        ],
-                      ),
-                      const Row(
-                        children: [
-                          Icon(Icons.star, color: Colors.yellow, size: 16),
-                          SizedBox(width: 3),
-                          Text("5.0", style: TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),

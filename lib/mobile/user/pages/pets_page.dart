@@ -13,12 +13,25 @@ class PetsPage extends StatefulWidget {
   State<PetsPage> createState() => _PetsPageState();
 }
 
-class _PetsPageState extends State<PetsPage> {
+class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin {
   late final PetsController petsController;
+  final TextEditingController _searchController = TextEditingController();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!Get.isRegistered<PetsController>()) {
@@ -29,17 +42,36 @@ class _PetsPageState extends State<PetsPage> {
       } else {
         petsController = Get.find();
       }
-
+      _animationController.forward();
       setState(() {});
+    });
+
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
     });
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
+    _searchController.dispose();
     if (Get.isRegistered<PetsController>()) {
       Get.delete<PetsController>();
     }
     super.dispose();
+  }
+
+  List<dynamic> get _filteredPets {
+    if (_searchQuery.isEmpty) {
+      return petsController.pets;
+    }
+    return petsController.pets.where((pet) {
+      return pet.name.toLowerCase().contains(_searchQuery) ||
+          pet.breed.toLowerCase().contains(_searchQuery) ||
+          pet.type.toLowerCase().contains(_searchQuery);
+    }).toList();
   }
 
   @override
@@ -53,123 +85,289 @@ class _PetsPageState extends State<PetsPage> {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: Colors.blue.shade50,
+          backgroundColor: Colors.grey[50],
           body: Column(
             children: [
-              SizedBox(
-                height: 75,
-                child: Center(
-                  child: Text(
-                    "Pets",
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold, fontSize: 20),
+              // Header with gradient
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF3498DB),
+                      const Color(0xFF2C3E50),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.3),
+                      spreadRadius: 1,
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      // Title Bar
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.pets,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "My Pets",
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 24,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Manage your beloved companions",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Search Bar
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search pets...',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 15,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: Colors.grey[400],
+                              ),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: Colors.grey[400],
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {});
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+
+              // Content Area
               Expanded(
-                child: Container(
-                  width: double.maxFinite,
-                  height: double.maxFinite,
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(255, 230, 230, 230),
-                    borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20)),
-                  ),
-                  child: ListView(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                left: 16, top: 10, bottom: 20),
-                            child: Text(
-                              "Your pets",
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600, fontSize: 22),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                right: 16, top: 10, bottom: 20),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 81, 115, 153),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.grey.shade400,
-                                        spreadRadius: 2,
-                                        blurRadius: 3,
-                                        offset: const Offset(0, 2))
-                                  ]),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.filter_list_rounded,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {},
-                              ),
-                            ),
-                          )
-                        ],
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Obx(() {
+                    if (petsController.isLoading.value) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF3498DB),
+                        ),
+                      );
+                    }
+
+                    final filteredPets = _filteredPets;
+
+                    if (filteredPets.isEmpty && _searchQuery.isNotEmpty) {
+                      return _buildEmptySearchState();
+                    }
+
+                    if (petsController.pets.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.73,
+                        ),
+                        itemCount: filteredPets.length,
+                        itemBuilder: (context, index) {
+                          return MyPetTile(pet: filteredPets[index]);
+                        },
                       ),
-                      Obx(() {
-                        if (petsController.isLoading.value) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-        
-                        if (petsController.pets.isEmpty) {
-                          return const Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text("No pets yet."),
-                          );
-                        }
-        
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 10),
-                          child: SingleChildScrollView(
-                            child: Wrap(
-                              spacing: 20,
-                              runSpacing: 30,
-                              children: petsController.pets.map((pet) {
-                                return GestureDetector(
-                                  onTap: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => PetsNextPage(pet: pet),
-                                      ),
-                                    );
-        
-                                    if (result == true) {
-                                      Get.find<PetsController>().fetchPets();
-                                    }
-                                  },
-                                  child: MyPetTile(pet: pet),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        );
-                      })
-                    ],
-                  ),
+                    );
+                  }),
                 ),
               ),
             ],
           ),
         ),
         const Positioned(
-          bottom: 120,
+          bottom: 110,
           right: 20,
-          child: MyFabPets()
-        )
+          child: MyFabPets(),
+        ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3498DB).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.pets,
+                size: 80,
+                color: const Color(0xFF3498DB).withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "No Pets Yet",
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2C3E50),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Add your first pet by tapping the\n+ button below",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                color: Colors.grey[600],
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptySearchState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.search_off,
+                size: 70,
+                color: Colors.grey[400],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "No Pets Found",
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2C3E50),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Try adjusting your search terms",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {});
+              },
+              icon: const Icon(Icons.clear_all, color: Colors.white),
+              label: const Text(
+                'Clear Search',
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3498DB),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
