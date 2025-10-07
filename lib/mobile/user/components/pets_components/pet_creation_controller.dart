@@ -139,10 +139,13 @@ class PetCreationController extends GetxController {
 
       String? newImageId;
       String? finalImageUrl = existingPet!.image;
+      String? oldFileId;
+      if ((existingPet!.image ?? '').isNotEmpty) {
+        oldFileId = _extractFileIdFromUrl(existingPet!.image!);
+      }
 
-      // Handle image upload for both web and mobile
+      // Upload new image first
       if (imageBytes.value != null) {
-        // Web image upload
         final inputFile = InputFile.fromBytes(
           bytes: imageBytes.value!,
           filename: imageFileName.value,
@@ -151,29 +154,12 @@ class PetCreationController extends GetxController {
         newImageId = imageResponse.$id;
         finalImageUrl =
             '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$newImageId/view?project=${AppwriteConstants.projectID}';
-
-        // Delete old image if exists
-        if ((existingPet!.image ?? '').isNotEmpty) {
-          final oldFileId = _extractFileIdFromUrl(existingPet!.image!);
-          if (oldFileId != null) {
-            await authRepository.deleteImage(oldFileId);
-          }
-        }
       } else if (imageFile.value != null) {
-        // Mobile image upload
         final imageResponse =
             await authRepository.uploadImage(imageFile.value!.path);
         newImageId = imageResponse.$id;
         finalImageUrl =
             '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$newImageId/view?project=${AppwriteConstants.projectID}';
-
-        // Delete old image if exists
-        if ((existingPet!.image ?? '').isNotEmpty) {
-          final oldFileId = _extractFileIdFromUrl(existingPet!.image!);
-          if (oldFileId != null) {
-            await authRepository.deleteImage(oldFileId);
-          }
-        }
       }
 
       final updatedPet = Pet(
@@ -192,6 +178,14 @@ class PetCreationController extends GetxController {
       );
 
       await authRepository.updatePet(updatedPet);
+
+      // Delete old image if exists
+      if ((existingPet!.image ?? '').isNotEmpty) {
+        final oldFileId = _extractFileIdFromUrl(existingPet!.image!);
+        if (oldFileId != null) {
+          await authRepository.deleteImage(oldFileId);
+        }
+      }
 
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showSuccessSnackBar(
