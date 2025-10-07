@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_creation_controller.dart';
+import 'package:capstone_app/web/user_web/services/web_image_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PetCardCreation extends StatelessWidget {
   final Pet? existingPet;
@@ -18,9 +20,18 @@ class PetCardCreation extends StatelessWidget {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      controller.pickImage(File(pickedFile.path));
+    if (kIsWeb) {
+      // ✅ Use Web image picker
+      final result = await WebImagePickerService.pickImage();
+      if (result != null && result.isWeb) {
+        controller.pickWebImage(result.bytes!, result.name);
+      }
+    } else {
+      // ✅ Use Mobile image picker
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        controller.pickImage(File(pickedFile.path));
+      }
     }
   }
 
@@ -48,6 +59,7 @@ class PetCardCreation extends StatelessWidget {
                 child: Obx(() {
                   final file = controller.imageFile.value;
                   final url = controller.imageUrl.value;
+                  final bytes = controller.imageBytes.value;
 
                   return Container(
                     height: 200,
@@ -56,16 +68,30 @@ class PetCardCreation extends StatelessWidget {
                       color: Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: file != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(file, fit: BoxFit.cover),
-                          )
-                        : (url.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(url, fit: BoxFit.cover))
-                            : const Icon(Icons.add_a_photo, size: 50)),
+                    child: () {
+                      if (kIsWeb && bytes != null) {
+                        // ✅ Web: display picked image bytes
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(bytes, fit: BoxFit.cover),
+                        );
+                      } else if (!kIsWeb && file != null) {
+                        // ✅ Mobile: display File image
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(file, fit: BoxFit.cover),
+                        );
+                      } else if (url.isNotEmpty) {
+                        // ✅ Show existing image (network)
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(url, fit: BoxFit.cover),
+                        );
+                      } else {
+                        // ✅ No image picked yet
+                        return const Icon(Icons.add_a_photo, size: 50);
+                      }
+                    }(),
                   );
                 }),
               ),
