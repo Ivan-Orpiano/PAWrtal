@@ -23,16 +23,12 @@ class _WebProfileIconState extends State<WebProfileIcon> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Track screen size changes and close popup if size changes significantly
     final currentSize = MediaQuery.of(context).size;
     if (_lastScreenSize != null && _overlayEntry != null) {
-      // Check if screen width changed enough to trigger layout change
-      // Typically mobile breakpoint is around 600-800px
       final wasDesktop = _lastScreenSize!.width >= 800;
       final isNowDesktop = currentSize.width >= 800;
       
       if (wasDesktop != isNowDesktop) {
-        // Layout changed from desktop to mobile or vice versa
         _closePopup();
       }
     }
@@ -64,24 +60,81 @@ class _WebProfileIconState extends State<WebProfileIcon> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: Colors.red,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Logout',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.black87,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
                 _closePopup();
                 await LogoutHelper.logout();
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
               child: const Text(
                 'Logout',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -90,7 +143,6 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     );
   }
 
-  // Navigate to settings page with specific index
   void _navigateToSettings(int index) {
     _closePopup();
     Navigator.of(context).push(
@@ -110,7 +162,6 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     return OverlayEntry(
       builder: (context) => LayoutBuilder(
         builder: (context, constraints) {
-          // Auto-close if screen becomes too small for desktop layout
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (constraints.maxWidth < 800 && _overlayEntry != null) {
               _closePopup();
@@ -131,76 +182,130 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                 top: widget.top,
                 width: widget.width,
                 child: Material(
-                  elevation: 5,
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 10, bottom: 10),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Color.fromARGB(255, 81, 115, 153),
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.white,
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.transparent,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white,
+                          Colors.grey.shade50,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color.fromARGB(255, 81, 115, 153),
+                                        Color.fromARGB(255, 95, 135, 175),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(12),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        userName,
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        userEmail,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          userRole.toUpperCase(),
+                                          style: const TextStyle(
+                                            color: Color.fromARGB(255, 81, 115, 153),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          title: Text(
-                            userName,
-                            style: const TextStyle(color: Colors.black87),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Divider(color: Colors.grey.shade300, height: 1),
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                userEmail,
-                                style: const TextStyle(color: Colors.black87),
-                              ),
-                              Text(
-                                userRole.toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(color: Colors.black87),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _popupItem("Profile", () {
+                          _popupItem(Icons.person_outline, "Profile", () {
                             _navigateToSettings(0);
                           }),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _popupItem("Settings", () {
+                          _popupItem(Icons.settings_outlined, "Settings", () {
                             _navigateToSettings(1);
                           }),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _popupItem("Help & Support", () {
+                          _popupItem(Icons.help_outline, "Help & Support", () {
                             _navigateToSettings(2);
                           }),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _popupItem("Give feedback", () {
+                          _popupItem(Icons.feedback_outlined, "Give feedback", () {
                             _navigateToSettings(3);
                           }),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _popupItem("Sign out", () {
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            child: Divider(color: Colors.grey.shade300, height: 1),
+                          ),
+                          _popupItem(Icons.logout_rounded, "Sign out", () {
                             _showLogoutDialog(context);
-                          }),
-                        ),
-                      ],
+                          }, isLogout: true),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -212,12 +317,39 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     );
   }
 
-  Widget _popupItem(String text, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
-        child: Text(text, style: const TextStyle(color: Colors.black87)),
+  Widget _popupItem(IconData icon, String text, VoidCallback onTap, {bool isLogout = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          hoverColor: isLogout 
+              ? Colors.red.withOpacity(0.08) 
+              : const Color.fromARGB(255, 81, 115, 153).withOpacity(0.08),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isLogout ? Colors.red.shade700 : Colors.grey[700],
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: isLogout ? Colors.red.shade700 : Colors.black87,
+                    fontSize: 14,
+                    fontWeight: isLogout ? FontWeight.w500 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

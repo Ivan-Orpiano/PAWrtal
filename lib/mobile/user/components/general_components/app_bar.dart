@@ -14,13 +14,21 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   Widget build(BuildContext context) {
     return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: true,
-      primary: true,
       title: Image.asset(
         'lib/images/PAWrtal_logo.png',
-        width: 180, 
+        width: 160, 
         fit: BoxFit.contain,
-        
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1.0),
+        child: Container(
+          color: Colors.grey.shade400,
+          height: 1,
+        ),
       ),
       leading: Builder(
         builder: (context) {
