@@ -29,8 +29,8 @@ class AuthRepository {
 
   Future<models.User?> getUser() => appWriteProvider.getUser();
 
-  Future<models.File> uploadImage(String imagePath) =>
-      appWriteProvider.uploadImage(imagePath);
+  Future<models.File> uploadImage(dynamic image) =>
+      appWriteProvider.uploadImage(image);
   Future<dynamic> deleteImage(String fileID) =>
       appWriteProvider.deleteImage(fileID);
   Future<models.Document> createStaff(Map map) =>

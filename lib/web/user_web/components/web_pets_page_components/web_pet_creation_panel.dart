@@ -40,13 +40,12 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
           _selectedImage = result;
         });
 
-        // For mobile/desktop compatibility, create a temporary file
-        if (result.isFile && result.file != null) {
+        if (result.isWeb && result.bytes != null) {
+          // Handle web image
+          controller.pickWebImage(result.bytes!, result.name);
+        } else if (result.isFile && result.file != null) {
+          // Handle mobile/desktop file
           controller.pickImage(result.file!);
-        } else if (result.isWeb && result.bytes != null) {
-          // For web, we'll handle this differently in the controller
-          // You might need to update your PetCreationController to handle Uint8List
-          // For now, we'll store the image result and handle it during save
         }
       }
     } catch (e) {

@@ -572,14 +572,28 @@ class AppWriteProvider {
     return result.documents.isNotEmpty ? result.documents.first : null;
   }
 
-  Future<models.File> uploadImage(String imagePath) {
-    String fileName =
-        "${DateTime.now().millisecondsSinceEpoch}.${imagePath.split('.').last}";
+  Future<models.File> uploadImage(dynamic image) {
+    String fileName = "${DateTime.now().millisecondsSinceEpoch}.jpg";
+    InputFile inputFile;
+
+    if (image is String) {
+      // Mobile path-based upload
+      inputFile = InputFile.fromPath(
+        path: image,
+        filename: fileName,
+      );
+    } else if (image is InputFile) {
+      // Web bytes-based upload
+      inputFile = image;
+    } else {
+      throw Exception('Invalid image format');
+    }
 
     final response = storage!.createFile(
-        bucketId: AppwriteConstants.imageBucketID,
-        fileId: ID.unique(),
-        file: InputFile.fromPath(path: imagePath, filename: fileName));
+      bucketId: AppwriteConstants.imageBucketID,
+      fileId: ID.unique(),
+      file: inputFile,
+    );
 
     return response;
   }
