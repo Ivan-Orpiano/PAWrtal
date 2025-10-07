@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
@@ -31,6 +33,9 @@ class PetCreationController extends GetxController {
   var imageUrl = ''.obs;
   var isLoading = false.obs;
 
+  var imageBytes = Rxn<Uint8List>();
+  var imageFileName = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -50,6 +55,11 @@ class PetCreationController extends GetxController {
     imageFile.value = file;
   }
 
+  void pickWebImage(Uint8List bytes, String fileName) {
+    imageBytes.value = bytes;
+    imageFileName.value = fileName;
+  }
+
   Future<void> createPet() async {
     if (!formKey.currentState!.validate()) return;
 
@@ -58,7 +68,19 @@ class PetCreationController extends GetxController {
       String? imageId;
       String? finalImageUrl;
 
-      if (imageFile.value != null) {
+      // Handle image upload for both web and mobile
+      if (imageBytes.value != null) {
+        // Web image upload
+        final inputFile = InputFile.fromBytes(
+          bytes: imageBytes.value!,
+          filename: imageFileName.value,
+        );
+        final imageResponse = await authRepository.uploadImage(inputFile);
+        imageId = imageResponse.$id;
+        finalImageUrl =
+            '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
+      } else if (imageFile.value != null) {
+        // Mobile image upload
         final imageResponse =
             await authRepository.uploadImage(imageFile.value!.path);
         imageId = imageResponse.$id;
@@ -118,15 +140,34 @@ class PetCreationController extends GetxController {
       String? newImageId;
       String? finalImageUrl = existingPet!.image;
 
-      // Upload new image if one was picked
-      if (imageFile.value != null) {
+      // Handle image upload for both web and mobile
+      if (imageBytes.value != null) {
+        // Web image upload
+        final inputFile = InputFile.fromBytes(
+          bytes: imageBytes.value!,
+          filename: imageFileName.value,
+        );
+        final imageResponse = await authRepository.uploadImage(inputFile);
+        newImageId = imageResponse.$id;
+        finalImageUrl =
+            '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$newImageId/view?project=${AppwriteConstants.projectID}';
+
+        // Delete old image if exists
+        if ((existingPet!.image ?? '').isNotEmpty) {
+          final oldFileId = _extractFileIdFromUrl(existingPet!.image!);
+          if (oldFileId != null) {
+            await authRepository.deleteImage(oldFileId);
+          }
+        }
+      } else if (imageFile.value != null) {
+        // Mobile image upload
         final imageResponse =
             await authRepository.uploadImage(imageFile.value!.path);
         newImageId = imageResponse.$id;
         finalImageUrl =
             '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$newImageId/view?project=${AppwriteConstants.projectID}';
 
-        // Delete old image
+        // Delete old image if exists
         if ((existingPet!.image ?? '').isNotEmpty) {
           final oldFileId = _extractFileIdFromUrl(existingPet!.image!);
           if (oldFileId != null) {
