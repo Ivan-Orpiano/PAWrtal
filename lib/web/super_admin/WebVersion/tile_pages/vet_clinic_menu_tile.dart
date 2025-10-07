@@ -1,5 +1,5 @@
 import 'package:capstone_app/pages/super_admin_home/super_admin_home_binding.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

@@ -420,7 +420,7 @@ class _AdminMessagesNextPageState extends State<AdminMessagesNextPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('User Information'),
+        title: const Text('User Information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

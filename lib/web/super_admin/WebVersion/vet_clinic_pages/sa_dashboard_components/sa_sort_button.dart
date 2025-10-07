@@ -23,6 +23,7 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: PopupMenuButton<String>(
+        color: const Color.fromRGBO(249, 253, 255, 1),
         icon: const Icon(Icons.sort, color: Colors.white),
         tooltip: 'Sort',
         onSelected: (value) {
@@ -69,7 +70,7 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Registration Date',
+                  'Registration Date (Newest)',
                   style: TextStyle(
                     fontWeight: selectedSort == 'date'
                         ? FontWeight.bold

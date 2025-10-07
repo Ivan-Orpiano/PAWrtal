@@ -56,7 +56,7 @@ class PermissionGuard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.lock_outline,
               size: 64,
               color: vetOrange,
@@ -80,7 +80,7 @@ class PermissionGuard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Please contact your clinic administrator for access.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -123,7 +123,7 @@ class PermissionGuard extends StatelessWidget {
                   color: vetOrange.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.lock_outline,
                   size: 64,
                   color: vetOrange,
@@ -151,7 +151,7 @@ class PermissionGuard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.security, color: vetOrange, size: 16),
+                    const Icon(Icons.security, color: vetOrange, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       'Required: $requiredPermission',
@@ -185,7 +185,7 @@ class PermissionGuard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: primaryTeal, size: 20),
+                    const Icon(Icons.info_outline, color: primaryTeal, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(

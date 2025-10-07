@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/super_ad_vet_clinic_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_page.dart';
 import 'package:flutter/material.dart';
 
 class StaffMember {
