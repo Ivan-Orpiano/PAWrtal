@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_creation_controller.dart';
+import 'package:capstone_app/web/user_web/services/web_image_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PetCardCreation extends StatelessWidget {
   final Pet? existingPet;
@@ -19,7 +21,15 @@ class PetCardCreation extends StatelessWidget {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage(BuildContext context) async {
-    final source = await showModalBottomSheet<ImageSource>(
+    if (kIsWeb) {
+      // ✅ Use Web image picker
+      final result = await WebImagePickerService.pickImage();
+      if (result != null && result.isWeb) {
+        controller.pickWebImage(result.bytes!, result.name);
+      }
+    } else {
+      // ✅ Use Mobile image picker
+      final source = await showModalBottomSheet<ImageSource>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -85,8 +95,9 @@ class PetCardCreation extends StatelessWidget {
 
     if (source != null) {
       final pickedFile = await _picker.pickImage(source: source);
-      if (pickedFile != null) {
-        controller.pickImage(File(pickedFile.path));
+        if (pickedFile != null) {
+          controller.pickImage(File(pickedFile.path));
+      }
       }
     }
   }
@@ -126,6 +137,7 @@ class PetCardCreation extends StatelessWidget {
                   child: Obx(() {
                     final file = controller.imageFile.value;
                     final url = controller.imageUrl.value;
+                  final bytes = controller.imageBytes.value;
 
                     return Container(
                       height: 200,
