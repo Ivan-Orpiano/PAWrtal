@@ -51,6 +51,20 @@ class PetCreationController extends GetxController {
     }
   }
 
+  void clearForm() {
+    nameController.clear();
+    typeController.clear();
+    breedController.clear();
+    colorController.clear();
+    notesController.clear();
+    weightController.clear();
+    genderController.clear();
+    imageFile.value = null;
+    imageUrl.value = '';
+    imageBytes.value = null;
+    imageFileName.value = '';
+  }
+
   void pickImage(File file) {
     imageFile.value = file;
   }
@@ -105,6 +119,8 @@ class PetCreationController extends GetxController {
       );
 
       await authRepository.createPet(pet.toMap());
+
+      clearForm();
 
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showSuccessSnackBar(
@@ -226,6 +242,7 @@ class PetCreationController extends GetxController {
 
   @override
   void onClose() {
+    clearForm();
     nameController.dispose();
     typeController.dispose();
     breedController.dispose();

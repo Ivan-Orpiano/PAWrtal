@@ -10,56 +10,19 @@ class PetsNextPage extends StatelessWidget {
   final Pet pet;
   const PetsNextPage({super.key, required this.pet});
 
-  Future<void> _confirmDelete(BuildContext context) async {
+  void _confirmDelete(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.warning, color: Colors.red),
-            ),
-            const SizedBox(width: 12),
-            const Text("Delete Pet"),
-          ],
-        ),
-        content: Text(
-          "Are you sure you want to delete ${pet.name}? This action cannot be undone.",
-          style: GoogleFonts.inter(fontSize: 15),
-        ),
+        title: const Text("Delete Pet"),
+        content: const Text("Are you sure you want to delete this pet?"),
         actions: [
           TextButton(
-            child: Text(
-              "Cancel",
-              style: GoogleFonts.inter(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: const Text("Cancel"),
             onPressed: () => Navigator.of(context).pop(false),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              "Delete",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text("Delete"),
             onPressed: () => Navigator.of(context).pop(true),
           ),
         ],
@@ -68,21 +31,13 @@ class PetsNextPage extends StatelessWidget {
 
     if (confirm ?? false) {
       try {
-        // Delete image if exists
-        if (pet.image != null && pet.image!.isNotEmpty) {
-          final imageId = pet.image!.split('/files/')[1].split('/')[0];
-          await Get.find<AuthRepository>().deleteImage(imageId);
-        }
-
-        // Delete pet
         await Get.find<AuthRepository>().deletePet(pet.documentId!);
-
         CustomSnackBar.showSuccessSnackBar(
           context: context,
           title: "Deleted",
           message: "${pet.name} has been removed.",
         );
-        Get.back(result: true);
+        Get.back(); // Return to pet list
       } catch (e) {
         CustomSnackBar.showErrorSnackBar(
           context: context,
@@ -138,16 +93,51 @@ class PetsNextPage extends StatelessWidget {
                 },
               ),
               IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.delete, size: 20),
-                ),
-                onPressed: () => _confirmDelete(context),
-              ),
+                  icon: const Icon(Icons.delete),
+                  onPressed: () async {
+                    final confirm = await showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text("Delete Pet"),
+                        content: const Text(
+                            "Are you sure you want to delete this pet?"),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel")),
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Delete")),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      try {
+                        //delete image if exists
+                        if (pet.image != null && pet.image!.isNotEmpty) {
+                          final imageId =
+                              pet.image!.split('/files/')[1].split('/')[0];
+                          await Get.find<AuthRepository>().deleteImage(imageId);
+                        }
+
+                        //delete pet
+                        await Get.find<AuthRepository>()
+                            .deletePet(pet.documentId!);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Pet deleted successfully")),
+                        );
+
+                        Get.back(result: true); // go back and signal refresh
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Failed to delete pet: $e")),
+                        );
+                      }
+                    }
+                  }),
               const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -302,7 +292,8 @@ class PetsNextPage extends StatelessWidget {
                       // Navigate to vaccination history page
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Vaccination history feature coming soon"),
+                          content:
+                              Text("Vaccination history feature coming soon"),
                         ),
                       );
                     },

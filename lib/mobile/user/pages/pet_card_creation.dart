@@ -11,9 +11,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 class PetCardCreation extends StatelessWidget {
   final Pet? existingPet;
   PetCardCreation({super.key, this.existingPet}) {
+    final tag = existingPet?.petId ?? DateTime.now().toString();
     controller = Get.put(
       PetCreationController(Get.find(), existingPet: existingPet),
-      tag: existingPet?.petId ?? 'new',
+      tag: tag,
+      permanent: false, // Allow controller to be deleted
     );
   }
 
@@ -30,74 +32,74 @@ class PetCardCreation extends StatelessWidget {
     } else {
       // ✅ Use Mobile image picker
       final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Choose Photo',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3498DB).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Color(0xFF3498DB),
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3498DB).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.photo_library,
-                    color: Color(0xFF3498DB),
+                const SizedBox(height: 20),
+                Text(
+                  'Choose Photo',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-            ],
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3498DB).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Color(0xFF3498DB),
+                    ),
+                  ),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3498DB).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library,
+                      color: Color(0xFF3498DB),
+                    ),
+                  ),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    if (source != null) {
-      final pickedFile = await _picker.pickImage(source: source);
+      if (source != null) {
+        final pickedFile = await _picker.pickImage(source: source);
         if (pickedFile != null) {
           controller.pickImage(File(pickedFile.path));
-      }
+        }
       }
     }
   }
@@ -111,7 +113,8 @@ class PetCardCreation extends StatelessWidget {
         elevation: 0,
         backgroundColor: const Color(0xFF3498DB),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Get.back(result: true),
         ),
         title: Text(
@@ -137,7 +140,7 @@ class PetCardCreation extends StatelessWidget {
                   child: Obx(() {
                     final file = controller.imageFile.value;
                     final url = controller.imageUrl.value;
-                  final bytes = controller.imageBytes.value;
+                    final bytes = controller.imageBytes.value;
 
                     return Container(
                       height: 200,
@@ -158,57 +161,71 @@ class PetCardCreation extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: file != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: Image.file(file, fit: BoxFit.cover),
-                            )
-                          : (url.isNotEmpty
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: Image.network(url, fit: BoxFit.cover))
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF3498DB)
-                                            .withOpacity(0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.add_a_photo,
-                                        size: 40,
-                                        color: Color(0xFF3498DB),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      "Add Pet Photo",
-                                      style: GoogleFonts.inter(
-                                        color: const Color(0xFF3498DB),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Tap to upload",
-                                      style: GoogleFonts.inter(
-                                        color: Colors.grey[500],
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                )),
+                      child: () {
+                        if (kIsWeb && bytes != null) {
+                          // ✅ Web: display picked image bytes
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.memory(bytes, fit: BoxFit.cover),
+                          );
+                        } else if (!kIsWeb && file != null) {
+                          // ✅ Mobile: display File image
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.file(file, fit: BoxFit.cover),
+                          );
+                        } else if (url.isNotEmpty) {
+                          // ✅ Show existing pet image (from Appwrite)
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.network(url, fit: BoxFit.cover),
+                          );
+                        } else {
+                          // ✅ No image picked yet
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF3498DB).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.add_a_photo,
+                                  size: 40,
+                                  color: Color(0xFF3498DB),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                "Add Pet Photo",
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF3498DB),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Tap to upload",
+                                style: GoogleFonts.inter(
+                                  color: Colors.grey[500],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      }(),
                     );
                   }),
                 ),
               ),
-              
+
               const SizedBox(height: 28),
-              
+
               Text(
                 "Pet Information",
                 style: GoogleFonts.inter(
