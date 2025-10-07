@@ -5,6 +5,7 @@ import 'package:capstone_app/mobile/user/components/pets_components/pets_control
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
+import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -58,7 +59,8 @@ class PetCreationController extends GetxController {
       String? finalImageUrl;
 
       if (imageFile.value != null) {
-        final imageResponse = await authRepository.uploadImage(imageFile.value!.path);
+        final imageResponse =
+            await authRepository.uploadImage(imageFile.value!.path);
         imageId = imageResponse.$id;
         finalImageUrl =
             '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
@@ -89,9 +91,14 @@ class PetCreationController extends GetxController {
         message: "Pet created successfully",
       );
 
-      // Navigate to root and refresh pets list
-      Get.until((route) => route.isFirst);
-      Get.find<PetsController>().fetchPets();
+      // Check if we're on web by looking for WebPetsController
+      if (Get.isRegistered<WebPetsController>()) {
+        Get.find<WebPetsController>().refreshPets();
+      } else {
+        // Mobile case
+        Get.until((route) => route.isFirst);
+        Get.find<PetsController>().fetchPets();
+      }
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showErrorSnackBar(
@@ -113,7 +120,8 @@ class PetCreationController extends GetxController {
 
       // Upload new image if one was picked
       if (imageFile.value != null) {
-        final imageResponse = await authRepository.uploadImage(imageFile.value!.path);
+        final imageResponse =
+            await authRepository.uploadImage(imageFile.value!.path);
         newImageId = imageResponse.$id;
         finalImageUrl =
             '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$newImageId/view?project=${AppwriteConstants.projectID}';
@@ -152,8 +160,13 @@ class PetCreationController extends GetxController {
       );
 
       // Navigate to root and refresh pets list
-      Get.until((route) => route.isFirst);
-      Get.find<PetsController>().fetchPets();
+      if (Get.isRegistered<WebPetsController>()) {
+        Get.find<WebPetsController>().refreshPets();
+      } else {
+        // Mobile case
+        Get.until((route) => route.isFirst);
+        Get.find<PetsController>().fetchPets();
+      }
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showErrorSnackBar(
