@@ -11,7 +11,11 @@ import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_com
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/web/user_web/controllers/web_appointment_controller.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class WebClinicPageUpdated extends StatefulWidget {
   final Clinic clinic;
@@ -32,6 +36,9 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final servicesKey = GlobalKey();
   final locationKey = GlobalKey();
   final reviewsKey = GlobalKey();
+  
+  // Single appointment controller instance
+  late WebAppointmentController _appointmentController;
 
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
@@ -47,12 +54,17 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
 
   void _updatePanelState() {
     final offset = _scrollController.offset;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Dynamic breakpoints based on screen height
+    final firstBreakpoint = screenHeight * 0.7;
+    final secondBreakpoint = screenHeight * 2;
 
-    if (offset <= 550 && _panelState != PanelState.scrollable) {
+    if (offset <= firstBreakpoint && _panelState != PanelState.scrollable) {
       setState(() => _panelState = PanelState.scrollable);
-    } else if (offset > 550 && offset <= 1800 && _panelState != PanelState.positioned) {
+    } else if (offset > firstBreakpoint && offset <= secondBreakpoint && _panelState != PanelState.positioned) {
       setState(() => _panelState = PanelState.positioned);
-    } else if (offset > 1800 && _panelState != PanelState.static) {
+    } else if (offset > secondBreakpoint && _panelState != PanelState.static) {
       setState(() => _panelState = PanelState.static);
     }
   }
@@ -61,17 +73,23 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   void initState() {
     super.initState();
 
+    // Initialize controller ONCE at page level
+    _appointmentController = Get.put(
+      WebAppointmentController(
+        authRepository: Get.find<AuthRepository>(),
+        session: Get.find<UserSessionService>(),
+        clinic: widget.clinic,
+      ),
+      tag: widget.clinic.documentId,
+    );
+
     _scrollController.addListener(() {
       final offset = _scrollController.offset;
 
       if (offset > 550 && !_showWidget) {
-        setState(() {
-          _showWidget = true;
-        });
+        setState(() => _showWidget = true);
       } else if (offset <= 550 && _showWidget) {
-        setState(() {
-          _showWidget = false;
-        });
+        setState(() => _showWidget = false);
       }
 
       _updatePanelState();
@@ -81,6 +99,8 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   @override
   void dispose() {
     _scrollController.dispose();
+    // Clean up controller when page is disposed
+    Get.delete<WebAppointmentController>(tag: widget.clinic.documentId);
     super.dispose();
   }
 
@@ -112,21 +132,17 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     return desiredMinRight + t * (desiredMaxRight - desiredMinRight);
   }
 
-double getLeftSideWidth(double screenWidth) {
-    // Calculate available width after padding and spacing
-    final horizontalPadding = getResponsivePadding(screenWidth) * 2; // Both sides
-    const spacingBetween = 125; // The flexible spacing
+  double getLeftSideWidth(double screenWidth) {
+    final horizontalPadding = getResponsivePadding(screenWidth) * 2;
+    const spacingBetween = 125;
     final appointmentPanelWidth = getAppointmentPanelWidth(screenWidth);
     
-    // Total available width minus reserved space
     final availableWidth = screenWidth - horizontalPadding - spacingBetween - appointmentPanelWidth;
     
-    // Ensure minimum width for left content
     return availableWidth.clamp(400.0, double.infinity);
   }
 
   double getAppointmentPanelWidth(double screenWidth) {
-    // Smooth responsive scaling for appointment panel
     const double minScreen = 800;
     const double midScreen = 1200;
     const double maxScreen = 1920;
@@ -137,11 +153,9 @@ double getLeftSideWidth(double screenWidth) {
     if (screenWidth <= minScreen) {
       return minWidth;
     } else if (screenWidth <= midScreen) {
-      // Smooth interpolation between min and mid
       double t = (screenWidth - minScreen) / (midScreen - minScreen);
       return minWidth + t * (midWidth - minWidth);
     } else if (screenWidth <= maxScreen) {
-      // Smooth interpolation between mid and max
       double t = (screenWidth - midScreen) / (maxScreen - midScreen);
       return midWidth + t * (maxWidth - midWidth);
     } else {
@@ -149,37 +163,27 @@ double getLeftSideWidth(double screenWidth) {
     }
   }
 
-  // Alternative method if you want even more control over the layout
-  Map<String, double> getResponsiveWidths(double screenWidth) {
-    final horizontalPadding = getResponsivePadding(screenWidth) * 2;
-    const spacingBetween = 125;
-    final totalReservedSpace = horizontalPadding + spacingBetween;
-    
-    // Define appointment panel width with smooth scaling
-    late double appointmentWidth;
-    if (screenWidth >= 1400) {
-      appointmentWidth = 420;
-    } else if (screenWidth >= 1100) {
-      // Smooth interpolation
-      double t = (screenWidth - 1100) / (1400 - 1100);
-      appointmentWidth = 320 + t * 100; // 320 to 420
-    } else if (screenWidth >= 800) {
-      double t = (screenWidth - 800) / (1100 - 800);
-      appointmentWidth = 280 + t * 40; // 280 to 320
+  // Get max height for appointment panel based on screen height
+  double getAppointmentPanelMaxHeight(double screenHeight) {
+    if (screenHeight <= 768) {
+      return screenHeight * 0.75;
+    } else if (screenHeight <= 1080) {
+      return screenHeight * 0.7;
     } else {
-      appointmentWidth = 280; // Minimum width
+      return 800;
     }
-    
-    // Calculate left side width
-    final leftSideWidth = (screenWidth - totalReservedSpace - appointmentWidth).clamp(300.0, 800.0);
-    
-    return {
-      'leftSide': leftSideWidth,
-      'appointmentPanel': appointmentWidth,
-    };
   }
 
-  Widget _buildMainContent(double screenWidth) {
+  // Determine if we should use compact mode
+  bool shouldUseCompactMode(double screenHeight) {
+    return screenHeight <= 900;
+  }
+
+  Widget _buildMainContent(double screenWidth, double screenHeight) {
+    final appointmentWidth = getAppointmentPanelWidth(screenWidth);
+    final maxHeight = getAppointmentPanelMaxHeight(screenHeight);
+    final isCompact = shouldUseCompactMode(screenHeight);
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
       child: Row(
@@ -196,34 +200,42 @@ double getLeftSideWidth(double screenWidth) {
             child: SizedBox(width: 125),
           ),
           
-          // Appointment panel stack - always on the right
+          // Appointment panel - reusable widget
           SizedBox(
-            width: getAppointmentPanelWidth(screenWidth),
-            child: Stack(
-              children: [
-                Column(
-                  children: [
-                    // Scrollable state panel
-                    if (_panelState == PanelState.scrollable)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 40),
-                        child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
-                      ),
-                    
-                    // Static state panel
-                    if (_panelState == PanelState.static)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 40),
-                        child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
-                      ),
-                  ],
-                ),
-              ],
+            width: appointmentWidth,
+            child: _buildAppointmentPanelByState(
+              _panelState, 
+              maxHeight, 
+              isCompact,
             ),
           ),
         ],
       ),
     );
+  }
+
+  // Centralized appointment panel builder
+  Widget _buildAppointmentPanelByState(
+    PanelState state, 
+    double maxHeight, 
+    bool isCompact,
+  ) {
+    switch (state) {
+      case PanelState.scrollable:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 40),
+          child: EnhancedWebAppointmentPanel(
+            clinic: widget.clinic,
+            maxHeight: maxHeight,
+            compact: isCompact,
+          ),
+        );
+      case PanelState.positioned:
+      case PanelState.static:
+        // Return empty space with same height to maintain layout
+        // Panel will be shown as positioned overlay
+        return SizedBox(height: maxHeight);
+    }
   }
 
   Widget _buildLeftContent() {
@@ -327,6 +339,7 @@ double getLeftSideWidth(double screenWidth) {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     double iconRight = responsiveRight(
       screenWidth: screenWidth,
@@ -434,7 +447,7 @@ double getLeftSideWidth(double screenWidth) {
               ),
               
               // Main content area
-              _buildMainContent(screenWidth),
+              _buildMainContent(screenWidth, screenHeight),
 
               // Location section
               Container(
@@ -455,16 +468,34 @@ double getLeftSideWidth(double screenWidth) {
             ],
           ),
 
-          // Positioned appointment panel
+          // Positioned appointment panel (sticky for both positioned and static states)
           if (_panelState == PanelState.positioned)
           Positioned(
             top: 120,
             right: getResponsivePadding(screenWidth),
             child: SizedBox(
               width: getAppointmentPanelWidth(screenWidth),
-              child: EnhancedWebAppointmentPanel(clinic: widget.clinic),
+              child: EnhancedWebAppointmentPanel(
+                clinic: widget.clinic,
+                maxHeight: getAppointmentPanelMaxHeight(screenHeight),
+                compact: shouldUseCompactMode(screenHeight),
+              ),
             ),
           ),
+
+if (_panelState == PanelState.static)
+  Positioned(
+    bottom: 80,
+    right: getResponsivePadding(screenWidth),
+    child: SizedBox(
+      width: getAppointmentPanelWidth(screenWidth),
+      child: EnhancedWebAppointmentPanel(
+        clinic: widget.clinic,
+        maxHeight: getAppointmentPanelMaxHeight(screenHeight),
+        compact: shouldUseCompactMode(screenHeight),
+      ),
+    ),
+  ),
 
           // Navigation bar overlay
           if (_showWidget)
