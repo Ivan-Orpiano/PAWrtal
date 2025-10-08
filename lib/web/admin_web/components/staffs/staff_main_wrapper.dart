@@ -163,7 +163,7 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
     return Container(
       width: 250,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [primaryBlue, primaryTeal],

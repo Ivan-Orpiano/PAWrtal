@@ -1,6 +1,4 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
-import 'package:capstone_app/data/models/clinic_model.dart';
-import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

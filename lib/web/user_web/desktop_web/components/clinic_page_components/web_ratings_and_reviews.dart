@@ -1,6 +1,5 @@
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import '../dashboard_components/web_review_card.dart';
 
 Widget buildStarRating(double rating, {double size = 30}) {

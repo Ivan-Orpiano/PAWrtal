@@ -245,7 +245,7 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
                 color: Colors.orange[600],
                 size: isTablet ? 28 : 24,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Confirm Logout',
                 style: TextStyle(

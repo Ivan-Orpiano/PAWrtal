@@ -156,8 +156,8 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                                       constraints: BoxConstraints(
                                         maxWidth: constraints.maxWidth / 2 - 12,
                                       ),
-                                      child: Column(
-                                        children: const [
+                                      child: const Column(
+                                        children: [
                                           Padding(
                                             padding: EdgeInsets.symmetric(
                                                 vertical: 6.0),
