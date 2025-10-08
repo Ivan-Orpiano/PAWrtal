@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
+import 'package:get_storage/get_storage.dart';
 
 class StaffAuthController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService userSession;
+  final GetStorage _getStorage = GetStorage();
 
   StaffAuthController({
     required this.authRepository,
@@ -23,7 +25,7 @@ class StaffAuthController extends GetxController {
   Rx<Staff?> currentStaff = Rx<Staff?>(null);
   RxList<String> staffAuthorities = <String>[].obs;
 
-  // Store session data in the controller instead of UserSessionService
+  // Store session data in the controller
   final RxString sessionId = ''.obs;
   final RxString clinicId = ''.obs;
   final RxString staffDocId = ''.obs;
@@ -50,13 +52,25 @@ class StaffAuthController extends GetxController {
     errorMessage.value = '';
 
     try {
+      print('=== STAFF CONTROLLER LOGIN ===');
+
       final result = await authRepository.staffLogin(
         emailController.text.trim(),
         passwordController.text,
       );
 
-      // Store session data in controller
+      print('Login result: ${result['success']}');
+      print('Is staff: ${result['isStaff']}');
+      print('Role: ${result['role']}');
+
+      if (result['success'] != true) {
+        errorMessage.value = result['message'] ?? 'Login failed';
+        throw Exception(errorMessage.value);
+      }
+
+      // Store session data
       sessionId.value = result['session'].$id;
+      clinicId.value = result['clinicId'] ?? '';
 
       // Store staff data
       final staffDoc = result['staffDoc'];
@@ -64,11 +78,21 @@ class StaffAuthController extends GetxController {
       staff.documentId = staffDoc.$id;
 
       currentStaff.value = staff;
-      staffAuthorities.value = staff.authorities;
-
-      // Store clinic ID and staff doc ID
-      clinicId.value = result['clinicId'];
+      staffAuthorities.value = List<String>.from(result['authorities'] ?? []);
       staffDocId.value = staff.documentId!;
+
+      // CRITICAL: Store data in GetStorage for persistence
+      print('Storing in GetStorage...');
+      _getStorage.write('role', 'staff');
+      _getStorage.write('sessionId', sessionId.value);
+      _getStorage.write('userId', staff.userId);
+      _getStorage.write('userName', staff.name);
+      _getStorage.write('email', staff.email);
+      _getStorage.write('clinicId', clinicId.value);
+      _getStorage.write('staffDocId', staffDocId.value);
+      _getStorage.write('authorities', staffAuthorities);
+
+      print('GetStorage saved. Role: ${_getStorage.read("role")}');
 
       Get.snackbar(
         'Success',
@@ -77,13 +101,16 @@ class StaffAuthController extends GetxController {
         backgroundColor: Colors.green,
         colorText: Colors.white,
         icon: const Icon(Icons.check_circle, color: Colors.white),
+        duration: const Duration(seconds: 2),
       );
 
       // Navigate to staff dashboard
-      Get.offAllNamed('/staff/home');
+      await Future.delayed(const Duration(milliseconds: 500));
+      Get.offAllNamed('/adminHome'); // Staff and admin share the same home
     } catch (e) {
-      print('Login error: $e');
-      errorMessage.value = 'Invalid email or password';
+      print('=== LOGIN ERROR ===');
+      print('Error: $e');
+      errorMessage.value = e.toString().replaceAll('Exception: ', '');
 
       Get.snackbar(
         'Login Failed',
@@ -92,6 +119,7 @@ class StaffAuthController extends GetxController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
         icon: const Icon(Icons.error, color: Colors.white),
+        duration: const Duration(seconds: 3),
       );
     } finally {
       isLoading.value = false;
@@ -100,12 +128,25 @@ class StaffAuthController extends GetxController {
 
   Future<void> loadStaffData() async {
     try {
-      final staff = await authRepository.getStaffByUserId(userSession.userId);
-      if (staff != null) {
-        currentStaff.value = staff;
-        staffAuthorities.value = staff.authorities;
-        clinicId.value = staff.clinicId;
-        staffDocId.value = staff.documentId ?? '';
+      // Try to load from GetStorage first
+      final storedRole = _getStorage.read('role');
+      final storedUserId = _getStorage.read('userId');
+
+      print('Loading staff data...');
+      print('Stored role: $storedRole');
+      print('Stored userId: $storedUserId');
+
+      if (storedRole == 'staff' && storedUserId != null) {
+        final staff = await authRepository.getStaffByUserId(storedUserId);
+        if (staff != null) {
+          currentStaff.value = staff;
+          staffAuthorities.value = staff.authorities;
+          clinicId.value = staff.clinicId;
+          staffDocId.value = staff.documentId ?? '';
+
+          print('Staff data loaded successfully');
+          print('Authorities: ${staffAuthorities}');
+        }
       }
     } catch (e) {
       print('Error loading staff data: $e');
@@ -113,7 +154,10 @@ class StaffAuthController extends GetxController {
   }
 
   bool hasAuthority(String authority) {
-    return staffAuthorities.contains(authority);
+    final result = staffAuthorities.contains(authority);
+    print('Checking authority "$authority": $result');
+    print('Available authorities: $staffAuthorities');
+    return result;
   }
 
   bool hasAnyAuthority(List<String> authorities) {
@@ -126,7 +170,6 @@ class StaffAuthController extends GetxController {
 
   Future<void> logout() async {
     try {
-      // Use the sessionId stored in controller if available, otherwise use current session
       final logoutSessionId =
           sessionId.value.isNotEmpty ? sessionId.value : 'current';
 
@@ -138,6 +181,9 @@ class StaffAuthController extends GetxController {
       sessionId.value = '';
       clinicId.value = '';
       staffDocId.value = '';
+
+      // Clear GetStorage
+      _getStorage.erase();
 
       Get.offAllNamed('/login');
 

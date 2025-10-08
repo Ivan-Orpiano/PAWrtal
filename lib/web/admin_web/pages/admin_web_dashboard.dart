@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -15,10 +16,29 @@ class AdminWebDashboard extends StatefulWidget {
 }
 
 class _AdminWebDashboardState extends State<AdminWebDashboard> {
+  // Add this to your State class
   @override
   void initState() {
     super.initState();
+    _runMigrationOnce();
+  }
 
+  Future<void> _runMigrationOnce() async {
+    final storage = GetStorage();
+    final migrationRun = storage.read('staff_migration_completed') ?? false;
+
+    if (!migrationRun) {
+      try {
+        print('Running staff migration...');
+        final authRepo = Get.find<AuthRepository>();
+        await authRepo.migrateExistingStaffRecords();
+
+        storage.write('staff_migration_completed', true);
+        print('Staff migration completed successfully');
+      } catch (e) {
+        print('Migration error: $e');
+      }
+    }
     if (!Get.isRegistered<AdminDashboardController>()) {
       Get.put(AdminDashboardController(
         authRepository: Get.find<AuthRepository>(),

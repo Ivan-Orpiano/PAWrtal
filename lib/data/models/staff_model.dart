@@ -39,7 +39,7 @@ class Staff {
     createdAt = map["createdAt"] ?? '';
     email = map["email"] ?? '';
     phone = map["phone"];
-    role = map["role"] ?? '';
+    role = map["role"] ?? 'staff';
     documentId = map["\$id"] ?? '';
     clinicId = map["clinicId"] ?? '';
     userId = map["userId"] ?? '';

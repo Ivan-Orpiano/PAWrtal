@@ -6,21 +6,19 @@ import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:capstone_app/data/models/staff_model.dart';
 
 class LoginController extends GetxController {
   AuthRepository authRepository;
   LoginController(this.authRepository);
 
-  //Form Key
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-  //controllers
   TextEditingController emailEditingController = TextEditingController();
   TextEditingController passwordEditingController = TextEditingController();
   TextEditingController emailForPasswordResetController =
       TextEditingController();
 
-  //form validation
   bool isFormValid = false;
 
   final GetStorage _getStorage = GetStorage();
@@ -41,7 +39,6 @@ class LoginController extends GetxController {
     if (!GetUtils.isEmail(value)) {
       return "Provide a valid Email";
     }
-
     return null;
   }
 
@@ -49,10 +46,10 @@ class LoginController extends GetxController {
     if (value.isEmpty) {
       return "Provide valid password";
     }
-
     return null;
   }
 
+  /// AUTO-HEALING LOGIN - Fixes userId mismatches automatically
   void validateAndLogin({
     required String email,
     required String password,
@@ -60,11 +57,16 @@ class LoginController extends GetxController {
     isFormValid = formKey.currentState!.validate();
     if (!isFormValid) return;
 
-    String? sessionId; // Track session for cleanup
+    String? sessionId;
 
     try {
       formKey.currentState!.save();
       FullScreenDialogLoader.showDialog();
+
+      print('>>> ==========================================');
+      print('>>> LOGIN ATTEMPT');
+      print('>>> Email: $email');
+      print('>>> ==========================================');
 
       final value = await authRepository.login({
         "email": email,
@@ -76,7 +78,6 @@ class LoginController extends GetxController {
         throw Exception("Login failed: Session data is missing");
       }
 
-      // CRITICAL: Store session ID for potential cleanup
       sessionId = session.$id;
       final userId = session.userId;
 
@@ -89,58 +90,95 @@ class LoginController extends GetxController {
       _getStorage.write("userId", userId);
       _getStorage.write("sessionId", session.$id);
 
+      print('>>> Auth User ID: $userId');
+      print('>>> Email: $userEmail');
+
       String role = "";
       bool matched = false;
 
-      // check if account is admin
+      // Check if account is admin
+      print('>>> Step 1: Checking if ADMIN...');
       final clinicDoc = await authRepository.getClinicByAdminId(userId);
       if (clinicDoc != null) {
         role = clinicDoc.data["role"];
         _getStorage.write("clinicId", clinicDoc.$id);
+        _getStorage.write("userName", clinicDoc.data["createdBy"] ?? user.name);
         matched = true;
+        print('>>> ✓ ADMIN FOUND - Role: $role');
       }
 
-      // check if account is staff
+      // Check if account is staff
       if (!matched) {
-        final staff = await authRepository.getStaffByUserId(userId);
+        print('>>> Step 2: Checking if STAFF...');
+
+        // Try by userId first
+        var staff = await authRepository.getStaffByUserId(userId);
+
+        // If not found, try by email (this catches userId mismatches)
+        if (staff == null) {
+          print('>>> Not found by userId, trying by EMAIL...');
+          staff = await authRepository.getStaffByEmail(userEmail);
+
+          // Auto-fix userId if found by email
+          if (staff != null) {
+            print('>>> ✓ STAFF FOUND BY EMAIL');
+            await _autoFixStaffUserId(staff, userId);
+          }
+        } else {
+          print('>>> ✓ STAFF FOUND BY USERID');
+        }
+
         if (staff != null) {
           role = staff.role;
           _getStorage.write("staffId", staff.documentId);
           _getStorage.write("clinicId", staff.clinicId);
+          _getStorage.write("authorities", staff.authorities);
+          _getStorage.write("userName", staff.name);
           matched = true;
+          print('>>> Staff Role: $role');
+          print('>>> Staff Name: ${staff.name}');
         }
       }
 
-      // check if user (customer)
+      // Check if user (customer)
       if (!matched) {
+        print('>>> Step 3: Checking if CUSTOMER...');
         final userDoc = await authRepository.getUserById(userId);
         if (userDoc != null) {
           role = userDoc.data["role"];
           _getStorage.write("customerId", userDoc.$id);
+          _getStorage.write("userName", user.name);
           matched = true;
+          print('>>> ✓ CUSTOMER FOUND - Role: $role');
         }
       }
 
-      // check if developer (super admin)
+      // Check if developer
       if (!matched && userEmail == "test.developer@gmail.com") {
         role = "developer";
+        _getStorage.write("userName", user.name);
         matched = true;
+        print('>>> ✓ DEVELOPER ACCOUNT');
       }
 
       if (!matched) {
-        // CRITICAL: Clean up session before throwing error
-        try {
-          if (sessionId != null) {
-            await authRepository.logout(sessionId);
-            print('Cleaned up session for unmatched role');
-          }
-        } catch (cleanupError) {
-          print('Error cleaning up session: $cleanupError');
+        print('>>> ==========================================');
+        print('>>> ✗ NO ROLE MATCHED');
+        print('>>> ==========================================');
+
+        if (sessionId != null) {
+          await authRepository.logout(sessionId);
         }
-        throw Exception("No role found for this account");
+        throw Exception(
+            "No role found for this account. Please contact support.");
       }
 
       _getStorage.write("role", role);
+      _getStorage.write("email", userEmail);
+
+      print('>>> ==========================================');
+      print('>>> ✓ LOGIN SUCCESS - Role: $role');
+      print('>>> ==========================================');
 
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showSuccessSnackBar(
@@ -150,7 +188,7 @@ class LoginController extends GetxController {
 
       clearTextEditingControllers();
 
-      // route by role
+      // Route by role
       if (role == "admin") {
         Get.offAllNamed(Routes.adminHome);
       } else if (role == "developer") {
@@ -161,14 +199,14 @@ class LoginController extends GetxController {
         Get.offAllNamed(Routes.userHome);
       }
     } catch (e) {
-      // CRITICAL: Clean up any created session on error
+      print('>>> ==========================================');
+      print('>>> ✗ LOGIN ERROR: $e');
+      print('>>> ==========================================');
+
       if (sessionId != null) {
         try {
           await authRepository.logout(sessionId);
-          print('Session cleaned up after error');
-        } catch (cleanupError) {
-          print('Error cleaning up session: $cleanupError');
-        }
+        } catch (_) {}
       }
 
       FullScreenDialogLoader.cancelDialog();
@@ -178,6 +216,24 @@ class LoginController extends GetxController {
           message: e is AppwriteException
               ? e.response ?? "Appwrite error"
               : e.toString());
+    }
+  }
+
+  /// AUTO-FIX HELPER: Runs every login, only updates if mismatch detected
+  Future<void> _autoFixStaffUserId(Staff staff, String correctUserId) async {
+    if (staff.userId != correctUserId) {
+      print('>>> Auto-fixing userId mismatch...');
+      print('>>> DB userId: ${staff.userId}');
+      print('>>> Auth userId: $correctUserId');
+
+      try {
+        await authRepository.fixStaffUserId(staff.documentId!, correctUserId);
+        staff.userId = correctUserId;
+        print('>>> ✓ UserId fixed!');
+      } catch (e) {
+        print('>>> Warning: Could not auto-fix userId: $e');
+        // Continue anyway, the login should still work
+      }
     }
   }
 

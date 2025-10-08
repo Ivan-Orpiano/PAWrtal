@@ -6,6 +6,7 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 class ClinicSettingsController extends GetxController {
   final AuthRepository authRepository;
@@ -71,19 +72,6 @@ class ClinicSettingsController extends GetxController {
     initializeData();
   }
 
-  // @override
-  // void onClose() {
-  //   // Dispose controllers
-  //   clinicNameController.dispose();
-  //   addressController.dispose();
-  //   contactController.dispose();
-  //   emailController.dispose();
-  //   descriptionController.dispose();
-  //   emergencyContactController.dispose();
-  //   specialInstructionsController.dispose();
-  //   super.onClose();
-  // }
-
   Future<void> initializeData() async {
     try {
       isLoading.value = true;
@@ -100,18 +88,43 @@ class ClinicSettingsController extends GetxController {
     final user = await authRepository.getUser();
     if (user == null) return;
 
-    final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
-    if (clinicDoc != null) {
-      clinic.value = Clinic.fromMap(clinicDoc.data);
-      clinic.value!.documentId = clinicDoc.$id;
-      _populateClinicFields();
+    // Get user role from storage
+    final storage = GetStorage();
+    final userRole = storage.read('role') as String?;
+
+    String? clinicId;
+
+    if (userRole == 'staff') {
+      // Staff: Get clinicId from storage
+      clinicId = storage.read('clinicId') as String?;
+      print(
+          '>>> CLINIC SETTINGS: Staff mode - using stored clinicId: $clinicId');
+    } else {
+      // Admin: Get clinic by admin ID
+      print('>>> CLINIC SETTINGS: Admin mode - looking up clinic');
+      final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
+      if (clinicDoc != null) {
+        clinicId = clinicDoc.$id;
+      }
+    }
+
+    if (clinicId != null) {
+      final clinicDoc = await authRepository.getClinicById(clinicId);
+      if (clinicDoc != null) {
+        clinic.value = Clinic.fromMap(clinicDoc.data);
+        clinic.value!.documentId = clinicDoc.$id;
+        _populateClinicFields();
+        print(
+            '>>> CLINIC SETTINGS: Clinic loaded: ${clinic.value!.clinicName}');
+      }
     }
   }
 
   Future<void> fetchClinicSettings() async {
     if (clinic.value?.documentId == null) return;
 
-    final settings = await authRepository.getClinicSettingsByClinicId(clinic.value!.documentId!);
+    final settings = await authRepository
+        .getClinicSettingsByClinicId(clinic.value!.documentId!);
     if (settings != null) {
       clinicSettings.value = settings;
       _populateSettingsFields();
@@ -125,7 +138,8 @@ class ClinicSettingsController extends GetxController {
     if (clinic.value?.documentId == null) return;
 
     final defaultSettings = ClinicSettings(clinicId: clinic.value!.documentId!);
-    final createdSettings = await authRepository.initializeClinicSettings(clinic.value!.documentId!);
+    final createdSettings = await authRepository
+        .initializeClinicSettings(clinic.value!.documentId!);
     clinicSettings.value = createdSettings;
     _populateSettingsFields();
   }
@@ -172,9 +186,10 @@ class ClinicSettingsController extends GetxController {
       };
 
       await authRepository.updateClinic(clinic.value!.documentId!, updatedData);
-      
+
       // Update local clinic object
-      clinic.value = clinic.value!..clinicName = clinicNameController.text.trim()
+      clinic.value = clinic.value!
+        ..clinicName = clinicNameController.text.trim()
         ..address = addressController.text.trim()
         ..contact = contactController.text.trim()
         ..email = emailController.text.trim()
@@ -241,7 +256,8 @@ class ClinicSettingsController extends GetxController {
   }
 
   void addCustomService(String service) {
-    if (service.trim().isNotEmpty && !selectedServices.contains(service.trim())) {
+    if (service.trim().isNotEmpty &&
+        !selectedServices.contains(service.trim())) {
       selectedServices.add(service.trim());
     }
   }
@@ -260,33 +276,37 @@ class ClinicSettingsController extends GetxController {
 
       if (result != null && result.files.isNotEmpty) {
         isSaving.value = true;
-        
+
         final newImageUrls = <String>[];
-        
+
         // Process each file individually, similar to pet creation
         for (int i = 0; i < result.files.length; i++) {
           final file = result.files[i];
-          
+
           try {
             // For web: use bytes, for mobile: use path (same logic as pet creation)
             String? imagePath;
             if (file.bytes != null) {
               // Handle web platform - we need to create a temporary approach
               // For now, let's use the uploadClinicGalleryImages method but simplified
-              final uploadedFiles = await authRepository.uploadClinicGalleryImages([file]);
+              final uploadedFiles =
+                  await authRepository.uploadClinicGalleryImages([file]);
               if (uploadedFiles.isNotEmpty) {
                 final imageId = uploadedFiles.first.$id;
                 // Use exact same URL construction as pet creation
-                final imageUrl = '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
+                final imageUrl =
+                    '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
                 newImageUrls.add(imageUrl);
                 print("Added image URL: $imageUrl"); // Debug log
               }
             } else if (file.path != null) {
               // Handle mobile platform - use existing uploadImage method like pet creation
-              final imageResponse = await authRepository.uploadImage(file.path!);
+              final imageResponse =
+                  await authRepository.uploadImage(file.path!);
               final imageId = imageResponse.$id;
-              // Use exact same URL construction as pet creation  
-              final imageUrl = '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
+              // Use exact same URL construction as pet creation
+              final imageUrl =
+                  '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
               newImageUrls.add(imageUrl);
               print("Added image URL: $imageUrl"); // Debug log
             }
@@ -295,11 +315,12 @@ class ClinicSettingsController extends GetxController {
             // Continue with other images
           }
         }
-        
+
         if (newImageUrls.isNotEmpty) {
           galleryImages.addAll(newImageUrls);
           await saveClinicSettings();
-          _showSnackBar("${newImageUrls.length} image(s) uploaded successfully!");
+          _showSnackBar(
+              "${newImageUrls.length} image(s) uploaded successfully!");
         } else {
           _showSnackBar("No images were uploaded successfully", isError: true);
         }
@@ -330,21 +351,22 @@ class ClinicSettingsController extends GetxController {
   // Validation
   bool get isValidBasicInfo {
     return clinicNameController.text.trim().isNotEmpty &&
-           addressController.text.trim().isNotEmpty &&
-           contactController.text.trim().isNotEmpty &&
-           emailController.text.trim().isNotEmpty;
+        addressController.text.trim().isNotEmpty &&
+        contactController.text.trim().isNotEmpty &&
+        emailController.text.trim().isNotEmpty;
   }
 
   bool get hasUnsavedChanges {
     if (clinic.value == null || clinicSettings.value == null) return false;
-    
+
     return clinicNameController.text.trim() != clinic.value!.clinicName ||
-           addressController.text.trim() != clinic.value!.address ||
-           contactController.text.trim() != clinic.value!.contact ||
-           emailController.text.trim() != clinic.value!.email ||
-           descriptionController.text.trim() != clinic.value!.description ||
-           isClinicOpen.value != clinicSettings.value!.isOpen ||
-           autoAcceptAppointments.value != clinicSettings.value!.autoAcceptAppointments;
+        addressController.text.trim() != clinic.value!.address ||
+        contactController.text.trim() != clinic.value!.contact ||
+        emailController.text.trim() != clinic.value!.email ||
+        descriptionController.text.trim() != clinic.value!.description ||
+        isClinicOpen.value != clinicSettings.value!.isOpen ||
+        autoAcceptAppointments.value !=
+            clinicSettings.value!.autoAcceptAppointments;
   }
 
   // Utility methods

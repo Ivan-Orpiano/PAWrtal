@@ -47,12 +47,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
-  final List<String> tags = const [
-    'Clinic',
-    'Appointments',
-    'Staffs',
-    'Messages'
-  ];
+  // UPDATED: Only 3 possible authorities now
+  final List<String> tags = const ['Clinic', 'Appointments', 'Messages'];
 
   @override
   void initState() {
@@ -79,16 +75,50 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     setState(() => _isLoading = true);
 
     try {
-      // Get clinic
-      final clinicDoc =
-          await _authRepository.getClinicByAdminId(_session.userId);
-      if (clinicDoc != null) {
-        _clinic = Clinic.fromMap(clinicDoc.data);
-        _clinic!.documentId = clinicDoc.$id;
+      print('>>> Loading clinic and staff data...');
 
+      // Get user role from storage
+      final role = _getStorage.read('role') as String?;
+      print('>>> Current user role: $role');
+
+      // Get clinic based on user role
+      if (role == 'admin') {
+        print('>>> Admin user - fetching clinic by admin ID');
+        final clinicDoc =
+            await _authRepository.getClinicByAdminId(_session.userId);
+        if (clinicDoc != null) {
+          _clinic = Clinic.fromMap(clinicDoc.data);
+          _clinic!.documentId = clinicDoc.$id;
+          print('>>> Clinic found: ${_clinic!.clinicName}');
+        } else {
+          print('>>> ERROR: No clinic found for admin ID: ${_session.userId}');
+        }
+      } else if (role == 'staff') {
+        print('>>> Staff user - fetching clinic by clinic ID');
+        final clinicId = _getStorage.read('clinicId') as String?;
+        print('>>> Staff clinic ID from storage: $clinicId');
+
+        if (clinicId != null && clinicId.isNotEmpty) {
+          final clinicDoc = await _authRepository.getClinicById(clinicId);
+          if (clinicDoc != null) {
+            _clinic = Clinic.fromMap(clinicDoc.data);
+            _clinic!.documentId = clinicDoc.$id;
+            print('>>> Clinic found: ${_clinic!.clinicName}');
+          } else {
+            print('>>> ERROR: No clinic found for clinic ID: $clinicId');
+          }
+        } else {
+          print('>>> ERROR: No clinic ID found in storage for staff user');
+        }
+      } else {
+        print('>>> ERROR: Unknown user role: $role');
+      }
+
+      if (_clinic != null) {
         // Get clinic settings
         _clinicSettings = await _authRepository
             .getClinicSettingsByClinicId(_clinic!.documentId!);
+        print('>>> Clinic settings loaded: ${_clinicSettings != null}');
 
         // Get staff for this clinic
         final staff =
@@ -96,9 +126,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         setState(() {
           staffList = staff;
         });
+        print('>>> Loaded ${staffList.length} staff members');
       }
     } catch (e) {
-      print('Error loading clinic and staff: $e');
+      print('>>> ERROR loading clinic and staff: $e');
       Get.snackbar(
         'Error',
         'Failed to load staff: $e',
@@ -619,6 +650,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             IconData icon;
             List<Color> colors;
 
+            // Only 3 possible authorities now
             switch (tag) {
               case 'Clinic':
                 icon = Icons.local_hospital_rounded;
@@ -627,10 +659,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               case 'Appointments':
                 icon = Icons.calendar_month_rounded;
                 colors = const [primaryBlue, softBlue];
-                break;
-              case 'Staffs':
-                icon = Icons.group_rounded;
-                colors = const [vetPurple, deepBlue];
                 break;
               case 'Messages':
                 icon = Icons.message_rounded;

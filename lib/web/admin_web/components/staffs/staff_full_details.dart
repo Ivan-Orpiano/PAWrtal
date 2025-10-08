@@ -28,7 +28,6 @@ class StaffFullDetails extends StatefulWidget {
 class _StaffFullDetailsState extends State<StaffFullDetails> {
   late bool hasClinicAuthority;
   late bool hasAppointmentsAuthority;
-  late bool hasStaffsAuthority;
   late bool hasMessagesAuthority;
   bool showDeleteConfirm = false;
 
@@ -52,7 +51,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     hasClinicAuthority = widget.initialAuthorities.contains('Clinic');
     hasAppointmentsAuthority =
         widget.initialAuthorities.contains('Appointments');
-    hasStaffsAuthority = widget.initialAuthorities.contains('Staffs');
     hasMessagesAuthority = widget.initialAuthorities.contains('Messages');
   }
 
@@ -60,7 +58,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     List<String> updatedAuthorities = [];
     if (hasClinicAuthority) updatedAuthorities.add('Clinic');
     if (hasAppointmentsAuthority) updatedAuthorities.add('Appointments');
-    if (hasStaffsAuthority) updatedAuthorities.add('Staffs');
     if (hasMessagesAuthority) updatedAuthorities.add('Messages');
     widget.onAuthoritiesUpdated(updatedAuthorities);
     Navigator.of(context).pop();
@@ -396,15 +393,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           ),
           Divider(height: 1, color: Colors.grey[300]),
           _buildAuthTile(
-            'Staff Management',
-            'Manage staff accounts',
-            Icons.group_rounded,
-            [vetPurple, deepBlue],
-            hasStaffsAuthority,
-            (val) => setState(() => hasStaffsAuthority = val!),
-          ),
-          Divider(height: 1, color: Colors.grey[300]),
-          _buildAuthTile(
             'Messages',
             'Access messaging system',
             Icons.message_rounded,
@@ -520,8 +508,8 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 const SizedBox(width: 16),
                 Container(
                   decoration: BoxDecoration(
-                    gradient:
-                        const LinearGradient(colors: [primaryTeal, primaryBlue]),
+                    gradient: const LinearGradient(
+                        colors: [primaryTeal, primaryBlue]),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
@@ -622,7 +610,8 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               width: double.infinity,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [primaryTeal, primaryBlue]),
+                  gradient:
+                      const LinearGradient(colors: [primaryTeal, primaryBlue]),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(

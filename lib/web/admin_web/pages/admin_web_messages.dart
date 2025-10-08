@@ -7,6 +7,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 class AdminWebMessages extends StatefulWidget {
   const AdminWebMessages({super.key});
@@ -16,20 +17,32 @@ class AdminWebMessages extends StatefulWidget {
 }
 
 class _AdminWebMessagesState extends State<AdminWebMessages> {
+  final GetStorage _getStorage = GetStorage();
   late final AdminMessagingController _controller;
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final UserSessionService _userSession = Get.find<UserSessionService>();
   final Map<String, dynamic> _userCache = {};
-  
+
   String? _clinicId;
+  String? _userRole;
   Conversation? _selectedConversation;
   String? _selectedUserId;
   String? _selectedUserName;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _initializeMessaging();
+  }
+
+  void _loadUserRole() {
+    _userRole = _getStorage.read("role") as String?;
+    print('>>> ============================================');
+    print('>>> ADMIN_WEB_MESSAGES: Loading user role');
+    print('>>> User role: $_userRole');
+    print('>>> ============================================');
   }
 
   Future<void> _initializeMessaging() async {
@@ -40,15 +53,85 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
 
     try {
-      final clinicDoc = await _authRepository.getClinicByAdminId(_userSession.userId);
-      if (clinicDoc != null) {
+      print('>>> ============================================');
+      print('>>> ADMIN_WEB_MESSAGES: Initializing...');
+      print('>>> ============================================');
+
+      // CRITICAL FIX: Read clinicId directly from storage FIRST
+      // This was stored during login for both admin and staff
+      String? clinicId = _getStorage.read('clinicId') as String?;
+
+      print('>>> Step 1: Checking storage for clinicId');
+      print('>>>   - clinicId from storage: $clinicId');
+      print('>>>   - user role: $_userRole');
+      print('>>>   - user ID: ${_userSession.userId}');
+
+      // If no clinicId in storage, try to fetch it
+      if (clinicId == null || clinicId.isEmpty) {
+        print('>>> Step 2: No clinicId in storage, attempting to fetch...');
+
+        if (_userRole == 'admin') {
+          print('>>>   - Mode: ADMIN - Looking up by admin ID');
+          final clinicDoc =
+              await _authRepository.getClinicByAdminId(_userSession.userId);
+
+          if (clinicDoc != null) {
+            clinicId = clinicDoc.$id;
+            // Store it for future use
+            await _getStorage.write('clinicId', clinicId);
+            print('>>>   - Found and stored clinic ID: $clinicId');
+          } else {
+            print(
+                '>>>   - ERROR: No clinic found for admin ID: ${_userSession.userId}');
+          }
+        } else if (_userRole == 'staff') {
+          print('>>>   - Mode: STAFF - Should have clinicId in storage');
+          print('>>>   - ERROR: Staff account missing clinicId in storage!');
+
+          // Try to look up staff record to get clinicId
+          final staff =
+              await _authRepository.getStaffByUserId(_userSession.userId);
+          if (staff != null) {
+            clinicId = staff.clinicId;
+            await _getStorage.write('clinicId', clinicId);
+            print(
+                '>>>   - Found and stored clinic ID from staff record: $clinicId');
+          }
+        }
+      } else {
+        print('>>> Step 2: Using clinicId from storage: $clinicId');
+      }
+
+      if (clinicId != null && clinicId.isNotEmpty) {
         setState(() {
-          _clinicId = clinicDoc.$id;
+          _clinicId = clinicId;
+          _isLoading = false;
         });
+
+        print('>>> Step 3: Initializing controller with clinic ID: $_clinicId');
         await _controller.initializeForClinic(_clinicId!);
+        print('>>> ============================================');
+        print('>>> INITIALIZATION SUCCESSFUL');
+        print('>>> Clinic ID: $_clinicId');
+        print('>>> ============================================');
+      } else {
+        print('>>> ============================================');
+        print('>>> ERROR: No clinic ID found');
+        print('>>> User role: $_userRole');
+        print('>>> User ID: ${_userSession.userId}');
+        print('>>> Storage dump:');
+        print('>>>   - role: ${_getStorage.read("role")}');
+        print('>>>   - clinicId: ${_getStorage.read("clinicId")}');
+        print('>>>   - userId: ${_getStorage.read("userId")}');
+        print('>>> ============================================');
+
+        setState(() => _isLoading = false);
       }
     } catch (e) {
-      print('Error initializing messaging: $e');
+      print('>>> ============================================');
+      print('>>> ERROR initializing messaging: $e');
+      print('>>> ============================================');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -76,7 +159,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     return {'name': 'Unknown User', 'email': '', 'phone': ''};
   }
 
-  void _selectConversation(Conversation conversation, String userId, String userName) {
+  void _selectConversation(
+      Conversation conversation, String userId, String userName) {
     setState(() {
       _selectedConversation = conversation;
       _selectedUserId = userId;
@@ -87,9 +171,41 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   @override
   Widget build(BuildContext context) {
-    if (_clinicId == null) {
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_clinicId == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Clinic not found',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Role: $_userRole',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Try to reinitialize
+                  setState(() => _isLoading = true);
+                  _initializeMessaging();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -102,7 +218,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             width: 350,
             child: _buildConversationsList(),
           ),
-          
+
           // Right Panel - Messages
           Expanded(
             child: _selectedConversation == null
@@ -154,7 +270,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               ],
             ),
           ),
-          
+
           // Search
           Padding(
             padding: const EdgeInsets.all(16),
@@ -170,7 +286,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               ),
             ),
           ),
-          
+
           // Conversations
           Expanded(
             child: Obx(() {
@@ -183,7 +299,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
+                      Icon(Icons.chat_bubble_outline,
+                          size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
                         'No conversations yet',
@@ -201,10 +318,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getUserData(conversation.userId),
                     builder: (context, snapshot) {
-                      final userData = snapshot.data ?? {'name': 'Loading...', 'email': ''};
-                      final isSelected = _selectedConversation?.documentId == conversation.documentId;
-                      
-                      return _buildConversationTile(conversation, userData, isSelected);
+                      final userData =
+                          snapshot.data ?? {'name': 'Loading...', 'email': ''};
+                      final isSelected = _selectedConversation?.documentId ==
+                          conversation.documentId;
+
+                      return _buildConversationTile(
+                          conversation, userData, isSelected);
                     },
                   );
                 },
@@ -216,13 +336,15 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     );
   }
 
-  Widget _buildConversationTile(Conversation conversation, Map<String, dynamic> userData, bool isSelected) {
+  Widget _buildConversationTile(Conversation conversation,
+      Map<String, dynamic> userData, bool isSelected) {
     final hasUnread = conversation.clinicUnreadCount > 0;
-    
+
     return Material(
       color: isSelected ? Colors.blue.shade100 : Colors.white,
       child: InkWell(
-        onTap: () => _selectConversation(conversation, conversation.userId, userData['name']),
+        onTap: () => _selectConversation(
+            conversation, conversation.userId, userData['name']),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -237,11 +359,15 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                     backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                     child: Text(
                       userData['name'][0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   Obx(() {
-                    final status = _controller.getUserStatus(conversation.userId);
+                    final status =
+                        _controller.getUserStatus(conversation.userId);
                     if (status?.isOnline == true) {
                       return Positioned(
                         bottom: 0,
@@ -272,7 +398,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                           child: Text(
                             userData['name'],
                             style: TextStyle(
-                              fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
+                              fontWeight:
+                                  hasUnread ? FontWeight.bold : FontWeight.w500,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -280,7 +407,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                         if (conversation.lastMessageTime != null)
                           Text(
                             conversation.timeAgo,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                           ),
                       ],
                     ),
@@ -292,8 +420,11 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                             conversation.conversationPreview,
                             style: TextStyle(
                               fontSize: 13,
-                              color: hasUnread ? Colors.black87 : Colors.grey[600],
-                              fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                              color:
+                                  hasUnread ? Colors.black87 : Colors.grey[600],
+                              fontWeight: hasUnread
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -301,14 +432,18 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                         ),
                         if (hasUnread)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: const BoxDecoration(
                               color: Color.fromARGB(255, 81, 115, 153),
                               shape: BoxShape.circle,
                             ),
                             child: Text(
                               conversation.clinicUnreadCount.toString(),
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                       ],
@@ -380,7 +515,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             backgroundColor: const Color.fromARGB(255, 81, 115, 153),
             child: Text(
               _selectedUserName![0].toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 12),
@@ -390,7 +526,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               children: [
                 Text(
                   _selectedUserName!,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Obx(() {
                   final status = _controller.getUserStatus(_selectedUserId!);
@@ -441,15 +578,16 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   Widget _buildMessageBubble(Message message) {
     final isCurrentUser = _controller.isCurrentUser(message.senderId);
-    
+
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
         decoration: BoxDecoration(
-          color: isCurrentUser 
+          color: isCurrentUser
               ? const Color.fromARGB(255, 81, 115, 153)
               : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
@@ -498,7 +636,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               onSubmitted: (value) {
                 if (value.trim().isNotEmpty) {
@@ -509,22 +648,24 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           ),
           const SizedBox(width: 8),
           Obx(() => IconButton(
-            icon: _controller.isSendingMessage.value
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send),
-            color: const Color.fromARGB(255, 81, 115, 153),
-            onPressed: _controller.isSendingMessage.value
-                ? null
-                : () {
-                    if (_controller.messageController.text.trim().isNotEmpty) {
-                      _controller.sendMessage();
-                    }
-                  },
-          )),
+                icon: _controller.isSendingMessage.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                color: const Color.fromARGB(255, 81, 115, 153),
+                onPressed: _controller.isSendingMessage.value
+                    ? null
+                    : () {
+                        if (_controller.messageController.text
+                            .trim()
+                            .isNotEmpty) {
+                          _controller.sendMessage();
+                        }
+                      },
+              )),
         ],
       ),
     );

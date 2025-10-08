@@ -180,7 +180,6 @@ class _StaffFormDialog extends StatefulWidget {
 class _StaffFormDialogState extends State<_StaffFormDialog> {
   bool clinicAuth = false;
   bool appointmentAuth = false;
-  bool staffAuth = false;
   bool messagesAuth = false;
   Uint8List? selectedImageBytes;
   String generatedEmail = '';
@@ -504,7 +503,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     final authorities = <String>[];
     if (clinicAuth) authorities.add('Clinic');
     if (appointmentAuth) authorities.add('Appointments');
-    if (staffAuth) authorities.add('Staffs');
     if (messagesAuth) authorities.add('Messages');
 
     Navigator.of(context).pop();
@@ -859,42 +857,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
             value: appointmentAuth,
             onChanged: (val) => setState(() => appointmentAuth = val ?? false),
             activeColor: primaryBlue,
-            checkColor: Colors.white,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          Divider(height: 1, color: Colors.grey[300]),
-          CheckboxListTile(
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: vetPurple.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.group_rounded,
-                      size: 18, color: vetPurple),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Text(
-                    'Staff Management',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                  ),
-                ),
-              ],
-            ),
-            subtitle: const Padding(
-              padding: EdgeInsets.only(left: 40, top: 4),
-              child: Text(
-                'Add, edit, and remove staff accounts',
-                style: TextStyle(fontSize: 13),
-              ),
-            ),
-            value: staffAuth,
-            onChanged: (val) => setState(() => staffAuth = val ?? false),
-            activeColor: vetPurple,
             checkColor: Colors.white,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

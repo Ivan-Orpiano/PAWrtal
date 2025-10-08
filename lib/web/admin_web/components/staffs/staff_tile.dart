@@ -36,7 +36,6 @@ class _StaffTileState extends State<StaffTile>
   static const Color darkText = Color(0xFF374151);
   static const Color vetGreen = Color(0xFF34D399);
   static const Color vetOrange = Color(0xFFF59E0B);
-  static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
   @override
@@ -344,6 +343,7 @@ class _StaffTileState extends State<StaffTile>
                                       .map((auth) {
                                     IconData icon;
                                     List<Color> colors;
+                                    // Only 3 possible authorities now: Clinic, Appointments, Messages
                                     switch (auth) {
                                       case 'Clinic':
                                         icon = Icons.local_hospital;
@@ -352,10 +352,6 @@ class _StaffTileState extends State<StaffTile>
                                       case 'Appointments':
                                         icon = Icons.calendar_month;
                                         colors = [primaryBlue, softBlue];
-                                        break;
-                                      case 'Staffs':
-                                        icon = Icons.group;
-                                        colors = [vetPurple, deepBlue];
                                         break;
                                       case 'Messages':
                                         icon = Icons.message;
