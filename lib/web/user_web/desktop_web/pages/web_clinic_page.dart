@@ -483,20 +483,6 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
             ),
           ),
 
-if (_panelState == PanelState.static)
-  Positioned(
-    bottom: 80,
-    right: getResponsivePadding(screenWidth),
-    child: SizedBox(
-      width: getAppointmentPanelWidth(screenWidth),
-      child: EnhancedWebAppointmentPanel(
-        clinic: widget.clinic,
-        maxHeight: getAppointmentPanelMaxHeight(screenHeight),
-        compact: shouldUseCompactMode(screenHeight),
-      ),
-    ),
-  ),
-
           // Navigation bar overlay
           if (_showWidget)
           Positioned(
