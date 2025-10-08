@@ -179,64 +179,65 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     return screenHeight <= 900;
   }
 
-  Widget _buildMainContent(double screenWidth, double screenHeight) {
-    final appointmentWidth = getAppointmentPanelWidth(screenWidth);
-    final maxHeight = getAppointmentPanelMaxHeight(screenHeight);
-    final isCompact = shouldUseCompactMode(screenHeight);
+Widget _buildMainContent(double screenWidth, double screenHeight) {
+  final appointmentWidth = getAppointmentPanelWidth(screenWidth);
+  final maxHeight = getAppointmentPanelMaxHeight(screenHeight);
+  final isCompact = shouldUseCompactMode(screenHeight);
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: getLeftSideWidth(screenWidth)
-            ),
-            child: _buildLeftContent(),
+  return Container(
+    padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left side content
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: getLeftSideWidth(screenWidth)
           ),
-          const Flexible(
-            flex: 2,
-            child: SizedBox(width: 125),
+          child: _buildLeftContent(),
+        ),
+        
+        // Spacing between left and right
+        const Flexible(
+          flex: 2,
+          child: SizedBox(width: 125),
+        ),
+        
+        // Right side - appointment panel with visibility logic
+        SizedBox(
+          width: appointmentWidth,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 925),
+                    child: Visibility(
+                      visible: _panelState == PanelState.scrollable,
+                      child: EnhancedWebAppointmentPanel(
+                        clinic: widget.clinic,
+                        maxHeight: maxHeight,
+                        compact: isCompact,
+                      ),
+                    ),
+                  ),
+                  Visibility(
+                    visible: _panelState == PanelState.static,
+                    child: EnhancedWebAppointmentPanel(
+                      clinic: widget.clinic,
+                      maxHeight: maxHeight,
+                      compact: isCompact,
+                    ),
+                  )
+                ],
+              ),
+            ],
           ),
-          
-          // Appointment panel - reusable widget
-          SizedBox(
-            width: appointmentWidth,
-            child: _buildAppointmentPanelByState(
-              _panelState, 
-              maxHeight, 
-              isCompact,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Centralized appointment panel builder
-  Widget _buildAppointmentPanelByState(
-    PanelState state, 
-    double maxHeight, 
-    bool isCompact,
-  ) {
-    switch (state) {
-      case PanelState.scrollable:
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: EnhancedWebAppointmentPanel(
-            clinic: widget.clinic,
-            maxHeight: maxHeight,
-            compact: isCompact,
-          ),
-        );
-      case PanelState.positioned:
-      case PanelState.static:
-        // Return empty space with same height to maintain layout
-        // Panel will be shown as positioned overlay
-        return SizedBox(height: maxHeight);
-    }
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildLeftContent() {
     return Column(
