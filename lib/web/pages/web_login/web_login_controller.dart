@@ -12,16 +12,16 @@ class WebLoginController extends GetxController {
   WebLoginController(this._authRepository);
 
   final GetStorage _getStorage = GetStorage();
-  
+
   // Form controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final emailForPasswordResetController = TextEditingController();
-  
+
   // Form key
   final formKey = GlobalKey<FormState>();
   final resetPasswordFormKey = GlobalKey<FormState>();
-  
+
   // Reactive variables
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
@@ -54,13 +54,21 @@ class WebLoginController extends GetxController {
 
     try {
       isLoading.value = true;
-      
-      // Use the same method as your mobile login controller
+
+      print('>>> ============================================');
+      print('>>> WEB LOGIN CONTROLLER: Starting login...');
+      print('>>> ============================================');
+
+      // Call the repository login method
       final value = await _authRepository.login({
         "email": emailController.text.trim(),
         "password": passwordController.text,
       });
 
+      print('>>> Login response received');
+      print('>>> Response keys: ${value.keys}');
+
+      // Validate response
       final session = value["session"];
       if (session == null) {
         throw Exception("Login failed: Session data is missing");
@@ -73,66 +81,88 @@ class WebLoginController extends GetxController {
       }
       final userEmail = user.email;
 
+      // Store basic user info
       await _getStorage.write("userId", userId);
       await _getStorage.write("sessionId", session.$id);
-
-      String role = "";
-      bool matched = false;
-
-      // Check if account is admin
-      final clinicDoc = await _authRepository.getClinicByAdminId(userId);
-      if (clinicDoc != null) {
-        role = clinicDoc.data["role"];
-        await _getStorage.write("clinicId", clinicDoc.$id);
-        matched = true;
-      }
-
-      // Check if account is staff
-      if (!matched) {
-        final staffDoc = await _authRepository.getStaffByClinicId(userEmail);
-        if (staffDoc != null) {
-          role = staffDoc.data["role"];
-          await _getStorage.write("staffId", staffDoc.$id);
-          await _getStorage.write("clinicId", staffDoc.data["clinicId"]);
-          matched = true;
-        }
-      }
-
-      // Check if user (customer)
-      if (!matched) {
-        final userDoc = await _authRepository.getUserById(userId);
-        if (userDoc != null) {
-          role = userDoc.data["role"]; // role should be "user"
-          await _getStorage.write("customerId", userDoc.$id);
-          matched = true;
-        }
-      }
-
-      // Check if developer (super admin)
-      if (!matched && userEmail == "test.developer@gmail.com") {
-        role = "developer";
-        matched = true;
-      }
-
-      if (!matched) throw Exception("No role found for this account");
-
-      await _getStorage.write("role", role);
       await _getStorage.write("email", userEmail);
-      
-      // Store user name if available
+
       if (user.name != null) {
         await _getStorage.write("userName", user.name);
       }
 
+      print('>>> User ID: $userId');
+      print('>>> Email: $userEmail');
+
+      // Get role from response (already determined by provider)
+      String role = value["role"] ?? "";
+      print('>>> Role from response: $role');
+
+      if (role.isEmpty) {
+        throw Exception("Login failed: Role not determined");
+      }
+
+      // Store role-specific data
+      if (role == "admin") {
+        print('>>> Processing ADMIN login...');
+
+        final clinicId = value["clinicId"];
+        if (clinicId != null && clinicId.isNotEmpty) {
+          await _getStorage.write("clinicId", clinicId);
+          print('>>> Clinic ID stored: $clinicId');
+        } else {
+          print('>>> WARNING: Admin has no clinic ID!');
+        }
+      } else if (role == "staff") {
+        print('>>> Processing STAFF login...');
+
+        final clinicId = value["clinicId"];
+        if (clinicId != null && clinicId.isNotEmpty) {
+          await _getStorage.write("clinicId", clinicId);
+          print('>>> Clinic ID stored: $clinicId');
+        } else {
+          print('>>> WARNING: Staff has no clinic ID!');
+        }
+
+        if (value["staffDocumentId"] != null) {
+          await _getStorage.write("staffId", value["staffDocumentId"]);
+          print('>>> Staff ID stored: ${value["staffDocumentId"]}');
+        }
+
+        if (value["authorities"] != null) {
+          await _getStorage.write("authorities", value["authorities"]);
+          print('>>> Authorities stored: ${value["authorities"]}');
+        } else {
+          print('>>> WARNING: Staff has no authorities!');
+          await _getStorage.write("authorities", <String>[]);
+        }
+      } else if (role == "user" || role == "customer") {
+        print('>>> Processing USER/CUSTOMER login...');
+        // No additional data needed for regular users
+      }
+
+      // Store the role
+      await _getStorage.write("role", role);
+
+      print('>>> ============================================');
+      print('>>> STORAGE SUMMARY:');
+      print('>>> - userId: ${_getStorage.read("userId")}');
+      print('>>> - role: ${_getStorage.read("role")}');
+      print('>>> - clinicId: ${_getStorage.read("clinicId")}');
+      print('>>> - authorities: ${_getStorage.read("authorities")}');
+      print('>>> ============================================');
+
       // Navigate based on role
+      print('>>> Navigating to home...');
       _navigateBasedOnRole(role);
-      
+
       WebErrorHandler.handleSuccess('Login successful');
 
       // Clear controllers
       _clearControllers();
-      
     } catch (e) {
+      print('>>> ============================================');
+      print('>>> WEB LOGIN CONTROLLER ERROR: $e');
+      print('>>> ============================================');
       WebErrorHandler.handleError(e, context: 'Login');
     } finally {
       isLoading.value = false;
@@ -142,17 +172,14 @@ class WebLoginController extends GetxController {
   Future<void> signInWithGoogle() async {
     try {
       isLoading.value = true;
-      
-      // Use AppWriteProvider directly for Google sign-in like in mobile
+
       final appWriteProvider = AppWriteProvider();
       final success = await appWriteProvider.signInWithGoogle();
-      
+
       if (success) {
-        // For Google sign-in, typically redirects to user home
-        // You may need to implement additional role checking here
         await _getStorage.write("role", "user");
         _navigateBasedOnRole("user");
-        
+
         WebErrorHandler.handleSuccess('Logged in with Google successfully');
       } else {
         WebErrorHandler.handleError('Failed to login with Google');
@@ -169,14 +196,13 @@ class WebLoginController extends GetxController {
 
     try {
       WebLoadingHelper.showLoading(message: 'Sending recovery email...');
-      
+
       final appWriteProvider = AppWriteProvider();
-      final success = await appWriteProvider.sendRecoveryEmail(
-        emailForPasswordResetController.text.trim()
-      );
-      
+      final success = await appWriteProvider
+          .sendRecoveryEmail(emailForPasswordResetController.text.trim());
+
       WebLoadingHelper.hideLoading();
-      
+
       if (success) {
         WebErrorHandler.handleSuccess('Recovery email sent successfully');
         emailForPasswordResetController.clear();
@@ -190,18 +216,25 @@ class WebLoginController extends GetxController {
   }
 
   void _navigateBasedOnRole(String? role) {
+    print('>>> Navigating for role: $role');
+
     switch (role) {
       case "admin":
       case "staff":
+        print('>>> -> adminHome');
         Get.offAllNamed(Routes.adminHome);
         break;
       case "developer":
+        print('>>> -> superAdminHome');
         Get.offAllNamed(Routes.superAdminHome);
         break;
       case "user":
+      case "customer":
+        print('>>> -> userHome');
         Get.offAllNamed(Routes.userHome);
         break;
       default:
+        print('>>> ERROR: Invalid role');
         WebErrorHandler.handleError('Invalid user role');
         break;
     }
@@ -214,9 +247,6 @@ class WebLoginController extends GetxController {
 
   @override
   void onClose() {
-    // emailController.dispose();
-    // passwordController.dispose();
-    // emailForPasswordResetController.dispose();
     super.onClose();
   }
 }

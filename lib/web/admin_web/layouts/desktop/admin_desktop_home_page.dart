@@ -1,16 +1,14 @@
 import 'package:capstone_app/web/admin_web/components/appbar/admin_web_notif.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_web_profile.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_clinicpage.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_dashboard.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_messages.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_staffs.dart';
+import 'package:capstone_app/web/admin_web/components/staffs/data/permission_guard.dart';
+import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AdminDesktopHomePage extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
-  final bool canAccessStaffs;
+  final bool canAccessStaffs; // Kept for compatibility
 
   const AdminDesktopHomePage({
     super.key,
@@ -24,33 +22,29 @@ class AdminDesktopHomePage extends StatefulWidget {
 }
 
 class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
-  List<Widget> get _pages {
-    List<Widget> basePages = const [
-      AdminWebDashboard(),
-      AdminWebClinicpage(),
-      AdminWebAppointments(),
-      AdminWebMessages(),
-      AdminWebStaffs(),
-    ];
+  Widget _wrapWithPermissionGuard(
+      Widget page, int index, WebAdminHomeController controller) {
+    // Home page (index 0) doesn't need permission check
+    if (index == 0) return page;
 
-    // Only add staffs page if user has permission
-    // if (widget.canAccessStaffs) {
-    //   basePages.add(const AdminWebStaffs());
-    // }
+    // Admin has full access to everything
+    if (controller.isAdmin) return page;
 
-    return basePages;
-  }
+    // Staff users - check if they have permission for this page
+    final pageName = controller.navigationLabels[index];
+    final hasPermission = controller.hasAuthority(pageName);
 
-  List<String> get _navigationLabels {
-    List<String> baseLabels = ["Home", "Clinic", "Appointments", "Messages"];
-    if (widget.canAccessStaffs) {
-      baseLabels.add("Staffs");
-    }
-    return baseLabels;
+    return PermissionGuard(
+      hasPermission: hasPermission,
+      requiredPermission: pageName,
+      child: page,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<WebAdminHomeController>();
+
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0,
@@ -74,14 +68,18 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
             ),
           ),
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: _navigationLabels.asMap().entries.map((entry) {
-            int index = entry.key;
-            String label = entry.value;
-            return _buildNavItem(label, index);
-          }).toList(),
-        ),
+        title: Obx(() => Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                controller.navigationLabels.length,
+                (index) => _buildNavItem(
+                  controller,
+                  controller.navigationLabels[index],
+                  index,
+                  widget.selectedIndex == index,
+                ),
+              ),
+            )),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 60),
@@ -97,22 +95,57 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
           )
         ],
       ),
-      body: _pages[widget.selectedIndex],
+      body: Obx(() {
+        if (widget.selectedIndex >= controller.pages.length) {
+          return const Center(child: Text('Page not found'));
+        }
+
+        // Wrap the current page with permission guard
+        return _wrapWithPermissionGuard(
+          controller.pages[widget.selectedIndex],
+          widget.selectedIndex,
+          controller,
+        );
+      }),
     );
   }
 
-  Widget _buildNavItem(String title, int index) {
+  Widget _buildNavItem(
+    WebAdminHomeController controller,
+    String title,
+    int index,
+    bool isSelected,
+  ) {
+    // Check if user has permission for this page
+    final hasPermission = index == 0 || controller.hasAuthority(title);
+    final isViewOnly = !hasPermission && controller.isStaff;
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => widget.onItemSelected(index),
       child: Container(
         padding: const EdgeInsets.all(12),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            color: widget.selectedIndex == index ? Colors.black : Colors.grey,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isViewOnly)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 16,
+                  color: isSelected ? Colors.black54 : Colors.grey,
+                ),
+              ),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                color: isSelected ? Colors.black : Colors.grey,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );

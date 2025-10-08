@@ -10,6 +10,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
+import 'package:get_storage/get_storage.dart';
 
 import 'appointment_view_mode.dart';
 
@@ -69,12 +70,36 @@ class WebAppointmentController extends GetxController {
       final user = await authRepository.getUser();
       if (user == null) return;
 
-      final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
-      if (clinicDoc != null) {
-        clinicData.value = Clinic.fromMap(clinicDoc.data);
-        clinicData.value!.documentId = clinicDoc.$id;
-        await fetchClinicAppointments();
-        await _initializeRealTimeUpdates();
+      // Get user role from storage
+      final storage = GetStorage();
+      final userRole = storage.read('role') as String?;
+
+      String? clinicId;
+
+      if (userRole == 'staff') {
+        // Staff: Get clinicId from storage
+        clinicId = storage.read('clinicId') as String?;
+        print(
+            '>>> APPOINTMENTS: Staff mode - using stored clinicId: $clinicId');
+      } else {
+        // Admin: Get clinic by admin ID
+        print('>>> APPOINTMENTS: Admin mode - looking up clinic');
+        final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
+        if (clinicDoc != null) {
+          clinicId = clinicDoc.$id;
+        }
+      }
+
+      if (clinicId != null) {
+        final clinicDoc = await authRepository.getClinicById(clinicId);
+        if (clinicDoc != null) {
+          clinicData.value = Clinic.fromMap(clinicDoc.data);
+          clinicData.value!.documentId = clinicDoc.$id;
+          await fetchClinicAppointments();
+          await _initializeRealTimeUpdates();
+          print(
+              '>>> APPOINTMENTS: Clinic loaded: ${clinicData.value!.clinicName}');
+        }
       }
     } catch (e) {
       Get.snackbar("Error", "Failed to load clinic data: $e");

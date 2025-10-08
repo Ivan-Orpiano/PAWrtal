@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:get_storage/get_storage.dart';
 
 class AdminDashboardController extends GetxController {
   final AuthRepository authRepository;
@@ -329,10 +330,33 @@ class AdminDashboardController extends GetxController {
       final user = await authRepository.getUser();
       if (user == null) return;
 
-      final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
-      if (clinicDoc != null) {
-        clinicData.value = Clinic.fromMap(clinicDoc.data);
-        clinicData.value!.documentId = clinicDoc.$id;
+      // Get user role from storage
+      final storage = GetStorage();
+      final userRole = storage.read('role') as String?;
+
+      String? clinicId;
+
+      if (userRole == 'staff') {
+        // Staff: Get clinicId from storage
+        clinicId = storage.read('clinicId') as String?;
+        print('>>> DASHBOARD: Staff mode - using stored clinicId: $clinicId');
+      } else {
+        // Admin: Get clinic by admin ID
+        print('>>> DASHBOARD: Admin mode - looking up clinic');
+        final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
+        if (clinicDoc != null) {
+          clinicId = clinicDoc.$id;
+        }
+      }
+
+      if (clinicId != null) {
+        final clinicDoc = await authRepository.getClinicById(clinicId);
+        if (clinicDoc != null) {
+          clinicData.value = Clinic.fromMap(clinicDoc.data);
+          clinicData.value!.documentId = clinicDoc.$id;
+          print(
+              '>>> DASHBOARD: Clinic loaded: ${clinicData.value!.clinicName}');
+        }
       }
     } catch (e) {
       print("Error fetching clinic data: $e");

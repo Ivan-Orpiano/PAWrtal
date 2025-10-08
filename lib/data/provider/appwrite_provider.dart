@@ -55,20 +55,122 @@ class AppWriteProvider {
     );
   }
 
+  /// Enhanced regular login - CHECK ADMIN FIRST, THEN STAFF
   Future<Map<String, dynamic>> login(Map map) async {
-    final session = await account!.createEmailPasswordSession(
-      email: map["email"],
-      password: map["password"],
-    );
+    try {
+      final email = map["email"];
+      final password = map["password"];
 
-    final user = await account!.get();
-    final role = user.prefs.data["role"] ?? "customer";
+      print('>>> ============================================');
+      print('>>> LOGIN ATTEMPT');
+      print('>>> Email: $email');
+      print('>>> ============================================');
 
-    return {
-      "session": session,
-      "user": user,
-      "role": role,
-    };
+      // Step 1: Create session first
+      print('>>> Step 1: Creating session...');
+      final session = await account!.createEmailPasswordSession(
+        email: email,
+        password: password,
+      );
+      print('>>> Session created: ${session.$id}');
+
+      final user = await account!.get();
+      print('>>> User retrieved: ${user.$id}');
+
+      // Step 2: CRITICAL - Check if ADMIN first (highest priority)
+      print('>>> Step 2: Checking if user is ADMIN...');
+      final clinicDoc = await getClinicByAdminId(user.$id);
+
+      if (clinicDoc != null) {
+        print('>>> ADMIN FOUND! User is admin of clinic: ${clinicDoc.$id}');
+        print('>>> Clinic name: ${clinicDoc.data['clinicName']}');
+
+        return {
+          'success': true,
+          'session': session,
+          'user': user,
+          'role': 'admin', // Force admin role
+          'clinicId': clinicDoc.$id,
+          'message': 'Admin login successful',
+        };
+      }
+
+      // Step 3: Check if STAFF (only if not admin)
+      print('>>> Step 3: Not admin, checking if staff...');
+      final staffCheck = await checkIfStaffAccount(email);
+
+      if (staffCheck['isStaff'] == true) {
+        print('>>> STAFF FOUND! Processing as staff...');
+
+        if (staffCheck['isActive'] != true) {
+          print('>>> ERROR: Staff account is deactivated');
+          return {
+            'success': false,
+            'isStaff': true,
+            'message': 'Staff account is deactivated',
+          };
+        }
+
+        final staffDoc = staffCheck['staffDoc'];
+        final role = staffCheck['role'] ?? 'staff';
+        final clinicId = staffCheck['clinicId'] ?? '';
+        final authorities = staffCheck['authorities'] ?? [];
+
+        print('>>> Staff role: $role');
+        print('>>> Staff clinic: $clinicId');
+        print('>>> Staff authorities: $authorities');
+
+        return {
+          'success': true,
+          'isStaff': true,
+          'session': session,
+          'user': user,
+          'role': role,
+          'clinicId': clinicId,
+          'staffDoc': staffDoc,
+          'authorities': authorities,
+          'staffDocumentId': staffDoc?.$id ?? '',
+          'message': 'Staff login successful',
+        };
+      }
+
+      // Step 4: Regular user/customer
+      print('>>> Step 4: Regular user login...');
+      String? role = user.prefs.data["role"];
+      print('>>> Role from prefs: $role');
+
+      if (role == null || role.isEmpty) {
+        print('>>> No role in prefs, checking database...');
+        try {
+          final userDoc = await getUserById(user.$id);
+          if (userDoc != null) {
+            role = userDoc.data['role'] ?? 'customer';
+            print('>>> Role from database: $role');
+          } else {
+            print('>>> No user doc found, defaulting to customer');
+            role = 'customer';
+          }
+        } catch (e) {
+          print('>>> Error fetching from database: $e');
+          role = 'customer';
+        }
+      }
+
+      print('>>> Final role: $role');
+      print('>>> ============================================');
+
+      return {
+        'success': true,
+        'session': session,
+        'user': user,
+        'role': role,
+        'message': 'Login successful',
+      };
+    } catch (e) {
+      print('>>> LOGIN ERROR: $e');
+      print('>>> ============================================');
+      rethrow;
+    }
   }
 
   Future<bool> signInWithGoogle() async {
@@ -384,8 +486,7 @@ class AppWriteProvider {
   Future<models.Document> createMedicalRecord(Map<String, dynamic> data) async {
     return await databases!.createDocument(
       databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants
-          .medicalRecordsCollectionID, // You'll need to add this constant
+      collectionId: AppwriteConstants.medicalRecordsCollectionID,
       documentId: ID.unique(),
       data: data,
     );
@@ -505,15 +606,12 @@ class AppWriteProvider {
 
         InputFile inputFile;
 
-        // Handle web vs mobile platforms
         if (file.bytes != null) {
-          // Web platform - use bytes
           inputFile = InputFile.fromBytes(
             bytes: file.bytes!,
             filename: fileName,
           );
         } else if (file.path != null) {
-          // Mobile platform - use path
           inputFile = InputFile.fromPath(
             path: file.path!,
             filename: fileName,
@@ -532,14 +630,12 @@ class AppWriteProvider {
         uploadedFiles.add(response);
       } catch (e) {
         print("Error uploading image ${files[i].name}: $e");
-        // Continue with other images even if one fails
       }
     }
 
     return uploadedFiles;
   }
 
-  // Delete multiple images from clinic gallery
   Future<void> deleteClinicGalleryImages(List<String> fileIds) async {
     for (String fileId in fileIds) {
       try {
@@ -549,14 +645,11 @@ class AppWriteProvider {
         );
       } catch (e) {
         print("Error deleting image $fileId: $e");
-        // Continue with other deletions even if one fails
       }
     }
   }
 
-  // Get image URL from file ID with proper authentication
   String getImageUrl(String fileId) {
-    // Simple, direct URL construction for public access
     final url =
         '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
     print("Generated URL: $url");
@@ -627,7 +720,7 @@ class AppWriteProvider {
       "createdBy": map["createdBy"] ?? "unknown",
       "image": map.containsKey("image") && map["image"].isNotEmpty
           ? map["image"]
-          : currentImage, // use current image if no new one is uploaded
+          : currentImage,
     };
 
     final response = await databases!.updateDocument(
@@ -664,7 +757,6 @@ class AppWriteProvider {
   Future<Document?> getOrCreateConversation(
       String userId, String clinicId) async {
     try {
-      // First, try to find existing conversation
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.conversationsCollectionID,
@@ -678,12 +770,11 @@ class AppWriteProvider {
         return result.documents.first;
       }
 
-      // If no conversation exists, create new one
       final conversationData = {
         'userId': userId,
         'clinicId': clinicId,
         'unreadCount': 0,
-        'userUnreadCount': 0, // Initialize both unread counts
+        'userUnreadCount': 0,
         'clinicUnreadCount': 0,
         'isActive': true,
         'createdAt': DateTime.now().toIso8601String(),
@@ -734,7 +825,7 @@ class AppWriteProvider {
     );
   }
 
-// ============= MESSAGE METHODS =============
+  // ============= MESSAGE METHODS =============
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
     final messageDoc = await databases!.createDocument(
@@ -744,11 +835,9 @@ class AppWriteProvider {
       data: data,
     );
 
-    // After creating message, update conversation unread counts properly
     final conversationId = data['conversationId'];
     final senderType = data['senderType'];
 
-    // Get current conversation
     try {
       final conversation = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
@@ -756,7 +845,6 @@ class AppWriteProvider {
         documentId: conversationId,
       );
 
-      // Get current unread counts
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
       final currentClinicUnreadCount =
           conversation.data['clinicUnreadCount'] ?? 0;
@@ -768,18 +856,14 @@ class AppWriteProvider {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      // Increment unread count for the RECEIVER only
       if (senderType == 'user') {
-        // User sent message, increment clinic's unread count, keep user's count same
         updateData['clinicUnreadCount'] = currentClinicUnreadCount + 1;
         updateData['userUnreadCount'] = currentUserUnreadCount;
       } else {
-        // Admin/clinic sent message, increment user's unread count, keep clinic's count same
         updateData['userUnreadCount'] = currentUserUnreadCount + 1;
         updateData['clinicUnreadCount'] = currentClinicUnreadCount;
       }
 
-      // Update total unread count for backward compatibility
       updateData['unreadCount'] =
           updateData['userUnreadCount'] + updateData['clinicUnreadCount'];
 
@@ -805,7 +889,6 @@ class AppWriteProvider {
       Query.limit(limit),
     ];
 
-    // For pagination
     if (lastMessageId != null) {
       queries.add(Query.cursorBefore(lastMessageId));
     }
@@ -816,7 +899,7 @@ class AppWriteProvider {
       queries: queries,
     );
 
-    return result.documents.reversed.toList(); // Reverse to show oldest first
+    return result.documents.reversed.toList();
   }
 
   Future<Document> updateMessage(
@@ -831,18 +914,16 @@ class AppWriteProvider {
 
   Future<void> markMessagesAsRead(String conversationId, String userId) async {
     try {
-      // Get unread messages for this user in this conversation
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.messagesCollectionID,
         queries: [
           Query.equal("conversationId", conversationId),
-          Query.equal("receiverId", userId), // Only messages TO this user
+          Query.equal("receiverId", userId),
           Query.equal("isRead", false),
         ],
       );
 
-      // Mark each message as read
       for (var doc in result.documents) {
         await databases!.updateDocument(
           databaseId: AppwriteConstants.dbID,
@@ -852,7 +933,6 @@ class AppWriteProvider {
         );
       }
 
-      // Get current conversation to determine user type
       final conversation = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.conversationsCollectionID,
@@ -860,27 +940,20 @@ class AppWriteProvider {
       );
 
       final conversationUserId = conversation.data['userId'];
-      final conversationClinicId = conversation.data['clinicId'];
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
       final currentClinicUnreadCount =
           conversation.data['clinicUnreadCount'] ?? 0;
 
       Map<String, dynamic> updateData = {};
 
-      // Determine which unread count to reset based on who is reading
       if (userId == conversationUserId) {
-        // User is reading, reset their unread count
         updateData['userUnreadCount'] = 0;
-        updateData['clinicUnreadCount'] =
-            currentClinicUnreadCount; // Keep clinic count
+        updateData['clinicUnreadCount'] = currentClinicUnreadCount;
       } else {
-        // Admin/clinic is reading, reset their unread count
         updateData['clinicUnreadCount'] = 0;
-        updateData['userUnreadCount'] =
-            currentUserUnreadCount; // Keep user count
+        updateData['userUnreadCount'] = currentUserUnreadCount;
       }
 
-      // Update total unread count for backward compatibility
       updateData['unreadCount'] =
           updateData['userUnreadCount'] + updateData['clinicUnreadCount'];
 
@@ -898,7 +971,7 @@ class AppWriteProvider {
     }
   }
 
-// ============= CONVERSATION STARTERS METHODS =============
+  // ============= CONVERSATION STARTERS METHODS =============
 
   Future<Document> createConversationStarter(Map<String, dynamic> data) async {
     return await databases!.createDocument(
@@ -941,19 +1014,16 @@ class AppWriteProvider {
     );
   }
 
-// Initialize default conversation starters for a clinic
   Future<void> initializeDefaultConversationStarters(String clinicId) async {
     try {
       print('Creating default conversation starters for clinic: $clinicId');
 
-      // Check if clinic already has starters
       final existing = await getClinicConversationStarters(clinicId);
       if (existing.isNotEmpty) {
         print('Clinic already has ${existing.length} starters');
         return;
       }
 
-      // Create default starters WITHOUT starterId field - AppWrite will auto-generate document ID
       final defaultStarters = [
         {
           'clinicId': clinicId,
@@ -1019,12 +1089,11 @@ class AppWriteProvider {
     }
   }
 
-// ============= USER STATUS METHODS =============
+  // ============= USER STATUS METHODS =============
 
   Future<Document> createOrUpdateUserStatus(
       String userId, Map<String, dynamic> data) async {
     try {
-      // First, try to find existing status
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.userStatusCollectionID,
@@ -1032,7 +1101,6 @@ class AppWriteProvider {
       );
 
       if (result.documents.isNotEmpty) {
-        // Update existing status
         return await databases!.updateDocument(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.userStatusCollectionID,
@@ -1040,7 +1108,6 @@ class AppWriteProvider {
           data: data,
         );
       } else {
-        // Create new status
         data['userId'] = userId;
         return await databases!.createDocument(
           databaseId: AppwriteConstants.dbID,
@@ -1089,13 +1156,12 @@ class AppWriteProvider {
     await createOrUpdateUserStatus(userId, data);
   }
 
-// ============= REAL-TIME SUBSCRIPTION METHODS =============
+  // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   StreamSubscription<RealtimeMessage>? _messageSubscription;
   StreamSubscription<RealtimeMessage>? _conversationSubscription;
   StreamSubscription<RealtimeMessage>? _statusSubscription;
 
-// Subscribe to messages in a conversation
   Stream<RealtimeMessage> subscribeToMessages(String conversationId) {
     final realtime = Realtime(client);
     return realtime
@@ -1104,12 +1170,10 @@ class AppWriteProvider {
         ])
         .stream
         .where((message) {
-          // Filter messages for specific conversation
           return message.payload['conversationId'] == conversationId;
         });
   }
 
-// Subscribe to conversation updates
   Stream<RealtimeMessage> subscribeToConversations(String userId) {
     final realtime = Realtime(client);
     return realtime
@@ -1118,12 +1182,10 @@ class AppWriteProvider {
         ])
         .stream
         .where((message) {
-          // Filter conversations for specific user
           return message.payload['userId'] == userId;
         });
   }
 
-// Subscribe to user status updates
   Stream<RealtimeMessage> subscribeToUserStatus(String userId) {
     final realtime = Realtime(client);
     return realtime
@@ -1136,7 +1198,6 @@ class AppWriteProvider {
         });
   }
 
-// Cleanup subscriptions
   void disposeMessageSubscriptions() {
     _messageSubscription?.cancel();
     _conversationSubscription?.cancel();
@@ -1151,7 +1212,6 @@ class AppWriteProvider {
         ])
         .stream
         .where((message) {
-          // Filter appointments for specific user
           return message.payload['userId'] == userId;
         });
   }
@@ -1159,7 +1219,6 @@ class AppWriteProvider {
   Future<List<String>> getOccupiedTimeSlots(
       String clinicId, DateTime date) async {
     try {
-      // Format date to start and end of day
       final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
@@ -1170,18 +1229,15 @@ class AppWriteProvider {
           Query.equal("clinicId", clinicId),
           Query.greaterThanEqual("dateTime", startOfDay.toIso8601String()),
           Query.lessThanEqual("dateTime", endOfDay.toIso8601String()),
-          // Only count non-cancelled appointments
           Query.notEqual("status", "cancelled"),
           Query.notEqual("status", "declined"),
           Query.notEqual("status", "no_show"),
         ],
       );
 
-      // Extract time slots from appointments
       final List<String> occupiedSlots = [];
       for (var doc in result.documents) {
         final appointmentDateTime = DateTime.parse(doc.data['dateTime']);
-        // Format time as HH:MM
         final timeString =
             '${appointmentDateTime.hour.toString().padLeft(2, '0')}:${appointmentDateTime.minute.toString().padLeft(2, '0')}';
         occupiedSlots.add(timeString);
@@ -1202,13 +1258,12 @@ class AppWriteProvider {
         ])
         .stream
         .where((message) {
-          // Filter appointments for specific clinic
           return message.payload['clinicId'] == clinicId;
         });
   }
-// ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
-  /// Create a complete staff account - WORKING VERSION
+  // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
+
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
     required String email,
@@ -1220,54 +1275,21 @@ class AppWriteProvider {
     String? phone,
     String? createdBy,
   }) async {
-    String? adminSessionId;
-
     try {
-      print('=== STAFF CREATION START ===');
+      print('>>> ============================================');
+      print('>>> STAFF ACCOUNT CREATION START');
+      print('>>> ============================================');
 
-      // Save admin session ID before creating new user
-      try {
-        final sessions = await account!.listSessions();
-        if (sessions.sessions.isNotEmpty) {
-          adminSessionId = sessions.sessions.first.$id;
-          print('Admin session saved: $adminSessionId');
-        }
-      } catch (e) {
-        print('Could not get admin session: $e');
-      }
-
-      // Step 1: Create authentication account
-      // WARNING: This logs in as the NEW user automatically
-      print('Creating auth user...');
+      print('>>> Step 1: Creating Appwrite auth user...');
       final authUser = await account!.create(
         userId: ID.unique(),
         email: email,
         password: password,
         name: name,
       );
-      print('Auth user created: ${authUser.$id}');
+      print('>>> Auth user created: ${authUser.$id}');
 
-      // Step 2: Now we are logged in AS the new user
-      // Set preferences for THIS user (the new staff member)
-      print('Setting preferences...');
-      try {
-        await account!.updatePrefs(prefs: {
-          'role': 'staff',
-          'clinicId': clinicId,
-          'verified': false,
-        });
-        print('Preferences set successfully');
-
-        // Verify preferences were set
-        final updatedUser = await account!.get();
-        print('Verified role in prefs: ${updatedUser.prefs.data["role"]}');
-      } catch (prefError) {
-        print('ERROR setting preferences: $prefError');
-        throw Exception('Failed to set user role: $prefError');
-      }
-
-      // Step 3: Create staff database record BEFORE logging out
-      print('Creating staff database record...');
+      print('>>> Step 2: Creating staff database record...');
       final staffData = {
         'userId': authUser.$id,
         'name': name,
@@ -1284,47 +1306,38 @@ class AppWriteProvider {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
+      print('>>> Staff data to be saved:');
+      print('>>> Role: ${staffData['role']}');
+      print('>>> Email: ${staffData['email']}');
+      print('>>> Authorities: ${staffData['authorities']}');
+
       final staffDoc = await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         documentId: ID.unique(),
         data: staffData,
       );
-      print('Staff database record created: ${staffDoc.$id}');
+      print('>>> Staff database record created: ${staffDoc.$id}');
+      print('>>> Staff role in doc: ${staffDoc.data['role']}');
 
-      // Step 4: Logout the new user
-      print('Logging out new user...');
-      try {
-        await account!.deleteSession(sessionId: 'current');
-        print('New user logged out');
-      } catch (e) {
-        print('Warning: Could not delete new user session: $e');
-      }
+      print('>>> ============================================');
+      print('>>> STAFF ACCOUNT CREATION SUCCESS');
+      print('>>> ============================================');
 
-      print('=== STAFF CREATION SUCCESS ===');
       return {
         'success': true,
         'authUser': authUser,
         'staffDoc': staffDoc,
         'message': 'Staff account created successfully',
-        'adminSessionId': adminSessionId,
       };
     } catch (e) {
-      print('=== STAFF CREATION ERROR ===');
-      print('Error: $e');
-
-      // Try to logout any session that might be active
-      try {
-        await account!.deleteSession(sessionId: 'current');
-      } catch (cleanupError) {
-        print('Cleanup error: $cleanupError');
-      }
-
+      print('>>> ============================================');
+      print('>>> STAFF ACCOUNT CREATION ERROR: $e');
+      print('>>> ============================================');
       rethrow;
     }
   }
 
-  /// Get all staff members for a specific clinic
   Future<List<Document>> getClinicStaff(String clinicId) async {
     try {
       final result = await databases!.listDocuments(
@@ -1343,9 +1356,12 @@ class AppWriteProvider {
     }
   }
 
-  /// Get staff by user ID (for authentication)
   Future<Document?> getStaffByUserId(String userId) async {
     try {
+      print('>>> ==========================================');
+      print('>>> GET STAFF BY USER ID');
+      print('>>> User ID: $userId');
+
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -1354,14 +1370,98 @@ class AppWriteProvider {
           Query.equal('isActive', true),
         ],
       );
-      return result.documents.isNotEmpty ? result.documents.first : null;
+
+      if (result.documents.isEmpty) {
+        print('>>> No staff found for user ID: $userId');
+        print('>>> ==========================================');
+        return null;
+      }
+
+      final doc = result.documents.first;
+
+      print('>>> Staff found!');
+      print('>>> Document ID: ${doc.$id}');
+      print('>>> Name: ${doc.data['name']}');
+      print('>>> Email: ${doc.data['email']}');
+      print('>>> Role: ${doc.data['role']}');
+      print('>>> Clinic ID: ${doc.data['clinicId']}');
+      print('>>> Authorities: ${doc.data['authorities']}');
+      print('>>> Is Active: ${doc.data['isActive']}');
+      print('>>> ==========================================');
+
+      return doc;
     } catch (e) {
-      print('Error getting staff by user ID: $e');
+      print('>>> Error getting staff by user ID: $e');
+      print('>>> ==========================================');
       return null;
     }
   }
 
-  /// Update staff permissions/authorities
+  /// NEW: Get staff by email (fallback method when userId doesn't match)
+  Future<Document?> getStaffByEmail(String email) async {
+    try {
+      print('>>> ==========================================');
+      print('>>> GET STAFF BY EMAIL');
+      print('>>> Email: $email');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        queries: [
+          Query.equal('email', email),
+          Query.equal('isActive', true),
+        ],
+      );
+
+      if (result.documents.isEmpty) {
+        print('>>> No staff found for email: $email');
+        print('>>> ==========================================');
+        return null;
+      }
+
+      final doc = result.documents.first;
+
+      print('>>> Staff found by email!');
+      print('>>> Document ID: ${doc.$id}');
+      print('>>> Name: ${doc.data['name']}');
+      print('>>> UserId in DB: ${doc.data['userId']}');
+      print('>>> Email: ${doc.data['email']}');
+      print('>>> Role: ${doc.data['role']}');
+      print('>>> Clinic ID: ${doc.data['clinicId']}');
+      print('>>> ==========================================');
+
+      return doc;
+    } catch (e) {
+      print('>>> Error getting staff by email: $e');
+      print('>>> ==========================================');
+      return null;
+    }
+  }
+
+  /// NEW: Fix userId mismatch in staff record
+  Future<void> fixStaffUserId(String staffDocId, String correctUserId) async {
+    try {
+      print('>>> Fixing staff userId...');
+      print('>>> Staff Doc ID: $staffDocId');
+      print('>>> Correct User ID: $correctUserId');
+
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: staffDocId,
+        data: {
+          'userId': correctUserId,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      print('>>> Staff userId updated successfully');
+    } catch (e) {
+      print('>>> Error fixing staff userId: $e');
+      rethrow;
+    }
+  }
+
   Future<Document> updateStaffAuthorities(
     String staffDocumentId,
     List<String> authorities,
@@ -1382,7 +1482,56 @@ class AppWriteProvider {
     }
   }
 
-  /// Update staff information
+  Future<void> migrateExistingStaffRecords() async {
+    try {
+      print('>>> ==========================================');
+      print('>>> MIGRATING EXISTING STAFF RECORDS');
+      print('>>> Adding role field to all staff records');
+      print('>>> ==========================================');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+      );
+
+      print('>>> Found ${result.documents.length} staff records');
+
+      for (var doc in result.documents) {
+        try {
+          final currentRole = doc.data['role'];
+
+          if (currentRole == null || currentRole.isEmpty) {
+            print(
+                '>>> Updating staff: ${doc.data['name']} (${doc.data['email']})');
+
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.staffCollectionID,
+              documentId: doc.$id,
+              data: {
+                'role': 'staff',
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
+
+            print('>>> Role field added successfully');
+          } else {
+            print(
+                '>>> Staff already has role: ${doc.data['name']} - $currentRole');
+          }
+        } catch (e) {
+          print('>>> Error updating staff ${doc.$id}: $e');
+        }
+      }
+
+      print('>>> ==========================================');
+      print('>>> MIGRATION COMPLETE');
+      print('>>> ==========================================');
+    } catch (e) {
+      print('>>> Migration error: $e');
+    }
+  }
+
   Future<Document> updateStaffInfo({
     required String staffDocumentId,
     String? name,
@@ -1412,11 +1561,9 @@ class AppWriteProvider {
     }
   }
 
-  /// Deactivate staff account (soft delete)
   Future<void> deactivateStaffAccount(
       String staffDocumentId, String userId) async {
     try {
-      // Deactivate in database
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -1426,16 +1573,12 @@ class AppWriteProvider {
           'updatedAt': DateTime.now().toIso8601String(),
         },
       );
-
-      // Note: We don't delete the auth account to preserve data integrity
-      // Admin can manually delete from Appwrite console if needed
     } catch (e) {
       print('Error deactivating staff account: $e');
       rethrow;
     }
   }
 
-  /// Permanently delete staff account
   Future<void> deleteStaffAccount(String staffDocumentId) async {
     try {
       await databases!.deleteDocument(
@@ -1449,7 +1592,6 @@ class AppWriteProvider {
     }
   }
 
-  /// Update clinic settings email template
   Future<Document> updateClinicSettingsEmailTemplate(
     String clinicSettingsDocumentId,
     String newTemplate,
@@ -1470,16 +1612,13 @@ class AppWriteProvider {
     }
   }
 
-  /// Update all staff emails when template changes
   Future<void> updateAllStaffEmailsForClinic(
     String clinicId,
     String newTemplate,
   ) async {
     try {
-      // Get all staff for this clinic
       final staffList = await getClinicStaff(clinicId);
 
-      // Update each staff email
       for (var staffDoc in staffList) {
         final staffName = staffDoc.data['name'] as String;
         final cleanName = staffName
@@ -1488,7 +1627,6 @@ class AppWriteProvider {
             .replaceAll(' ', '.');
         final newEmail = newTemplate.replaceAll('{name}', cleanName);
 
-        // Update staff document
         await databases!.updateDocument(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.staffCollectionID,
@@ -1499,8 +1637,6 @@ class AppWriteProvider {
           },
         );
 
-        // Note: Appwrite doesn't allow email update for existing auth users
-        // New staff will use the new template
         print('Updated email for ${staffDoc.$id} to: $newEmail');
       }
     } catch (e) {
@@ -1509,10 +1645,10 @@ class AppWriteProvider {
     }
   }
 
-  /// Check if email belongs to a staff account (does NOT authenticate)
   Future<Map<String, dynamic>> checkIfStaffAccount(String email) async {
     try {
-      // Just check if this email exists in staff table
+      print('>>> Checking staff account in database for: $email');
+
       final staffResult = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -1522,6 +1658,7 @@ class AppWriteProvider {
       );
 
       if (staffResult.documents.isEmpty) {
+        print('>>> No staff account found in database');
         return {
           'isStaff': false,
         };
@@ -1529,28 +1666,45 @@ class AppWriteProvider {
 
       final staffDoc = staffResult.documents.first;
       final isActive = staffDoc.data['isActive'] ?? true;
+      final role = staffDoc.data['role'] ?? 'staff';
+      final clinicId = staffDoc.data['clinicId'] ?? '';
+      final authorities = staffDoc.data['authorities'] ?? [];
+
+      print('>>> Staff account found in database!');
+      print('>>> Staff Document ID: ${staffDoc.$id}');
+      print('>>> Is active: $isActive');
+      print('>>> Role from database: $role');
+      print('>>> Clinic ID: $clinicId');
+      print('>>> Authorities: $authorities');
 
       return {
         'isStaff': true,
         'isActive': isActive,
         'staffDoc': staffDoc,
-        'clinicId': staffDoc.data['clinicId'] ?? '',
+        'clinicId': clinicId,
+        'role': role,
+        'authorities': authorities,
       };
     } catch (e) {
-      print('Error checking staff account: $e');
+      print('>>> Error checking staff account: $e');
       return {
         'isStaff': false,
       };
     }
   }
 
-  /// Staff login - uses regular auth, just adds staff context
   Future<Map<String, dynamic>> staffLogin(String email, String password) async {
     try {
-      // First check if this is a staff account (NO authentication yet)
+      print('>>> ============================================');
+      print('>>> STAFF LOGIN START');
+      print('>>> ============================================');
+      print('>>> Email: $email');
+
+      print('>>> Step 1: Checking if staff account in database...');
       final staffCheck = await checkIfStaffAccount(email);
 
       if (staffCheck['isStaff'] != true) {
+        print('>>> ERROR: Not a staff account');
         return {
           'success': false,
           'isStaff': false,
@@ -1558,8 +1712,8 @@ class AppWriteProvider {
         };
       }
 
-      // Check if staff account is active
       if (staffCheck['isActive'] != true) {
+        print('>>> ERROR: Staff account is deactivated');
         return {
           'success': false,
           'isStaff': true,
@@ -1567,38 +1721,63 @@ class AppWriteProvider {
         };
       }
 
-      // Now authenticate (same as regular login)
+      print('>>> Step 2: Staff account confirmed and active');
+
+      print('>>> Step 3: Creating Appwrite session...');
       final session = await account!.createEmailPasswordSession(
         email: email,
         password: password,
       );
+      print('>>> Session created successfully: ${session.$id}');
 
       final user = await account!.get();
+      print('>>> User retrieved: ${user.$id}');
+      print('>>> User email: ${user.email}');
 
-      // Return success with staff context
-      return {
+      final staffDoc = staffCheck['staffDoc'];
+      final role = staffCheck['role'] ?? 'staff';
+      final clinicId = staffCheck['clinicId'] ?? '';
+      final authorities = staffCheck['authorities'] ?? [];
+
+      print('>>> ============================================');
+      print('>>> DATA FROM DATABASE (NOT PREFS):');
+      print('>>> Role: $role');
+      print('>>> Clinic ID: $clinicId');
+      print('>>> Authorities: $authorities');
+      print('>>> Staff Doc ID: ${staffDoc?.$id}');
+      print('>>> ============================================');
+
+      final result = {
         'success': true,
         'isStaff': true,
         'session': session,
         'user': user,
-        'role': 'staff',
-        'clinicId': staffCheck['clinicId'],
-        'staffDoc': staffCheck['staffDoc'],
-        'authorities': staffCheck['staffDoc']?.data['authorities'] ?? [],
+        'role': role,
+        'clinicId': clinicId,
+        'staffDoc': staffDoc,
+        'authorities': authorities,
+        'staffDocumentId': staffDoc?.$id ?? '',
         'message': 'Staff login successful',
       };
+
+      print('>>> STAFF LOGIN SUCCESS');
+      print('>>> Result role: ${result['role']}');
+      print('>>> ============================================');
+
+      return result;
     } catch (e) {
-      print('Staff login error: $e');
-      // Return the actual error for debugging
+      print('>>> ============================================');
+      print('>>> STAFF LOGIN ERROR');
+      print('>>> Error: $e');
+      print('>>> ============================================');
       return {
         'success': false,
-        'isStaff': true, // Keep as true since we confirmed it's a staff account
+        'isStaff': true,
         'message': 'Authentication failed: ${e.toString()}',
       };
     }
   }
 
-  /// Check if staff has specific authority
   Future<bool> checkStaffAuthority(String userId, String authority) async {
     try {
       final staffDoc = await getStaffByUserId(userId);
@@ -1614,7 +1793,6 @@ class AppWriteProvider {
     }
   }
 
-  /// Get staff statistics for a clinic
   Future<Map<String, int>> getClinicStaffStats(String clinicId) async {
     try {
       final allStaff = await databases!.listDocuments(
