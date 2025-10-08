@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
@@ -23,21 +24,24 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
   final TextEditingController vetContact = TextEditingController();
   final TextEditingController vetEmail = TextEditingController();
   final TextEditingController vetPassword = TextEditingController();
+  final TextEditingController vetConfirmPassword = TextEditingController();
 
   final int vetNameLimit = 69;
-  final int vetAddressLimit = 39;
+  final int vetAddressLimit = 69;
   final int vetContactLimit = 11;
-  final int vetEmailLimit = 29;
-  final int vetPasswordLimit = 19;
+  final int vetEmailLimit = 39;
+  final int vetPasswordLimit = 29;
 
   Color vetNameBorderColor = Colors.grey;
   Color vetAddressBorderColor = Colors.grey;
   Color vetContactBorderColor = Colors.grey;
   Color vetEmailBorderColor = Colors.grey;
   Color vetPasswordBorderColor = Colors.grey;
+  Color vetConfirmPasswordBorderColor = Colors.grey;
 
   bool isLoading = false;
   bool isPasswordVisible = false;
+  bool isConfirmPasswordVisible = false;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -74,12 +78,18 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
 
     _fadeController.forward();
     _slideController.forward();
+
+    vetContact.text = "09";
+    vetContact.selection = TextSelection.fromPosition(
+      TextPosition(offset: vetContact.text.length),
+    );
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    vetConfirmPassword.dispose();
     super.dispose();
   }
 
@@ -100,7 +110,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
   void _onVetContactChanged(String value) {
     setState(() {
       vetContactBorderColor =
-          value.length > vetContactLimit ? Colors.orange : Colors.grey;
+          value.length == vetContactLimit ? Colors.grey : Colors.orange;
     });
   }
 
@@ -118,6 +128,13 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     });
   }
 
+  void _onConfirmPasswordChanged(String value) {
+    setState(() {
+      vetConfirmPasswordBorderColor =
+          value.length > vetPasswordLimit ? Colors.orange : Colors.grey;
+    });
+  }
+
   Widget _buildAnimatedTextField({
     required TextEditingController controller,
     required String labelText,
@@ -130,6 +147,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     Widget? suffixIcon,
     IconData? prefixIcon,
     int animationDelay = 0,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -159,6 +177,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                 obscureText: obscureText,
                 keyboardType: keyboardType,
                 onChanged: onChanged,
+                inputFormatters: inputFormatters,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -427,19 +446,53 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                               ),
                               _buildAnimatedTextField(
                                 controller: vetContact,
-                                labelText: "Contact Number ",
+                                labelText: "Contact Number",
                                 maxLength: vetContactLimit,
                                 borderColor: vetContactBorderColor,
                                 onChanged: _onVetContactChanged,
                                 keyboardType: TextInputType.number,
                                 prefixIcon: Icons.phone_rounded,
                                 animationDelay: 200,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  TextInputFormatter.withFunction(
+                                      (oldValue, newValue) {
+                                    String text = newValue.text;
+                                    if (text.length < 2) {
+                                      return const TextEditingValue(
+                                        text: '09',
+                                        selection:
+                                            TextSelection.collapsed(offset: 2),
+                                      );
+                                    }
+                                    if (!text.startsWith('09')) {
+                                      text = '09' +
+                                          text.replaceAll(RegExp(r'^0*9*'), '');
+                                    }
+
+                                    if (text.length > vetContactLimit) {
+                                      text = text.substring(0, vetContactLimit);
+                                    }
+                                    int offset = newValue.selection.baseOffset;
+                                    if (offset < 2) {
+                                      offset = 2;
+                                    }
+                                    return TextEditingValue(
+                                      text: text,
+                                      selection: TextSelection.collapsed(
+                                          offset: offset),
+                                    );
+                                  }),
+                                ],
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
                                     return 'Contact Number is required';
                                   }
                                   if (!RegExp(r'^\d+$').hasMatch(value)) {
                                     return 'Contact Number must be numeric';
+                                  }
+                                  if (!value.startsWith('09')) {
+                                    return 'Contact Number must start with 09';
                                   }
                                   if (value.length != vetContactLimit) {
                                     return 'Contact Number must be exactly $vetContactLimit digits';
@@ -500,14 +553,48 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                                   return null;
                                 },
                               ),
+                              _buildAnimatedTextField(
+                                controller: vetConfirmPassword,
+                                labelText: "Confirm Password",
+                                maxLength: vetPasswordLimit,
+                                borderColor: vetConfirmPasswordBorderColor,
+                                onChanged: _onConfirmPasswordChanged,
+                                obscureText: !isConfirmPasswordVisible,
+                                prefixIcon: Icons.lock_outline_rounded,
+                                animationDelay: 450,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    isConfirmPasswordVisible
+                                        ? Icons.visibility_rounded
+                                        : Icons.visibility_off_rounded,
+                                    color:
+                                        const Color.fromARGB(255, 81, 115, 153),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      isConfirmPasswordVisible =
+                                          !isConfirmPasswordVisible;
+                                    });
+                                  },
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Confirm Password is required";
+                                  }
+                                  if (value != vetPassword.text) {
+                                    return "Passwords do not match";
+                                  }
+                                  if (value.length < 6) {
+                                    return "Password must be at least 6 characters";
+                                  }
+                                  return null;
+                                },
+                              ),
                             ],
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 30),
-
-                      // Register Button
                       TweenAnimationBuilder<double>(
                         tween: Tween<double>(begin: 0.0, end: 1.0),
                         duration: const Duration(milliseconds: 800),

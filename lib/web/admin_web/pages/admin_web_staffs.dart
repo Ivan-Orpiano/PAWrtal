@@ -1,4 +1,3 @@
-import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:typed_data';

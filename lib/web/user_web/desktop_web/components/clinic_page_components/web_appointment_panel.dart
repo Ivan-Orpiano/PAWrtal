@@ -10,8 +10,15 @@ import 'package:capstone_app/web/user_web/controllers/web_appointment_controller
 
 class EnhancedWebAppointmentPanel extends StatefulWidget {
   final Clinic clinic;
+  final double? maxHeight; // Optional max height for responsiveness
+  final bool compact; // Compact mode for smaller screens
 
-  const EnhancedWebAppointmentPanel({super.key, required this.clinic});
+  const EnhancedWebAppointmentPanel({
+    super.key, 
+    required this.clinic,
+    this.maxHeight,
+    this.compact = false,
+  });
 
   @override
   State<EnhancedWebAppointmentPanel> createState() => _EnhancedWebAppointmentPanelState();
@@ -19,26 +26,37 @@ class EnhancedWebAppointmentPanel extends StatefulWidget {
 
 class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPanel> {
   late WebAppointmentController controller;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Initialize controller with dependencies
-    controller = Get.put(
-      WebAppointmentController(
-        authRepository: Get.find<AuthRepository>(),
-        session: Get.find<UserSessionService>(),
-        clinic: widget.clinic,
-      ),
-      tag: widget.clinic.documentId, // Use unique tag for each clinic
-    );
+    // Initialize controller with dependencies only if not already created
+    if (!Get.isRegistered<WebAppointmentController>(tag: widget.clinic.documentId)) {
+      controller = Get.put(
+        WebAppointmentController(
+          authRepository: Get.find<AuthRepository>(),
+          session: Get.find<UserSessionService>(),
+          clinic: widget.clinic,
+        ),
+        tag: widget.clinic.documentId,
+      );
+    } else {
+      controller = Get.find<WebAppointmentController>(tag: widget.clinic.documentId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final effectiveMaxHeight = widget.maxHeight ?? _calculateMaxHeight(screenHeight);
+    
     return Container(
       width: 420,
-      constraints: const BoxConstraints(maxHeight: 800),
+      constraints: BoxConstraints(
+        maxHeight: effectiveMaxHeight,
+        minHeight: widget.compact ? 400 : 500,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -55,87 +73,107 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         mainAxisSize: MainAxisSize.min,
         children: [
           // Header with clinic status
-          Obx(() => Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: _getHeaderColor(),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(_getHeaderIcon(), color: Colors.white, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Book Appointment',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (controller.clinicSettings.value != null)
-                        Text(
-                          _getClinicStatusText(),
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          )),
+          _buildHeader(),
 
-          // Content
+          // Content with flexible scrolling
           Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Clinic status banner (if closed)
-                  _buildStatusBanner(),
-                  
-                  // Calendar Section
-                  _buildSectionHeader('Select Date'),
-                  const SizedBox(height: 12),
-                  _buildCalendar(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Time & Service Selection
-                  _buildSectionHeader('Appointment Details'),
-                  const SizedBox(height: 12),
-                  _buildTimeServiceRow(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Pet Selection
-                  _buildSectionHeader('Select Pet'),
-                  const SizedBox(height: 12),
-                  _buildPetSelection(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Book Button
-                  _buildBookButton(),
-                ],
+            child: Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: false,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: EdgeInsets.all(widget.compact ? 16 : 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Clinic status banner (if closed)
+                    _buildStatusBanner(),
+                    
+                    // Calendar Section
+                    _buildSectionHeader('Select Date'),
+                    SizedBox(height: widget.compact ? 8 : 12),
+                    _buildCalendar(),
+                    
+                    SizedBox(height: widget.compact ? 16 : 24),
+                    
+                    // Time & Service Selection
+                    _buildSectionHeader('Appointment Details'),
+                    SizedBox(height: widget.compact ? 8 : 12),
+                    _buildTimeServiceRow(),
+                    
+                    SizedBox(height: widget.compact ? 16 : 20),
+                    
+                    // Pet Selection
+                    _buildSectionHeader('Select Pet'),
+                    SizedBox(height: widget.compact ? 8 : 12),
+                    _buildPetSelection(),
+                    
+                    SizedBox(height: widget.compact ? 16 : 24),
+                    
+                    // Book Button
+                    _buildBookButton(),
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  double _calculateMaxHeight(double screenHeight) {
+    // Responsive height calculation based on screen height
+    if (screenHeight <= 768) {
+      return screenHeight * 0.75; // 75% on smaller screens
+    } else if (screenHeight <= 1080) {
+      return screenHeight * 0.7; // 70% on medium screens
+    } else {
+      return 800; // Fixed max on large screens
+    }
+  }
+
+  Widget _buildHeader() {
+    return Obx(() => Container(
+      padding: EdgeInsets.all(widget.compact ? 16 : 20),
+      decoration: BoxDecoration(
+        color: _getHeaderColor(),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(_getHeaderIcon(), color: Colors.white, size: widget.compact ? 20 : 24),
+          SizedBox(width: widget.compact ? 8 : 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Book Appointment',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: widget.compact ? 18 : 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (controller.clinicSettings.value != null)
+                  Text(
+                    _getClinicStatusText(),
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: widget.compact ? 12 : 14,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ));
   }
 
   Color _getHeaderColor() {
@@ -210,8 +248,8 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.only(bottom: 20),
+        padding: EdgeInsets.all(widget.compact ? 10 : 12),
+        margin: EdgeInsets.only(bottom: widget.compact ? 16 : 20),
         decoration: BoxDecoration(
           color: bannerColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
@@ -219,14 +257,15 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         ),
         child: Row(
           children: [
-            Icon(bannerIcon, color: bannerColor, size: 20),
-            const SizedBox(width: 8),
+            Icon(bannerIcon, color: bannerColor, size: widget.compact ? 18 : 20),
+            SizedBox(width: widget.compact ? 6 : 8),
             Expanded(
               child: Text(
                 bannerText,
                 style: TextStyle(
                   color: bannerColor,
                   fontWeight: FontWeight.w600,
+                  fontSize: widget.compact ? 12 : 14,
                 ),
               ),
             ),
@@ -240,7 +279,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     return Text(
       title,
       style: GoogleFonts.inter(
-        fontSize: 16,
+        fontSize: widget.compact ? 14 : 16,
         fontWeight: FontWeight.w600,
         color: Colors.grey[800],
       ),
@@ -264,11 +303,17 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
           titleCentered: true,
           titleTextStyle: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
-            fontSize: 16,
+            fontSize: widget.compact ? 14 : 16,
             color: Colors.grey[800],
           ),
-          leftChevronIcon: Icon(Icons.chevron_left, color: Colors.grey[600]),
-          rightChevronIcon: Icon(Icons.chevron_right, color: Colors.grey[600]),
+          leftChevronIcon: Icon(Icons.chevron_left, 
+            color: Colors.grey[600], 
+            size: widget.compact ? 20 : 24
+          ),
+          rightChevronIcon: Icon(Icons.chevron_right, 
+            color: Colors.grey[600],
+            size: widget.compact ? 20 : 24
+          ),
         ),
         calendarStyle: CalendarStyle(
           todayDecoration: BoxDecoration(
@@ -281,8 +326,13 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
           ),
           weekendTextStyle: TextStyle(color: Colors.grey[600]),
           outsideDaysVisible: false,
-          cellMargin: const EdgeInsets.all(4),
+          cellMargin: EdgeInsets.all(widget.compact ? 2 : 4),
           disabledTextStyle: TextStyle(color: Colors.grey[400]),
+          defaultTextStyle: TextStyle(fontSize: widget.compact ? 12 : 14),
+        ),
+        daysOfWeekStyle: DaysOfWeekStyle(
+          weekdayStyle: TextStyle(fontSize: widget.compact ? 11 : 13),
+          weekendStyle: TextStyle(fontSize: widget.compact ? 11 : 13),
         ),
         enabledDayPredicate: controller.isDateSelectable,
         onDaySelected: (selectedDay, focusedDay) {
@@ -306,12 +356,12 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
               Text(
                 'Time',
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: widget.compact ? 12 : 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey[700],
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: widget.compact ? 4 : 6),
               Obx(() => Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey[300]!),
@@ -320,17 +370,23 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: controller.selectedTime.value,
-                    hint: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('Select time'),
+                    hint: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: widget.compact ? 8 : 12),
+                      child: Text(
+                        'Select time',
+                        style: TextStyle(fontSize: widget.compact ? 12 : 14),
+                      ),
                     ),
                     isExpanded: true,
                     items: controller.availableTimes.map((time) {
                       return DropdownMenuItem<String>(
                         value: time,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(time),
+                          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 8 : 12),
+                          child: Text(
+                            time,
+                            style: TextStyle(fontSize: widget.compact ? 12 : 14),
+                          ),
                         ),
                       );
                     }).toList(),
@@ -340,7 +396,6 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                   ),
                 ),
               )),
-              // Show message if no times available
               Obx(() {
                 if (controller.selectedDateTime.value != null && 
                     controller.availableTimes.isEmpty &&
@@ -348,9 +403,9 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'No available times for this date',
+                      'No available times',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: widget.compact ? 10 : 12,
                         color: Colors.red[600],
                       ),
                     ),
@@ -361,7 +416,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: widget.compact ? 12 : 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,12 +424,12 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
               Text(
                 'Service',
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: widget.compact ? 12 : 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey[700],
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: widget.compact ? 4 : 6),
               Obx(() => Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey[300]!),
@@ -383,19 +438,23 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: controller.selectedService.value,
-                    hint: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('Choose service'),
+                    hint: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: widget.compact ? 8 : 12),
+                      child: Text(
+                        'Choose service',
+                        style: TextStyle(fontSize: widget.compact ? 12 : 14),
+                      ),
                     ),
                     isExpanded: true,
                     items: controller.services.map((service) {
                       return DropdownMenuItem<String>(
                         value: service,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 8 : 12),
                           child: Text(
                             service,
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: widget.compact ? 12 : 14),
                           ),
                         ),
                       );
@@ -415,20 +474,23 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     return Obx(() {
       if (controller.isLoading.value) {
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(widget.compact ? 12 : 16),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey[300]!),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Row(
+          child: Row(
             children: [
               SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                width: widget.compact ? 16 : 20,
+                height: widget.compact ? 16 : 20,
+                child: const CircularProgressIndicator(strokeWidth: 2),
               ),
-              SizedBox(width: 12),
-              Text('Loading pets...'),
+              SizedBox(width: widget.compact ? 8 : 12),
+              Text(
+                'Loading pets...',
+                style: TextStyle(fontSize: widget.compact ? 12 : 14),
+              ),
             ],
           ),
         );
@@ -436,7 +498,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
 
       if (controller.pets.isEmpty) {
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(widget.compact ? 12 : 16),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.orange[300]!),
             borderRadius: BorderRadius.circular(8),
@@ -444,10 +506,17 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.orange[600]),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('No pets found. Please add a pet to your profile first.'),
+              Icon(
+                Icons.info_outline, 
+                color: Colors.orange[600],
+                size: widget.compact ? 16 : 20,
+              ),
+              SizedBox(width: widget.compact ? 8 : 12),
+              Expanded(
+                child: Text(
+                  'No pets found. Please add a pet to your profile first.',
+                  style: TextStyle(fontSize: widget.compact ? 12 : 14),
+                ),
               ),
             ],
           ),
@@ -462,13 +531,16 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         child: DropdownButtonHideUnderline(
           child: DropdownButton<Pet>(
             value: controller.selectedPet.value,
-            hint: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
+            hint: Padding(
+              padding: EdgeInsets.symmetric(horizontal: widget.compact ? 8 : 12),
               child: Row(
                 children: [
-                  Icon(Icons.pets, size: 20),
-                  SizedBox(width: 8),
-                  Text('Choose your pet'),
+                  Icon(Icons.pets, size: widget.compact ? 16 : 20),
+                  SizedBox(width: widget.compact ? 6 : 8),
+                  Text(
+                    'Choose your pet',
+                    style: TextStyle(fontSize: widget.compact ? 12 : 14),
+                  ),
                 ],
               ),
             ),
@@ -477,20 +549,20 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
               return DropdownMenuItem<Pet>(
                 value: pet,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: widget.compact ? 8 : 12),
                   child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 16,
+                        radius: widget.compact ? 14 : 16,
                         backgroundColor: Colors.grey[200],
                         backgroundImage: pet.image != null && pet.image!.isNotEmpty
                             ? NetworkImage(pet.image!)
                             : null,
                         child: pet.image == null || pet.image!.isEmpty
-                            ? const Icon(Icons.pets, size: 16)
+                            ? Icon(Icons.pets, size: widget.compact ? 12 : 16)
                             : null,
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: widget.compact ? 8 : 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,12 +570,15 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                           children: [
                             Text(
                               pet.name,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: widget.compact ? 12 : 14,
+                              ),
                             ),
                             Text(
                               '${pet.type} • ${pet.breed}',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: widget.compact ? 10 : 12,
                                 color: Colors.grey[600],
                               ),
                             ),
@@ -529,11 +604,10 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       
       return Column(
         children: [
-          // Show validation message if any
           if (validationMessage != null && !controller.isBooking.value)
             Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.all(widget.compact ? 10 : 12),
+              margin: EdgeInsets.only(bottom: widget.compact ? 10 : 12),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -541,14 +615,18 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.orange[700], size: 16),
-                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.info_outline, 
+                    color: Colors.orange[700], 
+                    size: widget.compact ? 14 : 16
+                  ),
+                  SizedBox(width: widget.compact ? 6 : 8),
                   Expanded(
                     child: Text(
                       validationMessage,
                       style: TextStyle(
                         color: Colors.orange[700],
-                        fontSize: 13,
+                        fontSize: widget.compact ? 11 : 13,
                       ),
                     ),
                   ),
@@ -558,7 +636,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
           
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: widget.compact ? 44 : 48,
             child: ElevatedButton(
               onPressed: isEnabled ? controller.bookAppointment : null,
               style: ElevatedButton.styleFrom(
@@ -570,23 +648,23 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                 elevation: isEnabled ? 2 : 0,
               ),
               child: controller.isBooking.value
-                  ? const Row(
+                  ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
+                          width: widget.compact ? 16 : 20,
+                          height: widget.compact ? 16 : 20,
+                          child: const CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        SizedBox(width: widget.compact ? 8 : 12),
                         Text(
                           'Booking...',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: widget.compact ? 14 : 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -596,7 +674,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                       'Book Appointment',
                       style: GoogleFonts.inter(
                         color: isEnabled ? Colors.white : Colors.grey[600],
-                        fontSize: 16,
+                        fontSize: widget.compact ? 14 : 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -609,8 +687,8 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
 
   @override
   void dispose() {
-    // Clean up controller
-    Get.delete<WebAppointmentController>(tag: widget.clinic.documentId);
+    _scrollController.dispose();
+    // Don't delete controller here - let parent manage lifecycle
     super.dispose();
   }
 }

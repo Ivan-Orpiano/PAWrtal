@@ -648,7 +648,7 @@ class WebAppointmentTile extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                     );
-                  }).toList(),
+                  }),
 
                   const SizedBox(height: 16),
 

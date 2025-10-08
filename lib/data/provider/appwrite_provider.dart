@@ -665,14 +665,28 @@ class AppWriteProvider {
     return result.documents.isNotEmpty ? result.documents.first : null;
   }
 
-  Future<models.File> uploadImage(String imagePath) {
-    String fileName =
-        "${DateTime.now().millisecondsSinceEpoch}.${imagePath.split('.').last}";
+  Future<models.File> uploadImage(dynamic image) {
+    String fileName = "${DateTime.now().millisecondsSinceEpoch}.jpg";
+    InputFile inputFile;
+
+    if (image is String) {
+      // Mobile path-based upload
+      inputFile = InputFile.fromPath(
+        path: image,
+        filename: fileName,
+      );
+    } else if (image is InputFile) {
+      // Web bytes-based upload
+      inputFile = image;
+    } else {
+      throw Exception('Invalid image format');
+    }
 
     final response = storage!.createFile(
-        bucketId: AppwriteConstants.imageBucketID,
-        fileId: ID.unique(),
-        file: InputFile.fromPath(path: imagePath, filename: fileName));
+      bucketId: AppwriteConstants.imageBucketID,
+      fileId: ID.unique(),
+      file: inputFile,
+    );
 
     return response;
   }
@@ -1823,4 +1837,291 @@ class AppWriteProvider {
       return {'total': 0, 'active': 0, 'inactive': 0};
     }
   }
+
+  Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) async {
+  try {
+    print('=== STARTING CLINIC DELETION ===');
+    print('Clinic ID: $clinicId');
+
+    final errors = <String>[];
+    final results = {
+      'clinicDeleted': false,
+      'settingsDeleted': false,
+      'appointmentsDeleted': 0,
+      'medicalRecordsDeleted': 0,
+      'conversationsDeleted': 0,
+      'messagesDeleted': 0,
+      'staffDeleted': 0,
+      'galleryImagesDeleted': 0,
+      'errors': errors,
+    };
+
+    // Step 1: Get clinic settings first (for gallery images)
+    try {
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+      if (settingsDoc != null) {
+        // Delete all gallery images
+        final gallery = List<String>.from(settingsDoc.data['gallery'] ?? []);
+        for (String imageId in gallery) {
+          try {
+            await deleteImage(imageId);
+            results['galleryImagesDeleted'] = 
+                (results['galleryImagesDeleted'] as int) + 1;
+          } catch (e) {
+            print('Error deleting gallery image $imageId: $e');
+            errors.add('Gallery image: $imageId');
+          }
+        }
+
+        // Delete clinic settings document
+        await deleteClinicSettings(settingsDoc.$id);
+        results['settingsDeleted'] = true;
+        print('✓ Clinic settings deleted');
+      }
+    } catch (e) {
+      print('Error deleting clinic settings: $e');
+      errors.add('Clinic settings: ${e.toString()}');
+    }
+
+    // Step 2: Delete all appointments
+    try {
+      final appointments = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      for (var doc in appointments.documents) {
+        try {
+          await databases!.deleteDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.appointmentCollectionID,
+            documentId: doc.$id,
+          );
+          results['appointmentsDeleted'] = 
+              (results['appointmentsDeleted'] as int) + 1;
+        } catch (e) {
+          print('Error deleting appointment ${doc.$id}: $e');
+          errors.add('Appointment: ${doc.$id}');
+        }
+      }
+      print('✓ ${results['appointmentsDeleted']} appointments deleted');
+    } catch (e) {
+      print('Error deleting appointments: $e');
+      errors.add('Appointments: ${e.toString()}');
+    }
+
+    // Step 3: Delete all medical records
+    try {
+      final records = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.medicalRecordsCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      for (var doc in records.documents) {
+        try {
+          await databases!.deleteDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.medicalRecordsCollectionID,
+            documentId: doc.$id,
+          );
+          results['medicalRecordsDeleted'] = 
+              (results['medicalRecordsDeleted'] as int) + 1;
+        } catch (e) {
+          print('Error deleting medical record ${doc.$id}: $e');
+          errors.add('Medical record: ${doc.$id}');
+        }
+      }
+      print('✓ ${results['medicalRecordsDeleted']} medical records deleted');
+    } catch (e) {
+      print('Error deleting medical records: $e');
+      errors.add('Medical records: ${e.toString()}');
+    }
+
+    // Step 4: Delete all conversations and messages
+    try {
+      final conversations = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      for (var conversation in conversations.documents) {
+        // Delete all messages in this conversation
+        try {
+          final messages = await databases!.listDocuments(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.messagesCollectionID,
+            queries: [Query.equal('conversationId', conversation.$id)],
+          );
+
+          for (var message in messages.documents) {
+            try {
+              await databases!.deleteDocument(
+                databaseId: AppwriteConstants.dbID,
+                collectionId: AppwriteConstants.messagesCollectionID,
+                documentId: message.$id,
+              );
+              results['messagesDeleted'] = 
+                  (results['messagesDeleted'] as int) + 1;
+            } catch (e) {
+              print('Error deleting message ${message.$id}: $e');
+            }
+          }
+
+          // Delete conversation
+          await databases!.deleteDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.conversationsCollectionID,
+            documentId: conversation.$id,
+          );
+          results['conversationsDeleted'] = 
+              (results['conversationsDeleted'] as int) + 1;
+        } catch (e) {
+          print('Error deleting conversation ${conversation.$id}: $e');
+          errors.add('Conversation: ${conversation.$id}');
+        }
+      }
+      print('✓ ${results['conversationsDeleted']} conversations deleted');
+      print('✓ ${results['messagesDeleted']} messages deleted');
+    } catch (e) {
+      print('Error deleting conversations: $e');
+      errors.add('Conversations: ${e.toString()}');
+    }
+
+    // Step 5: Delete all conversation starters
+    try {
+      final starters = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationStartersCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      for (var doc in starters.documents) {
+        try {
+          await databases!.deleteDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.conversationStartersCollectionID,
+            documentId: doc.$id,
+          );
+        } catch (e) {
+          print('Error deleting conversation starter ${doc.$id}: $e');
+        }
+      }
+      print('✓ ${starters.documents.length} conversation starters deleted');
+    } catch (e) {
+      print('Error deleting conversation starters: $e');
+    }
+
+    // Step 6: Deactivate all staff (don't delete to preserve data)
+    try {
+      final staff = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      for (var doc in staff.documents) {
+        try {
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.staffCollectionID,
+            documentId: doc.$id,
+            data: {
+              'isActive': false,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+          );
+          results['staffDeleted'] = (results['staffDeleted'] as int) + 1;
+        } catch (e) {
+          print('Error deactivating staff ${doc.$id}: $e');
+          errors.add('Staff: ${doc.$id}');
+        }
+      }
+      print('✓ ${results['staffDeleted']} staff members deactivated');
+    } catch (e) {
+      print('Error deactivating staff: $e');
+      errors.add('Staff: ${e.toString()}');
+    }
+
+    // Step 7: Get and delete clinic main image
+    try {
+      final clinicDoc = await getClinicById(clinicId);
+      if (clinicDoc != null) {
+        final clinicImage = clinicDoc.data['image'] as String?;
+        if (clinicImage != null && clinicImage.isNotEmpty) {
+          try {
+            await deleteImage(clinicImage);
+            print('✓ Clinic main image deleted');
+          } catch (e) {
+            print('Error deleting clinic main image: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error handling clinic main image: $e');
+    }
+
+    // Step 8: Finally, delete the clinic document
+    try {
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicsCollectionID,
+        documentId: clinicId,
+      );
+      results['clinicDeleted'] = true;
+      print('✓ Clinic document deleted');
+    } catch (e) {
+      print('Error deleting clinic document: $e');
+      errors.add('Clinic document: ${e.toString()}');
+      throw Exception('Failed to delete clinic: ${e.toString()}');
+    }
+
+    print('=== CLINIC DELETION COMPLETE ===');
+    print('Total errors: ${errors.length}');
+    
+    return results;
+  } catch (e) {
+    print('=== CLINIC DELETION FAILED ===');
+    print('Error: $e');
+    rethrow;
+  }
+}
+
+/// Get clinic with full settings (including realtime status)
+Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) async {
+  try {
+    final clinicDoc = await getClinicById(clinicId);
+    if (clinicDoc == null) return null;
+
+    final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+    return {
+      'clinic': clinicDoc.data,
+      'clinicDocId': clinicDoc.$id,
+      'settings': settingsDoc?.data,
+      'settingsDocId': settingsDoc?.$id,
+    };
+  } catch (e) {
+    print('Error getting clinic with settings: $e');
+    return null;
+  }
+}
+
+/// Real-time subscription for clinic changes
+Stream<RealtimeMessage> subscribeToClinicChanges() {
+  final realtime = Realtime(client);
+  return realtime.subscribe([
+    'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicsCollectionID}.documents',
+  ]).stream;
+}
+
+/// Real-time subscription for clinic settings changes
+Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
+  final realtime = Realtime(client);
+  return realtime.subscribe([
+    'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicSettingsCollectionID}.documents',
+  ]).stream;
+}
 }

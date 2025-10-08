@@ -2,7 +2,6 @@ import 'package:capstone_app/mobile/admin/controllers/enhanced_clinic_appointmen
 import 'package:capstone_app/mobile/admin/components/appointment_tiles/enhanced_clinic_appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 class InProgressPage extends StatelessWidget {
   const InProgressPage({super.key});

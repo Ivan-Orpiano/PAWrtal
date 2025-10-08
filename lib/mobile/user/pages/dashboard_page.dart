@@ -24,7 +24,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+      backgroundColor: Colors.grey.shade50,
       body: RefreshIndicator(
         onRefresh: () => controller.fetchClinics(),
         child: Obx(() {
