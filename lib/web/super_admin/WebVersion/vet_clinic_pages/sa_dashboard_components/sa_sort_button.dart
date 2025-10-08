@@ -39,20 +39,37 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
               children: [
                 Icon(
                   Icons.sort_by_alpha,
+                  size: 20,
                   color: selectedSort == 'name'
                       ? const Color.fromARGB(255, 81, 115, 153)
                       : Colors.grey[600],
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Name (A-Z)',
-                  style: TextStyle(
-                    fontWeight: selectedSort == 'name'
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: selectedSort == 'name'
-                        ? const Color.fromARGB(255, 81, 115, 153)
-                        : Colors.black87,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Alphabetically (A-Z)',
+                        style: TextStyle(
+                          fontWeight: selectedSort == 'name'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: selectedSort == 'name'
+                              ? const Color.fromARGB(255, 81, 115, 153)
+                              : Colors.black87,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Sort by clinic name',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -64,20 +81,37 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
               children: [
                 Icon(
                   Icons.calendar_today,
+                  size: 20,
                   color: selectedSort == 'date'
                       ? const Color.fromARGB(255, 81, 115, 153)
                       : Colors.grey[600],
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Registration Date (Newest)',
-                  style: TextStyle(
-                    fontWeight: selectedSort == 'date'
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: selectedSort == 'date'
-                        ? const Color.fromARGB(255, 81, 115, 153)
-                        : Colors.black87,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Registration Date',
+                        style: TextStyle(
+                          fontWeight: selectedSort == 'date'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: selectedSort == 'date'
+                              ? const Color.fromARGB(255, 81, 115, 153)
+                              : Colors.black87,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Newest first',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -89,20 +123,37 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
               children: [
                 Icon(
                   Icons.toggle_on,
+                  size: 20,
                   color: selectedSort == 'status'
                       ? const Color.fromARGB(255, 81, 115, 153)
                       : Colors.grey[600],
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Status (Open/Closed)',
-                  style: TextStyle(
-                    fontWeight: selectedSort == 'status'
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: selectedSort == 'status'
-                        ? const Color.fromARGB(255, 81, 115, 153)
-                        : Colors.black87,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Operating Status',
+                        style: TextStyle(
+                          fontWeight: selectedSort == 'status'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: selectedSort == 'status'
+                              ? const Color.fromARGB(255, 81, 115, 153)
+                              : Colors.black87,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Open clinics first',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

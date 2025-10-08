@@ -36,7 +36,6 @@ class SuperAdminHomeController extends GetxController {
     super.onClose();
   }
 
-  
   Future<void> fetchAllClinics() async {
     try {
       isLoading.value = true;
@@ -45,6 +44,7 @@ class SuperAdminHomeController extends GetxController {
       final clinicsData = await authRepository.getClinicsWithSettings();
       clinicsWithSettings.value = clinicsData;
 
+      // Apply current sorting after fetching
       sortClinics();
     } catch (e) {
       errorMessage.value = 'Error fetching clinics: ${e.toString()}';
@@ -54,7 +54,6 @@ class SuperAdminHomeController extends GetxController {
     }
   }
 
- 
   void setupRealtimeListeners() {
     try {
       final realtime = Realtime(authRepository.client);
@@ -81,6 +80,7 @@ class SuperAdminHomeController extends GetxController {
         },
       );
 
+      // Listen to clinic settings changes
       final settingsChannel =
           'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicSettingsCollectionID}.documents';
 
@@ -108,82 +108,114 @@ class SuperAdminHomeController extends GetxController {
     }
   }
 
-
   void updateSearchQuery(String query) {
     searchQuery.value = query.toLowerCase().trim();
   }
 
-  
   List<Map<String, dynamic>> get filteredClinics {
+    List<Map<String, dynamic>> filtered;
+
     if (searchQuery.value.isEmpty) {
-      return clinicsWithSettings;
+      filtered = List.from(clinicsWithSettings);
+    } else {
+      final query = searchQuery.value;
+
+      filtered = clinicsWithSettings.where((clinicData) {
+        final clinic = clinicData['clinic'] as Clinic;
+
+        final clinicNameLower = clinic.clinicName.toLowerCase();
+        final addressLower = clinic.address.toLowerCase();
+        final emailLower = clinic.email.toLowerCase();
+        final servicesLower = clinic.services.toLowerCase();
+
+        return clinicNameLower.contains(query) ||
+            addressLower.contains(query) ||
+            emailLower.contains(query) ||
+            servicesLower.contains(query);
+      }).toList();
     }
 
-    final query = searchQuery.value;
-
-    return clinicsWithSettings.where((clinicData) {
-      final clinic = clinicData['clinic'] as Clinic;
-
-  
-      final clinicNameLower = clinic.clinicName.toLowerCase();
-      final addressLower = clinic.address.toLowerCase();
-      final emailLower = clinic.email.toLowerCase();
-      final servicesLower = clinic.services.toLowerCase();
-
-    
-      return clinicNameLower.contains(query) ||
-          addressLower.contains(query) ||
-          emailLower.contains(query) ||
-          servicesLower.contains(query);
-    }).toList();
+    // Apply sorting to filtered results in real-time
+    return _applySorting(filtered);
   }
 
-  // Sort clinics
+  // Update sort option and trigger re-sort
   void updateSortBy(String sortOption) {
     sortBy.value = sortOption;
     sortClinics();
   }
 
+  // Sort the main list
   void sortClinics() {
+    clinicsWithSettings.value = _applySorting(clinicsWithSettings);
+    clinicsWithSettings.refresh();
+  }
+
+  // Core sorting logic - used by both main list and filtered list
+  List<Map<String, dynamic>> _applySorting(List<Map<String, dynamic>> clinics) {
+    final List<Map<String, dynamic>> sortedList = List.from(clinics);
+
     switch (sortBy.value) {
       case 'name':
-        clinicsWithSettings.sort((a, b) {
+        // Alphabetical A-Z sorting by clinic name
+        sortedList.sort((a, b) {
           final clinicA = a['clinic'] as Clinic;
           final clinicB = b['clinic'] as Clinic;
-          return clinicA.clinicName.compareTo(clinicB.clinicName);
+          
+          final nameA = clinicA.clinicName.trim().toLowerCase();
+          final nameB = clinicB.clinicName.trim().toLowerCase();
+          
+          return nameA.compareTo(nameB);
         });
         break;
+
       case 'date':
-        clinicsWithSettings.sort((a, b) {
+        // Sort by registration date - newest first
+        sortedList.sort((a, b) {
           final clinicA = a['clinic'] as Clinic;
           final clinicB = b['clinic'] as Clinic;
+          
           try {
-            return DateTime.parse(clinicB.createdAt)
-                .compareTo(DateTime.parse(clinicA.createdAt));
+            final dateA = DateTime.parse(clinicA.createdAt);
+            final dateB = DateTime.parse(clinicB.createdAt);
+            
+            // Newest first (descending order)
+            return dateB.compareTo(dateA);
           } catch (e) {
+            print('Error parsing dates: $e');
             return 0;
           }
         });
         break;
+
       case 'status':
-        clinicsWithSettings.sort((a, b) {
+        // Group by status: Open clinics first, then closed clinics
+        // Within each group, sort alphabetically
+        sortedList.sort((a, b) {
           final settingsA = a['settings'] as ClinicSettings?;
           final settingsB = b['settings'] as ClinicSettings?;
-          final isOpenA = settingsA?.isOpen ?? false;
-          final isOpenB = settingsB?.isOpen ?? false;
+          
+          final isOpenA = settingsA?.isOpenNow() ?? false;
+          final isOpenB = settingsB?.isOpenNow() ?? false;
 
-          // Open clinics first
+          // Primary sort: Open clinics first
           if (isOpenA && !isOpenB) return -1;
           if (!isOpenA && isOpenB) return 1;
-          return 0;
+          
+          // Secondary sort: Within same status, sort alphabetically
+          final clinicA = a['clinic'] as Clinic;
+          final clinicB = b['clinic'] as Clinic;
+          
+          final nameA = clinicA.clinicName.trim().toLowerCase();
+          final nameB = clinicB.clinicName.trim().toLowerCase();
+          
+          return nameA.compareTo(nameB);
         });
         break;
     }
 
-
-    clinicsWithSettings.refresh();
+    return sortedList;
   }
-
 
   Map<String, int> get clinicStats {
     int totalClinics = clinicsWithSettings.length;
@@ -192,7 +224,7 @@ class SuperAdminHomeController extends GetxController {
 
     for (var clinicData in clinicsWithSettings) {
       final settings = clinicData['settings'] as ClinicSettings?;
-      if (settings?.isOpen == true) {
+      if (settings?.isOpenNow() == true) {
         openClinics++;
       } else {
         closedClinics++;
