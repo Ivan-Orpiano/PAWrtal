@@ -11,9 +11,14 @@ class SuperAdminSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
-      onChanged: onChanged,
+      onChanged: (value) {
+
+        if (onChanged != null) {
+          onChanged!(value);
+        }
+      },
       decoration: InputDecoration(
-        hintText: 'Search clinics...',
+        hintText: 'Search clinics (exact match)...',
         hintStyle: TextStyle(color: Colors.grey[400]),
         prefixIcon: Icon(
           Icons.search,

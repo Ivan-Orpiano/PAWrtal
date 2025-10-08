@@ -336,7 +336,7 @@ class AdminMessagingController extends GetxController {
     }
   }
 
-  void _scrollToBottomWithRetry([int attempts = 0]) {
+  void _scrollToBottomWithRetry() {
     // Not needed with reverse ListView, but keeping for compatibility
     _scrollToBottom();
   }

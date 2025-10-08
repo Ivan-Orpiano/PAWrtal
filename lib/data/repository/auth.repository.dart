@@ -509,4 +509,25 @@ class AuthRepository {
   Future<Map<String, int>> getClinicStaffStats(String clinicId) {
     return appWriteProvider.getClinicStaffStats(clinicId);
   }
+  // Add these methods to your AuthRepository class
+
+/// Delete clinic completely with all associated data
+Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) {
+  return appWriteProvider.deleteClinicCompletely(clinicId);
+}
+
+/// Get clinic with settings
+Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) {
+  return appWriteProvider.getClinicWithSettings(clinicId);
+}
+
+/// Subscribe to clinic changes (real-time)
+Stream<RealtimeMessage> subscribeToClinicChanges() {
+  return appWriteProvider.subscribeToClinicChanges();
+}
+
+/// Subscribe to clinic settings changes (real-time)
+Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
+  return appWriteProvider.subscribeToClinicSettingsChanges();
+}
 }

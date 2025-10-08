@@ -36,7 +36,7 @@ class SuperAdminHomeController extends GetxController {
     super.onClose();
   }
 
-  // Fetch all clinics with their settings
+  
   Future<void> fetchAllClinics() async {
     try {
       isLoading.value = true;
@@ -54,9 +54,7 @@ class SuperAdminHomeController extends GetxController {
     }
   }
 
-  // Setup real-time listeners for clinics and settings
-  // Setup real-time listeners for clinics and settings
-// Setup real-time listeners for clinics and settings
+ 
   void setupRealtimeListeners() {
     try {
       final realtime = Realtime(authRepository.client);
@@ -83,7 +81,6 @@ class SuperAdminHomeController extends GetxController {
         },
       );
 
-      // Listen to settings changes
       final settingsChannel =
           'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicSettingsCollectionID}.documents';
 
@@ -111,23 +108,33 @@ class SuperAdminHomeController extends GetxController {
     }
   }
 
-  // Search functionality
+
   void updateSearchQuery(String query) {
-    searchQuery.value = query.toLowerCase();
+    searchQuery.value = query.toLowerCase().trim();
   }
 
-  // Get filtered clinics based on search
+  
   List<Map<String, dynamic>> get filteredClinics {
     if (searchQuery.value.isEmpty) {
       return clinicsWithSettings;
     }
 
+    final query = searchQuery.value;
+
     return clinicsWithSettings.where((clinicData) {
       final clinic = clinicData['clinic'] as Clinic;
-      return clinic.clinicName.toLowerCase().contains(searchQuery.value) ||
-          clinic.address.toLowerCase().contains(searchQuery.value) ||
-          clinic.services.toLowerCase().contains(searchQuery.value) ||
-          clinic.email.toLowerCase().contains(searchQuery.value);
+
+  
+      final clinicNameLower = clinic.clinicName.toLowerCase();
+      final addressLower = clinic.address.toLowerCase();
+      final emailLower = clinic.email.toLowerCase();
+      final servicesLower = clinic.services.toLowerCase();
+
+    
+      return clinicNameLower.contains(query) ||
+          addressLower.contains(query) ||
+          emailLower.contains(query) ||
+          servicesLower.contains(query);
     }).toList();
   }
 
@@ -173,11 +180,11 @@ class SuperAdminHomeController extends GetxController {
         break;
     }
 
-    // Trigger UI update
+
     clinicsWithSettings.refresh();
   }
 
-  // Get clinic statistics
+
   Map<String, int> get clinicStats {
     int totalClinics = clinicsWithSettings.length;
     int openClinics = 0;
