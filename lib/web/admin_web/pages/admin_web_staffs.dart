@@ -47,7 +47,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
-  // UPDATED: Only 3 possible authorities now
   final List<String> tags = const ['Clinic', 'Appointments', 'Messages'];
 
   @override
@@ -77,11 +76,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     try {
       print('>>> Loading clinic and staff data...');
 
-      // Get user role from storage
       final role = _getStorage.read('role') as String?;
       print('>>> Current user role: $role');
 
-      // Get clinic based on user role
       if (role == 'admin') {
         print('>>> Admin user - fetching clinic by admin ID');
         final clinicDoc =
@@ -115,12 +112,10 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       }
 
       if (_clinic != null) {
-        // Get clinic settings
         _clinicSettings = await _authRepository
             .getClinicSettingsByClinicId(_clinic!.documentId!);
         print('>>> Clinic settings loaded: ${_clinicSettings != null}');
 
-        // Get staff for this clinic
         final staff =
             await _authRepository.getClinicStaff(_clinic!.documentId!);
         setState(() {
@@ -142,6 +137,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     }
   }
 
+  // ⭐ FIX: No more forced relogin when creating staff
   Future<void> _addNewStaff(
     String name,
     String email,
@@ -158,7 +154,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       String? imageUrl;
       // Upload image if needed
 
-      print('Calling createStaffAccount...');
+      print('>>> Calling createStaffAccount...');
       final result = await _authRepository.createStaffAccount(
         name: name,
         email: email,
@@ -169,26 +165,26 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         image: imageUrl ?? '',
       );
 
-      print('Staff creation result: $result');
+      print('>>> Staff creation result: $result');
 
       if (result['success'] == true) {
-        // Show success message
+        // ⭐ CRITICAL FIX: Just reload the list, no forced logout!
+        print('>>> Staff created successfully - refreshing staff list');
+
+        await _loadClinicAndStaff();
+
         Get.snackbar(
           'Success',
-          'Staff account created! You need to log back in.',
+          'Staff account created successfully! ${result['authUser'].name} has been added to your team.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: vetGreen,
           colorText: Colors.white,
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 4),
+          icon: const Icon(Icons.check_circle, color: Colors.white),
         );
-
-        // Force logout and redirect to login
-        await Future.delayed(const Duration(seconds: 2));
-        _getStorage.erase(); // Clear all stored data
-        Get.offAllNamed('/login');
       }
     } catch (e) {
-      print('Error creating staff: $e');
+      print('>>> Error creating staff: $e');
       Get.snackbar(
         'Error',
         'Failed to create staff: $e',
@@ -405,8 +401,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     ),
                     child: _buildTitleSection(isLarge, isMedium, isSmall),
                   ),
-
-                  // Email Template Editor
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: isMedium ? 24 : 16,
@@ -417,7 +411,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                       onTemplateUpdated: _loadClinicAndStaff,
                     ),
                   ),
-
                   LayoutBuilder(
                     builder: (context, cons) {
                       final w = cons.maxWidth;
@@ -650,7 +643,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             IconData icon;
             List<Color> colors;
 
-            // Only 3 possible authorities now
             switch (tag) {
               case 'Clinic':
                 icon = Icons.local_hospital_rounded;
