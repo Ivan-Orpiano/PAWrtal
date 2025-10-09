@@ -58,7 +58,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     
     // Dynamic breakpoints based on screen height
     final firstBreakpoint = screenHeight * 0.7;
-    final secondBreakpoint = screenHeight * 2;
+    final secondBreakpoint = screenHeight * 1.90;
 
     if (offset <= firstBreakpoint && _panelState != PanelState.scrollable) {
       setState(() => _panelState = PanelState.scrollable);
@@ -221,12 +221,15 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
                       ),
                     ),
                   ),
-                  Visibility(
-                    visible: _panelState == PanelState.static,
-                    child: EnhancedWebAppointmentPanel(
-                      clinic: widget.clinic,
-                      maxHeight: maxHeight,
-                      compact: isCompact,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 310),
+                    child: Visibility(
+                      visible: _panelState == PanelState.static,
+                      child: EnhancedWebAppointmentPanel(
+                        clinic: widget.clinic,
+                        maxHeight: maxHeight,
+                        compact: isCompact,
+                      ),
                     ),
                   )
                 ],
