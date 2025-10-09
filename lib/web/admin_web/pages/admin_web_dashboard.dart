@@ -16,11 +16,37 @@ class AdminWebDashboard extends StatefulWidget {
 }
 
 class _AdminWebDashboardState extends State<AdminWebDashboard> {
-  // Add this to your State class
+  late AdminDashboardController controller;
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    _initializeController();
+  }
+
+  // FIX: Synchronous controller initialization
+  void _initializeController() {
+    // Register controller synchronously first
+    if (!Get.isRegistered<AdminDashboardController>()) {
+      controller = Get.put(
+        AdminDashboardController(
+          authRepository: Get.find<AuthRepository>(),
+          session: Get.find<UserSessionService>(),
+        ),
+        permanent: true,
+      );
+    } else {
+      controller = Get.find<AdminDashboardController>();
+    }
+
+    // Run migration asynchronously but don't block UI
     _runMigrationOnce();
+
+    // Mark as initialized
+    setState(() {
+      _isInitialized = true;
+    });
   }
 
   Future<void> _runMigrationOnce() async {
@@ -29,27 +55,30 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
     if (!migrationRun) {
       try {
-        print('Running staff migration...');
+        print('>>> Running staff migration...');
         final authRepo = Get.find<AuthRepository>();
         await authRepo.migrateExistingStaffRecords();
 
         storage.write('staff_migration_completed', true);
-        print('Staff migration completed successfully');
+        print('>>> Staff migration completed successfully');
       } catch (e) {
-        print('Migration error: $e');
+        print('>>> Migration error: $e');
       }
-    }
-    if (!Get.isRegistered<AdminDashboardController>()) {
-      Get.put(AdminDashboardController(
-        authRepository: Get.find<AuthRepository>(),
-        session: Get.find<UserSessionService>(),
-      ));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AdminDashboardController>();
+    // FIX: Wait for controller to be initialized
+    if (!_isInitialized) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 768;
     final isTablet = screenWidth < 1200 && screenWidth >= 768;
@@ -86,6 +115,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
+  // Rest of the build methods remain the same...
   Widget _buildHeader(AdminDashboardController controller, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 24),
