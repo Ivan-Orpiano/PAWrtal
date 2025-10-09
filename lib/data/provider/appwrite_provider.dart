@@ -1278,6 +1278,7 @@ class AppWriteProvider {
 
   // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
+  /// CRITICAL FIX: Staff account creation without session conflicts
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
     required String email,
@@ -1294,20 +1295,33 @@ class AppWriteProvider {
       print('>>> STAFF ACCOUNT CREATION START');
       print('>>> ============================================');
 
+      // Store current admin session
+      print('>>> Step 0: Verifying current admin session...');
+      final currentSession = await account!.getSession(sessionId: 'current');
+      print('>>> Current admin session: ${currentSession.$id}');
+
       print('>>> Step 1: Creating Appwrite auth user...');
+      // This creates the user but doesn't create a session
       final authUser = await account!.create(
         userId: ID.unique(),
-        email: email,
+        email: email, // This is the AUTHENTICATION email (permanent)
         password: password,
         name: name,
       );
       print('>>> Auth user created: ${authUser.$id}');
+      print('>>> Auth email (permanent): ${authUser.email}');
+
+      // Verify admin session is still active
+      final verifySession = await account!.get();
+      print(
+          '>>> Session verified - still logged in as: ${verifySession.email}');
 
       print('>>> Step 2: Creating staff database record...');
       final staffData = {
         'userId': authUser.$id,
         'name': name,
-        'email': email,
+        'email': email, // Display email (can be changed)
+        'authEmail': email, // CRITICAL: Authentication email (NEVER changes)
         'phone': phone ?? '',
         'clinicId': clinicId,
         'authorities': authorities,
@@ -1320,10 +1334,10 @@ class AppWriteProvider {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      print('>>> Staff data to be saved:');
-      print('>>> Role: ${staffData['role']}');
-      print('>>> Email: ${staffData['email']}');
-      print('>>> Authorities: ${staffData['authorities']}');
+      print('>>> Staff data:');
+      print('>>> - Display email: ${staffData['email']}');
+      print('>>> - Auth email: ${staffData['authEmail']}');
+      print('>>> - Role: ${staffData['role']}');
 
       final staffDoc = await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
@@ -1332,7 +1346,11 @@ class AppWriteProvider {
         data: staffData,
       );
       print('>>> Staff database record created: ${staffDoc.$id}');
-      print('>>> Staff role in doc: ${staffDoc.data['role']}');
+
+      // Final session verification
+      final finalSession = await account!.get();
+      print(
+          '>>> Final check - admin still logged in as: ${finalSession.email}');
 
       print('>>> ============================================');
       print('>>> STAFF ACCOUNT CREATION SUCCESS');
@@ -1348,6 +1366,79 @@ class AppWriteProvider {
       print('>>> ============================================');
       print('>>> STAFF ACCOUNT CREATION ERROR: $e');
       print('>>> ============================================');
+      rethrow;
+    }
+  }
+
+  /// CRITICAL FIX: Update ONLY display emails, NOT authentication emails
+  Future<void> updateAllStaffEmailsForClinic(
+    String clinicId,
+    String newTemplate,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> UPDATING STAFF DISPLAY EMAILS');
+      print('>>> New template: $newTemplate');
+      print('>>> Clinic ID: $clinicId');
+      print('>>> ============================================');
+
+      final staffList = await getClinicStaff(clinicId);
+      print('>>> Found ${staffList.length} staff members to update');
+
+      int successCount = 0;
+      int errorCount = 0;
+
+      for (var staffDoc in staffList) {
+        try {
+          final staffName = staffDoc.data['name'] as String;
+          final authEmail = staffDoc.data['authEmail'] as String? ??
+              staffDoc.data['email'] as String;
+
+          // Generate new DISPLAY email using template
+          final cleanName = staffName
+              .toLowerCase()
+              .replaceAll(RegExp(r'[^a-z0-9]'), '')
+              .replaceAll(' ', '.');
+
+          String newDisplayEmail;
+          if (newTemplate.startsWith('@')) {
+            newDisplayEmail = '$cleanName$newTemplate';
+          } else {
+            newDisplayEmail = newTemplate.replaceAll('{name}', cleanName);
+          }
+
+          print('>>> Updating staff: ${staffDoc.$id}');
+          print('>>>   - Name: $staffName');
+          print('>>>   - Auth Email (permanent): $authEmail');
+          print('>>>   - New Display Email: $newDisplayEmail');
+
+          // CRITICAL: Update display email only, keep authEmail unchanged
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.staffCollectionID,
+            documentId: staffDoc.$id,
+            data: {
+              'email': newDisplayEmail, // Update display email
+              'authEmail': authEmail, // KEEP authentication email unchanged
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+          );
+
+          successCount++;
+          print('>>> ✓ Successfully updated');
+        } catch (e) {
+          errorCount++;
+          print('>>> ✗ Error updating ${staffDoc.$id}: $e');
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> UPDATE COMPLETE');
+      print('>>> Success: $successCount');
+      print('>>> Errors: $errorCount');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> CRITICAL ERROR updating staff emails: $e');
       rethrow;
     }
   }
@@ -1496,12 +1587,13 @@ class AppWriteProvider {
     }
   }
 
+  /// MIGRATION: Add authEmail to existing staff records
   Future<void> migrateExistingStaffRecords() async {
     try {
-      print('>>> ==========================================');
-      print('>>> MIGRATING EXISTING STAFF RECORDS');
-      print('>>> Adding role field to all staff records');
-      print('>>> ==========================================');
+      print('>>> ============================================');
+      print('>>> MIGRATING STAFF RECORDS');
+      print('>>> Adding authEmail field to existing records');
+      print('>>> ============================================');
 
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -1513,10 +1605,14 @@ class AppWriteProvider {
       for (var doc in result.documents) {
         try {
           final currentRole = doc.data['role'];
+          final currentAuthEmail = doc.data['authEmail'];
+          final email = doc.data['email'];
 
+          // If role is missing, add it
           if (currentRole == null || currentRole.isEmpty) {
             print(
                 '>>> Updating staff: ${doc.data['name']} (${doc.data['email']})');
+            print('>>>   - Adding role field');
 
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
@@ -1527,20 +1623,36 @@ class AppWriteProvider {
                 'updatedAt': DateTime.now().toIso8601String(),
               },
             );
+          }
 
-            print('>>> Role field added successfully');
+          // CRITICAL: If authEmail is missing, set it to current email
+          if (currentAuthEmail == null || currentAuthEmail.isEmpty) {
+            print('>>> Updating staff: ${doc.data['name']}');
+            print('>>>   - Adding authEmail field: $email');
+
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.staffCollectionID,
+              documentId: doc.$id,
+              data: {
+                'authEmail': email, // Set authEmail to current email
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
+
+            print('>>>   ✓ Migration successful');
           } else {
             print(
-                '>>> Staff already has role: ${doc.data['name']} - $currentRole');
+                '>>> Staff already has authEmail: ${doc.data['name']} - $currentAuthEmail');
           }
         } catch (e) {
           print('>>> Error updating staff ${doc.$id}: $e');
         }
       }
 
-      print('>>> ==========================================');
+      print('>>> ============================================');
       print('>>> MIGRATION COMPLETE');
-      print('>>> ==========================================');
+      print('>>> ============================================');
     } catch (e) {
       print('>>> Migration error: $e');
     }
@@ -1626,56 +1738,26 @@ class AppWriteProvider {
     }
   }
 
-  Future<void> updateAllStaffEmailsForClinic(
-    String clinicId,
-    String newTemplate,
-  ) async {
-    try {
-      final staffList = await getClinicStaff(clinicId);
-
-      for (var staffDoc in staffList) {
-        final staffName = staffDoc.data['name'] as String;
-        final cleanName = staffName
-            .toLowerCase()
-            .replaceAll(RegExp(r'[^a-z0-9]'), '')
-            .replaceAll(' ', '.');
-        final newEmail = newTemplate.replaceAll('{name}', cleanName);
-
-        await databases!.updateDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.staffCollectionID,
-          documentId: staffDoc.$id,
-          data: {
-            'email': newEmail,
-            'updatedAt': DateTime.now().toIso8601String(),
-          },
-        );
-
-        print('Updated email for ${staffDoc.$id} to: $newEmail');
-      }
-    } catch (e) {
-      print('Error updating staff emails: $e');
-      rethrow;
-    }
-  }
-
+  /// CRITICAL FIX: Check staff using authEmail (authentication email)
   Future<Map<String, dynamic>> checkIfStaffAccount(String email) async {
     try {
-      print('>>> Checking staff account in database for: $email');
+      print('>>> ============================================');
+      print('>>> CHECKING STAFF ACCOUNT');
+      print('>>> Login email: $email');
+      print('>>> ============================================');
 
+      // CRITICAL: Check using authEmail field (authentication email)
       final staffResult = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         queries: [
-          Query.equal('email', email),
+          Query.equal('authEmail', email), // Use authEmail for authentication
         ],
       );
 
       if (staffResult.documents.isEmpty) {
-        print('>>> No staff account found in database');
-        return {
-          'isStaff': false,
-        };
+        print('>>> No staff found with authEmail: $email');
+        return {'isStaff': false};
       }
 
       final staffDoc = staffResult.documents.first;
@@ -1683,13 +1765,19 @@ class AppWriteProvider {
       final role = staffDoc.data['role'] ?? 'staff';
       final clinicId = staffDoc.data['clinicId'] ?? '';
       final authorities = staffDoc.data['authorities'] ?? [];
+      final displayEmail = staffDoc.data['email'] ?? email;
+      final authEmail = staffDoc.data['authEmail'] ?? email;
 
-      print('>>> Staff account found in database!');
+      print('>>> ============================================');
+      print('>>> STAFF FOUND!');
       print('>>> Staff Document ID: ${staffDoc.$id}');
+      print('>>> Display Email: $displayEmail');
+      print('>>> Auth Email: $authEmail');
       print('>>> Is active: $isActive');
-      print('>>> Role from database: $role');
+      print('>>> Role: $role');
       print('>>> Clinic ID: $clinicId');
       print('>>> Authorities: $authorities');
+      print('>>> ============================================');
 
       return {
         'isStaff': true,
@@ -1701,20 +1789,20 @@ class AppWriteProvider {
       };
     } catch (e) {
       print('>>> Error checking staff account: $e');
-      return {
-        'isStaff': false,
-      };
+      return {'isStaff': false};
     }
   }
 
+  /// Enhanced staff login using authEmail
   Future<Map<String, dynamic>> staffLogin(String email, String password) async {
     try {
       print('>>> ============================================');
       print('>>> STAFF LOGIN START');
       print('>>> ============================================');
-      print('>>> Email: $email');
+      print('>>> Login email: $email');
 
-      print('>>> Step 1: Checking if staff account in database...');
+      // Step 1: Check if staff account exists using authEmail
+      print('>>> Step 1: Checking staff account...');
       final staffCheck = await checkIfStaffAccount(email);
 
       if (staffCheck['isStaff'] != true) {
@@ -1737,16 +1825,16 @@ class AppWriteProvider {
 
       print('>>> Step 2: Staff account confirmed and active');
 
+      // Step 2: Create session using authentication email
       print('>>> Step 3: Creating Appwrite session...');
       final session = await account!.createEmailPasswordSession(
-        email: email,
+        email: email, // Use the authentication email
         password: password,
       );
       print('>>> Session created successfully: ${session.$id}');
 
       final user = await account!.get();
       print('>>> User retrieved: ${user.$id}');
-      print('>>> User email: ${user.email}');
 
       final staffDoc = staffCheck['staffDoc'];
       final role = staffCheck['role'] ?? 'staff';
@@ -1754,14 +1842,14 @@ class AppWriteProvider {
       final authorities = staffCheck['authorities'] ?? [];
 
       print('>>> ============================================');
-      print('>>> DATA FROM DATABASE (NOT PREFS):');
+      print('>>> STAFF LOGIN DATA:');
       print('>>> Role: $role');
       print('>>> Clinic ID: $clinicId');
       print('>>> Authorities: $authorities');
       print('>>> Staff Doc ID: ${staffDoc?.$id}');
       print('>>> ============================================');
 
-      final result = {
+      return {
         'success': true,
         'isStaff': true,
         'session': session,
@@ -1773,12 +1861,6 @@ class AppWriteProvider {
         'staffDocumentId': staffDoc?.$id ?? '',
         'message': 'Staff login successful',
       };
-
-      print('>>> STAFF LOGIN SUCCESS');
-      print('>>> Result role: ${result['role']}');
-      print('>>> ============================================');
-
-      return result;
     } catch (e) {
       print('>>> ============================================');
       print('>>> STAFF LOGIN ERROR');
@@ -1839,289 +1921,289 @@ class AppWriteProvider {
   }
 
   Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) async {
-  try {
-    print('=== STARTING CLINIC DELETION ===');
-    print('Clinic ID: $clinicId');
-
-    final errors = <String>[];
-    final results = {
-      'clinicDeleted': false,
-      'settingsDeleted': false,
-      'appointmentsDeleted': 0,
-      'medicalRecordsDeleted': 0,
-      'conversationsDeleted': 0,
-      'messagesDeleted': 0,
-      'staffDeleted': 0,
-      'galleryImagesDeleted': 0,
-      'errors': errors,
-    };
-
-    // Step 1: Get clinic settings first (for gallery images)
     try {
-      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
-      if (settingsDoc != null) {
-        // Delete all gallery images
-        final gallery = List<String>.from(settingsDoc.data['gallery'] ?? []);
-        for (String imageId in gallery) {
-          try {
-            await deleteImage(imageId);
-            results['galleryImagesDeleted'] = 
-                (results['galleryImagesDeleted'] as int) + 1;
-          } catch (e) {
-            print('Error deleting gallery image $imageId: $e');
-            errors.add('Gallery image: $imageId');
-          }
-        }
+      print('=== STARTING CLINIC DELETION ===');
+      print('Clinic ID: $clinicId');
 
-        // Delete clinic settings document
-        await deleteClinicSettings(settingsDoc.$id);
-        results['settingsDeleted'] = true;
-        print('✓ Clinic settings deleted');
-      }
-    } catch (e) {
-      print('Error deleting clinic settings: $e');
-      errors.add('Clinic settings: ${e.toString()}');
-    }
+      final errors = <String>[];
+      final results = {
+        'clinicDeleted': false,
+        'settingsDeleted': false,
+        'appointmentsDeleted': 0,
+        'medicalRecordsDeleted': 0,
+        'conversationsDeleted': 0,
+        'messagesDeleted': 0,
+        'staffDeleted': 0,
+        'galleryImagesDeleted': 0,
+        'errors': errors,
+      };
 
-    // Step 2: Delete all appointments
-    try {
-      final appointments = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.appointmentCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-
-      for (var doc in appointments.documents) {
-        try {
-          await databases!.deleteDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.appointmentCollectionID,
-            documentId: doc.$id,
-          );
-          results['appointmentsDeleted'] = 
-              (results['appointmentsDeleted'] as int) + 1;
-        } catch (e) {
-          print('Error deleting appointment ${doc.$id}: $e');
-          errors.add('Appointment: ${doc.$id}');
-        }
-      }
-      print('✓ ${results['appointmentsDeleted']} appointments deleted');
-    } catch (e) {
-      print('Error deleting appointments: $e');
-      errors.add('Appointments: ${e.toString()}');
-    }
-
-    // Step 3: Delete all medical records
-    try {
-      final records = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.medicalRecordsCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-
-      for (var doc in records.documents) {
-        try {
-          await databases!.deleteDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.medicalRecordsCollectionID,
-            documentId: doc.$id,
-          );
-          results['medicalRecordsDeleted'] = 
-              (results['medicalRecordsDeleted'] as int) + 1;
-        } catch (e) {
-          print('Error deleting medical record ${doc.$id}: $e');
-          errors.add('Medical record: ${doc.$id}');
-        }
-      }
-      print('✓ ${results['medicalRecordsDeleted']} medical records deleted');
-    } catch (e) {
-      print('Error deleting medical records: $e');
-      errors.add('Medical records: ${e.toString()}');
-    }
-
-    // Step 4: Delete all conversations and messages
-    try {
-      final conversations = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.conversationsCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-
-      for (var conversation in conversations.documents) {
-        // Delete all messages in this conversation
-        try {
-          final messages = await databases!.listDocuments(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.messagesCollectionID,
-            queries: [Query.equal('conversationId', conversation.$id)],
-          );
-
-          for (var message in messages.documents) {
+      // Step 1: Get clinic settings first (for gallery images)
+      try {
+        final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+        if (settingsDoc != null) {
+          // Delete all gallery images
+          final gallery = List<String>.from(settingsDoc.data['gallery'] ?? []);
+          for (String imageId in gallery) {
             try {
-              await databases!.deleteDocument(
-                databaseId: AppwriteConstants.dbID,
-                collectionId: AppwriteConstants.messagesCollectionID,
-                documentId: message.$id,
-              );
-              results['messagesDeleted'] = 
-                  (results['messagesDeleted'] as int) + 1;
+              await deleteImage(imageId);
+              results['galleryImagesDeleted'] =
+                  (results['galleryImagesDeleted'] as int) + 1;
             } catch (e) {
-              print('Error deleting message ${message.$id}: $e');
+              print('Error deleting gallery image $imageId: $e');
+              errors.add('Gallery image: $imageId');
             }
           }
 
-          // Delete conversation
-          await databases!.deleteDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.conversationsCollectionID,
-            documentId: conversation.$id,
-          );
-          results['conversationsDeleted'] = 
-              (results['conversationsDeleted'] as int) + 1;
-        } catch (e) {
-          print('Error deleting conversation ${conversation.$id}: $e');
-          errors.add('Conversation: ${conversation.$id}');
+          // Delete clinic settings document
+          await deleteClinicSettings(settingsDoc.$id);
+          results['settingsDeleted'] = true;
+          print('✓ Clinic settings deleted');
         }
+      } catch (e) {
+        print('Error deleting clinic settings: $e');
+        errors.add('Clinic settings: ${e.toString()}');
       }
-      print('✓ ${results['conversationsDeleted']} conversations deleted');
-      print('✓ ${results['messagesDeleted']} messages deleted');
-    } catch (e) {
-      print('Error deleting conversations: $e');
-      errors.add('Conversations: ${e.toString()}');
-    }
 
-    // Step 5: Delete all conversation starters
-    try {
-      final starters = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.conversationStartersCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
+      // Step 2: Delete all appointments
+      try {
+        final appointments = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [Query.equal('clinicId', clinicId)],
+        );
 
-      for (var doc in starters.documents) {
-        try {
-          await databases!.deleteDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.conversationStartersCollectionID,
-            documentId: doc.$id,
-          );
-        } catch (e) {
-          print('Error deleting conversation starter ${doc.$id}: $e');
-        }
-      }
-      print('✓ ${starters.documents.length} conversation starters deleted');
-    } catch (e) {
-      print('Error deleting conversation starters: $e');
-    }
-
-    // Step 6: Deactivate all staff (don't delete to preserve data)
-    try {
-      final staff = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.staffCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-
-      for (var doc in staff.documents) {
-        try {
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.staffCollectionID,
-            documentId: doc.$id,
-            data: {
-              'isActive': false,
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
-          results['staffDeleted'] = (results['staffDeleted'] as int) + 1;
-        } catch (e) {
-          print('Error deactivating staff ${doc.$id}: $e');
-          errors.add('Staff: ${doc.$id}');
-        }
-      }
-      print('✓ ${results['staffDeleted']} staff members deactivated');
-    } catch (e) {
-      print('Error deactivating staff: $e');
-      errors.add('Staff: ${e.toString()}');
-    }
-
-    // Step 7: Get and delete clinic main image
-    try {
-      final clinicDoc = await getClinicById(clinicId);
-      if (clinicDoc != null) {
-        final clinicImage = clinicDoc.data['image'] as String?;
-        if (clinicImage != null && clinicImage.isNotEmpty) {
+        for (var doc in appointments.documents) {
           try {
-            await deleteImage(clinicImage);
-            print('✓ Clinic main image deleted');
+            await databases!.deleteDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.appointmentCollectionID,
+              documentId: doc.$id,
+            );
+            results['appointmentsDeleted'] =
+                (results['appointmentsDeleted'] as int) + 1;
           } catch (e) {
-            print('Error deleting clinic main image: $e');
+            print('Error deleting appointment ${doc.$id}: $e');
+            errors.add('Appointment: ${doc.$id}');
           }
         }
+        print('✓ ${results['appointmentsDeleted']} appointments deleted');
+      } catch (e) {
+        print('Error deleting appointments: $e');
+        errors.add('Appointments: ${e.toString()}');
       }
-    } catch (e) {
-      print('Error handling clinic main image: $e');
-    }
 
-    // Step 8: Finally, delete the clinic document
+      // Step 3: Delete all medical records
+      try {
+        final records = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.medicalRecordsCollectionID,
+          queries: [Query.equal('clinicId', clinicId)],
+        );
+
+        for (var doc in records.documents) {
+          try {
+            await databases!.deleteDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.medicalRecordsCollectionID,
+              documentId: doc.$id,
+            );
+            results['medicalRecordsDeleted'] =
+                (results['medicalRecordsDeleted'] as int) + 1;
+          } catch (e) {
+            print('Error deleting medical record ${doc.$id}: $e');
+            errors.add('Medical record: ${doc.$id}');
+          }
+        }
+        print('✓ ${results['medicalRecordsDeleted']} medical records deleted');
+      } catch (e) {
+        print('Error deleting medical records: $e');
+        errors.add('Medical records: ${e.toString()}');
+      }
+
+      // Step 4: Delete all conversations and messages
+      try {
+        final conversations = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.conversationsCollectionID,
+          queries: [Query.equal('clinicId', clinicId)],
+        );
+
+        for (var conversation in conversations.documents) {
+          // Delete all messages in this conversation
+          try {
+            final messages = await databases!.listDocuments(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.messagesCollectionID,
+              queries: [Query.equal('conversationId', conversation.$id)],
+            );
+
+            for (var message in messages.documents) {
+              try {
+                await databases!.deleteDocument(
+                  databaseId: AppwriteConstants.dbID,
+                  collectionId: AppwriteConstants.messagesCollectionID,
+                  documentId: message.$id,
+                );
+                results['messagesDeleted'] =
+                    (results['messagesDeleted'] as int) + 1;
+              } catch (e) {
+                print('Error deleting message ${message.$id}: $e');
+              }
+            }
+
+            // Delete conversation
+            await databases!.deleteDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.conversationsCollectionID,
+              documentId: conversation.$id,
+            );
+            results['conversationsDeleted'] =
+                (results['conversationsDeleted'] as int) + 1;
+          } catch (e) {
+            print('Error deleting conversation ${conversation.$id}: $e');
+            errors.add('Conversation: ${conversation.$id}');
+          }
+        }
+        print('✓ ${results['conversationsDeleted']} conversations deleted');
+        print('✓ ${results['messagesDeleted']} messages deleted');
+      } catch (e) {
+        print('Error deleting conversations: $e');
+        errors.add('Conversations: ${e.toString()}');
+      }
+
+      // Step 5: Delete all conversation starters
+      try {
+        final starters = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.conversationStartersCollectionID,
+          queries: [Query.equal('clinicId', clinicId)],
+        );
+
+        for (var doc in starters.documents) {
+          try {
+            await databases!.deleteDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.conversationStartersCollectionID,
+              documentId: doc.$id,
+            );
+          } catch (e) {
+            print('Error deleting conversation starter ${doc.$id}: $e');
+          }
+        }
+        print('✓ ${starters.documents.length} conversation starters deleted');
+      } catch (e) {
+        print('Error deleting conversation starters: $e');
+      }
+
+      // Step 6: Deactivate all staff (don't delete to preserve data)
+      try {
+        final staff = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.staffCollectionID,
+          queries: [Query.equal('clinicId', clinicId)],
+        );
+
+        for (var doc in staff.documents) {
+          try {
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.staffCollectionID,
+              documentId: doc.$id,
+              data: {
+                'isActive': false,
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
+            results['staffDeleted'] = (results['staffDeleted'] as int) + 1;
+          } catch (e) {
+            print('Error deactivating staff ${doc.$id}: $e');
+            errors.add('Staff: ${doc.$id}');
+          }
+        }
+        print('✓ ${results['staffDeleted']} staff members deactivated');
+      } catch (e) {
+        print('Error deactivating staff: $e');
+        errors.add('Staff: ${e.toString()}');
+      }
+
+      // Step 7: Get and delete clinic main image
+      try {
+        final clinicDoc = await getClinicById(clinicId);
+        if (clinicDoc != null) {
+          final clinicImage = clinicDoc.data['image'] as String?;
+          if (clinicImage != null && clinicImage.isNotEmpty) {
+            try {
+              await deleteImage(clinicImage);
+              print('✓ Clinic main image deleted');
+            } catch (e) {
+              print('Error deleting clinic main image: $e');
+            }
+          }
+        }
+      } catch (e) {
+        print('Error handling clinic main image: $e');
+      }
+
+      // Step 8: Finally, delete the clinic document
+      try {
+        await databases!.deleteDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.clinicsCollectionID,
+          documentId: clinicId,
+        );
+        results['clinicDeleted'] = true;
+        print('✓ Clinic document deleted');
+      } catch (e) {
+        print('Error deleting clinic document: $e');
+        errors.add('Clinic document: ${e.toString()}');
+        throw Exception('Failed to delete clinic: ${e.toString()}');
+      }
+
+      print('=== CLINIC DELETION COMPLETE ===');
+      print('Total errors: ${errors.length}');
+
+      return results;
+    } catch (e) {
+      print('=== CLINIC DELETION FAILED ===');
+      print('Error: $e');
+      rethrow;
+    }
+  }
+
+  /// Get clinic with full settings (including realtime status)
+  Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) async {
     try {
-      await databases!.deleteDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicsCollectionID,
-        documentId: clinicId,
-      );
-      results['clinicDeleted'] = true;
-      print('✓ Clinic document deleted');
+      final clinicDoc = await getClinicById(clinicId);
+      if (clinicDoc == null) return null;
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      return {
+        'clinic': clinicDoc.data,
+        'clinicDocId': clinicDoc.$id,
+        'settings': settingsDoc?.data,
+        'settingsDocId': settingsDoc?.$id,
+      };
     } catch (e) {
-      print('Error deleting clinic document: $e');
-      errors.add('Clinic document: ${e.toString()}');
-      throw Exception('Failed to delete clinic: ${e.toString()}');
+      print('Error getting clinic with settings: $e');
+      return null;
     }
-
-    print('=== CLINIC DELETION COMPLETE ===');
-    print('Total errors: ${errors.length}');
-    
-    return results;
-  } catch (e) {
-    print('=== CLINIC DELETION FAILED ===');
-    print('Error: $e');
-    rethrow;
   }
-}
 
-/// Get clinic with full settings (including realtime status)
-Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) async {
-  try {
-    final clinicDoc = await getClinicById(clinicId);
-    if (clinicDoc == null) return null;
-
-    final settingsDoc = await getClinicSettingsByClinicId(clinicId);
-
-    return {
-      'clinic': clinicDoc.data,
-      'clinicDocId': clinicDoc.$id,
-      'settings': settingsDoc?.data,
-      'settingsDocId': settingsDoc?.$id,
-    };
-  } catch (e) {
-    print('Error getting clinic with settings: $e');
-    return null;
+  /// Real-time subscription for clinic changes
+  Stream<RealtimeMessage> subscribeToClinicChanges() {
+    final realtime = Realtime(client);
+    return realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicsCollectionID}.documents',
+    ]).stream;
   }
-}
 
-/// Real-time subscription for clinic changes
-Stream<RealtimeMessage> subscribeToClinicChanges() {
-  final realtime = Realtime(client);
-  return realtime.subscribe([
-    'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicsCollectionID}.documents',
-  ]).stream;
-}
-
-/// Real-time subscription for clinic settings changes
-Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
-  final realtime = Realtime(client);
-  return realtime.subscribe([
-    'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicSettingsCollectionID}.documents',
-  ]).stream;
-}
+  /// Real-time subscription for clinic settings changes
+  Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
+    final realtime = Realtime(client);
+    return realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicSettingsCollectionID}.documents',
+    ]).stream;
+  }
 }

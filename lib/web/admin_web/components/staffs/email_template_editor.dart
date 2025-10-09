@@ -43,6 +43,7 @@ class _EmailTemplateEditorState extends State<EmailTemplateEditor> {
     super.dispose();
   }
 
+  // ⭐ CRITICAL FIX: Proper email template saving with database update
   Future<void> _saveTemplate() async {
     final newTemplate = _templateController.text.trim();
 
@@ -63,30 +64,41 @@ class _EmailTemplateEditorState extends State<EmailTemplateEditor> {
     try {
       final authRepo = Get.find<AuthRepository>();
 
-      // Update clinic settings email template
+      print('>>> ============================================');
+      print('>>> EMAIL TEMPLATE UPDATE START');
+      print('>>> Old template: ${widget.clinicSettings.staffEmailTemplate}');
+      print('>>> New template: $newTemplate');
+      print('>>> ============================================');
+
+      // Step 1: Update clinic settings email template
+      print('>>> Step 1: Updating clinic settings...');
       await authRepo.updateClinicSettingsEmailTemplate(
         widget.clinicSettings.documentId!,
         newTemplate,
       );
+      print('>>> ✓ Clinic settings updated');
 
-      // Show confirmation dialog before updating staff emails
+      // Step 2: Show confirmation dialog
+      print('>>> Step 2: Showing confirmation dialog...');
       final shouldUpdateStaff = await _showUpdateConfirmation();
 
       if (shouldUpdateStaff == true) {
-        // Update all existing staff emails
+        // Step 3: Update all existing staff DISPLAY emails
+        print('>>> Step 3: Updating all staff display emails...');
         await authRepo.updateAllStaffEmailsForClinic(
           widget.clinicSettings.clinicId,
           newTemplate,
         );
+        print('>>> ✓ All staff emails updated');
 
         Get.snackbar(
           'Success',
-          'Email template and all staff emails updated successfully',
+          'Email template and all staff display emails updated successfully',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: vetGreen,
           colorText: Colors.white,
           icon: const Icon(Icons.check_circle, color: Colors.white),
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         );
       } else {
         Get.snackbar(
@@ -104,11 +116,29 @@ class _EmailTemplateEditorState extends State<EmailTemplateEditor> {
         _isEditing = false;
       });
 
+      print('>>> ============================================');
+      print('>>> EMAIL TEMPLATE UPDATE COMPLETE');
+      print('>>> ============================================');
+
+      // Trigger refresh
       widget.onTemplateUpdated();
     } catch (e) {
+      print('>>> ============================================');
+      print('>>> EMAIL TEMPLATE UPDATE ERROR: $e');
+      print('>>> ============================================');
+
       setState(() {
         _errorMessage = 'Failed to update template: $e';
       });
+
+      Get.snackbar(
+        'Error',
+        'Failed to update email template: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
     } finally {
       setState(() {
         _isSaving = false;
@@ -124,13 +154,39 @@ class _EmailTemplateEditorState extends State<EmailTemplateEditor> {
           children: [
             Icon(Icons.update, color: primaryTeal),
             SizedBox(width: 12),
-            Text('Update Existing Staff Emails?'),
+            Expanded(child: Text('Update Existing Staff Emails?')),
           ],
         ),
-        content: const Text(
-          'Do you want to update email addresses for all existing staff members? '
-          'This will regenerate their email addresses using the new template.\n\n'
-          'Note: Authentication emails cannot be changed and will remain the same.',
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Do you want to update the display email addresses for all existing staff members?',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'This will regenerate their display email addresses using the new template.',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: primaryBlue),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Note: Login emails remain unchanged for security',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: mediumGray,
+                        fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -154,12 +210,10 @@ class _EmailTemplateEditorState extends State<EmailTemplateEditor> {
     final template = _templateController.text.trim();
     if (template.isEmpty) return 'example@domain.vet';
 
-    // If template starts with @, prepend example name
     if (template.startsWith('@')) {
       return 'johndoe$template';
     }
 
-    // For backward compatibility with {name} format
     return template.replaceAll('{name}', 'john.doe');
   }
 
@@ -173,7 +227,6 @@ class _EmailTemplateEditorState extends State<EmailTemplateEditor> {
   }
 
   Widget _buildDisplayMode() {
-    // Display template without {name} for cleaner look
     String displayTemplate = widget.clinicSettings.staffEmailTemplate;
     if (displayTemplate.contains('{name}')) {
       displayTemplate = displayTemplate.replaceAll('{name}', '');

@@ -40,25 +40,31 @@ class PermissionGuard extends StatelessWidget {
   }
 
   Widget _buildViewOnlyBanner(BuildContext context) {
+    // FIX: Special message for Staffs page (admin-only)
+    final bool isStaffsPage = requiredPermission == 'Staffs';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.orange.shade100,
-            Colors.orange.shade50,
-          ],
+          colors: isStaffsPage
+              ? [Colors.red.shade100, Colors.red.shade50]
+              : [Colors.orange.shade100, Colors.orange.shade50],
         ),
         border: Border(
           bottom: BorderSide(
-            color: vetOrange.withOpacity(0.3),
+            color: isStaffsPage
+                ? Colors.red.withOpacity(0.3)
+                : vetOrange.withOpacity(0.3),
             width: 2,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: vetOrange.withOpacity(0.1),
+            color: isStaffsPage
+                ? Colors.red.withOpacity(0.1)
+                : vetOrange.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -69,12 +75,14 @@ class PermissionGuard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: vetOrange.withOpacity(0.2),
+              color: isStaffsPage
+                  ? Colors.red.withOpacity(0.2)
+                  : vetOrange.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.visibility,
-              color: vetOrange,
+            child: Icon(
+              isStaffsPage ? Icons.admin_panel_settings : Icons.visibility,
+              color: isStaffsPage ? Colors.red : vetOrange,
               size: 22,
             ),
           ),
@@ -85,9 +93,9 @@ class PermissionGuard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'View-Only Mode',
-                      style: TextStyle(
+                    Text(
+                      isStaffsPage ? 'Admin-Only Page' : 'View-Only Mode',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -98,21 +106,34 @@ class PermissionGuard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: vetOrange.withOpacity(0.2),
+                        color: isStaffsPage
+                            ? Colors.red.withOpacity(0.2)
+                            : vetOrange.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: vetOrange.withOpacity(0.5)),
+                        border: Border.all(
+                            color: isStaffsPage
+                                ? Colors.red.withOpacity(0.5)
+                                : vetOrange.withOpacity(0.5)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.lock, size: 12, color: Colors.orange[800]),
+                          Icon(Icons.lock,
+                              size: 12,
+                              color: isStaffsPage
+                                  ? Colors.red[800]
+                                  : Colors.orange[800]),
                           const SizedBox(width: 4),
                           Text(
-                            'No "$requiredPermission" permission',
+                            isStaffsPage
+                                ? 'Administrator Access Required'
+                                : 'No "$requiredPermission" permission',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Colors.orange[800],
+                              color: isStaffsPage
+                                  ? Colors.red[800]
+                                  : Colors.orange[800],
                             ),
                           ),
                         ],
@@ -122,7 +143,9 @@ class PermissionGuard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'You can view this page but cannot make changes. Contact your administrator to request "$requiredPermission" permission.',
+                  isStaffsPage
+                      ? 'The Staff Management page is restricted to administrators only. You can view staff information but cannot add, edit, or remove staff members. Only clinic administrators have full access to manage staff accounts and permissions.'
+                      : 'You can view this page but cannot make changes. Contact your administrator to request "$requiredPermission" permission.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey[700],
@@ -162,6 +185,7 @@ class PermissionBanner extends StatelessWidget {
   final IconData icon;
   final Color? color;
   final bool isViewOnly;
+  final bool isAdminOnly;
 
   const PermissionBanner({
     super.key,
@@ -169,6 +193,7 @@ class PermissionBanner extends StatelessWidget {
     this.icon = Icons.info_outline,
     this.color,
     this.isViewOnly = false,
+    this.isAdminOnly = false,
   });
 
   static const Color vetOrange = Color(0xFFF59E0B);
@@ -176,7 +201,8 @@ class PermissionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bannerColor = color ?? (isViewOnly ? vetOrange : primaryTeal);
+    final bannerColor = color ??
+        (isAdminOnly ? Colors.red : (isViewOnly ? vetOrange : primaryTeal));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
