@@ -134,47 +134,54 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     }
   }
 
-  Widget _buildHeader() {
-    return Obx(() => Container(
-      padding: EdgeInsets.all(widget.compact ? 16 : 20),
-      decoration: BoxDecoration(
-        color: _getHeaderColor(),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+Widget _buildHeader() {
+  return Obx(() => Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(widget.compact ? 16 : 20),
+        decoration: BoxDecoration(
+          color: _getHeaderColor(),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(_getHeaderIcon(), color: Colors.white, size: widget.compact ? 20 : 24),
-          SizedBox(width: widget.compact ? 8 : 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Book Appointment',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: widget.compact ? 18 : 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (controller.clinicSettings.value != null)
+        child: Row(
+          children: [
+            Icon(
+              _getHeaderIcon(),
+              color: Colors.white,
+              size: widget.compact ? 20 : 24,
+            ),
+            SizedBox(width: widget.compact ? 8 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    _getClinicStatusText(),
+                    'Book Appointment',
                     style: GoogleFonts.inter(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: widget.compact ? 12 : 14,
+                      color: Colors.white,
+                      fontSize: widget.compact ? 18 : 20,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-              ],
+                  if (controller.clinicSettings.value != null)
+                    Text(
+                      _getClinicStatusText(),
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: widget.compact ? 12 : 14,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    ));
-  }
+            SizedBox(width: widget.compact ? 8 : 12),
+            _buildMessagebtn(), // ✅ safely added at end
+          ],
+        ),
+      ));
+}
 
   Color _getHeaderColor() {
     if (controller.clinicSettings.value == null) {
@@ -683,6 +690,18 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         ],
       );
     });
+  }
+
+  Widget _buildMessagebtn() {
+    return Container(
+      child: IconButton(
+        icon: const Icon(
+          Icons.message_rounded,
+          color: Colors.white,
+        ),
+        onPressed: () {}
+      ),
+    );
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/mobile/user/pages/clinic_page_maps.dart';
 import 'package:capstone_app/mobile/user/pages/schedule_appointment.dart';
 import 'package:capstone_app/mobile/user/pages/clinic_reviews_page.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
@@ -877,9 +878,11 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: const Stack(
+            child: Stack(
               children: [
-                WebMaps()
+                ClinicPageMaps(
+                  clinic: widget.clinic
+                )
               ],
             ),
           ),
