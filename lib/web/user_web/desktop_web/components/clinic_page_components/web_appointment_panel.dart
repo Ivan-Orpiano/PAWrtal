@@ -716,6 +716,13 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       Navigator.pop(context);
 
       if (conversation != null && context.mounted) {
+        // Open the conversation in MessagingController
+        await messagingController.openConversation(
+          conversation,
+          widget.clinic.documentId!,
+          'clinic',
+        );
+        
         // Get or create the WebUserHomeController
         final homeController = Get.isRegistered<WebUserHomeController>()
             ? Get.find<WebUserHomeController>()
