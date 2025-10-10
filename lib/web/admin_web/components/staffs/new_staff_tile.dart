@@ -5,8 +5,13 @@ import 'package:capstone_app/data/models/clinic_settings_model.dart';
 
 class NewStaffTile extends StatelessWidget {
   final ClinicSettings clinicSettings;
-  final void Function(String name, String email, String phone,
-      List<String> authorities, Uint8List? imageBytes) onStaffCreated;
+  final void Function(
+      String name,
+      String email,
+      String phone,
+      List<String> authorities,
+      Uint8List? imageBytes,
+      String password) onStaffCreated;
 
   const NewStaffTile({
     super.key,
@@ -162,8 +167,13 @@ class _StaffFormDialog extends StatefulWidget {
   final TextEditingController firstNameController;
   final TextEditingController surnameController;
   final TextEditingController phoneController;
-  final void Function(String name, String email, String phone,
-      List<String> authorities, Uint8List? imageBytes) onStaffCreated;
+  final void Function(
+      String name,
+      String email,
+      String phone,
+      List<String> authorities,
+      Uint8List? imageBytes,
+      String password) onStaffCreated;
 
   const _StaffFormDialog({
     required this.clinicSettings,
@@ -460,7 +470,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                       onPressed: _handleCreateStaff,
                       icon: const Icon(Icons.check_circle_outline,
                           color: Colors.white),
-                      label: const Text('Create Account',
+                      label: const Text('Next: Set Password',
                           style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
@@ -505,9 +515,744 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     if (appointmentAuth) authorities.add('Appointments');
     if (messagesAuth) authorities.add('Messages');
 
-    Navigator.of(context).pop();
-    widget.onStaffCreated(
-        fullName, generatedEmail, phone, authorities, selectedImageBytes);
+    // Show password dialog
+    _showPasswordDialog(fullName, generatedEmail, phone, authorities);
+  }
+
+  Future<void> _showPasswordDialog(
+    String fullName,
+    String email,
+    String phone,
+    List<String> authorities,
+  ) async {
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool obscurePassword = true;
+    bool obscureConfirm = true;
+    String? errorMessage;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    lightVetGreen.withOpacity(0.2),
+                  ],
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [primaryTeal, primaryBlue],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.lock_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Set Staff Password',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: darkText,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Create a secure password',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: mediumGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Info Box
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: primaryBlue.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Password Field
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    onChanged: (_) => setDialogState(() => errorMessage = null),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      hintText: 'Minimum 8 characters',
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: primaryTeal.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.lock,
+                            color: primaryTeal, size: 20),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: mediumGray,
+                          size: 20,
+                        ),
+                        onPressed: () => setDialogState(
+                            () => obscurePassword = !obscurePassword),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: primaryTeal.withOpacity(0.3)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: primaryTeal.withOpacity(0.3)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: primaryTeal, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm Password Field
+                  TextField(
+                    controller: confirmPasswordController,
+                    obscureText: obscureConfirm,
+                    onChanged: (_) => setDialogState(() => errorMessage = null),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      hintText: 'Re-enter password',
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: vetGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.check_circle_outline,
+                            color: vetGreen, size: 20),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: mediumGray,
+                          size: 20,
+                        ),
+                        onPressed: () => setDialogState(
+                            () => obscureConfirm = !obscureConfirm),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: vetGreen.withOpacity(0.3)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: vetGreen.withOpacity(0.3)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: vetGreen, width: 2),
+                      ),
+                    ),
+                  ),
+
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: Colors.red, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: mediumGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [primaryTeal, primaryBlue],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryTeal.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final password = passwordController.text;
+                            final confirmPassword =
+                                confirmPasswordController.text;
+
+                            if (password.length < 8) {
+                              setDialogState(() => errorMessage =
+                                  'Password must be at least 8 characters');
+                              return;
+                            }
+
+                            if (password != confirmPassword) {
+                              setDialogState(() =>
+                                  errorMessage = 'Passwords do not match');
+                              return;
+                            }
+
+                            // Show confirmation dialog
+                            Navigator.pop(dialogContext);
+                            _showConfirmationDialog(
+                              fullName,
+                              email,
+                              password,
+                              phone,
+                              authorities,
+                            );
+                          },
+                          icon: const Icon(Icons.arrow_forward,
+                              color: Colors.white, size: 18),
+                          label: const Text(
+                            'Continue',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showConfirmationDialog(
+    String fullName,
+    String email,
+    String password,
+    String phone,
+    List<String> authorities,
+  ) async {
+    bool showPassword = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    vetGreen.withOpacity(0.1),
+                  ],
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [vetGreen, primaryTeal],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Review & Confirm',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: darkText,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Verify account details',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: mediumGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Account Details Box
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: lightVetGreen.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: vetGreen.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name
+                        _buildDetailRow(
+                          Icons.person,
+                          'Staff Name',
+                          fullName,
+                          primaryBlue,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Email
+                        _buildDetailRow(
+                          Icons.email,
+                          'Email / Username',
+                          email,
+                          primaryTeal,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Password
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: vetOrange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.lock,
+                                color: vetOrange,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Password',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: mediumGray,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          showPassword
+                                              ? password
+                                              : '•' * password.length,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: darkText,
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () => setDialogState(
+                                            () => showPassword = !showPassword),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: vetOrange.withOpacity(0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                showPassword
+                                                    ? Icons.visibility_off
+                                                    : Icons.visibility,
+                                                size: 14,
+                                                color: vetOrange,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                showPassword ? 'Hide' : 'Show',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: vetOrange,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        if (authorities.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          // Permissions
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: vetGreen.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.security,
+                                  color: vetGreen,
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Permissions',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: mediumGray,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: authorities.map((auth) {
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: vetGreen.withOpacity(0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: vetGreen.withOpacity(0.4),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            auth,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: vetGreen,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Warning Box
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: vetOrange.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: vetOrange, size: 20),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Staff should change this password after first login',
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.3,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: mediumGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [vetGreen, primaryTeal],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: vetGreen.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(dialogContext);
+                            Navigator.of(this.context).pop();
+                            widget.onStaffCreated(
+                              fullName,
+                              email,
+                              phone,
+                              authorities,
+                              selectedImageBytes,
+                              password,
+                            );
+                          },
+                          icon: const Icon(Icons.check_circle,
+                              color: Colors.white, size: 20),
+                          label: const Text(
+                            'Confirm & Create',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(
+      IconData icon, String label, String value, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: mediumGray,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: darkText,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildProfilePhotoSection() {

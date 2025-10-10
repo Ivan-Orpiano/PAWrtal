@@ -137,22 +137,19 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     }
   }
 
-  // ⭐ FIX: No more forced relogin when creating staff
   Future<void> _addNewStaff(
     String name,
     String email,
     String phone,
     List<String> authorities,
     Uint8List? imageBytes,
+    String password,
   ) async {
     if (_clinic == null) return;
 
     try {
-      final password = await _showPasswordDialog();
-      if (password == null || password.isEmpty) return;
-
       String? imageUrl;
-      // Upload image if needed
+      // Upload image if needed (imageBytes handling)
 
       print('>>> Calling createStaffAccount...');
       final result = await _authRepository.createStaffAccount(
@@ -168,14 +165,13 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       print('>>> Staff creation result: $result');
 
       if (result['success'] == true) {
-        // ⭐ CRITICAL FIX: Just reload the list, no forced logout!
         print('>>> Staff created successfully - refreshing staff list');
 
         await _loadClinicAndStaff();
 
         Get.snackbar(
           'Success',
-          'Staff account created successfully! ${result['authUser'].name} has been added to your team.',
+          'Staff account created successfully! $name has been added to your team.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: vetGreen,
           colorText: Colors.white,
@@ -194,64 +190,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         duration: const Duration(seconds: 5),
       );
     }
-  }
-
-  Future<String?> _showPasswordDialog() async {
-    final controller = TextEditingController();
-
-    return await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set Initial Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Create a temporary password for this staff member.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                hintText: 'Minimum 8 characters',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'The staff member should change this password after first login.',
-              style: TextStyle(fontSize: 12, color: mediumGray),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.length >= 8) {
-                Navigator.pop(context, controller.text);
-              } else {
-                Get.snackbar(
-                  'Invalid Password',
-                  'Password must be at least 8 characters',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryTeal,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _updateStaffAuthorities(
@@ -355,6 +293,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       );
     }
 
+    // CRITICAL: Check if clinic has staff accounts
+    final bool hasStaffAccounts = staffList.isNotEmpty;
+
     return Scaffold(
       backgroundColor: lightGray,
       body: FadeTransition(
@@ -409,6 +350,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     child: EmailTemplateEditor(
                       clinicSettings: _clinicSettings!,
                       onTemplateUpdated: _loadClinicAndStaff,
+                      hasStaffAccounts: hasStaffAccounts,
                     ),
                   ),
                   LayoutBuilder(
