@@ -2,6 +2,8 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:get/get.dart';
@@ -10,8 +12,8 @@ import 'package:capstone_app/web/user_web/controllers/web_appointment_controller
 
 class EnhancedWebAppointmentPanel extends StatefulWidget {
   final Clinic clinic;
-  final double? maxHeight; // Optional max height for responsiveness
-  final bool compact; // Compact mode for smaller screens
+  final double? maxHeight;
+  final bool compact;
 
   const EnhancedWebAppointmentPanel({
     super.key, 
@@ -72,10 +74,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header with clinic status
           _buildHeader(),
-
-          // Content with flexible scrolling
           Flexible(
             child: Scrollbar(
               controller: _scrollController,
@@ -87,31 +86,19 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Clinic status banner (if closed)
                     _buildStatusBanner(),
-                    
-                    // Calendar Section
                     _buildSectionHeader('Select Date'),
                     SizedBox(height: widget.compact ? 8 : 12),
                     _buildCalendar(),
-                    
                     SizedBox(height: widget.compact ? 16 : 24),
-                    
-                    // Time & Service Selection
                     _buildSectionHeader('Appointment Details'),
                     SizedBox(height: widget.compact ? 8 : 12),
                     _buildTimeServiceRow(),
-                    
                     SizedBox(height: widget.compact ? 16 : 20),
-                    
-                    // Pet Selection
                     _buildSectionHeader('Select Pet'),
                     SizedBox(height: widget.compact ? 8 : 12),
                     _buildPetSelection(),
-                    
                     SizedBox(height: widget.compact ? 16 : 24),
-                    
-                    // Book Button
                     _buildBookButton(),
                   ],
                 ),
@@ -124,64 +111,63 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
   }
 
   double _calculateMaxHeight(double screenHeight) {
-    // Responsive height calculation based on screen height
     if (screenHeight <= 768) {
-      return screenHeight * 0.75; // 75% on smaller screens
+      return screenHeight * 0.75;
     } else if (screenHeight <= 1080) {
-      return screenHeight * 0.7; // 70% on medium screens
+      return screenHeight * 0.7;
     } else {
-      return 800; // Fixed max on large screens
+      return 800;
     }
   }
 
-Widget _buildHeader() {
-  return Obx(() => Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(widget.compact ? 16 : 20),
-        decoration: BoxDecoration(
-          color: _getHeaderColor(),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              _getHeaderIcon(),
-              color: Colors.white,
-              size: widget.compact ? 20 : 24,
+  Widget _buildHeader() {
+    return Obx(() => Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(widget.compact ? 16 : 20),
+          decoration: BoxDecoration(
+            color: _getHeaderColor(),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-            SizedBox(width: widget.compact ? 8 : 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Book Appointment',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: widget.compact ? 18 : 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (controller.clinicSettings.value != null)
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _getHeaderIcon(),
+                color: Colors.white,
+                size: widget.compact ? 20 : 24,
+              ),
+              SizedBox(width: widget.compact ? 8 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      _getClinicStatusText(),
+                      'Book Appointment',
                       style: GoogleFonts.inter(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: widget.compact ? 12 : 14,
+                        color: Colors.white,
+                        fontSize: widget.compact ? 18 : 20,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                ],
+                    if (controller.clinicSettings.value != null)
+                      Text(
+                        _getClinicStatusText(),
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: widget.compact ? 12 : 14,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(width: widget.compact ? 8 : 12),
-            _buildMessagebtn(), // ✅ safely added at end
-          ],
-        ),
-      ));
-}
+              SizedBox(width: widget.compact ? 8 : 12),
+              _buildMessageBtn(),
+            ],
+          ),
+        ));
+  }
 
   Color _getHeaderColor() {
     if (controller.clinicSettings.value == null) {
@@ -692,14 +678,108 @@ Widget _buildHeader() {
     });
   }
 
-  Widget _buildMessagebtn() {
-    return Container(
-      child: IconButton(
-        icon: const Icon(
-          Icons.message_rounded,
-          color: Colors.white,
+  Widget _buildMessageBtn() {
+    return IconButton(
+      icon: const Icon(
+        Icons.message_rounded,
+        color: Colors.white,
+      ),
+      onPressed: () => _startConversationWithClinic(context),
+      tooltip: 'Message Clinic',
+    );
+  }
+
+  Future<void> _startConversationWithClinic(BuildContext context) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF5173B8),
+          ),
         ),
-        onPressed: () {}
+      );
+
+      final MessagingController messagingController = Get.find<MessagingController>();
+      final UserSessionService userSession = Get.find<UserSessionService>();
+
+      if (userSession.userId.isEmpty) {
+        Navigator.pop(context);
+        _showLoginRequiredDialog(context);
+        return;
+      }
+
+      final conversation = await messagingController.startConversationWithClinic(
+          widget.clinic.documentId!);
+
+      Navigator.pop(context);
+
+      if (conversation != null && context.mounted) {
+        // Get or create the WebUserHomeController
+        final homeController = Get.isRegistered<WebUserHomeController>()
+            ? Get.find<WebUserHomeController>()
+            : Get.put(WebUserHomeController());
+        
+        // Navigate to Messages tab (index 2)
+        homeController.onItemSelected(2);
+        
+        // Pop back to close the current page if needed
+        Navigator.pop(context);
+      } else {
+        if (context.mounted) {
+          _showErrorDialog(context, 'Failed to start conversation. Please try again.');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        _showErrorDialog(context, 'Error starting conversation: $e');
+      }
+    }
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Login Required'),
+        content: const Text('Please log in to start a conversation with this clinic.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              // Navigate to login page
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5173B8),
+            ),
+            child: const Text(
+              'Login',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -707,7 +787,6 @@ Widget _buildHeader() {
   @override
   void dispose() {
     _scrollController.dispose();
-    // Don't delete controller here - let parent manage lifecycle
     super.dispose();
   }
 }

@@ -36,6 +36,8 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final servicesKey = GlobalKey();
   final locationKey = GlobalKey();
   final reviewsKey = GlobalKey();
+  final firstBreakpointKey = GlobalKey();
+  final secondBreakpointKey = GlobalKey();
   
   // Single appointment controller instance
   late WebAppointmentController _appointmentController;
@@ -52,22 +54,36 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     }
   }
 
-  void _updatePanelState() {
-    final offset = _scrollController.offset;
+void _updatePanelState() {
+  final offset = _scrollController.offset;
+  
+  // Get positions from GlobalKeys
+  double? firstBreakpoint = _getKeyPosition(firstBreakpointKey);
+  double? secondBreakpoint = _getKeyPosition(secondBreakpointKey);
+  
+  // Fallback to screen height calculation if keys aren't rendered yet
+  if (firstBreakpoint == null || secondBreakpoint == null) {
     final screenHeight = MediaQuery.of(context).size.height;
-    
-    // Dynamic breakpoints based on screen height
-    final firstBreakpoint = screenHeight * 0.7;
-    final secondBreakpoint = screenHeight * 1.90;
-
-    if (offset <= firstBreakpoint && _panelState != PanelState.scrollable) {
-      setState(() => _panelState = PanelState.scrollable);
-    } else if (offset > firstBreakpoint && offset <= secondBreakpoint && _panelState != PanelState.positioned) {
-      setState(() => _panelState = PanelState.positioned);
-    } else if (offset > secondBreakpoint && _panelState != PanelState.static) {
-      setState(() => _panelState = PanelState.static);
-    }
+    firstBreakpoint ??= screenHeight * 0.7;
+    secondBreakpoint ??= screenHeight * 1.90;
   }
+
+  if (offset <= firstBreakpoint && _panelState != PanelState.scrollable) {
+    setState(() => _panelState = PanelState.scrollable);
+  } else if (offset > firstBreakpoint && offset <= secondBreakpoint && _panelState != PanelState.positioned) {
+    setState(() => _panelState = PanelState.positioned);
+  } else if (offset > secondBreakpoint && _panelState != PanelState.static) {
+    setState(() => _panelState = PanelState.static);
+  }
+}
+
+double? _getKeyPosition(GlobalKey key) {
+  final RenderBox? renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+  if (renderBox == null) return null;
+  
+  final position = renderBox.localToGlobal(Offset.zero);
+  return position.dy;
+}
 
   @override
   void initState() {
@@ -242,103 +258,104 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
   );
 }
 
-  Widget _buildLeftContent() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: widget.clinic.image.isNotEmpty
-                ? Image.network(
-                    widget.clinic.image,
-                    height: 40,
-                    width: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        'lib/images/test_image.jpg',
-                        height: 40,
-                        width: 40,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  )
-                : Image.asset(
-                    'lib/images/test_image.jpg',
-                    height: 40,
-                    width: 40,
-                    fit: BoxFit.cover,
-                  ),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Text(
-                widget.clinic.clinicName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16
+Widget _buildLeftContent() {
+  return Column(
+    children: [
+      SizedBox(key: firstBreakpointKey),
+      Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: widget.clinic.image.isNotEmpty
+              ? Image.network(
+                  widget.clinic.image,
+                  height: 40,
+                  width: 40,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Image.asset(
+                      'lib/images/test_image.jpg',
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                )
+              : Image.asset(
+                  'lib/images/test_image.jpg',
+                  height: 40,
+                  width: 40,
+                  fit: BoxFit.cover,
                 ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Text(
+              widget.clinic.clinicName,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16
+              ),
+            ),
+          )
+        ],
+      ),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: SizedBox(
+          width: double.infinity,
+          child: Divider(
+            height: 1,
+            thickness: 0.5,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+      WebClinicDescriptionUpdated(clinic: widget.clinic),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: SizedBox(
+          width: double.infinity,
+          child: Divider(
+            height: 1,
+            thickness: 0.5,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+      const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Text(
+              'Services offered',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 22
               ),
             )
           ],
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: SizedBox(
-            width: double.infinity,
-            child: Divider(
-              height: 1,
-              thickness: 0.5,
-              color: Colors.grey,
-            ),
+      ),
+      WebClinicServicesUpdated(
+        key: servicesKey,
+        clinic: widget.clinic,
+      ),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: SizedBox(
+          width: double.infinity,
+          child: Divider(
+            height: 1,
+            thickness: 0.5,
+            color: Colors.grey,
           ),
         ),
-        WebClinicDescriptionUpdated(clinic: widget.clinic),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: SizedBox(
-            width: double.infinity,
-            child: Divider(
-              height: 1,
-              thickness: 0.5,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Text(
-                'Services offered',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 22
-                ),
-              )
-            ],
-          ),
-        ),
-        WebClinicServicesUpdated(
-          key: servicesKey,
-          clinic: widget.clinic,
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: SizedBox(
-            width: double.infinity,
-            child: Divider(
-              height: 1,
-              thickness: 0.5,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        WebRatingsAndReviews(key: reviewsKey),
-      ]
-    );
-  }
+      ),
+      WebRatingsAndReviews(key: reviewsKey),
+    ]
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -452,7 +469,7 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
               
               // Main content area
               _buildMainContent(screenWidth, screenHeight),
-
+              SizedBox(key: secondBreakpointKey),
               // Location section
               Container(
                 padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
