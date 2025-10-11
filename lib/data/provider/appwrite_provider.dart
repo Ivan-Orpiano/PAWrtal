@@ -2206,4 +2206,293 @@ class AppWriteProvider {
       'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.clinicSettingsCollectionID}.documents',
     ]).stream;
   }
+
+Future<Document> createRatingAndReview(Map<String, dynamic> data) async {
+  try {
+    print('Creating rating and review...');
+    
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  } catch (e) {
+    print('Error creating rating and review: $e');
+    rethrow;
+  }
 }
+
+/// Check if user has already reviewed an appointment
+Future<bool> hasUserReviewedAppointment(String appointmentId) async {
+  try {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: [
+        Query.equal('appointmentId', appointmentId),
+      ],
+    );
+    
+    return result.documents.isNotEmpty;
+  } catch (e) {
+    print('Error checking if appointment reviewed: $e');
+    return false;
+  }
+}
+
+/// Get all reviews for a clinic
+Future<List<Document>> getClinicReviews(String clinicId, {
+  int limit = 50,
+  String? lastDocumentId,
+}) async {
+  try {
+    final queries = [
+      Query.equal('clinicId', clinicId),
+      Query.orderDesc('createdAt'),
+      Query.limit(limit),
+    ];
+
+    if (lastDocumentId != null) {
+      queries.add(Query.cursorAfter(lastDocumentId));
+    }
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: queries,
+    );
+
+    return result.documents;
+  } catch (e) {
+    print('Error getting clinic reviews: $e');
+    return [];
+  }
+}
+
+/// Get reviews by a specific user
+Future<List<Document>> getUserReviews(String userId) async {
+  try {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: [
+        Query.equal('userId', userId),
+        Query.orderDesc('createdAt'),
+      ],
+    );
+
+    return result.documents;
+  } catch (e) {
+    print('Error getting user reviews: $e');
+    return [];
+  }
+}
+
+/// Get a specific review by appointment ID
+Future<Document?> getReviewByAppointmentId(String appointmentId) async {
+  try {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: [
+        Query.equal('appointmentId', appointmentId),
+      ],
+    );
+
+    return result.documents.isNotEmpty ? result.documents.first : null;
+  } catch (e) {
+    print('Error getting review by appointment: $e');
+    return null;
+  }
+}
+
+/// Update an existing review
+Future<Document> updateRatingAndReview(
+  String documentId, 
+  Map<String, dynamic> data
+) async {
+  try {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    data['isEdited'] = true;
+
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  } catch (e) {
+    print('Error updating rating and review: $e');
+    rethrow;
+  }
+}
+
+/// Delete a review
+Future<void> deleteRatingAndReview(String documentId) async {
+  try {
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      documentId: documentId,
+    );
+  } catch (e) {
+    print('Error deleting rating and review: $e');
+    rethrow;
+  }
+}
+
+/// Add clinic response to a review
+Future<Document> addClinicResponse(
+  String documentId,
+  String response,
+) async {
+  try {
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      documentId: documentId,
+      data: {
+        'clinicResponse': response,
+        'clinicResponseDate': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+    );
+  } catch (e) {
+    print('Error adding clinic response: $e');
+    rethrow;
+  }
+}
+
+/// Get clinic rating statistics
+Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
+  try {
+    final reviews = await getClinicReviews(clinicId, limit: 1000);
+    
+    if (reviews.isEmpty) {
+      return {
+        'averageRating': 0.0,
+        'totalReviews': 0,
+        'ratingDistribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+        'reviewsWithText': 0,
+        'reviewsWithImages': 0,
+      };
+    }
+
+    double totalRating = 0;
+    final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+    int withText = 0;
+    int withImages = 0;
+
+    for (var doc in reviews) {
+      final rating = (doc.data['rating'] ?? 0.0).toDouble();
+      totalRating += rating;
+      
+      final starRating = rating.ceil();
+      distribution[starRating] = (distribution[starRating] ?? 0) + 1;
+
+      if (doc.data['reviewText'] != null && doc.data['reviewText'].toString().isNotEmpty) {
+        withText++;
+      }
+
+      final images = doc.data['images'] as List?;
+      if (images != null && images.isNotEmpty) {
+        withImages++;
+      }
+    }
+
+    final avgRating = totalRating / reviews.length;
+
+    return {
+      'averageRating': double.parse(avgRating.toStringAsFixed(1)),
+      'totalReviews': reviews.length,
+      'ratingDistribution': distribution,
+      'reviewsWithText': withText,
+      'reviewsWithImages': withImages,
+    };
+  } catch (e) {
+    print('Error getting clinic rating stats: $e');
+    return {
+      'averageRating': 0.0,
+      'totalReviews': 0,
+      'ratingDistribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+      'reviewsWithText': 0,
+      'reviewsWithImages': 0,
+    };
+  }
+}
+
+/// Upload review images (supports both web and mobile)
+Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) async {
+  final List<models.File> uploadedFiles = [];
+
+  for (int i = 0; i < files.length; i++) {
+    try {
+      final file = files[i];
+      String fileName = "${DateTime.now().millisecondsSinceEpoch}_review_$i.${file.extension ?? 'jpg'}";
+
+      InputFile inputFile;
+
+      // Web upload (using bytes)
+      if (file.bytes != null) {
+        inputFile = InputFile.fromBytes(
+          bytes: file.bytes!,
+          filename: fileName,
+        );
+      } 
+      // Mobile upload (using path)
+      else if (file.path != null) {
+        inputFile = InputFile.fromPath(
+          path: file.path!,
+          filename: fileName,
+        );
+      } else {
+        print("Error: File has neither bytes nor path");
+        continue;
+      }
+
+      final response = await storage!.createFile(
+        bucketId: AppwriteConstants.imageBucketID,
+        fileId: ID.unique(),
+        file: inputFile,
+      );
+
+      uploadedFiles.add(response);
+      print("Successfully uploaded review image: ${response.$id}");
+    } catch (e) {
+      print("Error uploading review image ${files[i].name}: $e");
+      // Continue with other images even if one fails
+    }
+  }
+
+  return uploadedFiles;
+}
+
+/// Delete review images
+Future<void> deleteReviewImages(List<String> fileIds) async {
+  for (String fileId in fileIds) {
+    try {
+      await storage!.deleteFile(
+        bucketId: AppwriteConstants.imageBucketID,
+        fileId: fileId,
+      );
+    } catch (e) {
+      print("Error deleting review image $fileId: $e");
+    }
+  }
+}
+
+/// Subscribe to clinic reviews (real-time)
+Stream<RealtimeMessage> subscribeToClinicReviews(String clinicId) {
+  final realtime = Realtime(client);
+  return realtime
+      .subscribe([
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.ratingsAndReviewsCollectionID}.documents'
+      ])
+      .stream
+      .where((message) {
+        return message.payload['clinicId'] == clinicId;
+      });
+}
+}
+

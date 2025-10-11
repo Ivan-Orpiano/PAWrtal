@@ -14,6 +14,7 @@ class AppwriteConstants {
   static String messagesCollectionID = "68d25ad3000ebd275a4e";
   static String conversationStartersCollectionID = "68d25b3d001e1bef8af8";
   static String userStatusCollectionID = "68d25b9d000b7005695c";
+  static String ratingsAndReviewsCollectionID = "ratingsandreviews";
 
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID != "REPLACE_WITH_CONVERSATIONS_COLLECTION_ID" &&
@@ -21,5 +22,9 @@ class AppwriteConstants {
            conversationStartersCollectionID != "REPLACE_WITH_STARTERS_COLLECTION_ID" &&
            userStatusCollectionID != "REPLACE_WITH_USER_STATUS_COLLECTION_ID";
   }
+    static bool get ratingsAndReviewsConfigured {
+    return ratingsAndReviewsCollectionID != "REPLACE_WITH_YOUR_COLLECTION_ID";
+  }
 }
+
 
