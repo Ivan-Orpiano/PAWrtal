@@ -573,10 +573,6 @@ class AuthRepository {
 
 // ============= ID VERIFICATION METHODS =============
 
-  Future<Document> createIdVerification(IdVerification idVerification) {
-    return appWriteProvider.createIdVerification(idVerification.toMap());
-  }
-
   Future<IdVerification?> getIdVerificationByUserId(String userId) async {
     final doc = await appWriteProvider.getIdVerificationByUserId(userId);
     if (doc != null) {
