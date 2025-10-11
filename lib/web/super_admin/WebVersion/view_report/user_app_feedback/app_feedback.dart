@@ -1194,20 +1194,6 @@ class _ApplicationReportState extends State<ApplicationReport> {
     }
   }
 
-  Widget _buildAnalyticsItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value,
-              style: TextStyle(
-                  color: Colors.blue[600], fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
 }
 
 class FeedbackDetailsDialog extends StatefulWidget {

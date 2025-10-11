@@ -26,6 +26,7 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  bool _imageLoaded = false;
 
   @override
   void initState() {
@@ -47,13 +48,33 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   }
 
   @override
+  void didUpdateWidget(SuperAdminVetClinicTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Detect if clinic data changed (real-time update)
+    if (oldWidget.clinic.image != widget.clinic.image ||
+        oldWidget.clinic.clinicName != widget.clinic.clinicName ||
+        oldWidget.clinic.services != widget.clinic.services) {
+      setState(() {
+        _imageLoaded = false; // Reset image loading state
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isOpen = widget.settings?.isOpenNow() ?? false;
     final detailedStatus = widget.settings?.getDetailedStatus() ?? 'Unknown';
-    final services = widget.clinic.services
+    
+    // Get services count from both clinic and settings
+    final clinicServices = widget.clinic.services
         .split(',')
         .where((s) => s.trim().isNotEmpty)
-        .length;
+        .toList();
+    final settingsServices = widget.settings?.services ?? [];
+    final allServices = <String>{...clinicServices, ...settingsServices}.toList();
+    final servicesCount = allServices.length;
+    
     final galleryCount = widget.settings?.gallery.length ?? 0;
 
     // Responsive sizing
@@ -63,377 +84,466 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
             ? 360.0
             : 340.0;
 
-    return Container(
-      height: cardHeight,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(
-            color: const Color.fromRGBO(81, 115, 153, 0.2),
-            width: 2,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Enhanced Image Section with Real-time Status
-            Expanded(
-              flex: 5,
-              child: Stack(
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 300),
+      tween: Tween(begin: 0.95, end: 1.0),
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            height: cardHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color.fromRGBO(81, 115, 153, 0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(
+                  color: const Color.fromRGBO(81, 115, 153, 0.2),
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Main Image
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(22),
-                      ),
-                      color: Colors.grey[100],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(22),
-                      ),
-                      child: widget.clinic.image.isNotEmpty
-                          ? Image.network(
-                              getPetImageUrl(widget.clinic.image),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildPlaceholder();
-                              },
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    color:
-                                        const Color.fromRGBO(81, 115, 153, 1),
-                                    value: loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
-                            )
-                          : _buildPlaceholder(),
-                    ),
-                  ),
-
-                  // Gradient Overlay
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(22),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.6),
-                          ],
-                          stops: const [0.6, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Real-time Status Badge with Pulse Animation
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: isOpen ? _pulseAnimation.value : 1.0,
+                  // Enhanced Image Section with Real-time Updates
+                  Expanded(
+                    flex: 5,
+                    child: Stack(
+                      children: [
+                        // Main Image with AnimatedSwitcher for smooth transitions
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
                           child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: widget.isMobile ? 16 : 14,
-                              vertical: widget.isMobile ? 10 : 8,
-                            ),
+                            key: ValueKey(widget.clinic.image),
+                            width: double.infinity,
                             decoration: BoxDecoration(
-                              color: isOpen
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFFEF4444),
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (isOpen ? Colors.green : Colors.red)
-                                      .withOpacity(0.5),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                ),
-                              ],
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(22),
+                              ),
+                              color: Colors.grey[100],
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 9,
-                                  height: 9,
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(22),
+                              ),
+                              child: widget.clinic.image.isNotEmpty
+                                  ? Image.network(
+                                      getPetImageUrl(widget.clinic.image),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return _buildPlaceholder();
+                                      },
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            if (mounted) {
+                                              setState(() {
+                                                _imageLoaded = true;
+                                              });
+                                            }
+                                          });
+                                          return child;
+                                        }
+                                        return Container(
+                                          color: const Color(0xFFF8FAFC),
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                CircularProgressIndicator(
+                                                  color: const Color.fromRGBO(81, 115, 153, 1),
+                                                  value: loadingProgress.expectedTotalBytes != null
+                                                      ? loadingProgress.cumulativeBytesLoaded /
+                                                          loadingProgress.expectedTotalBytes!
+                                                      : null,
+                                                ),
+                                                const SizedBox(height: 12),
+                                                Text(
+                                                  'Loading...',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : _buildPlaceholder(),
+                            ),
+                          ),
+                        ),
+
+                        // Gradient Overlay
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(22),
+                              ),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.6),
+                                ],
+                                stops: const [0.6, 1.0],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Real-time Status Badge with Pulse Animation
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: isOpen ? _pulseAnimation.value : 1.0,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: widget.isMobile ? 16 : 14,
+                                    vertical: widget.isMobile ? 10 : 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
+                                    color: isOpen
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFEF4444),
+                                    borderRadius: BorderRadius.circular(30),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.white.withOpacity(0.6),
-                                        blurRadius: 6,
-                                        spreadRadius: 1,
+                                        color: (isOpen ? Colors.green : Colors.red)
+                                            .withOpacity(0.5),
+                                        blurRadius: 12,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 9,
+                                        height: 9,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.white.withOpacity(0.6),
+                                              blurRadius: 6,
+                                              spreadRadius: 1,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(width: widget.isMobile ? 7 : 6),
+                                      Text(
+                                        isOpen ? 'OPEN NOW' : 'CLOSED',
+                                        style: TextStyle(
+                                          fontSize: widget.isMobile ? 12 : 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 1,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                SizedBox(width: widget.isMobile ? 7 : 6),
-                                Text(
-                                  isOpen ? 'OPEN NOW' : 'CLOSED',
-                                  style: TextStyle(
-                                    fontSize: widget.isMobile ? 12 : 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 1,
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Real-time Update Indicator (appears briefly when data updates)
+                        if (_imageLoaded)
+                          Positioned(
+                            top: 16,
+                            left: 16,
+                            child: TweenAnimationBuilder<double>(
+                              duration: const Duration(seconds: 2),
+                              tween: Tween(begin: 1.0, end: 0.0),
+                              builder: (context, opacity, child) {
+                                if (opacity < 0.1) return const SizedBox.shrink();
+                                return Opacity(
+                                  opacity: opacity,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color.fromRGBO(81, 115, 153, 0.9),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.sync,
+                                          color: Colors.white,
+                                          size: 12,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Text(
+                                          'Updated',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                );
+                              },
                             ),
                           ),
-                        );
-                      },
+
+                        // Gallery Count Badge
+                        if (galleryCount > 0)
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.photo_library,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$galleryCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
 
-                  // Gallery Count Badge
-                  if (galleryCount > 0)
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.photo_library,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '$galleryCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
+                  // Enhanced Info Section with Real-time Service Count
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      padding: EdgeInsets.all(widget.isMobile ? 18.0 : 16.0),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white,
+                            Color(0xFFF8FAFC),
                           ],
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Enhanced Info Section
-            Expanded(
-              flex: 4,
-              child: Container(
-                padding: EdgeInsets.all(widget.isMobile ? 18.0 : 16.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white,
-                      const Color(0xFFF8FAFC),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Clinic Name
-                    Text(
-                      widget.clinic.clinicName,
-                      style: TextStyle(
-                        fontSize: widget.isMobile ? 19 : 17,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(81, 115, 153, 1),
-                        height: 1.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: widget.isMobile ? 10 : 8),
-
-                    // Address with Icon
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color.fromRGBO(81, 115, 153, 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Color.fromRGBO(81, 115, 153, 1),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            widget.clinic.address,
-                            style: TextStyle(
-                              fontSize: widget.isMobile ? 13 : 12,
-                              color: Colors.grey[700],
-                              height: 1.4,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: widget.isMobile ? 10 : 8),
-
-                    // Info Pills Row
-                    Row(
-                      children: [
-                        // Services Badge
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color.fromRGBO(81, 115, 153, 0.15),
-                                  Color.fromRGBO(79, 115, 153, 0.08),
-                                ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Clinic Name with Animation
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Text(
+                              widget.clinic.clinicName,
+                              key: ValueKey(widget.clinic.clinicName),
+                              style: TextStyle(
+                                fontSize: widget.isMobile ? 19 : 17,
+                                fontWeight: FontWeight.bold,
+                                color: const Color.fromRGBO(81, 115, 153, 1),
+                                height: 1.2,
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color.fromRGBO(81, 115, 153, 0.3),
-                                width: 1.5,
-                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.medical_services,
+                          ),
+                          SizedBox(height: widget.isMobile ? 10 : 8),
+
+                          // Address with Icon
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color.fromRGBO(81, 115, 153, 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.location_on,
                                   size: 16,
                                   color: Color.fromRGBO(81, 115, 153, 1),
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '$services',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color.fromRGBO(81, 115, 153, 1),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'services',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Contact Badge
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.green[300]!,
-                                width: 1.5,
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.phone,
-                                  size: 16,
-                                  color: Colors.green[700],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  widget.clinic.address,
+                                  style: TextStyle(
+                                    fontSize: widget.isMobile ? 13 : 12,
+                                    color: Colors.grey[700],
+                                    height: 1.4,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    widget.clinic.contact,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: widget.isMobile ? 10 : 8),
+
+                          // Info Pills Row with Real-time Updates
+                          Row(
+                            children: [
+                              // Services Badge with Animation
+                              Expanded(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Container(
+                                    key: ValueKey('services_$servicesCount'),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color.fromRGBO(81, 115, 153, 0.15),
+                                          Color.fromRGBO(79, 115, 153, 0.08),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color.fromRGBO(81, 115, 153, 0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.medical_services,
+                                          size: 16,
+                                          color: Color.fromRGBO(81, 115, 153, 1),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '$servicesCount',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color.fromRGBO(81, 115, 153, 1),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'services',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[600],
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Contact Badge
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.green[300]!,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.phone,
+                                        size: 16,
+                                        color: Colors.green[700],
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          widget.clinic.contact,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green[700],
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          SizedBox(height: widget.isMobile ? 10 : 8),
+                        ],
+                      ),
                     ),
-                    SizedBox(height: widget.isMobile ? 10 : 8),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

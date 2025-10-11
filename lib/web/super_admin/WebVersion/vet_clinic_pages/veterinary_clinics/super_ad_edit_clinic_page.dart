@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:appwrite/appwrite.dart';
 
-
 class SuperAdminEditClinicPage extends StatefulWidget {
   final Clinic clinic;
   final ClinicSettings? settings;
@@ -78,11 +77,13 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   void _initializeControllers() {
-    clinicNameController = TextEditingController(text: widget.clinic.clinicName);
+    clinicNameController =
+        TextEditingController(text: widget.clinic.clinicName);
     addressController = TextEditingController(text: widget.clinic.address);
     contactController = TextEditingController(text: widget.clinic.contact);
     emailController = TextEditingController(text: widget.clinic.email);
-    descriptionController = TextEditingController(text: widget.clinic.description);
+    descriptionController =
+        TextEditingController(text: widget.clinic.description);
     emergencyContactController = TextEditingController(
       text: widget.settings?.emergencyContact ?? '',
     );
@@ -142,9 +143,9 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         elevation: 2,
         shadowColor: const Color.fromRGBO(81, 115, 153, 0.1),
         leading: IconButton(
@@ -330,8 +331,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                           }
                         });
                       },
-                      selectedColor:
-                          const Color.fromRGBO(81, 115, 153, 0.2),
+                      selectedColor: const Color.fromRGBO(81, 115, 153, 0.2),
                       checkmarkColor: const Color.fromRGBO(81, 115, 153, 1),
                     );
                   }).toList(),
@@ -489,7 +489,8 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.photo_library, size: 48, color: Colors.grey),
+                          Icon(Icons.photo_library,
+                              size: 48, color: Colors.grey),
                           SizedBox(height: 8),
                           Text("No images uploaded"),
                         ],
@@ -500,7 +501,8 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
@@ -780,7 +782,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
-        
+
         // Upload image
         final uploadedFile = await authRepository.uploadImage(
           file.bytes != null
@@ -910,7 +912,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       }
 
       _showSuccessSnackbar('Clinic updated successfully');
-      
+
       // Wait a bit for realtime to propagate, then go back
       await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
@@ -931,6 +933,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Discard Changes?'),
         content: const Text(
