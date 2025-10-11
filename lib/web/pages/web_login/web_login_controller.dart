@@ -59,6 +59,9 @@ class WebLoginController extends GetxController {
       print('>>> WEB LOGIN CONTROLLER: Starting login...');
       print('>>> ============================================');
 
+      // CRITICAL FIX: Clear any existing dashboard controller before login
+      _clearExistingControllers();
+
       // Call the repository login method
       final value = await _authRepository.login({
         "email": emailController.text.trim(),
@@ -169,9 +172,37 @@ class WebLoginController extends GetxController {
     }
   }
 
+  // CRITICAL FIX: Clear any existing controllers to prevent data persistence
+  void _clearExistingControllers() {
+    try {
+      print('>>> Clearing existing controllers...');
+
+      // Delete AdminDashboardController if it exists
+      if (Get.isRegistered<dynamic>(tag: 'AdminDashboardController')) {
+        Get.delete<dynamic>(tag: 'AdminDashboardController', force: true);
+        print('>>> AdminDashboardController deleted (tagged)');
+      }
+
+      // Try to delete by finding it
+      try {
+        Get.delete(force: true);
+      } catch (e) {
+        // Ignore if not found
+      }
+
+      print('>>> Controller cleanup complete');
+    } catch (e) {
+      print('>>> Error during controller cleanup: $e');
+      // Continue anyway - not critical
+    }
+  }
+
   Future<void> signInWithGoogle() async {
     try {
       isLoading.value = true;
+
+      // CRITICAL FIX: Clear existing controllers before Google sign-in
+      _clearExistingControllers();
 
       final appWriteProvider = AppWriteProvider();
       final success = await appWriteProvider.signInWithGoogle();
@@ -247,6 +278,9 @@ class WebLoginController extends GetxController {
 
   @override
   void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    emailForPasswordResetController.dispose();
     super.onClose();
   }
 }

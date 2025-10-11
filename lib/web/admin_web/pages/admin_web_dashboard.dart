@@ -25,20 +25,35 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     _initializeController();
   }
 
-  // FIX: Synchronous controller initialization
-  void _initializeController() {
-    // Register controller synchronously first
-    if (!Get.isRegistered<AdminDashboardController>()) {
-      controller = Get.put(
-        AdminDashboardController(
-          authRepository: Get.find<AuthRepository>(),
-          session: Get.find<UserSessionService>(),
-        ),
-        permanent: true,
-      );
-    } else {
-      controller = Get.find<AdminDashboardController>();
+  @override
+  void dispose() {
+    // CRITICAL FIX: Delete controller when dashboard is disposed
+    // This ensures fresh data when switching between clinics
+    if (Get.isRegistered<AdminDashboardController>()) {
+      Get.delete<AdminDashboardController>(force: true);
+      print('>>> Dashboard disposed - controller deleted');
     }
+    super.dispose();
+  }
+
+  // FIX: Force fresh controller creation every time
+  void _initializeController() {
+    // CRITICAL FIX: Always delete existing controller first
+    if (Get.isRegistered<AdminDashboardController>()) {
+      Get.delete<AdminDashboardController>(force: true);
+      print('>>> Deleted existing AdminDashboardController');
+    }
+
+    // Create NEW controller (NOT permanent)
+    controller = Get.put(
+      AdminDashboardController(
+        authRepository: Get.find<AuthRepository>(),
+        session: Get.find<UserSessionService>(),
+      ),
+      permanent: false, // CRITICAL FIX: Changed from true to false
+    );
+
+    print('>>> Created new AdminDashboardController');
 
     // Run migration asynchronously but don't block UI
     _runMigrationOnce();
@@ -115,7 +130,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  // Rest of the build methods remain the same...
   Widget _buildHeader(AdminDashboardController controller, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 24),
