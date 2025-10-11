@@ -83,9 +83,9 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
         return Row(
           children: [
-            _buildAppointmentColumn("Upcoming", appointmentController.upcoming, Colors.blue, Icons.event_available),
-            const SizedBox(width: 16),
             _buildAppointmentColumn("Pending", appointmentController.pending, Colors.orange, Icons.pending_actions),
+            const SizedBox(width: 16),
+            _buildAppointmentColumn("Upcoming", appointmentController.upcoming, Colors.blue, Icons.event_available),
             const SizedBox(width: 16),
             _buildAppointmentColumn("Completed", appointmentController.completed, Colors.green, Icons.check_circle),
             const SizedBox(width: 16),
