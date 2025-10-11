@@ -10,6 +10,8 @@ import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 
+import 'package:capstone_app/data/id_verification/guards/appointment_verification_guard.dart';
+
 class DashboardNextPage extends StatefulWidget {
   final Clinic clinic;
   final ClinicSettings? clinicSettings;
@@ -46,8 +48,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
 
     try {
       final authRepository = Get.find<AuthRepository>();
-      final settings = await authRepository.getClinicSettingsByClinicId(
-          widget.clinic.documentId ?? '');
+      final settings = await authRepository
+          .getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
       setState(() {
         _clinicSettings = settings;
         _isLoadingSettings = false;
@@ -267,7 +269,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 Expanded(
                   child: GridView.builder(
                     padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
@@ -372,7 +375,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
       ),
       child: Column(
         children: [
-          _buildInfoRow(Icons.location_on_outlined, 'Address', widget.clinic.address),
+          _buildInfoRow(
+              Icons.location_on_outlined, 'Address', widget.clinic.address),
           const SizedBox(height: 12),
           _buildInfoRow(Icons.phone_outlined, 'Contact', widget.clinic.contact),
           const SizedBox(height: 12),
@@ -405,7 +409,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 value.isNotEmpty ? value : 'Not provided',
                 style: TextStyle(
                   fontSize: 14,
-                  color: value.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
+                  color:
+                      value.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
                 ),
               ),
             ],
@@ -429,7 +434,12 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
     }
 
     if (services.isEmpty) {
-      services = ['General Consultation', 'Vaccination', 'Surgery', 'Emergency Care'];
+      services = [
+        'General Consultation',
+        'Vaccination',
+        'Surgery',
+        'Emergency Care'
+      ];
     }
 
     return Column(
@@ -447,7 +457,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: services.map((service) => _buildServiceChip(service)).toList(),
+            children:
+                services.map((service) => _buildServiceChip(service)).toList(),
           ),
         ),
       ],
@@ -588,7 +599,15 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
     if (_clinicSettings == null) return const SizedBox.shrink();
 
     final operatingHours = _clinicSettings!.operatingHours;
-    final days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    final days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,7 +713,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   }
 
   Widget _buildSpecialInstructions() {
-    if (_clinicSettings == null || _clinicSettings!.specialInstructions.isEmpty) {
+    if (_clinicSettings == null ||
+        _clinicSettings!.specialInstructions.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -878,11 +898,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Stack(
-              children: [
-                ClinicPageMaps(
-                  clinic: widget.clinic
-                )
-              ],
+              children: [ClinicPageMaps(clinic: widget.clinic)],
             ),
           ),
         ),
@@ -990,7 +1006,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           color: Colors.grey.shade300,
-                          child: const Icon(Icons.image_not_supported, size: 50),
+                          child:
+                              const Icon(Icons.image_not_supported, size: 50),
                         );
                       },
                     )
@@ -1075,7 +1092,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade300),
                     borderRadius: BorderRadius.circular(10),
@@ -1083,7 +1101,9 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                   child: Row(
                     children: [
                       Icon(
-                        _isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        _isSaved
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
                         color: _isSaved ? Colors.red : Colors.black,
                         size: 20,
                       ),
@@ -1127,7 +1147,9 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                         }
                       : null,
                   child: Text(
-                    _canMakeAppointment() ? "Book Appointment" : "Clinic Closed",
+                    _canMakeAppointment()
+                        ? "Book Appointment"
+                        : "Clinic Closed",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -1175,7 +1197,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         ),
       );
 
-      final MessagingController messagingController = Get.find<MessagingController>();
+      final MessagingController messagingController =
+          Get.find<MessagingController>();
       final UserSessionService userSession = Get.find<UserSessionService>();
 
       if (userSession.userId.isEmpty) {
@@ -1184,8 +1207,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         return;
       }
 
-      final conversation = await messagingController.startConversationWithClinic(
-          widget.clinic.documentId!);
+      final conversation = await messagingController
+          .startConversationWithClinic(widget.clinic.documentId!);
 
       Navigator.pop(context);
 
@@ -1204,7 +1227,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         );
       } else {
         if (context.mounted) {
-          _showErrorDialog(context, 'Failed to start conversation. Please try again.');
+          _showErrorDialog(
+              context, 'Failed to start conversation. Please try again.');
         }
       }
     } catch (e) {
@@ -1220,7 +1244,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Login Required'),
-        content: const Text('Please log in to start a conversation with this clinic.'),
+        content: const Text(
+            'Please log in to start a conversation with this clinic.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),

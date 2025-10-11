@@ -2207,6 +2207,305 @@ class AppWriteProvider {
     ]).stream;
   }
 
+  // ============= ID VERIFICATION METHODS =============
+
+  /// Create ID verification record
+  Future<Document> createIdVerification(Map<String, dynamic> data) async {
+    try {
+      print('>>> Creating ID verification record...');
+      print('>>> Data: $data');
+
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error creating ID verification: $e');
+      rethrow;
+    }
+  }
+
+  /// Get ID verification by userId
+  Future<Document?> getIdVerificationByUserId(String userId) async {
+    try {
+      print('>>> Getting ID verification for user: $userId');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.orderDesc('createdAt'),
+          Query.limit(1),
+        ],
+      );
+
+      if (result.documents.isEmpty) {
+        print('>>> No ID verification found');
+        return null;
+      }
+
+      print('>>> ID verification found: ${result.documents.first.$id}');
+      return result.documents.first;
+    } catch (e) {
+      print('>>> Error getting ID verification: $e');
+      return null;
+    }
+  }
+
+  /// Get ID verification by submissionId (from ARGOS webhook)
+  Future<Document?> getIdVerificationBySubmissionId(String submissionId) async {
+    try {
+      print('>>> Getting ID verification for submission: $submissionId');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('submissionId', submissionId),
+        ],
+      );
+
+      if (result.documents.isEmpty) {
+        print('>>> No ID verification found for submission');
+        return null;
+      }
+
+      return result.documents.first;
+    } catch (e) {
+      print('>>> Error getting ID verification by submission: $e');
+      return null;
+    }
+  }
+
+  /// Update ID verification record
+  Future<Document> updateIdVerification(
+    String documentId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      print('>>> Updating ID verification: $documentId');
+      print('>>> Update data: $data');
+
+      data['updatedAt'] = DateTime.now().toIso8601String();
+
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        documentId: documentId,
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error updating ID verification: $e');
+      rethrow;
+    }
+  }
+
+  /// Process ARGOS webhook (called from your backend)
+  /// This updates the verification status based on ARGOS webhook data
+  Future<Map<String, dynamic>> processArgosWebhook(
+    Map<String, dynamic> webhookData,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> PROCESSING ARGOS WEBHOOK');
+      print('>>> Webhook data: $webhookData');
+      print('>>> ============================================');
+
+      final userId = webhookData['userId'] as String?;
+      final submissionId = webhookData['submissionId'] as String?;
+      final status = webhookData['status'] as String?;
+      final email = webhookData['email'] as String?;
+
+      if (userId == null || submissionId == null) {
+        return {
+          'success': false,
+          'error': 'Missing required fields: userId or submissionId',
+        };
+      }
+
+      // Get existing verification record
+      Document? verificationDoc = await getIdVerificationByUserId(userId);
+
+      // Map ARGOS status to our status
+      String mappedStatus = 'pending';
+      if (status == 'approved' || status == 'success') {
+        mappedStatus = 'approved';
+      } else if (status == 'rejected' || status == 'failed') {
+        mappedStatus = 'rejected';
+      } else if (status == 'pending') {
+        mappedStatus = 'in_progress';
+      }
+
+      final updateData = {
+        'submissionId': submissionId,
+        'status': mappedStatus,
+        'fullName': webhookData['fullName'],
+        'birthDate': webhookData['birthDate'],
+        'idType': webhookData['idType'],
+        'countryCode': webhookData['countryCode'],
+        'rejectionReason': webhookData['rejectReason'],
+        'additionalData': webhookData['rawData'],
+      };
+
+      // If approved, set verifiedAt timestamp
+      if (mappedStatus == 'approved') {
+        updateData['verifiedAt'] = DateTime.now().toIso8601String();
+      }
+
+      Document updatedDoc;
+      if (verificationDoc != null) {
+        // Update existing record
+        print('>>> Updating existing verification record');
+        updatedDoc = await updateIdVerification(
+          verificationDoc.$id,
+          updateData,
+        );
+      } else {
+        // Create new record (shouldn't happen normally, but handle it)
+        print('>>> Creating new verification record from webhook');
+        updateData['userId'] = userId;
+        updateData['email'] = email ?? '';
+        updateData['createdAt'] = DateTime.now().toIso8601String();
+        updatedDoc = await createIdVerification(updateData);
+      }
+
+      // If verified, update user's verification status in users collection
+      if (mappedStatus == 'approved') {
+        print('>>> Updating user verification status...');
+        final userDoc = await getUserById(userId);
+        if (userDoc != null) {
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.usersCollectionID,
+            documentId: userDoc.$id,
+            data: {
+              'idVerified': true,
+              'idVerifiedAt': DateTime.now().toIso8601String(),
+            },
+          );
+          print('>>> User verification status updated');
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> WEBHOOK PROCESSED SUCCESSFULLY');
+      print('>>> Status: $mappedStatus');
+      print('>>> ============================================');
+
+      return {
+        'success': true,
+        'verificationDoc': updatedDoc,
+        'status': mappedStatus,
+      };
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR PROCESSING WEBHOOK: $e');
+      print('>>> ============================================');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Check if user is verified
+  Future<bool> isUserIdVerified(String userId) async {
+    try {
+      // First check users collection
+      final userDoc = await getUserById(userId);
+      if (userDoc != null) {
+        final idVerified = userDoc.data['idVerified'] as bool?;
+        if (idVerified == true) return true;
+      }
+
+      // Then check verification collection
+      final verificationDoc = await getIdVerificationByUserId(userId);
+      if (verificationDoc != null) {
+        final status = verificationDoc.data['status'] as String?;
+        return status == 'approved';
+      }
+
+      return false;
+    } catch (e) {
+      print('>>> Error checking verification status: $e');
+      return false;
+    }
+  }
+
+  /// Get verification status for display
+  Future<Map<String, dynamic>> getUserVerificationStatus(String userId) async {
+    try {
+      final verificationDoc = await getIdVerificationByUserId(userId);
+
+      if (verificationDoc == null) {
+        return {
+          'hasVerification': false,
+          'status': 'not_started',
+          'isVerified': false,
+        };
+      }
+
+      final status = verificationDoc.data['status'] as String? ?? 'pending';
+
+      return {
+        'hasVerification': true,
+        'status': status,
+        'isVerified': status == 'approved',
+        'verificationDoc': verificationDoc.data,
+        'documentId': verificationDoc.$id,
+      };
+    } catch (e) {
+      print('>>> Error getting verification status: $e');
+      return {
+        'hasVerification': false,
+        'status': 'error',
+        'isVerified': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Subscribe to ID verification changes (real-time)
+  Stream<RealtimeMessage> subscribeToIdVerification(String userId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          return message.payload['userId'] == userId;
+        });
+  }
+
+  Future<void> cleanupStuckVerifications(String userId) async {
+    try {
+      final verificationDoc = await getIdVerificationByUserId(userId);
+
+      if (verificationDoc != null) {
+        final status = verificationDoc.data['status'] as String?;
+        final createdAt = DateTime.parse(verificationDoc.data['createdAt']);
+        final now = DateTime.now();
+
+        // If stuck in 'in_progress' or 'pending' for more than 30 minutes, reset
+        if ((status == 'in_progress' || status == 'pending') &&
+            now.difference(createdAt).inMinutes > 30) {
+          print('>>> Cleaning up stuck verification record');
+          await databases!.deleteDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.idVerificationCollectionID,
+            documentId: verificationDoc.$id,
+          );
+        }
+      }
+    } catch (e) {
+      print('>>> Error cleaning up verifications: $e');
+    }
+  }
+
 Future<Document> createRatingAndReview(Map<String, dynamic> data) async {
   try {
     print('Creating rating and review...');

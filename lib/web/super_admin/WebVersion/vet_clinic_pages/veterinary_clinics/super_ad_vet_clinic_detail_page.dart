@@ -25,24 +25,25 @@ class SuperAdminVetClinicDetailPage extends StatefulWidget {
 }
 
 class _SuperAdminVetClinicDetailPageState
-    extends State<SuperAdminVetClinicDetailPage> with SingleTickerProviderStateMixin {
+    extends State<SuperAdminVetClinicDetailPage>
+    with SingleTickerProviderStateMixin {
   final AuthRepository authRepository = Get.find<AuthRepository>();
-  
+
   // State management
   bool isLoading = false;
   bool isDeleting = false;
   int totalStaff = 0;
   Clinic? currentClinic;
   ClinicSettings? currentSettings;
-  
+
   // Real-time subscriptions
   StreamSubscription? _clinicSubscription;
   StreamSubscription? _settingsSubscription;
-  
+
   // Animation controller for smooth transitions
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
+
   // Gallery state
   int _selectedGalleryIndex = 0;
   final PageController _galleryPageController = PageController();
@@ -52,7 +53,7 @@ class _SuperAdminVetClinicDetailPageState
     super.initState();
     currentClinic = widget.clinic;
     currentSettings = widget.settings;
-    
+
     // Initialize animation
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -63,7 +64,7 @@ class _SuperAdminVetClinicDetailPageState
       curve: Curves.easeInOut,
     );
     _animationController.forward();
-    
+
     _loadStaffCount();
     _setupRealtimeUpdates();
   }
@@ -79,9 +80,8 @@ class _SuperAdminVetClinicDetailPageState
 
   Future<void> _loadStaffCount() async {
     try {
-      final staffList = await authRepository.getClinicStaff(
-        currentClinic?.documentId ?? ''
-      );
+      final staffList =
+          await authRepository.getClinicStaff(currentClinic?.documentId ?? '');
       if (mounted) {
         setState(() {
           totalStaff = staffList.length;
@@ -98,7 +98,7 @@ class _SuperAdminVetClinicDetailPageState
         .subscribeToClinicChanges()
         .listen((RealtimeMessage event) {
       print('🔔 Clinic real-time event: ${event.events}');
-      
+
       if (event.payload['\$id'] == currentClinic?.documentId) {
         if (event.events.any((e) => e.contains('.delete'))) {
           // Clinic deleted - navigate back
@@ -117,8 +117,8 @@ class _SuperAdminVetClinicDetailPageState
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
       print('🔔 Settings real-time event: ${event.events}');
-      
-      if (currentSettings != null && 
+
+      if (currentSettings != null &&
           event.payload['clinicId'] == currentClinic?.documentId) {
         _refreshClinicData();
       }
@@ -128,13 +128,11 @@ class _SuperAdminVetClinicDetailPageState
   Future<void> _refreshClinicData() async {
     try {
       print('🔄 Refreshing clinic data...');
-      
-      final clinicDoc = await authRepository.getClinicById(
-        currentClinic?.documentId ?? ''
-      );
-      final settingsDoc = await authRepository.getClinicSettingsByClinicId(
-        currentClinic?.documentId ?? ''
-      );
+
+      final clinicDoc =
+          await authRepository.getClinicById(currentClinic?.documentId ?? '');
+      final settingsDoc = await authRepository
+          .getClinicSettingsByClinicId(currentClinic?.documentId ?? '');
 
       if (mounted && clinicDoc != null) {
         setState(() {
@@ -142,7 +140,7 @@ class _SuperAdminVetClinicDetailPageState
           currentClinic!.documentId = clinicDoc.$id;
           currentSettings = settingsDoc;
         });
-        
+
         _showUpdateNotification('Clinic information updated');
       }
     } catch (e) {
@@ -210,10 +208,10 @@ class _SuperAdminVetClinicDetailPageState
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1000;
-    
+
     final clinic = currentClinic ?? widget.clinic;
     final settings = currentSettings ?? widget.settings;
-    
+
     // Real-time status
     final isOpen = settings?.isOpenNow() ?? false;
     final detailedStatus = settings?.getDetailedStatus() ?? 'Status Unknown';
@@ -223,8 +221,9 @@ class _SuperAdminVetClinicDetailPageState
       body: CustomScrollView(
         slivers: [
           // Animated App Bar with Hero Image
-          _buildSliverAppBar(clinic, settings, isOpen, detailedStatus, isMobile),
-          
+          _buildSliverAppBar(
+              clinic, settings, isOpen, detailedStatus, isMobile),
+
           // Content
           SliverToBoxAdapter(
             child: FadeTransition(
@@ -264,7 +263,7 @@ class _SuperAdminVetClinicDetailPageState
 
                     // Admin Information
                     _buildAdminSection(clinic, isMobile),
-                    
+
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -336,7 +335,7 @@ class _SuperAdminVetClinicDetailPageState
                     },
                   )
                 : _buildImagePlaceholder(),
-            
+
             // Gradient Overlay
             Container(
               decoration: BoxDecoration(
@@ -350,7 +349,7 @@ class _SuperAdminVetClinicDetailPageState
                 ),
               ),
             ),
-            
+
             // Real-time Status Badge
             Positioned(
               top: 100,
@@ -362,11 +361,14 @@ class _SuperAdminVetClinicDetailPageState
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                  color: isOpen
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFEF4444),
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: (isOpen ? Colors.green : Colors.red).withOpacity(0.5),
+                      color:
+                          (isOpen ? Colors.green : Colors.red).withOpacity(0.5),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
@@ -410,10 +412,12 @@ class _SuperAdminVetClinicDetailPageState
     );
   }
 
-  Widget _buildQuickStatsCards(Clinic clinic, ClinicSettings? settings, bool isMobile) {
-    final services = clinic.services.split(',').where((s) => s.trim().isNotEmpty).toList();
+  Widget _buildQuickStatsCards(
+      Clinic clinic, ClinicSettings? settings, bool isMobile) {
+    final services =
+        clinic.services.split(',').where((s) => s.trim().isNotEmpty).toList();
     final galleryCount = settings?.gallery.length ?? 0;
-    
+
     return Row(
       children: [
         Expanded(
@@ -505,7 +509,8 @@ class _SuperAdminVetClinicDetailPageState
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, Clinic clinic, bool isMobile) {
+  Widget _buildActionButtons(
+      BuildContext context, Clinic clinic, bool isMobile) {
     return Row(
       children: [
         Expanded(
@@ -514,16 +519,18 @@ class _SuperAdminVetClinicDetailPageState
             label: 'Manage Staff',
             subtitle: '$totalStaff Members',
             color: const Color.fromRGBO(81, 115, 153, 1),
-            onPressed: isDeleting ? null : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SuperAdminStaffManagementPage(
-                    clinic: clinic,
-                  ),
-                ),
-              ).then((_) => _loadStaffCount());
-            },
+            onPressed: isDeleting
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SuperAdminStaffManagementPage(
+                          clinic: clinic,
+                        ),
+                      ),
+                    ).then((_) => _loadStaffCount());
+                  },
             isMobile: isMobile,
           ),
         ),
@@ -534,20 +541,22 @@ class _SuperAdminVetClinicDetailPageState
             label: 'Edit Clinic',
             subtitle: 'Modify Details',
             color: Colors.orange[700]!,
-            onPressed: isDeleting ? null : () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SuperAdminEditClinicPage(
-                    clinic: clinic,
-                    settings: currentSettings,
-                  ),
-                ),
-              );
-              if (result == true) {
-                _showUpdateNotification('Clinic updated successfully');
-              }
-            },
+            onPressed: isDeleting
+                ? null
+                : () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SuperAdminEditClinicPage(
+                          clinic: clinic,
+                          settings: currentSettings,
+                        ),
+                      ),
+                    );
+                    if (result == true) {
+                      _showUpdateNotification('Clinic updated successfully');
+                    }
+                  },
             isMobile: isMobile,
           ),
         ),
@@ -558,7 +567,9 @@ class _SuperAdminVetClinicDetailPageState
             label: isDeleting ? 'Deleting...' : 'Delete',
             subtitle: 'Remove Clinic',
             color: Colors.red[700]!,
-            onPressed: isDeleting ? null : () => _showDeleteConfirmation(context, clinic),
+            onPressed: isDeleting
+                ? null
+                : () => _showDeleteConfirmation(context, clinic),
             isMobile: isMobile,
             isLoading: isDeleting,
           ),
@@ -695,7 +706,7 @@ class _SuperAdminVetClinicDetailPageState
               ],
             ),
           ),
-          
+
           // Main Gallery Image with PageView
           SizedBox(
             height: isMobile ? 250 : 400,
@@ -734,9 +745,9 @@ class _SuperAdminVetClinicDetailPageState
               },
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Gallery Thumbnail Strip
           SizedBox(
             height: 80,
@@ -747,7 +758,6 @@ class _SuperAdminVetClinicDetailPageState
               itemBuilder: (context, index) {
                 final imageId = settings.gallery[index];
                 final isSelected = _selectedGalleryIndex == index;
-                
                 return GestureDetector(
                   onTap: () {
                     _galleryPageController.animateToPage(
@@ -786,7 +796,6 @@ class _SuperAdminVetClinicDetailPageState
               },
             ),
           ),
-          
           const SizedBox(height: 24),
         ],
       ),
@@ -805,11 +814,11 @@ class _SuperAdminVetClinicDetailPageState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.1),
+            color: Color.fromRGBO(81, 115, 153, 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -1074,18 +1083,17 @@ class _SuperAdminVetClinicDetailPageState
       ),
     );
   }
-
   Widget _buildContactSection(Clinic clinic, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 28),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.1),
+            color: Color.fromRGBO(81, 115, 153, 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -1151,7 +1159,6 @@ class _SuperAdminVetClinicDetailPageState
       ),
     );
   }
-
   Widget _buildContactRow(
     IconData icon,
     String label,
@@ -1197,7 +1204,6 @@ class _SuperAdminVetClinicDetailPageState
       ],
     );
   }
-
   Widget _buildAdminSection(Clinic clinic, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 28),
@@ -1260,7 +1266,7 @@ class _SuperAdminVetClinicDetailPageState
       ),
     );
   }
-
+  
   Widget _buildAdminInfoRow(String label, String value, IconData icon) {
     return Row(
       children: [
@@ -1319,14 +1325,22 @@ class _SuperAdminVetClinicDetailPageState
 
   String _getDayName(int weekday) {
     switch (weekday) {
-      case 1: return 'monday';
-      case 2: return 'tuesday';
-      case 3: return 'wednesday';
-      case 4: return 'thursday';
-      case 5: return 'friday';
-      case 6: return 'saturday';
-      case 7: return 'sunday';
-      default: return 'monday';
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
     }
   }
 
@@ -1343,6 +1357,7 @@ class _SuperAdminVetClinicDetailPageState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
@@ -1372,7 +1387,8 @@ class _SuperAdminVetClinicDetailPageState
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: Colors.red[700]),
+                      Icon(Icons.info_outline,
+                          size: 18, color: Colors.red[700]),
                       const SizedBox(width: 8),
                       Text(
                         'This will delete:',
@@ -1433,15 +1449,16 @@ class _SuperAdminVetClinicDetailPageState
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(
+              CircularProgressIndicator(
                 color: Color.fromRGBO(81, 115, 153, 1),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Deleting clinic...',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.w600),
@@ -1499,9 +1516,12 @@ class _SuperAdminVetClinicDetailPageState
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _buildResultRow('Appointments', '${results['appointmentsDeleted']}'),
-            _buildResultRow('Medical Records', '${results['medicalRecordsDeleted']}'),
-            _buildResultRow('Conversations', '${results['conversationsDeleted']}'),
+            _buildResultRow(
+                'Appointments', '${results['appointmentsDeleted']}'),
+            _buildResultRow(
+                'Medical Records', '${results['medicalRecordsDeleted']}'),
+            _buildResultRow(
+                'Conversations', '${results['conversationsDeleted']}'),
             _buildResultRow('Messages', '${results['messagesDeleted']}'),
             _buildResultRow('Staff', '${results['staffDeleted']}'),
             _buildResultRow('Gallery', '${results['galleryImagesDeleted']}'),
