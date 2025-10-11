@@ -4,7 +4,6 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/pages/clinic_page_maps.dart';
 import 'package:capstone_app/mobile/user/pages/schedule_appointment.dart';
 import 'package:capstone_app/mobile/user/pages/clinic_reviews_page.dart';
-import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
 import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';

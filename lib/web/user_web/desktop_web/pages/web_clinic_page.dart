@@ -26,18 +26,26 @@ class WebClinicPageUpdated extends StatefulWidget {
   State<WebClinicPageUpdated> createState() => _WebClinicPageUpdatedState();
 }
 
-enum PanelState { scrollable, positioned, static }
+enum PanelState { scrollable, fixed, staticBottom }
 
 class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final ScrollController _scrollController = ScrollController();
   bool _showWidget = false;
   PanelState _panelState = PanelState.scrollable;
+  
   final galleryKey = GlobalKey();
   final servicesKey = GlobalKey();
   final locationKey = GlobalKey();
   final reviewsKey = GlobalKey();
+  final panelPlaceholderKey = GlobalKey();
+  final leftContentKey = GlobalKey();
+  final reviewsEndKey = GlobalKey();
   
-  // Single appointment controller instance
+  double _panelHeight = 0;
+  double _leftContentHeight = 0;
+  double _panelStartPosition = 0;
+  double _reviewsEndPosition = 0;
+  
   late WebAppointmentController _appointmentController;
 
   void _scrollToSection(GlobalKey key) {
@@ -56,24 +64,53 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     final offset = _scrollController.offset;
     final screenHeight = MediaQuery.of(context).size.height;
     
-    // Dynamic breakpoints based on screen height
-    final firstBreakpoint = screenHeight * 0.7;
-    final secondBreakpoint = screenHeight * 1.90;
-
-    if (offset <= firstBreakpoint && _panelState != PanelState.scrollable) {
-      setState(() => _panelState = PanelState.scrollable);
-    } else if (offset > firstBreakpoint && offset <= secondBreakpoint && _panelState != PanelState.positioned) {
-      setState(() => _panelState = PanelState.positioned);
-    } else if (offset > secondBreakpoint && _panelState != PanelState.static) {
-      setState(() => _panelState = PanelState.static);
+    // Calculate breakpoints
+    final stickyStartPoint = _panelStartPosition - 120; // Start sticking after scrolling past panel start minus header
+    final stickyEndPoint = _reviewsEndPosition - screenHeight + 500; //factor in also screenwidth
+    
+    PanelState newState;
+    
+    if (offset < stickyStartPoint) {
+      // State 1: Normal scroll with content
+      newState = PanelState.scrollable;
+    } else if (offset >= stickyStartPoint && offset < stickyEndPoint) {
+      // State 2: Fixed/Sticky position
+      newState = PanelState.fixed;
+    } else {
+      // State 3: Static at bottom
+      newState = PanelState.staticBottom;
     }
+    
+    if (newState != _panelState) {
+      setState(() => _panelState = newState);
+    }
+  }
+
+  void _calculateDimensions() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final RenderBox? panelBox = panelPlaceholderKey.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? contentBox = leftContentKey.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? reviewsEndBox = reviewsEndKey.currentContext?.findRenderObject() as RenderBox?;
+      
+      if (panelBox != null && contentBox != null && reviewsEndBox != null) {
+        final panelPosition = panelBox.localToGlobal(Offset.zero);
+        final reviewsEndPosition = reviewsEndBox.localToGlobal(Offset.zero);
+        final reviewsEndHeight = reviewsEndBox.size.height;
+        
+        setState(() {
+          _panelHeight = panelBox.size.height;
+          _leftContentHeight = contentBox.size.height;
+          _panelStartPosition = panelPosition.dy;
+          _reviewsEndPosition = reviewsEndPosition.dy + reviewsEndHeight; // Bottom of the button
+        });
+      }
+    });
   }
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize controller ONCE at page level
     _appointmentController = Get.put(
       WebAppointmentController(
         authRepository: Get.find<AuthRepository>(),
@@ -94,12 +131,13 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
 
       _updatePanelState();
     });
+    
+    _calculateDimensions();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    // Clean up controller when page is disposed
     Get.delete<WebAppointmentController>(tag: widget.clinic.documentId);
     super.dispose();
   }
@@ -163,7 +201,6 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     }
   }
 
-  // Get max height for appointment panel based on screen height
   double getAppointmentPanelMaxHeight(double screenHeight) {
     if (screenHeight <= 768) {
       return screenHeight * 0.75;
@@ -174,7 +211,6 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     }
   }
 
-  // Determine if we should use compact mode
   bool shouldUseCompactMode(double screenHeight) {
     return screenHeight <= 900;
   }
@@ -203,37 +239,28 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
           child: SizedBox(width: 125),
         ),
         
-        // Right side - appointment panel with visibility logic
+        // Right side - appointment panel placeholder and static panel
         SizedBox(
           width: appointmentWidth,
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 925),
-                    child: Visibility(
-                      visible: _panelState == PanelState.scrollable,
-                      child: EnhancedWebAppointmentPanel(
-                        clinic: widget.clinic,
-                        maxHeight: maxHeight,
-                        compact: isCompact,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 310),
-                    child: Visibility(
-                      visible: _panelState == PanelState.static,
-                      child: EnhancedWebAppointmentPanel(
-                        clinic: widget.clinic,
-                        maxHeight: maxHeight,
-                        compact: isCompact,
-                      ),
-                    ),
-                  )
-                ],
-              ),
+              // Placeholder for scrollable state (invisible but takes space)
+              if (_panelState == PanelState.scrollable)
+                EnhancedWebAppointmentPanel(
+                  key: panelPlaceholderKey,
+                  clinic: widget.clinic,
+                  maxHeight: maxHeight,
+                  compact: isCompact,
+                ),
+              
+              // Static panel at bottom
+              if (_panelState == PanelState.staticBottom)
+                EnhancedWebAppointmentPanel(
+                  clinic: widget.clinic,
+                  maxHeight: maxHeight,
+                  compact: isCompact,
+                ),
             ],
           ),
         ),
@@ -244,6 +271,7 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
 
   Widget _buildLeftContent() {
     return Column(
+      key: leftContentKey,
       children: [
         Row(
           children: [
@@ -335,160 +363,223 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
             ),
           ),
         ),
-        WebRatingsAndReviews(key: reviewsKey),
+        WebRatingsAndReviews(
+          key: reviewsKey,
+          reviewsEndKey: reviewsEndKey,
+        ),
       ]
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+Widget build(BuildContext context) {
+  final screenWidth = MediaQuery.of(context).size.width;
+  final screenHeight = MediaQuery.of(context).size.height;
+  final appointmentWidth = getAppointmentPanelWidth(screenWidth);
+  final maxHeight = getAppointmentPanelMaxHeight(screenHeight);
+  final isCompact = shouldUseCompactMode(screenHeight);
 
-    double iconRight = responsiveRight(
-      screenWidth: screenWidth,
-      desiredMaxRight: 395,
-      desiredMinRight: 30
-    );
+  double iconRight = responsiveRight(
+    screenWidth: screenWidth,
+    desiredMaxRight: 395,
+    desiredMinRight: 30
+  );
 
-    double notifRight = responsiveRight(
-      screenWidth: screenWidth,
-      desiredMaxRight: 445,
-      desiredMinRight: 80
-    );
+  double notifRight = responsiveRight(
+    screenWidth: screenWidth,
+    desiredMaxRight: 445,
+    desiredMinRight: 80
+  );
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: Stack(
-        children: [
-          ListView(
-            controller: _scrollController,
-            children: [
-              // Header
-              Container(
-                height: 81,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.black26,
-                      width: 1
-                    )
+  return Scaffold(
+    backgroundColor: Colors.grey.shade50,
+    body: Stack(
+      children: [
+        ListView(
+          controller: _scrollController,
+          children: [
+            // Header
+            Container(
+              height: 81,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.black26,
+                    width: 1
                   )
-                ),
+                )
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+                    child: SizedBox(
+                      height: 80,
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(context);
+                            },
+                            child: Image.asset(
+                              'lib/images/PAWrtal_logo.png',
+                              width: 150,
+                              height: 100,
+                            ),
+                          ),
+                          const Spacer(flex: 1),
+                          const Expanded(
+                            flex: 2,
+                            child: WebSearchBar(width: 380),
+                          ),
+                          const Spacer(flex: 1),
+                          WebNotificationIcon(
+                            right: notifRight,
+                            top: 70,
+                            width: 500,
+                          ),
+                          WebProfileIcon(
+                            right: iconRight,
+                            top: 70,
+                            width: 250,
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Clinic name and gallery section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
                 child: Column(
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
-                      child: SizedBox(
-                        height: 80,
-                        child: Row(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(context);
-                              },
-                              child: Image.asset(
-                                'lib/images/PAWrtal_logo.png',
-                                width: 150,
-                                height: 100,
-                              ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.clinic.clinicName,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold
                             ),
-                            const Spacer(flex: 1),
-                            const Expanded(
-                              flex: 2,
-                              child: WebSearchBar(width: 380),
-                            ),
-                            const Spacer(flex: 1),
-                            WebNotificationIcon(
-                              right: notifRight,
-                              top: 70,
-                              width: 500,
-                            ),
-                            WebProfileIcon(
-                              right: iconRight,
-                              top: 70,
-                              width: 250,
-                            )
-                          ],
+                          ),
                         ),
-                      ),
+                        const WebShareButton(),
+                        const SizedBox(width: 12),
+                        const WebLike(),
+                      ],
+                    ),
+                    WebPictureGalleryUpdated(
+                      key: galleryKey,
+                      clinic: widget.clinic,
                     ),
                   ],
                 ),
               ),
-
-              // Clinic name and gallery section
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.clinic.clinicName,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold
-                              ),
-                            ),
-                          ),
-                          const WebShareButton(),
-                          const SizedBox(width: 12),
-                          const WebLike(),
-                        ],
-                      ),
-                      WebPictureGalleryUpdated(
-                        key: galleryKey,
-                        clinic: widget.clinic,
-                      ),
-                    ],
+            ),
+            
+            // Main content area
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left side content
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: getLeftSideWidth(screenWidth)
+                    ),
+                    child: _buildLeftContent(),
                   ),
+                  
+                  // Spacing between left and right
+                  const Flexible(
+                    flex: 2,
+                    child: SizedBox(width: 125),
+                  ),
+                  
+                  // Right side - appointment panel placeholder
+                  SizedBox(
+                    width: appointmentWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Placeholder that maintains space
+                        SizedBox(
+                          key: panelPlaceholderKey,
+                          height: _panelHeight > 0 ? _panelHeight : null,
+                          child: _panelState == PanelState.scrollable
+                            ? EnhancedWebAppointmentPanel(
+                                clinic: widget.clinic,
+                                maxHeight: maxHeight,
+                                compact: isCompact,
+                              )
+                            : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Location section
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
+              child: const Padding(
+                padding: EdgeInsets.only(top: 64, bottom: 64),
+                child: Divider(
+                  height: 1,
+                  thickness: 0.5,
                 ),
               ),
-              
-              // Main content area
-              _buildMainContent(screenWidth, screenHeight),
+            ),
+            WebClinicLocationUpdated(
+              key: locationKey,
+              clinic: widget.clinic,
+            ),
+            const SizedBox(height: 64)
+          ],
+        ),
 
-              // Location section
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
-                child: const Padding(
-                  padding: EdgeInsets.only(top: 64, bottom: 64),
-                  child: Divider(
-                    height: 1,
-                    thickness: 0.5,
-                  ),
-                ),
-              ),
-              WebClinicLocationUpdated(
-                key: locationKey,
-                clinic: widget.clinic,
-              ),
-              const SizedBox(height: 64)
-            ],
-          ),
-
-          // Positioned appointment panel (sticky for both positioned and static states)
-          if (_panelState == PanelState.positioned)
+        // Fixed/Sticky appointment panel
+        if (_panelState == PanelState.fixed)
           Positioned(
             top: 120,
             right: getResponsivePadding(screenWidth),
             child: SizedBox(
-              width: getAppointmentPanelWidth(screenWidth),
+              width: appointmentWidth,
               child: EnhancedWebAppointmentPanel(
                 clinic: widget.clinic,
-                maxHeight: getAppointmentPanelMaxHeight(screenHeight),
-                compact: shouldUseCompactMode(screenHeight),
+                maxHeight: maxHeight,
+                compact: isCompact,
               ),
             ),
           ),
 
-          // Navigation bar overlay
-          if (_showWidget)
+        // Static Bottom appointment panel - positioned absolutely
+        if (_panelState == PanelState.staticBottom)
+          Positioned(
+            top: _reviewsEndPosition - _panelHeight - 380, // Adjust this offset as needed
+            right: getResponsivePadding(screenWidth),
+            child: SizedBox(
+              width: appointmentWidth,
+              child: EnhancedWebAppointmentPanel(
+                clinic: widget.clinic,
+                maxHeight: maxHeight,
+                compact: isCompact,
+              ),
+            ),
+          ),
+
+        // Navigation bar overlay
+        if (_showWidget)
           Positioned(
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
@@ -525,8 +616,8 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
               ),
             )
           ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 }

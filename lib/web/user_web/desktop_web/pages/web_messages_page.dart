@@ -19,10 +19,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final Map<String, dynamic> _clinicCache = {};
   
-  Conversation? _selectedConversation;
-  String? _selectedClinicId;
-  String? _selectedClinicName;
-  String? _selectedClinicImage;
   bool _showStarters = false;
 
   @override
@@ -67,10 +63,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
 
   void _selectConversation(Conversation conversation, String clinicId, String clinicName, String clinicImage) async {
     setState(() {
-      _selectedConversation = conversation;
-      _selectedClinicId = clinicId;
-      _selectedClinicName = clinicName;
-      _selectedClinicImage = clinicImage;
       _showStarters = false;
     });
     await _controller.openConversation(conversation, clinicId, 'clinic');
@@ -93,9 +85,12 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           
           // Right Panel - Messages
           Expanded(
-            child: _selectedConversation == null
-                ? _buildEmptyState()
-                : _buildMessagesPanel(),
+            child: Obx(() {
+              // Use controller's currentConversation instead of local state
+              return _controller.currentConversation.value == null
+                  ? _buildEmptyState()
+                  : _buildMessagesPanel();
+            }),
           ),
         ],
       ),
@@ -186,7 +181,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                         'image': '',
                         'address': ''
                       };
-                      final isSelected = _selectedConversation?.documentId == conversation.documentId;
+                      // Check if this conversation is selected using controller's state
+                      final isSelected = _controller.currentConversation.value?.documentId == conversation.documentId;
                       
                       return _buildConversationTile(conversation, clinicData, isSelected);
                     },
@@ -337,24 +333,40 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   }
 
   Widget _buildMessagesPanel() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          _buildMessagesHeader(),
-          if (_showStarters) _buildConversationStarters(),
-          Expanded(child: _buildMessagesList()),
-          _buildMessageInput(),
-        ],
-      ),
-    );
+    return Obx(() {
+      // Get current conversation data from controller
+      final conversation = _controller.currentConversation.value;
+      final clinicId = _controller.currentReceiverId.value;
+      
+      return FutureBuilder<Map<String, dynamic>>(
+        future: _getClinicData(clinicId),
+        builder: (context, snapshot) {
+          final clinicData = snapshot.data ?? {
+            'name': 'Loading...',
+            'image': '',
+          };
+          
+          return Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _buildMessagesHeader(clinicData['name'], clinicData['image']),
+                if (_showStarters) _buildConversationStarters(),
+                Expanded(child: _buildMessagesList()),
+                _buildMessageInput(),
+              ],
+            ),
+          );
+        },
+      );
+    });
   }
 
-  Widget _buildMessagesHeader() {
+  Widget _buildMessagesHeader(String clinicName, String clinicImage) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -375,14 +387,14 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: _selectedClinicImage!.isNotEmpty
+            child: clinicImage.isNotEmpty
                 ? Image.network(
-                    _selectedClinicImage!,
+                    clinicImage,
                     width: 40,
                     height: 40,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return _buildDefaultAvatar(_selectedClinicName!);
+                      return _buildDefaultAvatar(clinicName);
                     },
                   )
                 : Container(
@@ -394,7 +406,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                     ),
                     child: Center(
                       child: Text(
-                        _selectedClinicName![0].toUpperCase(),
+                        clinicName[0].toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -406,7 +418,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              _selectedClinicName!,
+              clinicName,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
