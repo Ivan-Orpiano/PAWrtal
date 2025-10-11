@@ -1,4 +1,5 @@
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
@@ -14,6 +15,8 @@ import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
+
+import 'package:capstone_app/data/models/id_verification_model.dart';
 
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
@@ -545,23 +548,80 @@ class AuthRepository {
   }
   // Add these methods to your AuthRepository class
 
-/// Delete clinic completely with all associated data
-Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) {
-  return appWriteProvider.deleteClinicCompletely(clinicId);
-}
+  /// Delete clinic completely with all associated data
+  Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) {
+    return appWriteProvider.deleteClinicCompletely(clinicId);
+  }
 
-/// Get clinic with settings
-Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) {
-  return appWriteProvider.getClinicWithSettings(clinicId);
-}
+  /// Get clinic with settings
+  Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) {
+    return appWriteProvider.getClinicWithSettings(clinicId);
+  }
 
-/// Subscribe to clinic changes (real-time)
-Stream<RealtimeMessage> subscribeToClinicChanges() {
-  return appWriteProvider.subscribeToClinicChanges();
-}
+  /// Subscribe to clinic changes (real-time)
+  Stream<RealtimeMessage> subscribeToClinicChanges() {
+    return appWriteProvider.subscribeToClinicChanges();
+  }
 
-/// Subscribe to clinic settings changes (real-time)
-Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
-  return appWriteProvider.subscribeToClinicSettingsChanges();
-}
+  /// Subscribe to clinic settings changes (real-time)
+  Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
+    return appWriteProvider.subscribeToClinicSettingsChanges();
+  }
+
+// ============= ID VERIFICATION METHODS =============
+
+  Future<Document> createIdVerification(IdVerification idVerification) {
+    return appWriteProvider.createIdVerification(idVerification.toMap());
+  }
+
+  Future<IdVerification?> getIdVerificationByUserId(String userId) async {
+    final doc = await appWriteProvider.getIdVerificationByUserId(userId);
+    if (doc != null) {
+      final verification = IdVerification.fromMap(doc.data);
+      verification.documentId = doc.$id;
+      return verification;
+    }
+    return null;
+  }
+
+  Future<IdVerification?> getIdVerificationBySubmissionId(
+      String submissionId) async {
+    final doc =
+        await appWriteProvider.getIdVerificationBySubmissionId(submissionId);
+    if (doc != null) {
+      final verification = IdVerification.fromMap(doc.data);
+      verification.documentId = doc.$id;
+      return verification;
+    }
+    return null;
+  }
+
+  Future<Document> updateIdVerification(IdVerification idVerification) {
+    return appWriteProvider.updateIdVerification(
+      idVerification.documentId!,
+      idVerification.toMap(),
+    );
+  }
+
+  Future<Map<String, dynamic>> processArgosWebhook(
+    Map<String, dynamic> webhookData,
+  ) {
+    return appWriteProvider.processArgosWebhook(webhookData);
+  }
+
+  Future<bool> isUserIdVerified(String userId) {
+    return appWriteProvider.isUserIdVerified(userId);
+  }
+
+  Future<Map<String, dynamic>> getUserVerificationStatus(String userId) {
+    return appWriteProvider.getUserVerificationStatus(userId);
+  }
+
+  Stream<RealtimeMessage> subscribeToIdVerification(String userId) {
+    return appWriteProvider.subscribeToIdVerification(userId);
+  }
+
+  Future<void> cleanupStuckVerifications(String userId) {
+    return appWriteProvider.cleanupStuckVerifications(userId);
+  }
 }
