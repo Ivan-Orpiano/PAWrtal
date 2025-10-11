@@ -36,7 +36,12 @@ class _StarClipper extends CustomClipper<Rect> {
 }
 
 class WebRatingsAndReviews extends StatefulWidget {
-  const WebRatingsAndReviews({super.key});
+  final GlobalKey? reviewsEndKey;
+  
+  const WebRatingsAndReviews({
+    super.key,
+    this.reviewsEndKey,
+  });
 
   @override
   State<WebRatingsAndReviews> createState() => _WebRatingsAndReviewsState();
@@ -55,7 +60,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
       userName: 'Will',
       profileImageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9',
       rating: 4,
-      comment: 'Very good overall. A few small things could be improved, but I’m still satisfied.'
+      comment: 'Very good overall. A few small things could be improved, but I''m still satisfied.'
     ),
     Review(
       userName: 'Smith',
@@ -73,7 +78,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
       userName: 'Brian',
       profileImageUrl: 'https://images.unsplash.com/photo-1487412912498-0447578fcca8',
       rating: 1.5,
-      comment: 'Pretty disappointing. The experience didn’t meet my expectations at all.'
+      comment: 'Pretty disappointing. The experience didn''t meet my expectations at all.'
     ),
     Review(
       userName: 'Mia',
@@ -222,7 +227,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
           },
         ),
         const SizedBox(height: 32),
-        GestureDetector(
+        GestureDetector( // Add the key here to the button wrapper
           onTap: () {
             showDialog(
               context: context,
@@ -470,6 +475,7 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
                     color: Colors.black,
                   )
                 ),
+                key: widget.reviewsEndKey,
                 child: Text(
                   "Show all ${reviews.length} reviews",
                   style: const TextStyle(
