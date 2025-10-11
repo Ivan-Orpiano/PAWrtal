@@ -569,7 +569,66 @@ class AuthRepository {
     return appWriteProvider.subscribeToClinicSettingsChanges();
   }
 
-/// Create a new rating and review
+  
+
+// ============= ID VERIFICATION METHODS =============
+
+  Future<Document> createIdVerification(IdVerification idVerification) {
+    return appWriteProvider.createIdVerification(idVerification.toMap());
+  }
+
+  Future<IdVerification?> getIdVerificationByUserId(String userId) async {
+    final doc = await appWriteProvider.getIdVerificationByUserId(userId);
+    if (doc != null) {
+      final verification = IdVerification.fromMap(doc.data);
+      verification.documentId = doc.$id;
+      return verification;
+    }
+    return null;
+  }
+
+  Future<IdVerification?> getIdVerificationBySubmissionId(
+      String submissionId) async {
+    final doc =
+        await appWriteProvider.getIdVerificationBySubmissionId(submissionId);
+    if (doc != null) {
+      final verification = IdVerification.fromMap(doc.data);
+      verification.documentId = doc.$id;
+      return verification;
+    }
+    return null;
+  }
+
+  Future<Document> updateIdVerification(IdVerification idVerification) {
+    return appWriteProvider.updateIdVerification(
+      idVerification.documentId!,
+      idVerification.toMap(),
+    );
+  }
+
+  Future<Map<String, dynamic>> processArgosWebhook(
+    Map<String, dynamic> webhookData,
+  ) {
+    return appWriteProvider.processArgosWebhook(webhookData);
+  }
+
+  Future<bool> isUserIdVerified(String userId) {
+    return appWriteProvider.isUserIdVerified(userId);
+  }
+
+  Future<Map<String, dynamic>> getUserVerificationStatus(String userId) {
+    return appWriteProvider.getUserVerificationStatus(userId);
+  }
+
+  Stream<RealtimeMessage> subscribeToIdVerification(String userId) {
+    return appWriteProvider.subscribeToIdVerification(userId);
+  }
+
+  Future<void> cleanupStuckVerifications(String userId) {
+    return appWriteProvider.cleanupStuckVerifications(userId);
+  }
+
+  /// Create a new rating and review
 Future<RatingAndReview> createRatingAndReview(RatingAndReview review) async {
   final doc = await appWriteProvider.createRatingAndReview(review.toMap());
   return review.copyWith(documentId: doc.$id);
@@ -711,62 +770,4 @@ Future<RatingAndReview> createReviewFromAppointment({
 
   return await createRatingAndReview(review);
 }
-
-
-// ============= ID VERIFICATION METHODS =============
-
-  Future<Document> createIdVerification(IdVerification idVerification) {
-    return appWriteProvider.createIdVerification(idVerification.toMap());
-  }
-
-  Future<IdVerification?> getIdVerificationByUserId(String userId) async {
-    final doc = await appWriteProvider.getIdVerificationByUserId(userId);
-    if (doc != null) {
-      final verification = IdVerification.fromMap(doc.data);
-      verification.documentId = doc.$id;
-      return verification;
-    }
-    return null;
-  }
-
-  Future<IdVerification?> getIdVerificationBySubmissionId(
-      String submissionId) async {
-    final doc =
-        await appWriteProvider.getIdVerificationBySubmissionId(submissionId);
-    if (doc != null) {
-      final verification = IdVerification.fromMap(doc.data);
-      verification.documentId = doc.$id;
-      return verification;
-    }
-    return null;
-  }
-
-  Future<Document> updateIdVerification(IdVerification idVerification) {
-    return appWriteProvider.updateIdVerification(
-      idVerification.documentId!,
-      idVerification.toMap(),
-    );
-  }
-
-  Future<Map<String, dynamic>> processArgosWebhook(
-    Map<String, dynamic> webhookData,
-  ) {
-    return appWriteProvider.processArgosWebhook(webhookData);
-  }
-
-  Future<bool> isUserIdVerified(String userId) {
-    return appWriteProvider.isUserIdVerified(userId);
-  }
-
-  Future<Map<String, dynamic>> getUserVerificationStatus(String userId) {
-    return appWriteProvider.getUserVerificationStatus(userId);
-  }
-
-  Stream<RealtimeMessage> subscribeToIdVerification(String userId) {
-    return appWriteProvider.subscribeToIdVerification(userId);
-  }
-
-  Future<void> cleanupStuckVerifications(String userId) {
-    return appWriteProvider.cleanupStuckVerifications(userId);
-  }
 }

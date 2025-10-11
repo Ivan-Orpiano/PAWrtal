@@ -29,11 +29,7 @@ class AppwriteConstants {
     static bool get ratingsAndReviewsConfigured {
     return ratingsAndReviewsCollectionID != "REPLACE_WITH_YOUR_COLLECTION_ID";
   }
-}
-
-
-
-  // NEW: ARGOS Identity Configuration
+    // NEW: ARGOS Identity Configuration
   // Get your project ID from ARGOS Dashboard after signing up
   static String argosProjectId = "xn67l316fg";
   static String argosLiveformBaseUrl = "https://form.argosidentity.com/";
@@ -51,3 +47,4 @@ class AppwriteConstants {
         argosWebhookUrl != "REPLACE_WITH_YOUR_WEBHOOK_URL";
   }
 }
+
