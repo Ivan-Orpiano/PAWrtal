@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -8,6 +9,9 @@ import 'package:capstone_app/web/user_web/desktop_web/components/appointment_com
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:appwrite/appwrite.dart';
 
 class EnhancedWebAppointmentsPage extends StatefulWidget {
   const EnhancedWebAppointmentsPage({super.key});
@@ -83,9 +87,9 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
 
         return Row(
           children: [
-            _buildAppointmentColumn("Upcoming", appointmentController.upcoming, Colors.blue, Icons.event_available),
-            const SizedBox(width: 16),
             _buildAppointmentColumn("Pending", appointmentController.pending, Colors.orange, Icons.pending_actions),
+            const SizedBox(width: 16),
+            _buildAppointmentColumn("Upcoming", appointmentController.upcoming, Colors.blue, Icons.event_available),
             const SizedBox(width: 16),
             _buildAppointmentColumn("Completed", appointmentController.completed, Colors.green, Icons.check_circle),
             const SizedBox(width: 16),
@@ -1046,254 +1050,505 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
     );
   }
 
-  Widget _buildRatingDialog(Appointment appointment, Clinic? clinic, Pet? pet) {
-    int selectedRating = 0;
-    final TextEditingController reviewController = TextEditingController();
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            width: 500,
-            constraints: const BoxConstraints(maxHeight: 600),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            clipBehavior: Clip.hardEdge,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.amber.shade50,
-                        Colors.orange.shade50,
-                      ],
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
-                      const Text(
-                        'Rate & Review',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.rate_review, color: Colors.amber),
-                      ),
+Widget _buildRatingDialog(Appointment appointment, Clinic? clinic, Pet? pet) {
+  double selectedRating = 0.0; // Changed from int to double
+  final TextEditingController reviewController = TextEditingController();
+  List<PlatformFile> selectedImages = [];
+  
+  return StatefulBuilder(
+    builder: (context, setState) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 500,
+          constraints: const BoxConstraints(maxHeight: 700),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.amber.shade50,
+                      Colors.orange.shade50,
                     ],
                   ),
                 ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                    const Text(
+                      'Rate & Review',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.rate_review, color: Colors.amber),
+                    ),
+                  ],
+                ),
+              ),
 
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.local_hospital,
-                                    color: Colors.blue.shade600,
-                                    size: 20,
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Appointment info
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.local_hospital,
+                                  color: Colors.blue.shade600,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    clinic?.clinicName ?? 'Unknown Clinic',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      clinic?.clinicName ?? 'Unknown Clinic',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${appointment.service} • ${pet?.name ?? appointment.petId}',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat('MMM dd, yyyy').format(appointment.dateTime),
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Rating stars with slider
+                      const Text(
+                        'How would you rate your experience?',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Visual star display
+                      Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(5, (index) {
+                            final starValue = index + 1;
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(
+                                selectedRating >= starValue 
+                                    ? Icons.star 
+                                    : (selectedRating >= starValue - 0.5 
+                                        ? Icons.star_half 
+                                        : Icons.star_border),
+                                color: selectedRating >= starValue - 0.5 
+                                    ? Colors.amber 
+                                    : Colors.grey.shade400,
+                                size: 40,
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Rating slider for precise control
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: [
+                            Slider(
+                              value: selectedRating,
+                              min: 0.0,
+                              max: 5.0,
+                              divisions: 10, // 0.5 increments
+                              activeColor: Colors.amber,
+                              inactiveColor: Colors.grey.shade300,
+                              label: selectedRating > 0 
+                                  ? selectedRating.toStringAsFixed(1) 
+                                  : null,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedRating = value;
+                                });
+                              },
+                            ),
+                            if (selectedRating > 0)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${selectedRating.toStringAsFixed(1)} stars',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    _getRatingTextFromDouble(selectedRating),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: _getRatingColorFromDouble(selectedRating),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Review text
+                      const Text(
+                        'Share your experience (Optional)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: TextField(
+                          controller: reviewController,
+                          maxLines: 4,
+                          maxLength: 500,
+                          decoration: InputDecoration(
+                            hintText: 'Tell us about your visit, the service quality, staff friendliness, etc...',
+                            hintStyle: TextStyle(color: Colors.grey.shade500),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.all(16),
+                            counterStyle: TextStyle(color: Colors.grey.shade500),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Image upload section
+                      const Text(
+                        'Add Photos (Optional)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Image picker button
+                      InkWell(
+                        onTap: () async {
+                          final result = await FilePicker.platform.pickFiles(
+                            type: FileType.image,
+                            allowMultiple: true,
+                            withData: true,
+                          );
+                          
+                          if (result != null && result.files.isNotEmpty) {
+                            setState(() {
+                              selectedImages.addAll(result.files);
+                              if (selectedImages.length > 5) {
+                                selectedImages = selectedImages.take(5).toList();
+                              }
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.grey.shade300, 
+                              width: 2, 
+                              style: BorderStyle.solid
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey.shade50,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate,
+                                color: Colors.grey.shade600,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 8),
                               Text(
-                                '${appointment.service} • ${pet?.name ?? appointment.petId}',
+                                selectedImages.isEmpty 
+                                    ? 'Add photos (up to 5)'
+                                    : '${selectedImages.length} photo${selectedImages.length > 1 ? 's' : ''} selected',
                                 style: TextStyle(
                                   color: Colors.grey.shade700,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat('MMM dd, yyyy').format(appointment.dateTime),
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                      ),
 
-                        const SizedBox(height: 24),
-
-                        const Text(
-                          'How would you rate your experience?',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(5, (index) {
-                              return GestureDetector(
-                                onTap: () => setState(() => selectedRating = index + 1),
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                                  padding: const EdgeInsets.all(8),
-                                  child: Icon(
-                                    selectedRating > index ? Icons.star : Icons.star_border,
-                                    color: selectedRating > index ? Colors.amber : Colors.grey.shade400,
-                                    size: 40,
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-
-                        if (selectedRating > 0) ...[
-                          const SizedBox(height: 8),
-                          Center(
-                            child: Text(
-                              _getRatingText(selectedRating),
-                              style: TextStyle(
-                                color: _getRatingColor(selectedRating),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: 24),
-
-                        const Text(
-                          'Share your experience (Optional)',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      // Display selected images
+                      if (selectedImages.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: TextField(
-                            controller: reviewController,
-                            maxLines: 4,
-                            maxLength: 500,
-                            decoration: InputDecoration(
-                              hintText: 'Tell us about your visit, the service quality, staff friendliness, etc...',
-                              hintStyle: TextStyle(color: Colors.grey.shade500),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.all(16),
-                              counterStyle: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
                         SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: selectedRating > 0 
-                              ? () => _submitRating(appointment, selectedRating, reviewController.text, clinic)
-                              : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: selectedRating > 0 ? Colors.amber : Colors.grey.shade300,
-                              foregroundColor: selectedRating > 0 ? Colors.white : Colors.grey.shade500,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: selectedRating > 0 ? 2 : 0,
-                            ),
-                            child: Text(
-                              selectedRating > 0 ? 'Submit Review' : 'Select a Rating',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          height: 100,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: selectedImages.length,
+                            itemBuilder: (context, index) {
+                              final file = selectedImages[index];
+                              
+                              return Stack(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 8),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: file.bytes != null
+                                          ? Image.memory(
+                                              file.bytes!,
+                                              width: 100,
+                                              height: 100,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Container(
+                                              width: 100,
+                                              height: 100,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.image),
+                                            ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 12,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedImages.removeAt(index);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ],
-                    ),
+
+                      const SizedBox(height: 24),
+
+                      // Submit button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: selectedRating > 0 
+                            ? () => _submitRating(
+                                appointment, 
+                                selectedRating, // Now passing double
+                                reviewController.text,
+                                selectedImages,
+                                clinic,
+                              )
+                            : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: selectedRating > 0 
+                                ? Colors.amber 
+                                : Colors.grey.shade300,
+                            foregroundColor: selectedRating > 0 
+                                ? Colors.white 
+                                : Colors.grey.shade500,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: selectedRating > 0 ? 2 : 0,
+                          ),
+                          child: Text(
+                            selectedRating > 0 
+                                ? 'Submit Review' 
+                                : 'Select a Rating',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
+      );
+    },
+  );
+}
+
+  String _getRatingTextFromDouble(double rating) {
+  if (rating >= 4.5) return 'Excellent';
+  if (rating >= 3.5) return 'Very Good';
+  if (rating >= 2.5) return 'Good';
+  if (rating >= 1.5) return 'Fair';
+  if (rating > 0) return 'Poor';
+  return '';
+}
+
+Color _getRatingColorFromDouble(double rating) {
+  if (rating >= 4.5) return Colors.green;
+  if (rating >= 3.5) return Colors.lightGreen;
+  if (rating >= 2.5) return Colors.amber;
+  if (rating >= 1.5) return Colors.orange;
+  if (rating > 0) return Colors.red;
+  return Colors.grey;
+}
+
+
+  Future<void> _submitRating(
+    Appointment appointment,
+    double rating,
+    String review,
+    List<PlatformFile> images,
+    Clinic? clinic,
+  ) async {
+    try {
+      // Show loading
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(color: Colors.amber),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Get user info
+      final user = await Get.find<AuthRepository>().getUser();
+      if (user == null) {
+        Get.back(); // Close loading
+        Get.snackbar('Error', 'User not found');
+        return;
+      }
+
+      // Check if already reviewed
+      final alreadyReviewed = await Get.find<AuthRepository>()
+          .hasUserReviewedAppointment(appointment.documentId!);
+
+      if (alreadyReviewed) {
+        Get.back(); // Close loading
+        Get.snackbar(
+          'Already Reviewed',
+          'You have already reviewed this appointment.',
+          backgroundColor: Colors.orange.shade50,
+          colorText: Colors.orange.shade700,
         );
-      },
+        return;
+      }
+
+      // Upload images if any
+      List<String> imageIds = [];
+      if (images.isNotEmpty) {
+        try {
+          print('Uploading ${images.length} review images...');
+          final uploadedFiles = await Get.find<AuthRepository>().uploadReviewImages(images);
+          imageIds = uploadedFiles.map((file) => file.$id).toList();
+          print('Successfully uploaded ${imageIds.length} images');
+        } catch (e) {
+          print('Error uploading images: $e');
+          // Continue without images if upload fails
+        }
+      }
+
+      // Get pet name
+      final pet = appointmentController.getPetForAppointment(appointment);
+
+      // Create review
+      final ratingReview = RatingAndReview(
+      userId: appointment.userId,
+      clinicId: appointment.clinicId,
+      appointmentId: appointment.documentId!,
+      rating: rating, // Already a double
+      reviewText: review.isNotEmpty ? review : null,
+      images: imageIds,
+      userName: user.name,
+      petName: pet?.name,
+      serviceName: appointment.service,
     );
-  }
 
-  String _getRatingText(int rating) {
-    switch (rating) {
-      case 1: return 'Poor';
-      case 2: return 'Fair';
-      case 3: return 'Good';
-      case 4: return 'Very Good';
-      case 5: return 'Excellent';
-      default: return '';
-    }
-  }
+    await Get.find<AuthRepository>().createRatingAndReview(ratingReview);
 
-  Color _getRatingColor(int rating) {
-    switch (rating) {
-      case 1: return Colors.red;
-      case 2: return Colors.orange;
-      case 3: return Colors.amber;
-      case 4: return Colors.lightGreen;
-      case 5: return Colors.green;
-      default: return Colors.grey;
-    }
-  }
-
-  void _submitRating(Appointment appointment, int rating, String review, Clinic? clinic) {
+    Get.back();
     Navigator.pop(context);
-    
+
     Get.snackbar(
       'Review Submitted!',
-      'Thank you for your feedback. Your $rating-star review helps other pet owners.',
+      'Thank you for your feedback. Your ${rating.toStringAsFixed(1)}-star review helps other pet owners.',
       backgroundColor: Colors.green.shade50,
       colorText: Colors.green.shade700,
       icon: const Icon(Icons.check_circle, color: Colors.green),
@@ -1301,10 +1556,16 @@ class _EnhancedWebAppointmentsPageState extends State<EnhancedWebAppointmentsPag
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
     );
-
-    print('Rating submitted: $rating stars');
-    print('Review: $review');
-    print('Appointment ID: ${appointment.documentId}');
-    print('Clinic: ${clinic?.clinicName}');
+  } catch (e) {
+    Get.back();
+    print('Error submitting review: $e');
+    Get.snackbar(
+      'Error',
+      'Failed to submit review: ${e.toString()}',
+      backgroundColor: Colors.red.shade50,
+      colorText: Colors.red.shade700,
+      icon: const Icon(Icons.error, color: Colors.red),
+    );
   }
+}
 }

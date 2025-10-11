@@ -366,6 +366,7 @@ Widget _buildMainContent(double screenWidth, double screenHeight) {
         WebRatingsAndReviews(
           key: reviewsKey,
           reviewsEndKey: reviewsEndKey,
+          clinicId: widget.clinic.documentId!,
         ),
       ]
     );

@@ -14,7 +14,7 @@ class AppwriteConstants {
   static String messagesCollectionID = "68d25ad3000ebd275a4e";
   static String conversationStartersCollectionID = "68d25b3d001e1bef8af8";
   static String userStatusCollectionID = "68d25b9d000b7005695c";
-
+  static String ratingsAndReviewsCollectionID = "ratingsandreviews";
   static String idVerificationCollectionID = "68e74484002b415c4c9a";
 
   static bool get messagingCollectionsConfigured {
@@ -25,7 +25,9 @@ class AppwriteConstants {
             "REPLACE_WITH_STARTERS_COLLECTION_ID" &&
         userStatusCollectionID != "REPLACE_WITH_USER_STATUS_COLLECTION_ID";
   }
-
+  static bool get ratingsAndReviewsConfigured {
+    return ratingsAndReviewsCollectionID != "REPLACE_WITH_YOUR_COLLECTION_ID";
+  }
   // NEW: ARGOS Identity Configuration
   // Get your project ID from ARGOS Dashboard after signing up
   static String argosProjectId = "xn67l316fg";
