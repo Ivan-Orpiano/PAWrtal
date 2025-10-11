@@ -45,6 +45,9 @@ class AdminDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('>>> ============================================');
+    print('>>> DASHBOARD CONTROLLER: onInit()');
+    print('>>> ============================================');
     initializeDashboard();
 
     ever(selectedDate, (_) => fetchAppointmentsForDate(selectedDate.value));
@@ -52,22 +55,58 @@ class AdminDashboardController extends GetxController {
 
   @override
   void onClose() {
+    print('>>> ============================================');
+    print('>>> DASHBOARD CONTROLLER: onClose()');
+    print('>>> Cleaning up resources...');
+    print('>>> ============================================');
+
     _appointmentSubscription?.close();
     _fallbackTimer?.cancel();
+
+    // Clear all data to prevent memory leaks
+    clinicData.value = null;
+    appointments.clear();
+    appointmentStats.clear();
+    todayAppointments.clear();
+    upcomingAppointments.clear();
+    recentMessages.clear();
+    monthlyStats.clear();
+    petsCache.clear();
+    ownersCache.clear();
+    calendarAppointments.clear();
+
     super.onClose();
   }
 
   Future<void> initializeDashboard() async {
     try {
       isLoading.value = true;
-      await fetchClinicData();
-      await fetchAllAppointments();
-      await fetchAppointmentStats();
-      await generateCalendarData();
-      await fetchRecentMessages();
 
-      await _initializeRealTimeUpdates();
+      print('>>> ============================================');
+      print('>>> INITIALIZING DASHBOARD');
+      print('>>> ============================================');
+
+      await fetchClinicData();
+
+      // Only continue if we have valid clinic data
+      if (clinicData.value?.documentId != null) {
+        print('>>> Clinic loaded: ${clinicData.value!.clinicName}');
+        print('>>> Clinic ID: ${clinicData.value!.documentId}');
+
+        await fetchAllAppointments();
+        await fetchAppointmentStats();
+        await generateCalendarData();
+        await fetchRecentMessages();
+        await _initializeRealTimeUpdates();
+      } else {
+        print('>>> ERROR: No clinic data loaded!');
+      }
+
+      print('>>> ============================================');
+      print('>>> DASHBOARD INITIALIZATION COMPLETE');
+      print('>>> ============================================');
     } catch (e) {
+      print('>>> ERROR: Failed to load dashboard data: $e');
       Get.snackbar("Error", "Failed to load dashboard data: $e");
     } finally {
       isLoading.value = false;
@@ -328,11 +367,16 @@ class AdminDashboardController extends GetxController {
   Future<void> fetchClinicData() async {
     try {
       final user = await authRepository.getUser();
-      if (user == null) return;
+      if (user == null) {
+        print('>>> ERROR: No user found');
+        return;
+      }
 
       // Get user role from storage
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
+
+      print('>>> Fetching clinic data for role: $userRole');
 
       String? clinicId;
 
@@ -356,25 +400,37 @@ class AdminDashboardController extends GetxController {
           clinicData.value!.documentId = clinicDoc.$id;
           print(
               '>>> DASHBOARD: Clinic loaded: ${clinicData.value!.clinicName}');
+          print('>>> DASHBOARD: Clinic ID: ${clinicData.value!.documentId}');
+        } else {
+          print('>>> ERROR: Clinic document not found for ID: $clinicId');
         }
+      } else {
+        print('>>> ERROR: No clinicId available');
       }
     } catch (e) {
-      print("Error fetching clinic data: $e");
+      print(">>> ERROR fetching clinic data: $e");
     }
   }
 
   Future<void> fetchAllAppointments() async {
-    if (clinicData.value?.documentId == null) return;
+    if (clinicData.value?.documentId == null) {
+      print('>>> ERROR: Cannot fetch appointments - no clinic ID');
+      return;
+    }
 
     try {
+      print(
+          '>>> Fetching appointments for clinic: ${clinicData.value!.documentId}');
       final result = await authRepository
           .getClinicAppointments(clinicData.value!.documentId!);
+      print('>>> Found ${result.length} appointments');
+
       appointments.assignAll(result);
       await _fetchRelatedData();
       _processTodayAppointments();
       _processUpcomingAppointments();
     } catch (e) {
-      print("Error fetching appointments: $e");
+      print(">>> ERROR fetching appointments: $e");
     }
   }
 
