@@ -1578,9 +1578,9 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           labelText: 'Phone Number (Optional)',
           labelStyle:
               const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
-          hintText: '123456789',
-          helperText: 'Format: 09XXXXXXXXX (9 digits after 09)',
-          helperMaxLines: 2,
+          hintText: '696934651',
+          // helperText: 'Format: 09XXXXXXXXX (9 digits after 09)',
+          // helperMaxLines: 2,
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
