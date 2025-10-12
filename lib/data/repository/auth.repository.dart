@@ -18,6 +18,7 @@ import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 
 import 'package:capstone_app/data/models/id_verification_model.dart';
+import 'package:capstone_app/data/models/vaccination_model.dart';
 
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
@@ -772,5 +773,40 @@ class AuthRepository {
     );
 
     return await createRatingAndReview(review);
+  }
+
+  // ============= VACCINATION METHODS =============
+
+  Future<Vaccination> createVaccination(Vaccination vaccination) async {
+    final doc = await appWriteProvider.createVaccination(vaccination.toMap());
+    return vaccination.copyWith(documentId: doc.$id);
+  }
+
+  Future<List<Vaccination>> getPetVaccinations(String petId) async {
+    final rawVaccinations = await appWriteProvider.getPetVaccinations(petId);
+    return rawVaccinations.map((data) => Vaccination.fromMap(data)).toList();
+  }
+
+  Future<List<Vaccination>> getClinicVaccinations(String clinicId) async {
+    final rawVaccinations =
+        await appWriteProvider.getClinicVaccinations(clinicId);
+    return rawVaccinations.map((data) => Vaccination.fromMap(data)).toList();
+  }
+
+  Future<Vaccination> updateVaccination(Vaccination vaccination) async {
+    if (vaccination.documentId == null) {
+      throw Exception('Cannot update vaccination without documentId');
+    }
+
+    final doc = await appWriteProvider.updateVaccination(
+      vaccination.documentId!,
+      vaccination.toMap(),
+    );
+
+    return Vaccination.fromMap(doc.data).copyWith(documentId: doc.$id);
+  }
+
+  Future<void> deleteVaccination(String documentId) async {
+    await appWriteProvider.deleteVaccination(documentId);
   }
 }

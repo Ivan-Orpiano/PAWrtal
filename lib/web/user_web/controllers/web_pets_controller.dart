@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/services/web_snack_bar_service.dart';
+import 'package:capstone_app/data/models/medical_record_model.dart';
+import 'package:capstone_app/data/models/vaccination_model.dart';
 
 class WebPetsController extends GetxController {
   final AuthRepository authRepository;
@@ -15,6 +17,11 @@ class WebPetsController extends GetxController {
   RxString searchQuery = ''.obs;
   Rx<Pet?> selectedPet = Rx<Pet?>(null);
 
+  RxList<MedicalRecord> medicalRecords = <MedicalRecord>[].obs;
+  RxList<Vaccination> vaccinations = <Vaccination>[].obs;
+  RxBool isLoadingMedical = false.obs;
+  RxBool isLoadingVaccinations = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -26,11 +33,12 @@ class WebPetsController extends GetxController {
     if (searchQuery.value.isEmpty) {
       return pets;
     }
-    return pets.where((pet) => 
-      pet.name.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-      pet.type.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-      pet.breed.toLowerCase().contains(searchQuery.value.toLowerCase())
-    ).toList();
+    return pets
+        .where((pet) =>
+            pet.name.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+            pet.type.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+            pet.breed.toLowerCase().contains(searchQuery.value.toLowerCase()))
+        .toList();
   }
 
   Future<void> fetchUserPets() async {
@@ -54,6 +62,42 @@ class WebPetsController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> fetchPetMedicalHistory(String petId) async {
+    isLoadingMedical.value = true;
+    try {
+      final records = await authRepository.getPetMedicalRecords(petId);
+      medicalRecords.value = records;
+    } catch (e) {
+      WebSnackBarService.showError(
+        title: "Error",
+        message: "Failed to fetch medical history: $e",
+      );
+    } finally {
+      isLoadingMedical.value = false;
+    }
+  }
+
+  Future<void> fetchPetVaccinationHistory(String petId) async {
+    isLoadingVaccinations.value = true;
+    try {
+      final vaccins = await authRepository.getPetVaccinations(petId);
+      vaccinations.value = vaccins;
+    } catch (e) {
+      WebSnackBarService.showError(
+        title: "Error",
+        message: "Failed to fetch vaccination history: $e",
+      );
+    } finally {
+      isLoadingVaccinations.value = false;
+    }
+  }
+
+// Clear histories when pet selection changes
+  void clearHistories() {
+    medicalRecords.clear();
+    vaccinations.clear();
   }
 
   void selectPet(Pet pet) {
