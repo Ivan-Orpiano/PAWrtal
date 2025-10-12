@@ -19,7 +19,7 @@ class SuperAdminVetClinicDetailPage extends StatefulWidget {
     this.settings,
   });
 
-  @override
+  @override 
   State<SuperAdminVetClinicDetailPage> createState() =>
       _SuperAdminVetClinicDetailPageState();
 }
@@ -283,6 +283,7 @@ class _SuperAdminVetClinicDetailPageState
     bool isMobile,
   ) {
     return SliverAppBar(
+      surfaceTintColor: Colors.transparent,
       expandedHeight: isMobile ? 300 : 400,
       pinned: true,
       backgroundColor: Colors.white,
@@ -1083,6 +1084,7 @@ class _SuperAdminVetClinicDetailPageState
       ),
     );
   }
+
   Widget _buildContactSection(Clinic clinic, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 28),
@@ -1159,6 +1161,7 @@ class _SuperAdminVetClinicDetailPageState
       ),
     );
   }
+
   Widget _buildContactRow(
     IconData icon,
     String label,
@@ -1204,6 +1207,7 @@ class _SuperAdminVetClinicDetailPageState
       ],
     );
   }
+
   Widget _buildAdminSection(Clinic clinic, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 28),
@@ -1266,7 +1270,7 @@ class _SuperAdminVetClinicDetailPageState
       ),
     );
   }
-  
+
   Widget _buildAdminInfoRow(String label, String value, IconData icon) {
     return Row(
       children: [

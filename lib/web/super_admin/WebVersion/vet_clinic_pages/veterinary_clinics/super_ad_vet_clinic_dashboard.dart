@@ -25,7 +25,7 @@ class _SuperAdminVetClinicDashboardState
     extends State<SuperAdminVetClinicDashboard> {
   final SuperAdminHomeController controller =
       Get.find<SuperAdminHomeController>();
-  
+
   StreamSubscription? _clinicSubscription;
   StreamSubscription? _settingsSubscription;
 
@@ -43,14 +43,16 @@ class _SuperAdminVetClinicDashboardState
   }
 
   void _setupRealtimeListeners() {
-    _clinicSubscription = controller.authRepository
-        .subscribeToClinicChanges()
-        .listen((event) {
+    _clinicSubscription =
+        controller.authRepository.subscribeToClinicChanges().listen((event) {
       print('Clinic event: ${event.events}');
-      
-      if (event.events.contains('databases.*.collections.*.documents.*.create') ||
-          event.events.contains('databases.*.collections.*.documents.*.update') ||
-          event.events.contains('databases.*.collections.*.documents.*.delete')) {
+
+      if (event.events
+              .contains('databases.*.collections.*.documents.*.create') ||
+          event.events
+              .contains('databases.*.collections.*.documents.*.update') ||
+          event.events
+              .contains('databases.*.collections.*.documents.*.delete')) {
         controller.fetchAllClinics();
       }
     });
@@ -59,8 +61,9 @@ class _SuperAdminVetClinicDashboardState
         .subscribeToClinicSettingsChanges()
         .listen((event) {
       print('Settings event: ${event.events}');
-      
-      if (event.events.contains('databases.*.collections.*.documents.*.update')) {
+
+      if (event.events
+          .contains('databases.*.collections.*.documents.*.update')) {
         controller.fetchAllClinics();
       }
     });
@@ -70,23 +73,23 @@ class _SuperAdminVetClinicDashboardState
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // Responsive breakpoints
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1000;
     final isDesktop = screenWidth >= 1000;
 
     // Responsive padding
-    double horizontalPadding = isMobile 
-        ? 16.0 
-        : isTablet 
-            ? 24.0 
+    double horizontalPadding = isMobile
+        ? 16.0
+        : isTablet
+            ? 24.0
             : (screenWidth * 0.05).clamp(32.0, 80.0);
 
-    double gridHorizontalPadding = isMobile 
-        ? 16.0 
-        : isTablet 
-            ? 24.0 
+    double gridHorizontalPadding = isMobile
+        ? 16.0
+        : isTablet
+            ? 24.0
             : (screenWidth * 0.08).clamp(40.0, 80.0);
 
     return Scaffold(
@@ -125,21 +128,12 @@ class _SuperAdminVetClinicDashboardState
         return Column(
           children: [
             // Header section
-            _buildHeader(
-              context, 
-              filteredClinics.length, 
-              horizontalPadding, 
-              isMobile, 
-              isTablet
-            ),
+            _buildHeader(context, filteredClinics.length, horizontalPadding,
+                isMobile, isTablet),
 
             // Search and filter
-            _buildSearchBar(
-              horizontalPadding, 
-              isMobile, 
-              isTablet
-            ),
-            
+            _buildSearchBar(horizontalPadding, isMobile, isTablet),
+
             SizedBox(height: isMobile ? 12 : 16),
 
             // Clinic grid
@@ -151,7 +145,7 @@ class _SuperAdminVetClinicDashboardState
                   onRefresh: controller.fetchAllClinics,
                   color: const Color.fromRGBO(81, 115, 153, 1),
                   child: _buildClinicGrid(
-                    filteredClinics, 
+                    filteredClinics,
                     gridHorizontalPadding,
                     isMobile,
                     isTablet,
@@ -168,12 +162,13 @@ class _SuperAdminVetClinicDashboardState
   }
 
   PreferredSizeWidget _buildAppBar(
-    BuildContext context, 
-    double screenHeight, 
+    BuildContext context,
+    double screenHeight,
     double horizontalPadding,
     bool isMobile,
   ) {
     return AppBar(
+      surfaceTintColor: Colors.transparent,
       leading: IconButton(
         icon: Icon(
           Icons.arrow_back_rounded,
@@ -197,7 +192,6 @@ class _SuperAdminVetClinicDashboardState
         },
         tooltip: 'Back',
       ),
-      surfaceTintColor: Colors.transparent,
       backgroundColor: const Color(0xFFF8FAFC),
       centerTitle: true,
       toolbarHeight: isMobile ? screenHeight * 0.08 : screenHeight * 0.1,
@@ -376,7 +370,8 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildSearchBar(double horizontalPadding, bool isMobile, bool isTablet) {
+  Widget _buildSearchBar(
+      double horizontalPadding, bool isMobile, bool isTablet) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: isMobile
@@ -492,7 +487,7 @@ class _SuperAdminVetClinicDashboardState
                         ),
                       ),
                     );
-                    
+
                     if (result == true) {
                       controller.fetchAllClinics();
                     }
@@ -719,4 +714,4 @@ class _SuperAdminVetClinicDashboardState
       ),
     );
   }
-    }
+}

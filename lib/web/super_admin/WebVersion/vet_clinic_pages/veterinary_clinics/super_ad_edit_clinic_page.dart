@@ -147,6 +147,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         elevation: 2,
+        surfaceTintColor: Colors.transparent,
         shadowColor: const Color.fromRGBO(81, 115, 153, 0.1),
         leading: IconButton(
           icon: const Icon(Icons.close, color: Color.fromRGBO(81, 115, 153, 1)),

@@ -289,6 +289,7 @@ class _SuperAdminStaffManagementPageState
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: backgroundColor,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: primaryColor),
