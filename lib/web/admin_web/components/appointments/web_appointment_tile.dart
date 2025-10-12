@@ -4,6 +4,7 @@ import 'package:capstone_app/web/admin_web/components/appointments/web_appointme
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/dialogs/vaccination_completion_dialog.dart';
 
 class WebAppointmentTile extends StatelessWidget {
   final Appointment appointment;
@@ -104,6 +105,7 @@ class WebAppointmentTile extends StatelessWidget {
             const SizedBox(width: 12),
             Icon(Icons.medical_services, size: 14, color: Colors.grey[600]),
             const SizedBox(width: 4),
+            _buildServiceTypeIndicator(),
             Expanded(
               child: Text(
                 appointment.service,
@@ -224,6 +226,8 @@ class WebAppointmentTile extends StatelessWidget {
             ],
           ),
         ),
+        _buildServiceTypeIndicator(),
+        const SizedBox(width: 64),
         Expanded(
           flex: isTablet ? 2 : 3,
           child: Column(
@@ -847,6 +851,17 @@ class WebAppointmentTile extends StatelessWidget {
   }
 
   void _showCompleteServiceDialog(WebAppointmentController controller) {
+    // Check if this is a vaccination service
+    if (controller.isVaccinationService(appointment.service)) {
+      // Show vaccination-specific dialog
+      Get.dialog(
+        VaccinationCompletionDialog(appointment: appointment),
+        barrierDismissible: false,
+      );
+      return;
+    }
+
+    // Show regular service completion dialog for non-vaccination services
     final diagnosisController = TextEditingController();
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
@@ -863,30 +878,75 @@ class WebAppointmentTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Complete Service',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color.fromARGB(255, 81, 115, 153),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Complete Service',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Fill in the medical information below',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Leave fields empty to set as "N/A"',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.orange[700], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Note: Diagnosis and Treatment are required for proper medical record creation',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
                 TextField(
                   controller: diagnosisController,
                   decoration: const InputDecoration(
-                    labelText: 'Diagnosis (Optional)',
+                    labelText: 'Diagnosis *',
                     border: OutlineInputBorder(),
-                    hintText: 'Leave empty for N/A',
+                    hintText: 'Required - Enter diagnosis',
                   ),
                   maxLines: 2,
                 ),
@@ -894,9 +954,9 @@ class WebAppointmentTile extends StatelessWidget {
                 TextField(
                   controller: treatmentController,
                   decoration: const InputDecoration(
-                    labelText: 'Treatment (Optional)',
+                    labelText: 'Treatment *',
                     border: OutlineInputBorder(),
-                    hintText: 'Leave empty for N/A',
+                    hintText: 'Required - Enter treatment provided',
                   ),
                   maxLines: 2,
                 ),
@@ -931,20 +991,38 @@ class WebAppointmentTile extends StatelessWidget {
                     const SizedBox(width: 16),
                     ElevatedButton(
                       onPressed: () {
+                        // Validate required fields
+                        if (diagnosisController.text.trim().isEmpty) {
+                          Get.snackbar(
+                            'Required Field',
+                            'Please enter a diagnosis',
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+
+                        if (treatmentController.text.trim().isEmpty) {
+                          Get.snackbar(
+                            'Required Field',
+                            'Please enter the treatment provided',
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+
                         controller.completeServiceWithRecord(
                           appointment: appointment,
-                          diagnosis: diagnosisController.text.isEmpty
-                              ? null
-                              : diagnosisController.text,
-                          treatment: treatmentController.text.isEmpty
-                              ? null
-                              : treatmentController.text,
-                          prescription: prescriptionController.text.isEmpty
-                              ? null
-                              : prescriptionController.text,
-                          vetNotes: notesController.text.isEmpty
-                              ? null
-                              : notesController.text,
+                          diagnosis: diagnosisController.text.trim(),
+                          treatment: treatmentController.text.trim(),
+                          prescription:
+                              prescriptionController.text.trim().isNotEmpty
+                                  ? prescriptionController.text.trim()
+                                  : null,
+                          vetNotes: notesController.text.trim().isNotEmpty
+                              ? notesController.text.trim()
+                              : null,
                         );
                         Get.back();
                       },
@@ -960,6 +1038,38 @@ class WebAppointmentTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildServiceTypeIndicator() {
+    final controller = Get.find<WebAppointmentController>();
+    final isVaccination = controller.isVaccinationService(appointment.service);
+
+    if (!isVaccination) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.vaccines, size: 14, color: Colors.green[700]),
+          const SizedBox(width: 4),
+          Text(
+            'VACCINATION',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.green[700],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -2791,4 +2791,81 @@ class AppWriteProvider {
           return message.payload['clinicId'] == clinicId;
         });
   }
+
+  // ============= VACCINATION METHODS =============
+
+  Future<models.Document> createVaccination(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.vaccinationsCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPetVaccinations(String petId) async {
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vaccinationsCollectionID,
+        queries: [
+          Query.equal("petId", petId),
+          Query.orderDesc("dateGiven"),
+        ],
+      );
+
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getPetVaccinations: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getClinicVaccinations(
+      String clinicId) async {
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vaccinationsCollectionID,
+        queries: [
+          Query.equal("clinicId", clinicId),
+          Query.orderDesc("dateGiven"),
+        ],
+      );
+
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getClinicVaccinations: $e');
+      return [];
+    }
+  }
+
+  Future<Document> updateVaccination(
+      String documentId, Map<String, dynamic> data) async {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.vaccinationsCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<void> deleteVaccination(String documentId) async {
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.vaccinationsCollectionID,
+      documentId: documentId,
+    );
+  }
 }
