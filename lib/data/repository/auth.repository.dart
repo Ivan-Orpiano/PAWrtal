@@ -1,8 +1,10 @@
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
@@ -15,6 +17,8 @@ import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 
+import 'package:capstone_app/data/models/id_verification_model.dart';
+
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
   AuthRepository(this.appWriteProvider);
@@ -23,7 +27,39 @@ class AuthRepository {
   Future<models.User> signup(Map map) => appWriteProvider.signup(map);
   Future<models.Document> createUser(Map map) =>
       appWriteProvider.createUser(map);
-  Future<Map<String, dynamic>> login(Map map) => appWriteProvider.login(map);
+
+  Future<Map<String, dynamic>> login(Map map) async {
+    try {
+      final email = map["email"];
+      final password = map["password"];
+
+      print('=== AUTH REPOSITORY LOGIN ===');
+      print('Email: $email');
+
+      // First check if this is a staff account BY CHECKING DATABASE
+      final staffCheck = await appWriteProvider.checkIfStaffAccount(email);
+
+      if (staffCheck['isStaff'] == true) {
+        print('Detected staff account, using staff login...');
+        final staffLoginResult =
+            await appWriteProvider.staffLogin(email, password);
+
+        // Return the result directly - role is already included from database
+        return staffLoginResult;
+      }
+
+      // Regular user login
+      print('Regular user login...');
+      final result = await appWriteProvider.login(map);
+
+      // The result already has the role from the provider
+      return result;
+    } catch (e) {
+      print('Repository login error: $e');
+      rethrow;
+    }
+  }
+
   Future<dynamic> logout(String sessionId) =>
       appWriteProvider.logout(sessionId);
 
@@ -66,13 +102,11 @@ class AuthRepository {
       final rawAppointments =
           await appWriteProvider.getClinicAppointments(clinicId);
       return rawAppointments.map((data) {
-        // Add error handling for each appointment conversion
         try {
           return Appointment.fromMap(Map<String, dynamic>.from(data));
         } catch (e) {
           print('Error converting appointment data: $e');
           print('Problematic data: $data');
-          // Return a default appointment or rethrow based on your needs
           throw Exception('Invalid appointment data: $e');
         }
       }).toList();
@@ -126,13 +160,11 @@ class AuthRepository {
       final rawAppointments =
           await appWriteProvider.getUserAppointments(userId);
       return rawAppointments.map((data) {
-        // Add error handling for each appointment conversion
         try {
           return Appointment.fromMap(Map<String, dynamic>.from(data));
         } catch (e) {
           print('Error converting appointment data: $e');
           print('Problematic data: $data');
-          // Return a default appointment or rethrow based on your needs
           throw Exception('Invalid appointment data: $e');
         }
       }).toList();
@@ -156,7 +188,6 @@ class AuthRepository {
     return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
   }
 
-  // ClinicSettings methods
   Future<models.Document> createClinicSettings(ClinicSettings clinicSettings) =>
       appWriteProvider.createClinicSettings(clinicSettings.toMap());
 
@@ -188,15 +219,12 @@ class AuthRepository {
 
   String getImageUrl(String fileId) => appWriteProvider.getImageUrl(fileId);
 
-  // Initialize clinic settings when a new clinic is created
   Future<ClinicSettings> initializeClinicSettings(String clinicId) async {
     final defaultSettings = ClinicSettings(clinicId: clinicId);
     final doc = await createClinicSettings(defaultSettings);
     defaultSettings.documentId = doc.$id;
     return defaultSettings;
   }
-
-  // ============= CONVERSATION METHODS =============
 
   Future<models.Document> createConversation(Conversation conversation) =>
       appWriteProvider.createConversation(conversation.toMap());
@@ -235,8 +263,6 @@ class AuthRepository {
         conversation.toMap(),
       );
 
-// ============= MESSAGE METHODS =============
-
   Future<models.Document> createMessage(Message message) =>
       appWriteProvider.createMessage(message.toMap());
 
@@ -256,7 +282,6 @@ class AuthRepository {
   Future<void> markMessagesAsRead(String conversationId, String receiverId) =>
       appWriteProvider.markMessagesAsRead(conversationId, receiverId);
 
-// Send a message and update conversation
   Future<Message> sendMessage({
     required String conversationId,
     required String senderId,
@@ -266,7 +291,6 @@ class AuthRepository {
     String messageType = 'text',
     String? attachmentUrl,
   }) async {
-    // Create message
     final message = Message(
       conversationId: conversationId,
       senderId: senderId,
@@ -280,19 +304,15 @@ class AuthRepository {
     final messageDoc = await createMessage(message);
     final createdMessage = message.copyWith(documentId: messageDoc.$id);
 
-    // Update conversation with last message info
     await appWriteProvider.updateConversation(conversationId, {
       'lastMessageId': messageDoc.$id,
       'lastMessageText': messageText,
       'lastMessageTime': DateTime.now().toIso8601String(),
-      'unreadCount':
-          1, // This should be calculated properly in a real implementation
+      'unreadCount': 1,
     });
 
     return createdMessage;
   }
-
-// ============= CONVERSATION STARTERS METHODS =============
 
   Future<models.Document> createConversationStarter(
           ConversationStarter starter) =>
@@ -320,8 +340,6 @@ class AuthRepository {
   Future<void> initializeDefaultConversationStarters(String clinicId) =>
       appWriteProvider.initializeDefaultConversationStarters(clinicId);
 
-// ============= USER STATUS METHODS =============
-
   Future<models.Document> createOrUpdateUserStatus(UserStatus status) =>
       appWriteProvider.createOrUpdateUserStatus(status.userId, status.toMap());
 
@@ -340,8 +358,6 @@ class AuthRepository {
   Future<void> setUserOffline(String userId) =>
       appWriteProvider.setUserOffline(userId);
 
-// ============= REAL-TIME SUBSCRIPTION METHODS =============
-
   Stream<RealtimeMessage> subscribeToMessages(String conversationId) =>
       appWriteProvider.subscribeToMessages(conversationId);
 
@@ -353,8 +369,6 @@ class AuthRepository {
 
   void disposeMessageSubscriptions() =>
       appWriteProvider.disposeMessageSubscriptions();
-
-// ============= CLINIC DATA WITH SETTINGS =============
 
   Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
     try {
@@ -377,24 +391,20 @@ class AuthRepository {
     }
   }
 
-  // Real-time subscription for user appointments
   Stream<RealtimeMessage> subscribeToUserAppointments(String userId) {
     return appWriteProvider.subscribeToUserAppointments(userId);
   }
 
-  // Real-time subscription for clinic appointments
   Stream<RealtimeMessage> subscribeToClinicAppointments(String clinicId) {
     return appWriteProvider.subscribeToClinicAppointments(clinicId);
   }
 
-  // Get occupied time slots
   Future<List<String>> getOccupiedTimeSlots(String clinicId, DateTime date) {
     return appWriteProvider.getOccupiedTimeSlots(clinicId, date);
   }
 
   // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
-  /// Create a complete staff account
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
     required String email,
@@ -419,7 +429,6 @@ class AuthRepository {
     );
   }
 
-  /// Get all staff for a clinic
   Future<List<Staff>> getClinicStaff(String clinicId) async {
     final docs = await appWriteProvider.getClinicStaff(clinicId);
     return docs.map((doc) {
@@ -429,18 +438,55 @@ class AuthRepository {
     }).toList();
   }
 
-  /// Get staff by user ID
   Future<Staff?> getStaffByUserId(String userId) async {
+    print('>>> AUTH REPO: Getting staff by user ID: $userId');
+
     final doc = await appWriteProvider.getStaffByUserId(userId);
     if (doc != null) {
       final staff = Staff.fromMap(doc.data);
       staff.documentId = doc.$id;
+
+      print('>>> AUTH REPO: Staff found');
+      print('>>> Staff Role: ${staff.role}');
+      print('>>> Staff Name: ${staff.name}');
+
       return staff;
     }
+
+    print('>>> AUTH REPO: No staff found');
     return null;
   }
 
-  /// Update staff authorities/permissions
+  /// NEW: Get staff by email (fallback method)
+  Future<Staff?> getStaffByEmail(String email) async {
+    print('>>> AUTH REPO: Getting staff by email: $email');
+
+    final doc = await appWriteProvider.getStaffByEmail(email);
+    if (doc != null) {
+      final staff = Staff.fromMap(doc.data);
+      staff.documentId = doc.$id;
+
+      print('>>> AUTH REPO: Staff found by email');
+      print('>>> Staff Role: ${staff.role}');
+      print('>>> Staff Name: ${staff.name}');
+      print('>>> Staff UserId: ${staff.userId}');
+
+      return staff;
+    }
+
+    print('>>> AUTH REPO: No staff found by email');
+    return null;
+  }
+
+  /// NEW: Fix userId mismatch in staff record
+  Future<void> fixStaffUserId(String staffDocId, String correctUserId) {
+    return appWriteProvider.fixStaffUserId(staffDocId, correctUserId);
+  }
+
+  Future<void> migrateExistingStaffRecords() {
+    return appWriteProvider.migrateExistingStaffRecords();
+  }
+
   Future<void> updateStaffAuthorities(
     String staffDocumentId,
     List<String> authorities,
@@ -448,12 +494,12 @@ class AuthRepository {
     await appWriteProvider.updateStaffAuthorities(staffDocumentId, authorities);
   }
 
-  /// Update staff information
   Future<void> updateStaffInfo({
     required String staffDocumentId,
     String? name,
     String? department,
     String? image,
+    String? phone, // Add this
     List<String>? authorities,
   }) async {
     await appWriteProvider.updateStaffInfo(
@@ -461,21 +507,19 @@ class AuthRepository {
       name: name,
       department: department,
       image: image,
+      phone: phone, // Add this
       authorities: authorities,
     );
   }
 
-  /// Deactivate staff account
   Future<void> deactivateStaffAccount(String staffDocumentId, String userId) {
     return appWriteProvider.deactivateStaffAccount(staffDocumentId, userId);
   }
 
-  /// Delete staff account permanently
   Future<void> deleteStaffAccountPermanently(String staffDocumentId) {
     return appWriteProvider.deleteStaffAccount(staffDocumentId);
   }
 
-  /// Update clinic settings email template
   Future<void> updateClinicSettingsEmailTemplate(
     String clinicSettingsDocumentId,
     String newTemplate,
@@ -486,7 +530,6 @@ class AuthRepository {
     );
   }
 
-  /// Update all staff emails when template changes
   Future<void> updateAllStaffEmailsForClinic(
     String clinicId,
     String newTemplate,
@@ -495,39 +538,239 @@ class AuthRepository {
         clinicId, newTemplate);
   }
 
-  /// Staff login
   Future<Map<String, dynamic>> staffLogin(String email, String password) {
     return appWriteProvider.staffLogin(email, password);
   }
 
-  /// Check if staff has authority
   Future<bool> checkStaffAuthority(String userId, String authority) {
     return appWriteProvider.checkStaffAuthority(userId, authority);
   }
 
-  /// Get staff statistics
   Future<Map<String, int>> getClinicStaffStats(String clinicId) {
     return appWriteProvider.getClinicStaffStats(clinicId);
   }
   // Add these methods to your AuthRepository class
 
-/// Delete clinic completely with all associated data
-Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) {
-  return appWriteProvider.deleteClinicCompletely(clinicId);
-}
+  /// Delete clinic completely with all associated data
+  Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) {
+    return appWriteProvider.deleteClinicCompletely(clinicId);
+  }
 
-/// Get clinic with settings
-Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) {
-  return appWriteProvider.getClinicWithSettings(clinicId);
-}
+  /// Get clinic with settings
+  Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) {
+    return appWriteProvider.getClinicWithSettings(clinicId);
+  }
 
-/// Subscribe to clinic changes (real-time)
-Stream<RealtimeMessage> subscribeToClinicChanges() {
-  return appWriteProvider.subscribeToClinicChanges();
-}
+  /// Subscribe to clinic changes (real-time)
+  Stream<RealtimeMessage> subscribeToClinicChanges() {
+    return appWriteProvider.subscribeToClinicChanges();
+  }
 
-/// Subscribe to clinic settings changes (real-time)
-Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
-  return appWriteProvider.subscribeToClinicSettingsChanges();
-}
+  /// Subscribe to clinic settings changes (real-time)
+  Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
+    return appWriteProvider.subscribeToClinicSettingsChanges();
+  }
+
+// ============= ID VERIFICATION METHODS =============
+
+  Future<Document> createIdVerification(IdVerification idVerification) {
+    return appWriteProvider.createIdVerification(idVerification.toMap());
+  }
+
+  Future<IdVerification?> getIdVerificationByUserId(String userId) async {
+    final doc = await appWriteProvider.getIdVerificationByUserId(userId);
+    if (doc != null) {
+      final verification = IdVerification.fromMap(doc.data);
+      verification.documentId = doc.$id;
+      return verification;
+    }
+    return null;
+  }
+
+  Future<IdVerification?> getIdVerificationBySubmissionId(
+      String submissionId) async {
+    final doc =
+        await appWriteProvider.getIdVerificationBySubmissionId(submissionId);
+    if (doc != null) {
+      final verification = IdVerification.fromMap(doc.data);
+      verification.documentId = doc.$id;
+      return verification;
+    }
+    return null;
+  }
+
+  Future<Document> updateIdVerification(IdVerification idVerification) {
+    return appWriteProvider.updateIdVerification(
+      idVerification.documentId!,
+      idVerification.toMap(),
+    );
+  }
+
+  Future<Map<String, dynamic>> processArgosWebhook(
+    Map<String, dynamic> webhookData,
+  ) {
+    return appWriteProvider.processArgosWebhook(webhookData);
+  }
+
+  Future<bool> isUserIdVerified(String userId) {
+    return appWriteProvider.isUserIdVerified(userId);
+  }
+
+  Future<Map<String, dynamic>> getUserVerificationStatus(String userId) {
+    return appWriteProvider.getUserVerificationStatus(userId);
+  }
+
+  Stream<RealtimeMessage> subscribeToIdVerification(String userId) {
+    return appWriteProvider.subscribeToIdVerification(userId);
+  }
+
+  Future<void> cleanupStuckVerifications(String userId) {
+    return appWriteProvider.cleanupStuckVerifications(userId);
+  }
+
+  /// Create a new rating and review
+  Future<RatingAndReview> createRatingAndReview(RatingAndReview review) async {
+    final doc = await appWriteProvider.createRatingAndReview(review.toMap());
+    return review.copyWith(documentId: doc.$id);
+  }
+
+  /// Check if user has already reviewed an appointment
+  Future<bool> hasUserReviewedAppointment(String appointmentId) {
+    return appWriteProvider.hasUserReviewedAppointment(appointmentId);
+  }
+
+  /// Get all reviews for a clinic
+  Future<List<RatingAndReview>> getClinicReviews(
+    String clinicId, {
+    int limit = 50,
+    String? lastDocumentId,
+  }) async {
+    final docs = await appWriteProvider.getClinicReviews(
+      clinicId,
+      limit: limit,
+      lastDocumentId: lastDocumentId,
+    );
+
+    return docs.map((doc) {
+      final review = RatingAndReview.fromMap(doc.data);
+      return review.copyWith(documentId: doc.$id);
+    }).toList();
+  }
+
+  /// Get reviews by a specific user
+  Future<List<RatingAndReview>> getUserReviews(String userId) async {
+    final docs = await appWriteProvider.getUserReviews(userId);
+
+    return docs.map((doc) {
+      final review = RatingAndReview.fromMap(doc.data);
+      return review.copyWith(documentId: doc.$id);
+    }).toList();
+  }
+
+  /// Get a specific review by appointment ID
+  Future<RatingAndReview?> getReviewByAppointmentId(
+      String appointmentId) async {
+    final doc = await appWriteProvider.getReviewByAppointmentId(appointmentId);
+
+    if (doc != null) {
+      final review = RatingAndReview.fromMap(doc.data);
+      return review.copyWith(documentId: doc.$id);
+    }
+
+    return null;
+  }
+
+  /// Update an existing review
+  Future<RatingAndReview> updateRatingAndReview(RatingAndReview review) async {
+    if (review.documentId == null) {
+      throw Exception('Cannot update review without documentId');
+    }
+
+    final doc = await appWriteProvider.updateRatingAndReview(
+      review.documentId!,
+      review.toMap(),
+    );
+
+    return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+  }
+
+  /// Delete a review
+  Future<void> deleteRatingAndReview(
+      String documentId, List<String> imageIds) async {
+    // Delete review images first
+    if (imageIds.isNotEmpty) {
+      await appWriteProvider.deleteReviewImages(imageIds);
+    }
+
+    // Then delete the review document
+    await appWriteProvider.deleteRatingAndReview(documentId);
+  }
+
+  /// Add clinic response to a review
+  Future<RatingAndReview> addClinicResponse(
+    String documentId,
+    String response,
+  ) async {
+    final doc = await appWriteProvider.addClinicResponse(documentId, response);
+    return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+  }
+
+  /// Get clinic rating statistics
+  Future<ClinicRatingStats> getClinicRatingStats(String clinicId) async {
+    final stats = await appWriteProvider.getClinicRatingStats(clinicId);
+
+    return ClinicRatingStats(
+      averageRating: stats['averageRating'],
+      totalReviews: stats['totalReviews'],
+      ratingDistribution: Map<int, int>.from(stats['ratingDistribution']),
+      reviewsWithText: stats['reviewsWithText'],
+      reviewsWithImages: stats['reviewsWithImages'],
+    );
+  }
+
+  /// Upload review images
+  Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) {
+    return appWriteProvider.uploadReviewImages(files);
+  }
+
+  /// Delete review images
+  Future<void> deleteReviewImages(List<String> fileIds) {
+    return appWriteProvider.deleteReviewImages(fileIds);
+  }
+
+  /// Subscribe to clinic reviews (real-time)
+  Stream<RealtimeMessage> subscribeToClinicReviews(String clinicId) {
+    return appWriteProvider.subscribeToClinicReviews(clinicId);
+  }
+
+  /// Helper method to create review from appointment
+  Future<RatingAndReview> createReviewFromAppointment({
+    required Appointment appointment,
+    required String userName,
+    required double rating,
+    String? reviewText,
+    List<String> images = const [],
+  }) async {
+    // Check if already reviewed
+    final alreadyReviewed =
+        await hasUserReviewedAppointment(appointment.documentId!);
+    if (alreadyReviewed) {
+      throw Exception('This appointment has already been reviewed');
+    }
+
+    // Create the review
+    final review = RatingAndReview(
+      userId: appointment.userId,
+      clinicId: appointment.clinicId,
+      appointmentId: appointment.documentId!,
+      rating: rating,
+      reviewText: reviewText,
+      images: images,
+      userName: userName,
+      petName: appointment.petId, // You might want to get actual pet name
+      serviceName: appointment.service,
+    );
+
+    return await createRatingAndReview(review);
+  }
 }

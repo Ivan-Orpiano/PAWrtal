@@ -1,14 +1,12 @@
-import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_clinicpage.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_dashboard.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_messages.dart';
-import 'package:capstone_app/web/admin_web/pages/admin_web_staffs.dart';
+import 'package:capstone_app/web/admin_web/components/staffs/data/permission_guard.dart';
+import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AdminMobileHomePage extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
-  final bool canAccessStaffs;
+  final bool canAccessStaffs; // Kept for compatibility
 
   const AdminMobileHomePage({
     super.key,
@@ -22,39 +20,46 @@ class AdminMobileHomePage extends StatefulWidget {
 }
 
 class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
-  List<Widget> get _pages {
-    List<Widget> basePages = const [
-      AdminWebDashboard(),
-      AdminWebClinicpage(),
-      AdminWebAppointments(),
-      AdminWebMessages(),
-      AdminWebStaffs(),
-    ];
+  Widget _wrapWithPermissionGuard(
+      Widget page, int index, WebAdminHomeController controller) {
+    // Home page (index 0) doesn't need permission check
+    if (index == 0) return page;
 
-    // if (widget.canAccessStaffs) {
-    //   basePages.add(const AdminWebStaffs());
-    // }
+    // Admin has full access to everything
+    if (controller.isAdmin) return page;
 
-    return basePages;
+    // Staff users - check if they have permission for this page
+    final pageName = controller.navigationLabels[index];
+    final hasPermission = controller.hasAuthority(pageName);
+
+    return PermissionGuard(
+      hasPermission: hasPermission,
+      requiredPermission: pageName,
+      child: page,
+    );
   }
 
-  List<IconData> get _navigationIcons {
-    List<IconData> baseIcons = [
-      Icons.dashboard,
-      Icons.local_hospital,
-      Icons.calendar_today,
-      Icons.message,
-    ];
-
-    if (widget.canAccessStaffs) {
-      baseIcons.add(Icons.people);
+  IconData _getIconForLabel(String label) {
+    switch (label) {
+      case 'Home':
+        return Icons.dashboard;
+      case 'Clinic':
+        return Icons.local_hospital;
+      case 'Appointments':
+        return Icons.calendar_today;
+      case 'Messages':
+        return Icons.message;
+      case 'Staffs':
+        return Icons.people;
+      default:
+        return Icons.circle;
     }
-
-    return baseIcons;
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<WebAdminHomeController>();
+
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 70,
@@ -90,7 +95,18 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
           ),
         ],
       ),
-      body: _pages[widget.selectedIndex],
+      body: Obx(() {
+        if (widget.selectedIndex >= controller.pages.length) {
+          return const Center(child: Text('Page not found'));
+        }
+
+        // Wrap the current page with permission guard
+        return _wrapWithPermissionGuard(
+          controller.pages[widget.selectedIndex],
+          widget.selectedIndex,
+          controller,
+        );
+      }),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -103,41 +119,59 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: widget.selectedIndex,
-          onTap: widget.onItemSelected,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color.fromARGB(255, 81, 115, 153),
-          unselectedItemColor: Colors.grey,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          items: _navigationIcons.asMap().entries.map((entry) {
-            int index = entry.key;
-            IconData icon = entry.value;
-            return BottomNavigationBarItem(
-              icon: Icon(icon),
-              label: _getLabelForIndex(index),
-            );
-          }).toList(),
-        ),
+        child: Obx(() {
+          // Build navigation items dynamically based on controller's navigation labels
+          final navItems = List.generate(
+            controller.navigationLabels.length,
+            (index) {
+              final label = controller.navigationLabels[index];
+              final hasPermission =
+                  index == 0 || controller.hasAuthority(label);
+              final isViewOnly = !hasPermission && controller.isStaff;
+
+              return BottomNavigationBarItem(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(_getIconForLabel(label)),
+                    if (isViewOnly)
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.lock,
+                            size: 8,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                label: label,
+              );
+            },
+          );
+
+          return BottomNavigationBar(
+            currentIndex: widget.selectedIndex < navItems.length
+                ? widget.selectedIndex
+                : 0,
+            onTap: widget.onItemSelected,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color.fromARGB(255, 81, 115, 153),
+            unselectedItemColor: Colors.grey,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            items: navItems,
+          );
+        }),
       ),
     );
-  }
-
-  String _getLabelForIndex(int index) {
-    switch (index) {
-      case 0:
-        return "Dashboard";
-      case 1:
-        return "Clinic";
-      case 2:
-        return "Appointments";
-      case 3:
-        return "Messages";
-      case 4:
-        return "Staffs";
-      default:
-        return "Unknown";
-    }
   }
 }

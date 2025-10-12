@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 
+/// Permission Guard that shows view-only banner instead of blocking completely
 class PermissionGuard extends StatelessWidget {
   final bool hasPermission;
   final String requiredPermission;
   final Widget child;
-  final bool showOverlay;
 
   const PermissionGuard({
     super.key,
     required this.hasPermission,
     required this.requiredPermission,
     required this.child,
-    this.showOverlay = true,
   });
 
   static const Color primaryTeal = Color(0xFF5B9BD5);
@@ -21,189 +20,162 @@ class PermissionGuard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hasPermission) {
+      // Full access - no banner
       return child;
     }
 
-    if (!showOverlay) {
-      return _buildRestrictedMessage(context);
-    }
-
-    return Stack(
+    // View-only mode - show banner
+    return Column(
       children: [
-        // Blurred content
-        IgnorePointer(
-          child: Opacity(
-            opacity: 0.3,
+        _buildViewOnlyBanner(context),
+        Expanded(
+          child: AbsorbPointer(
+            // Prevent interactions but allow viewing
+            absorbing: true,
             child: child,
           ),
         ),
-        // Overlay
-        _buildRestrictedOverlay(context),
       ],
     );
   }
 
-  Widget _buildRestrictedMessage(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        margin: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: vetOrange.withOpacity(0.3), width: 2),
+  Widget _buildViewOnlyBanner(BuildContext context) {
+    // FIX: Special message for Staffs page (admin-only)
+    final bool isStaffsPage = requiredPermission == 'Staffs';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isStaffsPage
+              ? [Colors.red.shade100, Colors.red.shade50]
+              : [Colors.orange.shade100, Colors.orange.shade50],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.lock_outline,
-              size: 64,
-              color: vetOrange,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Access Restricted',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You need "$requiredPermission" permission to access this page.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Please contact your clinic administrator for access.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: mediumGray,
-              ),
-            ),
-          ],
+        border: Border(
+          bottom: BorderSide(
+            color: isStaffsPage
+                ? Colors.red.withOpacity(0.3)
+                : vetOrange.withOpacity(0.3),
+            width: 2,
+          ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isStaffsPage
+                ? Colors.red.withOpacity(0.1)
+                : vetOrange.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isStaffsPage
+                  ? Colors.red.withOpacity(0.2)
+                  : vetOrange.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              isStaffsPage ? Icons.admin_panel_settings : Icons.visibility,
+              color: isStaffsPage ? Colors.red : vetOrange,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      isStaffsPage ? 'Admin-Only Page' : 'View-Only Mode',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isStaffsPage
+                            ? Colors.red.withOpacity(0.2)
+                            : vetOrange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: isStaffsPage
+                                ? Colors.red.withOpacity(0.5)
+                                : vetOrange.withOpacity(0.5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock,
+                              size: 12,
+                              color: isStaffsPage
+                                  ? Colors.red[800]
+                                  : Colors.orange[800]),
+                          const SizedBox(width: 4),
+                          Text(
+                            isStaffsPage
+                                ? 'Administrator Access Required'
+                                : 'No "$requiredPermission" permission',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isStaffsPage
+                                  ? Colors.red[800]
+                                  : Colors.orange[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isStaffsPage
+                      ? 'The Staff Management page is restricted to administrators only. You can view staff information but cannot add, edit, or remove staff members. Only clinic administrators have full access to manage staff accounts and permissions.'
+                      : 'You can view this page but cannot make changes. Contact your administrator to request "$requiredPermission" permission.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildRestrictedOverlay(BuildContext context) {
-    return Container(
-      color: Colors.white.withOpacity(0.95),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          margin: const EdgeInsets.all(24),
-          constraints: const BoxConstraints(maxWidth: 500),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: vetOrange.withOpacity(0.3), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: vetOrange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.lock_outline,
-                  size: 64,
-                  color: vetOrange,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Access Restricted',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade900,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: vetOrange.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: vetOrange.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.security, color: vetOrange, size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Required: $requiredPermission',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.orange.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'You do not have permission to access this page. '
-                'Your account needs "$requiredPermission" authorization.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey.shade700,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryTeal.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: primaryTeal, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Contact your clinic administrator to request access.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blue.shade900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+/// Wrapper for pages that need permission checks
+class PermissionWrapper extends StatelessWidget {
+  final String pageName;
+  final Widget child;
+
+  const PermissionWrapper({
+    super.key,
+    required this.pageName,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // This will be overridden in the actual implementation with GetX
+    // For now, just return the child
+    return child;
   }
 }
 
@@ -212,19 +184,25 @@ class PermissionBanner extends StatelessWidget {
   final String message;
   final IconData icon;
   final Color? color;
+  final bool isViewOnly;
+  final bool isAdminOnly;
 
   const PermissionBanner({
     super.key,
     required this.message,
     this.icon = Icons.info_outline,
     this.color,
+    this.isViewOnly = false,
+    this.isAdminOnly = false,
   });
 
   static const Color vetOrange = Color(0xFFF59E0B);
+  static const Color primaryTeal = Color(0xFF5B9BD5);
 
   @override
   Widget build(BuildContext context) {
-    final bannerColor = color ?? vetOrange;
+    final bannerColor = color ??
+        (isAdminOnly ? Colors.red : (isViewOnly ? vetOrange : primaryTeal));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

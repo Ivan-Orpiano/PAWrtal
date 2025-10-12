@@ -366,15 +366,12 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Medical History section
-                  if (widget.pet.notes != null && widget.pet.notes!.isNotEmpty)
-                    _buildDetailSection('Medical History', widget.pet.notes!)
-                  else
-                    _buildEmptyStateButton(
-                      'Medical History',
-                      'View Medical History',
-                      Icons.medical_services_outlined,
-                      () => _flipToView(CardView.medicalHistory),
-                    ),
+                  _buildEmptyStateButton(
+                    'Medical History',
+                    'View Medical History',
+                    Icons.medical_services_outlined,
+                    () => _flipToView(CardView.medicalHistory),
+                  ),
                   
                   const SizedBox(height: 24),
                   

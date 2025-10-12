@@ -50,6 +50,7 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
     });
   }
 
+  // ALL PAGES are now available - staff can see all pages
   List<Map<String, dynamic>> get _availablePages {
     final pages = <Map<String, dynamic>>[];
 
@@ -62,44 +63,36 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
     });
 
     // Clinic page
-    if (staffController.hasAuthority('Clinic')) {
-      pages.add({
-        'title': 'Clinic',
-        'icon': Icons.local_hospital,
-        'permission': 'Clinic',
-        'widget': const AdminWebClinicpage(),
-      });
-    }
+    pages.add({
+      'title': 'Clinic',
+      'icon': Icons.local_hospital,
+      'permission': 'Clinic',
+      'widget': const AdminWebClinicpage(),
+    });
 
     // Appointments page
-    if (staffController.hasAuthority('Appointments')) {
-      pages.add({
-        'title': 'Appointments',
-        'icon': Icons.calendar_month,
-        'permission': 'Appointments',
-        'widget': const AdminWebAppointments(),
-      });
-    }
+    pages.add({
+      'title': 'Appointments',
+      'icon': Icons.calendar_month,
+      'permission': 'Appointments',
+      'widget': const AdminWebAppointments(),
+    });
 
     // Messages page
-    if (staffController.hasAuthority('Messages')) {
-      pages.add({
-        'title': 'Messages',
-        'icon': Icons.message,
-        'permission': 'Messages',
-        'widget': const AdminWebMessages(),
-      });
-    }
+    pages.add({
+      'title': 'Messages',
+      'icon': Icons.message,
+      'permission': 'Messages',
+      'widget': const AdminWebMessages(),
+    });
 
-    // Staffs page
-    if (staffController.hasAuthority('Staffs')) {
-      pages.add({
-        'title': 'Staffs',
-        'icon': Icons.group,
-        'permission': 'Staffs',
-        'widget': const AdminWebStaffs(),
-      });
-    }
+    // Staffs page - ALWAYS SHOWN but in view-only mode
+    pages.add({
+      'title': 'Staffs',
+      'icon': Icons.group,
+      'permission': 'Staffs', // Staff will never have this authority
+      'widget': const AdminWebStaffs(),
+    });
 
     return pages;
   }
@@ -119,7 +112,8 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
       return currentPage['widget'] as Widget;
     }
 
-    // Check permission for other pages
+    // For Staffs page, staff will NEVER have permission (always view-only)
+    // For other pages, check if they have the authority
     final hasPermission = staffController.hasAuthority(permission);
 
     return PermissionGuard(
@@ -236,11 +230,17 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
               itemBuilder: (context, index) {
                 final page = pages[index];
                 final isSelected = _selectedIndex == index;
+                final permission = page['permission'] as String?;
+
+                // Check if this is a view-only page
+                final isViewOnly = permission != null &&
+                    !staffController.hasAuthority(permission);
 
                 return _buildNavItem(
                   icon: page['icon'] as IconData,
                   title: page['title'] as String,
                   isSelected: isSelected,
+                  isViewOnly: isViewOnly,
                   onTap: () => setState(() => _selectedIndex = index),
                 );
               },
@@ -276,6 +276,7 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
     required IconData icon,
     required String title,
     required bool isSelected,
+    required bool isViewOnly,
     required VoidCallback onTap,
   }) {
     return Padding(
@@ -304,14 +305,30 @@ class _StaffMainWrapperState extends State<StaffMainWrapper> {
                   size: 22,
                 ),
                 const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
                   ),
                 ),
+                if (isViewOnly)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: vetOrange.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
               ],
             ),
           ),

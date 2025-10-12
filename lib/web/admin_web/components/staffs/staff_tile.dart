@@ -25,7 +25,6 @@ class _StaffTileState extends State<StaffTile>
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
 
-  // Updated color palette to match the interface
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
   static const Color lightTeal = Color(0xFF9FC5E8);
@@ -36,7 +35,6 @@ class _StaffTileState extends State<StaffTile>
   static const Color darkText = Color(0xFF374151);
   static const Color vetGreen = Color(0xFF34D399);
   static const Color vetOrange = Color(0xFFF59E0B);
-  static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
   @override
@@ -58,11 +56,8 @@ class _StaffTileState extends State<StaffTile>
   }
 
   void _showStaffDetails() {
-    // Parse image bytes if available
     Uint8List? imageBytes;
     if (widget.staff.image.isNotEmpty) {
-      // If image is a URL, we can't convert it to bytes directly
-      // The StaffFullDetails will handle URL display
       imageBytes = null;
     }
 
@@ -71,11 +66,15 @@ class _StaffTileState extends State<StaffTile>
       builder: (_) => StaffFullDetails(
         staffName: widget.staff.name,
         email: widget.staff.email,
-        phone: null, // Staff model doesn't have phone
+        phone: widget.staff.phone,
         initialAuthorities: widget.staff.authorities,
         onAuthoritiesUpdated: widget.onUpdate,
         onRemove: widget.onRemove,
         imageBytes: imageBytes,
+        staffDocumentId: widget.staff.documentId!,
+        currentImageUrl: widget.staff.image.isNotEmpty
+            ? widget.staff.image
+            : null, // Pass the current image URL
       ),
     );
   }
@@ -276,6 +275,41 @@ class _StaffTileState extends State<StaffTile>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+
+                        // Phone (if available)
+                        if (widget.staff.phone != null &&
+                            widget.staff.phone!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  vetOrange.withOpacity(0.1),
+                                  primaryBlue.withOpacity(0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.phone, size: 10, color: vetOrange),
+                                const SizedBox(width: 4),
+                                Text(
+                                  widget.staff.phone!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: darkText,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 14),
 
                         // Permissions Preview
@@ -352,10 +386,6 @@ class _StaffTileState extends State<StaffTile>
                                       case 'Appointments':
                                         icon = Icons.calendar_month;
                                         colors = [primaryBlue, softBlue];
-                                        break;
-                                      case 'Staffs':
-                                        icon = Icons.group;
-                                        colors = [vetPurple, deepBlue];
                                         break;
                                       case 'Messages':
                                         icon = Icons.message;

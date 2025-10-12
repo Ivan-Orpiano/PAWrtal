@@ -19,12 +19,43 @@ class EnhancedAppointmentPage extends StatefulWidget {
 class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _selectedIndex = 0;
+
+  final List<TabData> _tabs = [
+    TabData(
+      icon: Icons.event_available_rounded,
+      text: "Upcoming",
+      color: Colors.blue,
+    ),
+    TabData(
+      icon: Icons.pending_rounded,
+      text: "Pending",
+      color: Colors.orange,
+    ),
+    TabData(
+      icon: Icons.check_circle_rounded,
+      text: "Completed",
+      color: Colors.green,
+    ),
+    TabData(
+      icon: Icons.history_rounded,
+      text: "History",
+      color: Colors.grey,
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
 
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {
+          _selectedIndex = _tabController.index;
+        });
+      }
+    });
 
     if (!Get.isRegistered<EnhancedUserAppointmentController>()) {
       Get.put(EnhancedUserAppointmentController(
@@ -131,7 +162,7 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
               ),
               child: Column(
                 children: [
-                  // Enhanced Tab Bar with 4 tabs
+                  // Custom Dynamic Tab Bar
                   Container(
                     margin: const EdgeInsets.only(top: 20, left: 16, right: 16),
                     padding: const EdgeInsets.all(4),
@@ -147,49 +178,146 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                         ),
                       ],
                     ),
-                    child: TabBar(
-                      controller: _tabController,
-                      dividerColor: Colors.transparent,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: const Color.fromARGB(255, 81, 115, 153),
-                      indicatorColor: Colors.transparent,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      indicator: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color.fromARGB(255, 81, 115, 153),
-                            Colors.blue.shade400,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      tabs: [
-                        Obx(() => _buildTab(
-                          Icons.event_available_rounded,
-                          "Upcoming",
-                          controller.userStats['upcoming'] ?? 0,
-                          Colors.blue,
-                        )),
-                        Obx(() => _buildTab(
-                          Icons.pending_rounded,
-                          "Pending",
-                          controller.userStats['pending'] ?? 0,
-                          Colors.orange,
-                        )),
-                        Obx(() => _buildTab(
-                          Icons.check_circle_rounded,
-                          "Completed",
-                          controller.userStats['completed'] ?? 0,
-                          Colors.green,
-                        )),
-                        Obx(() => _buildTab(
-                          Icons.history_rounded,
-                          "History",
-                          controller.userStats['history'] ?? 0,
-                          Colors.grey,
-                        )),
-                      ],
-                    ),
+                    child: Obx(() {
+                      final stats = controller.userStats;
+                      return Row(
+                        children: List.generate(4, (index) {
+                          final isSelected = _selectedIndex == index;
+                          final tab = _tabs[index];
+                          int count = 0;
+                          
+                          switch (index) {
+                            case 0:
+                              count = stats['upcoming'] ?? 0;
+                              break;
+                            case 1:
+                              count = stats['pending'] ?? 0;
+                              break;
+                            case 2:
+                              count = stats['completed'] ?? 0;
+                              break;
+                            case 3:
+                              count = stats['history'] ?? 0;
+                              break;
+                          }
+
+                          return Expanded(
+                            flex: isSelected ? 3 : 1,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: InkWell(
+                                onTap: () {
+                                  _tabController.animateTo(index);
+                                  setState(() {
+                                    _selectedIndex = index;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected
+                                        ? LinearGradient(
+                                            colors: [
+                                              const Color.fromARGB(255, 81, 115, 153),
+                                              Colors.blue.shade400,
+                                            ],
+                                          )
+                                        : null,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: isSelected
+                                      ? Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              tab.icon,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                tab.text,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (count > 0) ...[
+                                              const SizedBox(width: 4),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  count.toString(),
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: tab.color,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        )
+                                      : Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Icon(
+                                              tab.icon,
+                                              size: 20,
+                                              color: const Color.fromARGB(255, 81, 115, 153)
+                                                  .withOpacity(0.6),
+                                            ),
+                                            if (count > 0)
+                                              Positioned(
+                                                right: 0,
+                                                top: 0,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: tab.color,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  constraints: const BoxConstraints(
+                                                    minWidth: 16,
+                                                    minHeight: 16,
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      count > 9 ? '9+' : count.toString(),
+                                                      style: const TextStyle(
+                                                        fontSize: 8,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      );
+                    }),
                   ),
                   
                   Expanded(
@@ -211,46 +339,16 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
       ),
     );
   }
+}
 
-  Widget _buildTab(IconData icon, String text, int count, Color countColor) {
-    return Tab(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: IntrinsicWidth(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  text, 
-                  style: const TextStyle(fontSize: 10),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (count > 0) ...[
-                const SizedBox(width: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: countColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    count.toString(),
-                    style: const TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class TabData {
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  TabData({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
 }

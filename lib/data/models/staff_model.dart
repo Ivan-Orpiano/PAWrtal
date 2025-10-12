@@ -4,7 +4,8 @@ class Staff {
   String? createdBy;
   late String image;
   late String createdAt;
-  late String email;
+  late String email; // Display email (can be changed with template)
+  late String authEmail; // CRITICAL: Authentication email (NEVER changes)
   String? phone;
   late String role;
   String? documentId;
@@ -21,6 +22,7 @@ class Staff {
     required this.image,
     required this.createdAt,
     required this.email,
+    required this.authEmail, // Authentication email
     this.phone,
     required this.role,
     this.documentId,
@@ -38,8 +40,10 @@ class Staff {
     image = map["image"] ?? '';
     createdAt = map["createdAt"] ?? '';
     email = map["email"] ?? '';
+    // CRITICAL: Use authEmail if available, otherwise fallback to email
+    authEmail = map["authEmail"] ?? map["email"] ?? '';
     phone = map["phone"];
-    role = map["role"] ?? '';
+    role = map["role"] ?? 'staff';
     documentId = map["\$id"] ?? '';
     clinicId = map["clinicId"] ?? '';
     userId = map["userId"] ?? '';
@@ -55,7 +59,8 @@ class Staff {
       "createdBy": createdBy ?? 'Unknown',
       "image": image,
       "createdAt": createdAt,
-      "email": email,
+      "email": email, // Display email
+      "authEmail": authEmail, // Authentication email (never changes)
       "phone": phone,
       "role": role,
       "clinicId": clinicId,
@@ -73,6 +78,7 @@ class Staff {
     String? image,
     String? createdAt,
     String? email,
+    String? authEmail,
     String? phone,
     String? role,
     String? documentId,
@@ -89,6 +95,7 @@ class Staff {
       image: image ?? this.image,
       createdAt: createdAt ?? this.createdAt,
       email: email ?? this.email,
+      authEmail: authEmail ?? this.authEmail,
       phone: phone ?? this.phone,
       role: role ?? this.role,
       documentId: documentId ?? this.documentId,

@@ -22,8 +22,8 @@ class WebSignUpPage extends GetView<WebSignUpController> {
               Color(0xFF49636f),
               Color(0xFF2c475c),
               Color(0xFF142b4e)
-            ]
-          )
+            ],
+          ),
         ),
         child: Center(
           child: Container(
@@ -32,12 +32,13 @@ class WebSignUpPage extends GetView<WebSignUpController> {
             decoration: BoxDecoration(
               color: const Color.fromARGB(223, 255, 255, 255),
               boxShadow: [
-              BoxShadow(
-                spreadRadius: 1,
-                blurRadius: 1,
-                color: Colors.grey.shade400,
-                offset: const Offset(0, 2))
-              ]
+                BoxShadow(
+                  spreadRadius: 1,
+                  blurRadius: 1,
+                  color: Colors.grey.shade400,
+                  offset: const Offset(0, 2),
+                )
+              ],
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -62,142 +63,199 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                      width: 400,
-                      child: TextFormField(
-                        controller: controller.emailController,
-                        keyboardType: TextInputType.emailAddress,
+                    width: 400,
+                    child: TextFormField(
+                      controller: controller.emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.email_rounded),
+                        hintText: "Email",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: 400,
+                    child: TextFormField(
+                      controller: controller.nameController,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.person_rounded),
+                        hintText: "Full Name",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: 400,
+                    child: Obx(
+                      () => TextFormField(
+                        controller: controller.passwordController,
+                        obscureText: !controller.isPasswordVisible.value,
                         decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.email_rounded),
-                            hintText: "Email",
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20))),
-                      )),
+                          prefixIcon: const Icon(Icons.lock_rounded),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              controller.isPasswordVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: controller.togglePasswordVisibility,
+                          ),
+                          hintText: "Password",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   SizedBox(
-                      width: 400,
-                      child: TextFormField(
-                        controller: controller.nameController,
+                    width: 400,
+                    child: Obx(
+                      () => TextFormField(
+                        controller: controller.confirmPasswordController,
+                        obscureText: !controller.isConfirmPasswordVisible.value,
                         decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.person_rounded),
-                            hintText: "Full Name",
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20))),
-                      )),
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              controller.isConfirmPasswordVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: controller.toggleConfirmPasswordVisibility,
+                          ),
+                          hintText: "Confirm Password",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
+                  // Terms and Conditions Checkbox
                   SizedBox(
-                      width: 400,
-                      child: Obx(() => TextFormField(
-                            controller: controller.passwordController,
-                            obscureText: !controller.isPasswordVisible.value,
-                            decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.lock_rounded),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    controller.isPasswordVisible.value
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
+                    width: 400,
+                    child: Obx(() => Row(
+                          children: [
+                            Checkbox(
+                              value: controller.termsAccepted.value,
+                              onChanged: (value) {
+                                controller.termsAccepted.value = value ?? false;
+                              },
+                              activeColor: const Color.fromARGB(255, 81, 115, 153),
+                            ),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 13,
                                   ),
-                                  onPressed:
-                                      controller.togglePasswordVisibility,
+                                  children: [
+                                    const TextSpan(text: "I agree to the "),
+                                    TextSpan(
+                                      text: "Terms and Conditions",
+                                      style: const TextStyle(
+                                        color: Color.fromARGB(255, 81, 115, 153),
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          controller.showTermsAndConditions();
+                                        },
+                                    ),
+                                  ],
                                 ),
-                                hintText: "Password",
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20))),
-                          ))),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                      width: 400,
-                      child: Obx(() => TextFormField(
-                            controller: controller.confirmPasswordController,
-                            obscureText:
-                                !controller.isConfirmPasswordVisible.value,
-                            decoration: InputDecoration(
-                                prefixIcon:
-                                    const Icon(Icons.lock_outline_rounded),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    controller.isConfirmPasswordVisible.value
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                  ),
-                                  onPressed: controller
-                                      .toggleConfirmPasswordVisibility,
-                                ),
-                                hintText: "Confirm Password",
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20))),
-                          ))),
-                  const SizedBox(height: 32),
+                              ),
+                            ),
+                          ],
+                        )),
+                  ),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: 400,
                     height: 50,
-                    child: Obx(() => ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                          ),
-                          onPressed: controller.isLoading.value
-                              ? null
-                              : controller.signUp,
-                          child: controller.isLoading.value
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white)
-                              : const Text(
-                                  "Sign Up",
-                                  style: TextStyle(
-                                      fontSize: 20, color: Colors.white),
-                                ),
-                        )),
+                    child: Obx(
+                      () => ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        ),
+                        onPressed: controller.isLoading.value
+                            ? null
+                            : controller.signUp,
+                        child: controller.isLoading.value
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
+                                "Sign Up",
+                                style: TextStyle(fontSize: 20, color: Colors.white),
+                              ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   RichText(
                     text: TextSpan(
-                        style: const TextStyle(color: Colors.black),
-                        children: <TextSpan>[
-                          const TextSpan(text: "Already have an account? "),
-                          TextSpan(
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color.fromARGB(255, 81, 115, 153),
-                            ),
-                            text: "Sign in",
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = controller.navigateToLogin,
-                          )
-                        ]),
+                      style: const TextStyle(color: Colors.black),
+                      children: <TextSpan>[
+                        const TextSpan(text: "Already have an account? "),
+                        TextSpan(
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(255, 81, 115, 153),
+                          ),
+                          text: "Sign in",
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = controller.navigateToLogin,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
                   const Row(
                     children: [
-                      Expanded(child: Divider(indent: 10)),
+                      Expanded(child: Divider(indent: 8)),
                       Text("  or  "),
-                      Expanded(child: Divider(endIndent: 10)),
+                      Expanded(child: Divider(endIndent: 8)),
                     ],
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
                   const Text("Sign up with"),
                   const SizedBox(height: 16),
-                  Obx(() => InkWell(
-                        onTap: controller.isLoading.value
-                            ? null
-                            : controller.signUpWithGoogle,
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration:
-                              BoxDecoration(color: Colors.white, boxShadow: [
+                  Obx(
+                    () => InkWell(
+                      onTap: controller.isLoading.value
+                          ? null
+                          : controller.signUpWithGoogle,
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
                             BoxShadow(
-                                spreadRadius: 1,
-                                blurRadius: 1,
-                                color: Colors.grey.shade400,
-                                offset: const Offset(0, 2))
-                          ]),
-                          child: controller.isLoading.value
-                              ? const Center(
-                                  child: CircularProgressIndicator())
-                              : Image.asset('lib/images/google_logo.png'),
+                              spreadRadius: 1,
+                              blurRadius: 1,
+                              color: Colors.grey.shade400,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
                         ),
-                      )),
+                        child: controller.isLoading.value
+                            ? const Center(child: CircularProgressIndicator())
+                            : Image.asset('lib/images/google_logo.png'),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),

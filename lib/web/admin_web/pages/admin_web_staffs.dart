@@ -10,6 +10,7 @@ import 'package:capstone_app/web/admin_web/components/staffs/staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/new_staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/email_template_editor.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:appwrite/appwrite.dart';
 
 class AdminWebStaffs extends StatefulWidget {
   const AdminWebStaffs({super.key});
@@ -47,12 +48,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
-  final List<String> tags = const [
-    'Clinic',
-    'Appointments',
-    'Staffs',
-    'Messages'
-  ];
+  final List<String> tags = const ['Clinic', 'Appointments', 'Messages'];
 
   @override
   void initState() {
@@ -64,7 +60,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
     _animationController.forward();
-
     _loadClinicAndStaff();
   }
 
@@ -79,18 +74,30 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     setState(() => _isLoading = true);
 
     try {
-      // Get clinic
-      final clinicDoc =
-          await _authRepository.getClinicByAdminId(_session.userId);
-      if (clinicDoc != null) {
-        _clinic = Clinic.fromMap(clinicDoc.data);
-        _clinic!.documentId = clinicDoc.$id;
+      final role = _getStorage.read('role') as String?;
+      // Resolve clinic by role
+      if (role == 'admin') {
+        final clinicDoc =
+            await _authRepository.getClinicByAdminId(_session.userId);
+        if (clinicDoc != null) {
+          _clinic = Clinic.fromMap(clinicDoc.data);
+          _clinic!.documentId = clinicDoc.$id;
+        }
+      } else if (role == 'staff') {
+        final clinicId = _getStorage.read('clinicId') as String?;
+        if (clinicId != null && clinicId.isNotEmpty) {
+          final clinicDoc = await _authRepository.getClinicById(clinicId);
+          if (clinicDoc != null) {
+            _clinic = Clinic.fromMap(clinicDoc.data);
+            _clinic!.documentId = clinicDoc.$id;
+          }
+        }
+      }
 
-        // Get clinic settings
+      if (_clinic != null) {
         _clinicSettings = await _authRepository
             .getClinicSettingsByClinicId(_clinic!.documentId!);
 
-        // Get staff for this clinic
         final staff =
             await _authRepository.getClinicStaff(_clinic!.documentId!);
         setState(() {
@@ -98,7 +105,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         });
       }
     } catch (e) {
-      print('Error loading clinic and staff: $e');
       Get.snackbar(
         'Error',
         'Failed to load staff: $e',
@@ -107,7 +113,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         colorText: Colors.white,
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -117,17 +123,34 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     String phone,
     List<String> authorities,
     Uint8List? imageBytes,
+    String password,
   ) async {
     if (_clinic == null) return;
 
     try {
-      final password = await _showPasswordDialog();
-      if (password == null || password.isEmpty) return;
+      String imageUrl = '';
 
-      String? imageUrl;
-      // Upload image if needed
+      // Upload image if provided
+      if (imageBytes != null && imageBytes.isNotEmpty) {
+        try {
+          final inputFile = InputFile.fromBytes(
+            bytes: imageBytes,
+            filename: "${DateTime.now().millisecondsSinceEpoch}_staff.jpg",
+          );
+          final uploadedImage = await _authRepository.uploadImage(inputFile);
+          imageUrl = _authRepository.getImageUrl(uploadedImage.$id);
+        } catch (e) {
+          Get.snackbar(
+            'Warning',
+            'Failed to upload image, continuing without photo.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: vetOrange,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 3),
+          );
+        }
+      }
 
-      print('Calling createStaffAccount...');
       final result = await _authRepository.createStaffAccount(
         name: name,
         email: email,
@@ -135,29 +158,23 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         clinicId: _clinic!.documentId!,
         authorities: authorities,
         createdBy: _session.userId,
-        image: imageUrl ?? '',
+        image: imageUrl,
+        phone: phone,
       );
 
-      print('Staff creation result: $result');
-
       if (result['success'] == true) {
-        // Show success message
+        await _loadClinicAndStaff();
         Get.snackbar(
           'Success',
-          'Staff account created! You need to log back in.',
+          'Staff account created successfully! $name has been added.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: vetGreen,
           colorText: Colors.white,
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 4),
+          icon: const Icon(Icons.check_circle, color: Colors.white),
         );
-
-        // Force logout and redirect to login
-        await Future.delayed(const Duration(seconds: 2));
-        _getStorage.erase(); // Clear all stored data
-        Get.offAllNamed('/login');
       }
     } catch (e) {
-      print('Error creating staff: $e');
       Get.snackbar(
         'Error',
         'Failed to create staff: $e',
@@ -169,64 +186,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     }
   }
 
-  Future<String?> _showPasswordDialog() async {
-    final controller = TextEditingController();
-
-    return await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set Initial Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Create a temporary password for this staff member.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                hintText: 'Minimum 8 characters',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'The staff member should change this password after first login.',
-              style: TextStyle(fontSize: 12, color: mediumGray),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.length >= 8) {
-                Navigator.pop(context, controller.text);
-              } else {
-                Get.snackbar(
-                  'Invalid Password',
-                  'Password must be at least 8 characters',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryTeal,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _updateStaffAuthorities(
       StaffModel.Staff staff, List<String> newAuthorities) async {
     try {
@@ -234,7 +193,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         staff.documentId!,
         newAuthorities,
       );
-
       await _loadClinicAndStaff();
 
       Get.snackbar(
@@ -245,7 +203,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         colorText: Colors.white,
       );
     } catch (e) {
-      print('Error updating authorities: $e');
       Get.snackbar(
         'Error',
         'Failed to update permissions: $e',
@@ -273,7 +230,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         colorText: Colors.white,
       );
     } catch (e) {
-      print('Error removing staff: $e');
       Get.snackbar(
         'Error',
         'Failed to remove staff: $e',
@@ -328,6 +284,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       );
     }
 
+    final bool hasStaffAccounts = staffList.isNotEmpty;
+
     return Scaffold(
       backgroundColor: lightGray,
       body: FadeTransition(
@@ -374,8 +332,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     ),
                     child: _buildTitleSection(isLarge, isMedium, isSmall),
                   ),
-
-                  // Email Template Editor
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: isMedium ? 24 : 16,
@@ -384,9 +340,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                     child: EmailTemplateEditor(
                       clinicSettings: _clinicSettings!,
                       onTemplateUpdated: _loadClinicAndStaff,
+                      hasStaffAccounts: hasStaffAccounts,
                     ),
                   ),
-
                   LayoutBuilder(
                     builder: (context, cons) {
                       final w = cons.maxWidth;
@@ -628,10 +584,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                 icon = Icons.calendar_month_rounded;
                 colors = const [primaryBlue, softBlue];
                 break;
-              case 'Staffs':
-                icon = Icons.group_rounded;
-                colors = const [vetPurple, deepBlue];
-                break;
               case 'Messages':
                 icon = Icons.message_rounded;
                 colors = const [vetOrange, primaryTeal];
@@ -703,8 +655,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               tooltip: 'Clear filter',
               icon: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: Color(0x1AFF0000), shape: BoxShape.circle),
                 child: Icon(Icons.clear, size: 16, color: Colors.red[600]),
               ),
             ),
@@ -1004,7 +956,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         for (final s in filteredStaffs) {
           if (s.authorities.length > maxChips) maxChips = s.authorities.length;
         }
-        if (maxChips < 0) maxChips = 0;
 
         const double chipW = 96.0;
         const double chipGap = 8.0;
@@ -1022,8 +973,11 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
         final double finalRatio = tileWidth / finalHeight;
 
+        // total items: 1 (NewStaffTile) + filtered staff count
+        final totalItems = 1 + filteredStaffs.length;
+
         return GridView.builder(
-          itemCount: filteredStaffs.length + 1,
+          itemCount: totalItems,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,
             crossAxisSpacing: spacing,
@@ -1031,13 +985,16 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             childAspectRatio: finalRatio,
           ),
           itemBuilder: (context, index) {
-            if (index == filteredStaffs.length) {
+            if (index == 0) {
               return NewStaffTile(
                 clinicSettings: _clinicSettings!,
                 onStaffCreated: _addNewStaff,
               );
             }
-            final staff = filteredStaffs[index];
+
+            final staffIndex = index - 1;
+            final staff = filteredStaffs[staffIndex];
+
             return StaffTile(
               staff: staff,
               onUpdate: (authorities) =>

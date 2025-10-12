@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -15,21 +16,84 @@ class AdminWebDashboard extends StatefulWidget {
 }
 
 class _AdminWebDashboardState extends State<AdminWebDashboard> {
+  late AdminDashboardController controller;
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    _initializeController();
+  }
 
-    if (!Get.isRegistered<AdminDashboardController>()) {
-      Get.put(AdminDashboardController(
+  @override
+  void dispose() {
+    // CRITICAL FIX: Delete controller when dashboard is disposed
+    // This ensures fresh data when switching between clinics
+    if (Get.isRegistered<AdminDashboardController>()) {
+      Get.delete<AdminDashboardController>(force: true);
+      print('>>> Dashboard disposed - controller deleted');
+    }
+    super.dispose();
+  }
+
+  // FIX: Force fresh controller creation every time
+  void _initializeController() {
+    // CRITICAL FIX: Always delete existing controller first
+    if (Get.isRegistered<AdminDashboardController>()) {
+      Get.delete<AdminDashboardController>(force: true);
+      print('>>> Deleted existing AdminDashboardController');
+    }
+
+    // Create NEW controller (NOT permanent)
+    controller = Get.put(
+      AdminDashboardController(
         authRepository: Get.find<AuthRepository>(),
         session: Get.find<UserSessionService>(),
-      ));
+      ),
+      permanent: false, // CRITICAL FIX: Changed from true to false
+    );
+
+    print('>>> Created new AdminDashboardController');
+
+    // Run migration asynchronously but don't block UI
+    _runMigrationOnce();
+
+    // Mark as initialized
+    setState(() {
+      _isInitialized = true;
+    });
+  }
+
+  Future<void> _runMigrationOnce() async {
+    final storage = GetStorage();
+    final migrationRun = storage.read('staff_migration_completed') ?? false;
+
+    if (!migrationRun) {
+      try {
+        print('>>> Running staff migration...');
+        final authRepo = Get.find<AuthRepository>();
+        await authRepo.migrateExistingStaffRecords();
+
+        storage.write('staff_migration_completed', true);
+        print('>>> Staff migration completed successfully');
+      } catch (e) {
+        print('>>> Migration error: $e');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AdminDashboardController>();
+    // FIX: Wait for controller to be initialized
+    if (!_isInitialized) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 768;
     final isTablet = screenWidth < 1200 && screenWidth >= 768;
