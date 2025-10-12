@@ -221,13 +221,13 @@ class WebAppointmentTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  _buildServiceTypeIndicator(),
+                  const SizedBox(width: 64),
                 ],
               ),
             ],
           ),
         ),
-        _buildServiceTypeIndicator(),
-        const SizedBox(width: 64),
         Expanded(
           flex: isTablet ? 2 : 3,
           child: Column(
