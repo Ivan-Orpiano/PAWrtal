@@ -276,11 +276,4 @@ class WebLoginController extends GetxController {
     passwordController.clear();
   }
 
-  @override
-  void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
-    emailForPasswordResetController.dispose();
-    super.onClose();
-  }
 }
