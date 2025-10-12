@@ -499,6 +499,7 @@ class AuthRepository {
     String? name,
     String? department,
     String? image,
+    String? phone, // Add this
     List<String>? authorities,
   }) async {
     await appWriteProvider.updateStaffInfo(
@@ -506,6 +507,7 @@ class AuthRepository {
       name: name,
       department: department,
       image: image,
+      phone: phone, // Add this
       authorities: authorities,
     );
   }
@@ -627,145 +629,148 @@ class AuthRepository {
   }
 
   /// Create a new rating and review
-Future<RatingAndReview> createRatingAndReview(RatingAndReview review) async {
-  final doc = await appWriteProvider.createRatingAndReview(review.toMap());
-  return review.copyWith(documentId: doc.$id);
-}
-
-/// Check if user has already reviewed an appointment
-Future<bool> hasUserReviewedAppointment(String appointmentId) {
-  return appWriteProvider.hasUserReviewedAppointment(appointmentId);
-}
-
-/// Get all reviews for a clinic
-Future<List<RatingAndReview>> getClinicReviews(
-  String clinicId, {
-  int limit = 50,
-  String? lastDocumentId,
-}) async {
-  final docs = await appWriteProvider.getClinicReviews(
-    clinicId,
-    limit: limit,
-    lastDocumentId: lastDocumentId,
-  );
-  
-  return docs.map((doc) {
-    final review = RatingAndReview.fromMap(doc.data);
-    return review.copyWith(documentId: doc.$id);
-  }).toList();
-}
-
-/// Get reviews by a specific user
-Future<List<RatingAndReview>> getUserReviews(String userId) async {
-  final docs = await appWriteProvider.getUserReviews(userId);
-  
-  return docs.map((doc) {
-    final review = RatingAndReview.fromMap(doc.data);
-    return review.copyWith(documentId: doc.$id);
-  }).toList();
-}
-
-/// Get a specific review by appointment ID
-Future<RatingAndReview?> getReviewByAppointmentId(String appointmentId) async {
-  final doc = await appWriteProvider.getReviewByAppointmentId(appointmentId);
-  
-  if (doc != null) {
-    final review = RatingAndReview.fromMap(doc.data);
+  Future<RatingAndReview> createRatingAndReview(RatingAndReview review) async {
+    final doc = await appWriteProvider.createRatingAndReview(review.toMap());
     return review.copyWith(documentId: doc.$id);
   }
-  
-  return null;
-}
 
-/// Update an existing review
-Future<RatingAndReview> updateRatingAndReview(RatingAndReview review) async {
-  if (review.documentId == null) {
-    throw Exception('Cannot update review without documentId');
-  }
-  
-  final doc = await appWriteProvider.updateRatingAndReview(
-    review.documentId!,
-    review.toMap(),
-  );
-  
-  return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
-}
-
-/// Delete a review
-Future<void> deleteRatingAndReview(String documentId, List<String> imageIds) async {
-  // Delete review images first
-  if (imageIds.isNotEmpty) {
-    await appWriteProvider.deleteReviewImages(imageIds);
-  }
-  
-  // Then delete the review document
-  await appWriteProvider.deleteRatingAndReview(documentId);
-}
-
-/// Add clinic response to a review
-Future<RatingAndReview> addClinicResponse(
-  String documentId,
-  String response,
-) async {
-  final doc = await appWriteProvider.addClinicResponse(documentId, response);
-  return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
-}
-
-/// Get clinic rating statistics
-Future<ClinicRatingStats> getClinicRatingStats(String clinicId) async {
-  final stats = await appWriteProvider.getClinicRatingStats(clinicId);
-  
-  return ClinicRatingStats(
-    averageRating: stats['averageRating'],
-    totalReviews: stats['totalReviews'],
-    ratingDistribution: Map<int, int>.from(stats['ratingDistribution']),
-    reviewsWithText: stats['reviewsWithText'],
-    reviewsWithImages: stats['reviewsWithImages'],
-  );
-}
-
-/// Upload review images
-Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) {
-  return appWriteProvider.uploadReviewImages(files);
-}
-
-/// Delete review images
-Future<void> deleteReviewImages(List<String> fileIds) {
-  return appWriteProvider.deleteReviewImages(fileIds);
-}
-
-/// Subscribe to clinic reviews (real-time)
-Stream<RealtimeMessage> subscribeToClinicReviews(String clinicId) {
-  return appWriteProvider.subscribeToClinicReviews(clinicId);
-}
-
-/// Helper method to create review from appointment
-Future<RatingAndReview> createReviewFromAppointment({
-  required Appointment appointment,
-  required String userName,
-  required double rating,
-  String? reviewText,
-  List<String> images = const [],
-}) async {
-  // Check if already reviewed
-  final alreadyReviewed = await hasUserReviewedAppointment(appointment.documentId!);
-  if (alreadyReviewed) {
-    throw Exception('This appointment has already been reviewed');
+  /// Check if user has already reviewed an appointment
+  Future<bool> hasUserReviewedAppointment(String appointmentId) {
+    return appWriteProvider.hasUserReviewedAppointment(appointmentId);
   }
 
-  // Create the review
-  final review = RatingAndReview(
-    userId: appointment.userId,
-    clinicId: appointment.clinicId,
-    appointmentId: appointment.documentId!,
-    rating: rating,
-    reviewText: reviewText,
-    images: images,
-    userName: userName,
-    petName: appointment.petId, // You might want to get actual pet name
-    serviceName: appointment.service,
-  );
+  /// Get all reviews for a clinic
+  Future<List<RatingAndReview>> getClinicReviews(
+    String clinicId, {
+    int limit = 50,
+    String? lastDocumentId,
+  }) async {
+    final docs = await appWriteProvider.getClinicReviews(
+      clinicId,
+      limit: limit,
+      lastDocumentId: lastDocumentId,
+    );
 
-  return await createRatingAndReview(review);
-}
+    return docs.map((doc) {
+      final review = RatingAndReview.fromMap(doc.data);
+      return review.copyWith(documentId: doc.$id);
+    }).toList();
+  }
+
+  /// Get reviews by a specific user
+  Future<List<RatingAndReview>> getUserReviews(String userId) async {
+    final docs = await appWriteProvider.getUserReviews(userId);
+
+    return docs.map((doc) {
+      final review = RatingAndReview.fromMap(doc.data);
+      return review.copyWith(documentId: doc.$id);
+    }).toList();
+  }
+
+  /// Get a specific review by appointment ID
+  Future<RatingAndReview?> getReviewByAppointmentId(
+      String appointmentId) async {
+    final doc = await appWriteProvider.getReviewByAppointmentId(appointmentId);
+
+    if (doc != null) {
+      final review = RatingAndReview.fromMap(doc.data);
+      return review.copyWith(documentId: doc.$id);
+    }
+
+    return null;
+  }
+
+  /// Update an existing review
+  Future<RatingAndReview> updateRatingAndReview(RatingAndReview review) async {
+    if (review.documentId == null) {
+      throw Exception('Cannot update review without documentId');
+    }
+
+    final doc = await appWriteProvider.updateRatingAndReview(
+      review.documentId!,
+      review.toMap(),
+    );
+
+    return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+  }
+
+  /// Delete a review
+  Future<void> deleteRatingAndReview(
+      String documentId, List<String> imageIds) async {
+    // Delete review images first
+    if (imageIds.isNotEmpty) {
+      await appWriteProvider.deleteReviewImages(imageIds);
+    }
+
+    // Then delete the review document
+    await appWriteProvider.deleteRatingAndReview(documentId);
+  }
+
+  /// Add clinic response to a review
+  Future<RatingAndReview> addClinicResponse(
+    String documentId,
+    String response,
+  ) async {
+    final doc = await appWriteProvider.addClinicResponse(documentId, response);
+    return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+  }
+
+  /// Get clinic rating statistics
+  Future<ClinicRatingStats> getClinicRatingStats(String clinicId) async {
+    final stats = await appWriteProvider.getClinicRatingStats(clinicId);
+
+    return ClinicRatingStats(
+      averageRating: stats['averageRating'],
+      totalReviews: stats['totalReviews'],
+      ratingDistribution: Map<int, int>.from(stats['ratingDistribution']),
+      reviewsWithText: stats['reviewsWithText'],
+      reviewsWithImages: stats['reviewsWithImages'],
+    );
+  }
+
+  /// Upload review images
+  Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) {
+    return appWriteProvider.uploadReviewImages(files);
+  }
+
+  /// Delete review images
+  Future<void> deleteReviewImages(List<String> fileIds) {
+    return appWriteProvider.deleteReviewImages(fileIds);
+  }
+
+  /// Subscribe to clinic reviews (real-time)
+  Stream<RealtimeMessage> subscribeToClinicReviews(String clinicId) {
+    return appWriteProvider.subscribeToClinicReviews(clinicId);
+  }
+
+  /// Helper method to create review from appointment
+  Future<RatingAndReview> createReviewFromAppointment({
+    required Appointment appointment,
+    required String userName,
+    required double rating,
+    String? reviewText,
+    List<String> images = const [],
+  }) async {
+    // Check if already reviewed
+    final alreadyReviewed =
+        await hasUserReviewedAppointment(appointment.documentId!);
+    if (alreadyReviewed) {
+      throw Exception('This appointment has already been reviewed');
+    }
+
+    // Create the review
+    final review = RatingAndReview(
+      userId: appointment.userId,
+      clinicId: appointment.clinicId,
+      appointmentId: appointment.documentId!,
+      rating: rating,
+      reviewText: reviewText,
+      images: images,
+      userName: userName,
+      petName: appointment.petId, // You might want to get actual pet name
+      serviceName: appointment.service,
+    );
+
+    return await createRatingAndReview(review);
+  }
 }

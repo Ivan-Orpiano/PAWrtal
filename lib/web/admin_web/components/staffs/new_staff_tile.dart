@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
@@ -238,6 +239,12 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     .replaceAll('{name}', 'staff');
       }
     });
+  }
+
+  String _getFullPhoneNumber() {
+    final phoneDigits = widget.phoneController.text.trim();
+    if (phoneDigits.isEmpty) return '';
+    return '09$phoneDigits';
   }
 
   @override
@@ -506,9 +513,38 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       return;
     }
 
+    // Validate image is required
+    if (selectedImageBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Profile photo is required'),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    // Validate phone if provided
+    final phoneDigits = widget.phoneController.text.trim();
+    if (phoneDigits.isNotEmpty && phoneDigits.length != 9) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Phone number must be exactly 9 digits after 09'),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     final fullName =
         '${widget.firstNameController.text.trim()} ${widget.surnameController.text.trim()}';
-    final phone = widget.phoneController.text.trim();
+    final phone = _getFullPhoneNumber();
 
     final authorities = <String>[];
     if (clinicAuth) authorities.add('Clinic');
@@ -949,6 +985,17 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                           primaryTeal,
                         ),
                         const SizedBox(height: 14),
+
+                        // Phone (if provided)
+                        if (phone.isNotEmpty) ...[
+                          _buildDetailRow(
+                            Icons.phone,
+                            'Phone Number',
+                            phone,
+                            vetOrange,
+                          ),
+                          const SizedBox(height: 14),
+                        ],
 
                         // Password
                         Row(
@@ -1452,12 +1499,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
             ],
           ),
         const SizedBox(height: 18),
-        _buildTextField(
-          controller: widget.phoneController,
-          label: 'Phone Number (Optional)',
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
-        ),
+        _buildPhoneTextField(),
       ],
     );
   }
@@ -1493,6 +1535,71 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: primaryTeal, size: 20),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryTeal.withOpacity(0.3)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryTeal.withOpacity(0.3)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: primaryTeal, width: 2.5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneTextField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: primaryTeal.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: widget.phoneController,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(9),
+        ],
+        decoration: InputDecoration(
+          labelText: 'Phone Number (Optional)',
+          labelStyle:
+              const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
+          hintText: '123456789',
+          helperText: 'Format: 09XXXXXXXXX (9 digits after 09)',
+          helperMaxLines: 2,
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: primaryTeal.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child:
+                const Icon(Icons.phone_outlined, color: primaryTeal, size: 20),
+          ),
+          prefix: Container(
+            padding: const EdgeInsets.only(right: 4),
+            child: const Text(
+              '09',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: primaryBlue,
+              ),
+            ),
           ),
           filled: true,
           fillColor: Colors.white,
