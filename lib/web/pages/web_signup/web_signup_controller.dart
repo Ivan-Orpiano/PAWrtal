@@ -216,10 +216,6 @@ class WebSignUpController extends GetxController {
   @override
   void onClose() {
     try {
-      // emailController.dispose();
-      // nameController.dispose();
-      // passwordController.dispose();
-      // confirmPasswordController.dispose();
       _clearControllersBeforeNavigation();
     } catch (e) {
       print('Controller disposal error: $e');
