@@ -23,16 +23,24 @@ class LoginController extends GetxController {
 
   final GetStorage _getStorage = GetStorage();
 
+  // Observable for password visibility
+  final isPasswordVisible = false.obs;
+
   @override
   void onClose() {
     super.onClose();
     emailEditingController.dispose();
     passwordEditingController.dispose();
+    emailForPasswordResetController.dispose();
   }
 
   void clearTextEditingControllers() {
     emailEditingController.clear();
     passwordEditingController.clear();
+  }
+
+  void togglePasswordVisibility() {
+    isPasswordVisible.value = !isPasswordVisible.value;
   }
 
   String? validateEmail(String value) {
@@ -238,6 +246,7 @@ class LoginController extends GetxController {
   }
 
   void moveToSignUp() {
+    clearTextEditingControllers();
     Get.toNamed(Routes.signup);
   }
 }
