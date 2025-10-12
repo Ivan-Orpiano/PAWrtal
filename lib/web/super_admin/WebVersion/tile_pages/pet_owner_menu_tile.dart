@@ -30,10 +30,10 @@ class PetOwnerTile extends StatelessWidget {
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
       hoverColor: Colors.transparent,
-      onTap: () => Navigator.push(
+        onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const UserManagementScreen(),
+          builder: (context) => const SuperAdminUserManagementScreen(),
         ),
       ),
       child: Padding(
