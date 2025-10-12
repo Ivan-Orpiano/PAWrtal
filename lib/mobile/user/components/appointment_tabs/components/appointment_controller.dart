@@ -21,20 +21,26 @@ class EnhancedUserAppointmentController extends GetxController {
   var appointments = <Appointment>[].obs;
   var clinics = <String, Clinic>{}.obs;
   var pets = <String, Pet>{}.obs;
+  
+  // Cache to track which appointments have reviews
+  var appointmentReviews = <String, bool>{}.obs;
 
   // Real-time subscription
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
+  StreamSubscription<RealtimeMessage>? _reviewSubscription;
 
   @override
   void onInit() {
     super.onInit();
     fetchAppointments();
     _setupRealtimeSubscription();
+    _setupReviewSubscription();
   }
 
   @override
   void onClose() {
     _appointmentSubscription?.cancel();
+    _reviewSubscription?.cancel();
     super.onClose();
   }
 
@@ -53,22 +59,64 @@ class EnhancedUserAppointmentController extends GetxController {
     }
   }
 
+  // NEW: Setup real-time subscription for review updates
+  void _setupReviewSubscription() {
+    try {
+      final userId = session.userId;
+      if (userId.isEmpty) return;
+
+      // Subscribe to all reviews (we'll filter by user's appointments)
+      _reviewSubscription = authRepository
+          .subscribeToClinicReviews('') // Empty string to get all reviews
+          .listen((message) {
+        _handleReviewUpdate(message);
+      });
+    } catch (e) {
+      print('Error setting up review subscription: $e');
+    }
+  }
+
+  // NEW: Handle review updates
+  void _handleReviewUpdate(RealtimeMessage message) {
+    final payload = message.payload;
+    final eventType = message.events.first;
+    final appointmentId = payload['appointmentId'] as String?;
+
+    if (appointmentId == null) return;
+
+    print('Review update received for appointment: $appointmentId');
+    print('Event type: $eventType');
+
+    if (eventType.contains('create')) {
+      // A review was created
+      appointmentReviews[appointmentId] = true;
+      print('Review created for appointment: $appointmentId');
+    } else if (eventType.contains('delete')) {
+      // A review was deleted
+      appointmentReviews[appointmentId] = false;
+      print('Review deleted for appointment: $appointmentId');
+    }
+
+    // Force refresh of the appointments list to update categories
+    appointments.refresh();
+  }
+
   void _handleRealtimeUpdate(RealtimeMessage message) {
     final payload = message.payload;
     final eventType = message.events.first;
 
-    print('Realtime update received: $eventType'); // Debug log
-    print('Payload: $payload'); // Debug log
+    print('Realtime update received: $eventType');
+    print('Payload: $payload');
 
     if (eventType.contains('create')) {
       _addOrUpdateAppointment(payload);
-      print('Added new appointment'); // Debug log
+      print('Added new appointment');
     } else if (eventType.contains('update')) {
       _addOrUpdateAppointment(payload);
-      print('Updated appointment'); // Debug log
+      print('Updated appointment');
     } else if (eventType.contains('delete')) {
       appointments.removeWhere((a) => a.documentId == payload['\$id']);
-      print('Deleted appointment'); // Debug log
+      print('Deleted appointment');
     }
 
     // Force refresh of the appointments list
@@ -88,6 +136,19 @@ class EnhancedUserAppointmentController extends GetxController {
 
     // Fetch related data if not cached
     _fetchRelatedDataForAppointment(appointment);
+    
+    // Check if this appointment has a review
+    _checkAppointmentReview(appointment.documentId!);
+  }
+
+  // NEW: Check if an appointment has a review
+  Future<void> _checkAppointmentReview(String appointmentId) async {
+    try {
+      final hasReview = await authRepository.hasUserReviewedAppointment(appointmentId);
+      appointmentReviews[appointmentId] = hasReview;
+    } catch (e) {
+      print('Error checking appointment review: $e');
+    }
   }
 
   Future<void> fetchAppointments() async {
@@ -102,11 +163,25 @@ class EnhancedUserAppointmentController extends GetxController {
 
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
+      
+      // Fetch related data
       await _fetchRelatedData();
+      
+      // Check reviews for all completed appointments
+      await _checkAllAppointmentReviews();
     } catch (e) {
       Get.snackbar("Error", "Failed to load appointments: $e");
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // NEW: Check reviews for all appointments
+  Future<void> _checkAllAppointmentReviews() async {
+    for (var appointment in appointments) {
+      if (appointment.documentId != null && appointment.isCompleted) {
+        await _checkAppointmentReview(appointment.documentId!);
+      }
     }
   }
 
@@ -134,7 +209,6 @@ class EnhancedUserAppointmentController extends GetxController {
         try {
           final petDoc = await authRepository.getPetByName(petName);
           if (petDoc != null) {
-            // Create Pet object from document data
             final pet = Pet.fromMap(petDoc.data);
             pet.documentId = petDoc.$id;
             pets[petName] = pet;
@@ -168,7 +242,6 @@ class EnhancedUserAppointmentController extends GetxController {
       try {
         final petDoc = await authRepository.getPetByName(appointment.petId);
         if (petDoc != null) {
-          // Create Pet object from document data
           final pet = Pet.fromMap(petDoc.data);
           pet.documentId = petDoc.$id;
           pets[appointment.petId] = pet;
@@ -193,18 +266,36 @@ class EnhancedUserAppointmentController extends GetxController {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  // UPDATED: Completed appointments WITHOUT reviews
   List<Appointment> get completed {
-    return appointments.where((a) => a.status == 'completed').toList()
+    return appointments.where((a) {
+      if (a.status != 'completed') return false;
+      
+      // Only show in completed if there's NO review
+      final hasReview = appointmentReviews[a.documentId] ?? false;
+      return !hasReview;
+    }).toList()
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
   }
 
+  // UPDATED: History includes cancelled, declined, no_show, AND completed with reviews
   List<Appointment> get history {
-    return appointments
-        .where((a) =>
-            a.status == 'cancelled' ||
-            a.status == 'declined' ||
-            a.status == 'no_show')
-        .toList()
+    return appointments.where((a) {
+      // Include cancelled, declined, no_show as before
+      if (a.status == 'cancelled' || 
+          a.status == 'declined' || 
+          a.status == 'no_show') {
+        return true;
+      }
+      
+      // NEW: Also include completed appointments that have a review
+      if (a.status == 'completed') {
+        final hasReview = appointmentReviews[a.documentId] ?? false;
+        return hasReview;
+      }
+      
+      return false;
+    }).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
@@ -283,7 +374,8 @@ class EnhancedUserAppointmentController extends GetxController {
         }
         return 'Treatment in progress';
       case 'completed':
-        return 'Treatment completed';
+        final hasReview = appointmentReviews[appointment.documentId] ?? false;
+        return hasReview ? 'Reviewed' : 'Treatment completed';
       case 'no_show':
         return 'Missed appointment';
       case 'declined':
@@ -304,7 +396,8 @@ class EnhancedUserAppointmentController extends GetxController {
       case 'in_progress':
         return 'In Treatment';
       case 'completed':
-        return 'Completed';
+        final hasReview = appointmentReviews[appointment.documentId] ?? false;
+        return hasReview ? 'Reviewed' : 'Completed';
       case 'no_show':
         return 'Missed';
       case 'declined':
@@ -349,5 +442,16 @@ class EnhancedUserAppointmentController extends GetxController {
       'today': todayAppointments.length,
       'history': history.length,
     };
+  }
+  
+  // NEW: Check if appointment has review
+  bool hasReview(String appointmentId) {
+    return appointmentReviews[appointmentId] ?? false;
+  }
+  
+  // NEW: Refresh appointment after review submission
+  Future<void> refreshAfterReview(String appointmentId) async {
+    await _checkAppointmentReview(appointmentId);
+    appointments.refresh();
   }
 }
