@@ -10,6 +10,7 @@ import 'package:capstone_app/web/admin_web/components/staffs/staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/new_staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/email_template_editor.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:appwrite/appwrite.dart';
 
 class AdminWebStaffs extends StatefulWidget {
   const AdminWebStaffs({super.key});
@@ -59,7 +60,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
     _animationController.forward();
-
     _loadClinicAndStaff();
   }
 
@@ -74,57 +74,37 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     setState(() => _isLoading = true);
 
     try {
-      print('>>> Loading clinic and staff data...');
-
       final role = _getStorage.read('role') as String?;
-      print('>>> Current user role: $role');
-
+      // Resolve clinic by role
       if (role == 'admin') {
-        print('>>> Admin user - fetching clinic by admin ID');
         final clinicDoc =
             await _authRepository.getClinicByAdminId(_session.userId);
         if (clinicDoc != null) {
           _clinic = Clinic.fromMap(clinicDoc.data);
           _clinic!.documentId = clinicDoc.$id;
-          print('>>> Clinic found: ${_clinic!.clinicName}');
-        } else {
-          print('>>> ERROR: No clinic found for admin ID: ${_session.userId}');
         }
       } else if (role == 'staff') {
-        print('>>> Staff user - fetching clinic by clinic ID');
         final clinicId = _getStorage.read('clinicId') as String?;
-        print('>>> Staff clinic ID from storage: $clinicId');
-
         if (clinicId != null && clinicId.isNotEmpty) {
           final clinicDoc = await _authRepository.getClinicById(clinicId);
           if (clinicDoc != null) {
             _clinic = Clinic.fromMap(clinicDoc.data);
             _clinic!.documentId = clinicDoc.$id;
-            print('>>> Clinic found: ${_clinic!.clinicName}');
-          } else {
-            print('>>> ERROR: No clinic found for clinic ID: $clinicId');
           }
-        } else {
-          print('>>> ERROR: No clinic ID found in storage for staff user');
         }
-      } else {
-        print('>>> ERROR: Unknown user role: $role');
       }
 
       if (_clinic != null) {
         _clinicSettings = await _authRepository
             .getClinicSettingsByClinicId(_clinic!.documentId!);
-        print('>>> Clinic settings loaded: ${_clinicSettings != null}');
 
         final staff =
             await _authRepository.getClinicStaff(_clinic!.documentId!);
         setState(() {
           staffList = staff;
         });
-        print('>>> Loaded ${staffList.length} staff members');
       }
     } catch (e) {
-      print('>>> ERROR loading clinic and staff: $e');
       Get.snackbar(
         'Error',
         'Failed to load staff: $e',
@@ -133,7 +113,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         colorText: Colors.white,
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -148,10 +128,29 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     if (_clinic == null) return;
 
     try {
-      String? imageUrl;
-      // Upload image if needed (imageBytes handling)
+      String imageUrl = '';
 
-      print('>>> Calling createStaffAccount...');
+      // Upload image if provided
+      if (imageBytes != null && imageBytes.isNotEmpty) {
+        try {
+          final inputFile = InputFile.fromBytes(
+            bytes: imageBytes,
+            filename: "${DateTime.now().millisecondsSinceEpoch}_staff.jpg",
+          );
+          final uploadedImage = await _authRepository.uploadImage(inputFile);
+          imageUrl = _authRepository.getImageUrl(uploadedImage.$id);
+        } catch (e) {
+          Get.snackbar(
+            'Warning',
+            'Failed to upload image, continuing without photo.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: vetOrange,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 3),
+          );
+        }
+      }
+
       final result = await _authRepository.createStaffAccount(
         name: name,
         email: email,
@@ -159,19 +158,15 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         clinicId: _clinic!.documentId!,
         authorities: authorities,
         createdBy: _session.userId,
-        image: imageUrl ?? '',
+        image: imageUrl,
+        phone: phone,
       );
 
-      print('>>> Staff creation result: $result');
-
       if (result['success'] == true) {
-        print('>>> Staff created successfully - refreshing staff list');
-
         await _loadClinicAndStaff();
-
         Get.snackbar(
           'Success',
-          'Staff account created successfully! $name has been added to your team.',
+          'Staff account created successfully! $name has been added.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: vetGreen,
           colorText: Colors.white,
@@ -180,7 +175,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         );
       }
     } catch (e) {
-      print('>>> Error creating staff: $e');
       Get.snackbar(
         'Error',
         'Failed to create staff: $e',
@@ -199,7 +193,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         staff.documentId!,
         newAuthorities,
       );
-
       await _loadClinicAndStaff();
 
       Get.snackbar(
@@ -210,7 +203,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         colorText: Colors.white,
       );
     } catch (e) {
-      print('Error updating authorities: $e');
       Get.snackbar(
         'Error',
         'Failed to update permissions: $e',
@@ -238,7 +230,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         colorText: Colors.white,
       );
     } catch (e) {
-      print('Error removing staff: $e');
       Get.snackbar(
         'Error',
         'Failed to remove staff: $e',
@@ -293,7 +284,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       );
     }
 
-    // CRITICAL: Check if clinic has staff accounts
     final bool hasStaffAccounts = staffList.isNotEmpty;
 
     return Scaffold(
@@ -665,8 +655,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               tooltip: 'Clear filter',
               icon: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: Color(0x1AFF0000), shape: BoxShape.circle),
                 child: Icon(Icons.clear, size: 16, color: Colors.red[600]),
               ),
             ),
@@ -966,7 +956,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         for (final s in filteredStaffs) {
           if (s.authorities.length > maxChips) maxChips = s.authorities.length;
         }
-        if (maxChips < 0) maxChips = 0;
 
         const double chipW = 96.0;
         const double chipGap = 8.0;
@@ -984,8 +973,11 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
         final double finalRatio = tileWidth / finalHeight;
 
+        // total items: 1 (NewStaffTile) + filtered staff count
+        final totalItems = 1 + filteredStaffs.length;
+
         return GridView.builder(
-          itemCount: filteredStaffs.length + 1,
+          itemCount: totalItems,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,
             crossAxisSpacing: spacing,
@@ -993,13 +985,16 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             childAspectRatio: finalRatio,
           ),
           itemBuilder: (context, index) {
-            if (index == filteredStaffs.length) {
+            if (index == 0) {
               return NewStaffTile(
                 clinicSettings: _clinicSettings!,
                 onStaffCreated: _addNewStaff,
               );
             }
-            final staff = filteredStaffs[index];
+
+            final staffIndex = index - 1;
+            final staff = filteredStaffs[staffIndex];
+
             return StaffTile(
               staff: staff,
               onUpdate: (authorities) =>

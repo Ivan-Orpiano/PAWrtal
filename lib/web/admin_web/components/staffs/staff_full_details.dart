@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:appwrite/appwrite.dart';
 import 'dart:typed_data';
+import 'package:get/get.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 
 class StaffFullDetails extends StatefulWidget {
   final String staffName;
@@ -9,6 +14,8 @@ class StaffFullDetails extends StatefulWidget {
   final List<String> initialAuthorities;
   final VoidCallback onRemove;
   final Uint8List? imageBytes;
+  final String staffDocumentId;
+  final String? currentImageUrl; // current image URL
 
   const StaffFullDetails({
     required this.staffName,
@@ -18,6 +25,8 @@ class StaffFullDetails extends StatefulWidget {
     required this.initialAuthorities,
     required this.onRemove,
     this.imageBytes,
+    required this.staffDocumentId,
+    this.currentImageUrl,
     super.key,
   });
 
@@ -29,9 +38,22 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   late bool hasClinicAuthority;
   late bool hasAppointmentsAuthority;
   late bool hasMessagesAuthority;
-  bool showDeleteConfirm = false;
+  late TextEditingController phoneController;
 
-  // Updated color palette to match the interface
+  bool isEditMode = false;
+  bool showDeleteConfirm = false;
+  bool hasChanges = false;
+
+  // Image editing variables
+  Uint8List? newImageBytes;
+  bool imageChanged = false;
+
+  // Store original values for comparison
+  late bool originalClinicAuth;
+  late bool originalAppointmentsAuth;
+  late bool originalMessagesAuth;
+  late String originalPhone;
+
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
   static const Color lightTeal = Color(0xFF9FC5E8);
@@ -42,7 +64,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   static const Color darkText = Color(0xFF374151);
   static const Color vetGreen = Color(0xFF34D399);
   static const Color vetOrange = Color(0xFFF59E0B);
-  static const Color vetPurple = Color(0x00a855f7);
+  static const Color vetPurple = Color(0xFFA855F7);
   static const Color lightVetGreen = Color(0xFFE5F7E5);
 
   @override
@@ -52,32 +74,266 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     hasAppointmentsAuthority =
         widget.initialAuthorities.contains('Appointments');
     hasMessagesAuthority = widget.initialAuthorities.contains('Messages');
+
+    // Store original values
+    originalClinicAuth = hasClinicAuthority;
+    originalAppointmentsAuth = hasAppointmentsAuthority;
+    originalMessagesAuth = hasMessagesAuthority;
+
+    // Initialize phone controller
+    final phoneValue = widget.phone ?? '';
+    // Remove '09' prefix if exists for editing
+    final phoneDigits = phoneValue.startsWith('09') && phoneValue.length == 11
+        ? phoneValue.substring(2)
+        : phoneValue;
+    phoneController = TextEditingController(text: phoneDigits);
+    originalPhone = phoneDigits;
+
+    phoneController.addListener(_checkForChanges);
   }
 
-  void _handleUpdate() {
-    List<String> updatedAuthorities = [];
+  @override
+  void dispose() {
+    phoneController.dispose();
+    super.dispose();
+  }
+
+  void _checkForChanges() {
+    setState(() {
+      hasChanges = hasClinicAuthority != originalClinicAuth ||
+          hasAppointmentsAuthority != originalAppointmentsAuth ||
+          hasMessagesAuthority != originalMessagesAuth ||
+          phoneController.text.trim() != originalPhone ||
+          imageChanged;
+    });
+  }
+
+  Future<void> _pickImage() async {
+    if (!isEditMode) return;
+
+    final ImagePicker picker = ImagePicker();
+    try {
+      final XFile? result = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+      );
+
+      if (result != null) {
+        final bytes = await result.readAsBytes();
+        if (bytes.length > 5 * 1024 * 1024) {
+          Get.snackbar(
+            'Error',
+            'Image size must be less than 5MB',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          return;
+        }
+        setState(() {
+          newImageBytes = bytes;
+          imageChanged = true;
+          _checkForChanges();
+        });
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to pick image: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  void _toggleEditMode() {
+    if (isEditMode && hasChanges) {
+      _showUnsavedChangesDialog();
+    } else {
+      setState(() {
+        isEditMode = !isEditMode;
+        showDeleteConfirm = false;
+        if (!isEditMode) {
+          // Reset to original values
+          hasClinicAuthority = originalClinicAuth;
+          hasAppointmentsAuthority = originalAppointmentsAuth;
+          hasMessagesAuthority = originalMessagesAuth;
+          phoneController.text = originalPhone;
+          hasChanges = false;
+          imageChanged = false;
+          newImageBytes = null;
+        }
+      });
+    }
+  }
+
+  void _showUnsavedChangesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: vetOrange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.warning_amber_rounded,
+                  color: vetOrange, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Unsaved Changes',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to discard them?',
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: mediumGray, fontWeight: FontWeight.w600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                isEditMode = false;
+                showDeleteConfirm = false;
+                // Reset to original values
+                hasClinicAuthority = originalClinicAuth;
+                hasAppointmentsAuthority = originalAppointmentsAuth;
+                hasMessagesAuthority = originalMessagesAuth;
+                phoneController.text = originalPhone;
+                hasChanges = false;
+                imageChanged = false;
+                newImageBytes = null;
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: vetOrange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Discard Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleUpdate() async {
+    final updatedAuthorities = <String>[];
     if (hasClinicAuthority) updatedAuthorities.add('Clinic');
     if (hasAppointmentsAuthority) updatedAuthorities.add('Appointments');
     if (hasMessagesAuthority) updatedAuthorities.add('Messages');
-    widget.onAuthoritiesUpdated(updatedAuthorities);
-    Navigator.of(context).pop();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-                child: Text(
-                    '${widget.staffName}\'s permissions updated successfully')),
-          ],
-        ),
+    final phoneValue = phoneController.text.trim();
+    final fullPhone = phoneValue.isNotEmpty ? '09$phoneValue' : '';
+
+    try {
+      final authRepo = Get.find<AuthRepository>();
+
+      // Handle image upload if changed
+      String? finalImageUrl = widget.currentImageUrl;
+      if (imageChanged && newImageBytes != null) {
+        try {
+          final inputFile = InputFile.fromBytes(
+            bytes: newImageBytes!,
+            filename:
+                "${DateTime.now().millisecondsSinceEpoch}_staff_${widget.staffDocumentId}.jpg",
+          );
+
+          final uploadedImage = await authRepo.uploadImage(inputFile);
+          finalImageUrl = authRepo.getImageUrl(uploadedImage.$id);
+
+          // Delete old image if present
+          if (widget.currentImageUrl != null &&
+              widget.currentImageUrl!.isNotEmpty) {
+            try {
+              final oldFileId =
+                  widget.currentImageUrl!.split('/').last.split('?').first;
+              await authRepo.deleteImage(oldFileId);
+            } catch (e) {
+              // Non-fatal
+              // ignore: avoid_print
+              print('>>> Warning: Could not delete old image: $e');
+            }
+          }
+        } catch (e) {
+          Get.snackbar(
+            'Warning',
+            'Failed to upload new image, other changes will be saved',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: vetOrange,
+            colorText: Colors.white,
+          );
+        }
+      }
+
+      // Update authorities
+      await authRepo.updateStaffAuthorities(
+        widget.staffDocumentId,
+        updatedAuthorities,
+      );
+
+      // Update staff info (phone + image)
+      await authRepo.updateStaffInfo(
+        staffDocumentId: widget.staffDocumentId,
+        phone: fullPhone,
+        image: finalImageUrl,
+      );
+
+      // Persist originals for future comparisons
+      originalClinicAuth = hasClinicAuthority;
+      originalAppointmentsAuth = hasAppointmentsAuthority;
+      originalMessagesAuth = hasMessagesAuthority;
+      originalPhone = phoneValue;
+
+      widget.onAuthoritiesUpdated(updatedAuthorities);
+
+      setState(() {
+        isEditMode = false;
+        hasChanges = false;
+        imageChanged = false;
+        newImageBytes = null;
+      });
+
+      Navigator.of(context).pop();
+
+      Get.snackbar(
+        'Success',
+        '${widget.staffName}\'s details updated successfully',
+        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: vetGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+        colorText: Colors.white,
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update staff details: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   void _handleRemove() {
@@ -85,20 +341,14 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       widget.onRemove();
       Navigator.of(context).pop();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.info_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('${widget.staffName} has been removed')),
-            ],
-          ),
-          backgroundColor: vetOrange,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      Get.snackbar(
+        'Success',
+        '${widget.staffName} has been removed',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: vetOrange,
+        colorText: Colors.white,
+        icon: const Icon(Icons.info_outline, color: Colors.white),
+        duration: const Duration(seconds: 2),
       );
     } else {
       setState(() {
@@ -137,8 +387,9 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header with gradient
+            // Header
             Container(
+              width: double.infinity,
               padding: EdgeInsets.all(isDesktop ? 28 : 24),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -168,7 +419,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Contact Information
                     _buildSectionHeader(
                       'Contact Information',
                       Icons.contact_mail_outlined,
@@ -177,18 +427,17 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                     const SizedBox(height: 20),
                     _buildContactInfoSection(),
                     const SizedBox(height: 28),
-
-                    // Permissions Section
                     _buildSectionHeader(
                       'Access Permissions',
                       Icons.security_rounded,
                       vetGreen,
-                      subtitle: 'Manage what this staff member can access',
+                      subtitle: isEditMode
+                          ? 'Toggle permissions for this staff member'
+                          : 'View permissions for this staff member',
                     ),
                     const SizedBox(height: 20),
                     _buildPermissionsSection(),
-
-                    if (showDeleteConfirm) ...[
+                    if (showDeleteConfirm && isEditMode) ...[
                       const SizedBox(height: 20),
                       _buildDeleteConfirmation(),
                     ],
@@ -222,37 +471,66 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   Widget _buildHeader() {
     return Column(
       children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.white, width: 4),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: widget.imageBytes != null
-              ? ClipOval(
-                  child: Image.memory(
-                    widget.imageBytes!,
-                    fit: BoxFit.cover,
-                    width: 92,
-                    height: 92,
+        // Profile Image with Edit Option
+        Stack(
+          children: [
+            GestureDetector(
+              onTap: isEditMode ? _pickImage : null,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(
+                    color: isEditMode
+                        ? (imageChanged ? vetGreen : primaryTeal)
+                        : Colors.white,
+                    width: 4,
                   ),
-                )
-              : Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: lightVetGreen.withOpacity(0.3),
-                  ),
-                  child: const Icon(Icons.person, size: 45, color: primaryTeal),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
+                child: ClipOval(
+                  child: _getCurrentImage(),
+                ),
+              ),
+            ),
+            if (isEditMode)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: primaryTeal,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryTeal.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(
@@ -281,7 +559,89 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
             ),
           ),
         ),
+        if (isEditMode && imageChanged) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: vetGreen.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withOpacity(0.5)),
+            ),
+            child: const Text(
+              'Image Changed - Save to Apply',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _getCurrentImage() {
+    // Show new image if changed
+    if (imageChanged && newImageBytes != null) {
+      return Image.memory(
+        newImageBytes!,
+        fit: BoxFit.cover,
+        width: 92,
+        height: 92,
+      );
+    }
+
+    // Show current image from URL
+    if (widget.currentImageUrl != null && widget.currentImageUrl!.isNotEmpty) {
+      return Image.network(
+        widget.currentImageUrl!,
+        fit: BoxFit.cover,
+        width: 92,
+        height: 92,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: lightVetGreen.withOpacity(0.3),
+            ),
+            child: const Icon(Icons.person, size: 45, color: primaryTeal),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: lightVetGreen.withOpacity(0.3),
+            ),
+            child: const CircularProgressIndicator(
+              color: primaryTeal,
+              strokeWidth: 2,
+            ),
+          );
+        },
+      );
+    }
+
+    // Show default image from bytes (fallback)
+    if (widget.imageBytes != null) {
+      return Image.memory(
+        widget.imageBytes!,
+        fit: BoxFit.cover,
+        width: 92,
+        height: 92,
+      );
+    }
+
+    // Default avatar
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: lightVetGreen.withOpacity(0.3),
+      ),
+      child: const Icon(Icons.person, size: 45, color: primaryTeal),
     );
   }
 
@@ -308,6 +668,11 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'Contact Information', // title is set below
+                  style:
+                      TextStyle(), // placeholder to keep const use consistent
+                ),
                 Text(
                   title,
                   style: const TextStyle(
@@ -348,60 +713,232 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         children: [
           _buildInfoRow(Icons.email_outlined, 'Email', widget.email),
           const SizedBox(height: 16),
-          _buildInfoRow(
-              Icons.phone_outlined, 'Phone', widget.phone ?? 'Not provided'),
-          const SizedBox(height: 16),
-          _buildInfoRow(
-              Icons.location_on_outlined, 'Location', 'Veterinary Clinic'),
+          if (isEditMode)
+            _buildPhoneEditField()
+          else
+            _buildInfoRow(
+              Icons.phone_outlined,
+              'Phone',
+              widget.phone != null && widget.phone!.isNotEmpty
+                  ? widget.phone!
+                  : 'Not provided',
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildPermissionsSection() {
+  Widget _buildPhoneEditField() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: primaryTeal.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: primaryTeal.withOpacity(0.3)),
       ),
-      child: Column(
-        children: [
-          _buildAuthTile(
-            'Clinic Page',
-            'Access to clinic information',
-            Icons.local_hospital_rounded,
-            [primaryTeal, primaryBlue],
-            hasClinicAuthority,
-            (val) => setState(() => hasClinicAuthority = val!),
-          ),
-          Divider(height: 1, color: Colors.grey[300]),
-          _buildAuthTile(
-            'Appointments',
-            'Manage appointments',
-            Icons.calendar_month_rounded,
-            [primaryBlue, softBlue],
-            hasAppointmentsAuthority,
-            (val) => setState(() => hasAppointmentsAuthority = val!),
-          ),
-          Divider(height: 1, color: Colors.grey[300]),
-          _buildAuthTile(
-            'Messages',
-            'Access messaging system',
-            Icons.message_rounded,
-            [vetOrange, primaryTeal],
-            hasMessagesAuthority,
-            (val) => setState(() => hasMessagesAuthority = val!),
-          ),
+      child: TextFormField(
+        controller: phoneController,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(9),
         ],
+        decoration: InputDecoration(
+          labelText: 'Phone Number (Optional)',
+          labelStyle: const TextStyle(color: mediumGray, fontSize: 14),
+          hintText: '123456789',
+          helperText: 'Format: 09XXXXXXXXX',
+          helperStyle: const TextStyle(fontSize: 11),
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: primaryTeal.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child:
+                const Icon(Icons.phone_outlined, color: primaryTeal, size: 18),
+          ),
+          prefix: Container(
+            padding: const EdgeInsets.only(right: 4),
+            child: const Text(
+              '09',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: primaryBlue,
+              ),
+            ),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: false,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
+    );
+  }
+
+  Widget _buildPermissionsSection() {
+    if (isEditMode) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: primaryTeal.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildAuthSwitchTile(
+              'Clinic Page',
+              'Access to clinic information',
+              Icons.local_hospital_rounded,
+              [primaryTeal, primaryBlue],
+              hasClinicAuthority,
+              (val) {
+                setState(() {
+                  hasClinicAuthority = val ?? false;
+                  _checkForChanges();
+                });
+              },
+            ),
+            Divider(height: 1, color: Colors.grey[300]),
+            _buildAuthSwitchTile(
+              'Appointments',
+              'Manage appointments',
+              Icons.calendar_month_rounded,
+              [primaryBlue, softBlue],
+              hasAppointmentsAuthority,
+              (val) {
+                setState(() {
+                  hasAppointmentsAuthority = val ?? false;
+                  _checkForChanges();
+                });
+              },
+            ),
+            Divider(height: 1, color: Colors.grey[300]),
+            _buildAuthSwitchTile(
+              'Messages',
+              'Access messaging system',
+              Icons.message_rounded,
+              [vetOrange, primaryTeal],
+              hasMessagesAuthority,
+              (val) {
+                setState(() {
+                  hasMessagesAuthority = val ?? false;
+                  _checkForChanges();
+                });
+              },
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Display-only mode
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: lightGray,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2),
+        ),
+        child: Column(
+          children: [
+            _buildPermissionDisplayRow(
+              'Clinic Page',
+              Icons.local_hospital_rounded,
+              hasClinicAuthority,
+              primaryTeal,
+            ),
+            const SizedBox(height: 12),
+            _buildPermissionDisplayRow(
+              'Appointments',
+              Icons.calendar_month_rounded,
+              hasAppointmentsAuthority,
+              primaryBlue,
+            ),
+            const SizedBox(height: 12),
+            _buildPermissionDisplayRow(
+              'Messages',
+              Icons.message_rounded,
+              hasMessagesAuthority,
+              vetOrange,
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildPermissionDisplayRow(
+    String title,
+    IconData icon,
+    bool hasPermission,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: color),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: darkText,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: hasPermission
+                ? vetGreen.withOpacity(0.1)
+                : Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: hasPermission
+                  ? vetGreen.withOpacity(0.3)
+                  : Colors.grey.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                hasPermission ? Icons.check_circle : Icons.cancel,
+                size: 16,
+                color: hasPermission ? vetGreen : Colors.grey,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                hasPermission ? 'Granted' : 'Denied',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: hasPermission ? vetGreen : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -448,6 +985,53 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   }
 
   Widget _buildActionButtons(bool isWide) {
+    if (!isEditMode) {
+      // View mode buttons
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                color: mediumGray,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient:
+                  const LinearGradient(colors: [primaryTeal, primaryBlue]),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryTeal.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ElevatedButton.icon(
+              onPressed: _toggleEditMode,
+              icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+              label: const Text('Edit', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Edit mode buttons
     if (isWide) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -496,7 +1080,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
             Row(
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _toggleEditMode,
                   child: const Text(
                     'Close',
                     style: TextStyle(
@@ -508,19 +1092,19 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 const SizedBox(width: 16),
                 Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [primaryTeal, primaryBlue]),
+                    gradient:
+                        const LinearGradient(colors: [vetGreen, primaryTeal]),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryTeal.withOpacity(0.3),
+                        color: vetGreen.withOpacity(0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: ElevatedButton.icon(
-                    onPressed: _handleUpdate,
+                    onPressed: hasChanges ? _handleUpdate : null,
                     icon: const Icon(Icons.save_outlined,
                         size: 18, color: Colors.white),
                     label: const Text('Save Changes',
@@ -528,6 +1112,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
+                      disabledBackgroundColor: Colors.grey,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -540,6 +1125,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         ],
       );
     } else {
+      // Mobile layout
       return Column(
         children: [
           if (showDeleteConfirm) ...[
@@ -593,7 +1179,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _toggleEditMode,
                     child: const Text(
                       'Close',
                       style: TextStyle(
@@ -611,18 +1197,18 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               child: Container(
                 decoration: BoxDecoration(
                   gradient:
-                      const LinearGradient(colors: [primaryTeal, primaryBlue]),
+                      const LinearGradient(colors: [vetGreen, primaryTeal]),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryTeal.withOpacity(0.3),
+                      color: vetGreen.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: _handleUpdate,
+                  onPressed: hasChanges ? _handleUpdate : null,
                   icon: const Icon(Icons.save_outlined,
                       size: 18, color: Colors.white),
                   label: const Text('Save Changes',
@@ -630,6 +1216,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
+                    disabledBackgroundColor: Colors.grey,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
@@ -683,7 +1270,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     );
   }
 
-  Widget _buildAuthTile(
+  Widget _buildAuthSwitchTile(
     String title,
     String subtitle,
     IconData icon,
@@ -719,7 +1306,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         ),
       ),
       value: value,
-      onChanged: onChanged,
+      onChanged: (b) => onChanged(b),
       activeColor: colors.first,
       activeTrackColor: colors.first.withOpacity(0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
