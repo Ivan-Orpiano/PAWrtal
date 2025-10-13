@@ -289,9 +289,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.flip, color: Colors.white),
+                        icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
                         onPressed: () => _flipToView(CardView.back),
-                        tooltip: "Flip Card",
+                        tooltip: "More",
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.white),
@@ -361,8 +361,13 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => _flipToView(CardView.front),
+                    tooltip: "Back",
+                  ),
+                  const SizedBox(width: 8,),
                   const Text(
                     'Health Records',
                     style: TextStyle(
@@ -370,11 +375,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.flip, color: Colors.white),
-                    onPressed: () => _flipToView(CardView.front),
-                    tooltip: "Flip Card",
                   ),
                 ],
               ),
