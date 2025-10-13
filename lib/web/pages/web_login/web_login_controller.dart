@@ -138,8 +138,8 @@ class WebLoginController extends GetxController {
           print('>>> WARNING: Staff has no authorities!');
           await _getStorage.write("authorities", <String>[]);
         }
-      } else if (role == "user" || role == "customer") {
-        print('>>> Processing USER/CUSTOMER login...');
+      } else if (role == "user") {
+        print('>>> Processing USER login...');
         // No additional data needed for regular users
       }
 
@@ -158,7 +158,6 @@ class WebLoginController extends GetxController {
       print('>>> Navigating to home...');
       _navigateBasedOnRole(role);
 
-      WebErrorHandler.handleSuccess('Login successful');
 
       // Clear controllers
       _clearControllers();
@@ -254,19 +253,21 @@ class WebLoginController extends GetxController {
       case "staff":
         print('>>> -> adminHome');
         Get.offAllNamed(Routes.adminHome);
+        WebErrorHandler.handleSuccess('Login successful');
         break;
       case "developer":
         print('>>> -> superAdminHome');
         Get.offAllNamed(Routes.superAdminHome);
+        WebErrorHandler.handleSuccess('Login successful');
         break;
       case "user":
-      case "customer":
         print('>>> -> userHome');
         Get.offAllNamed(Routes.userHome);
+        WebErrorHandler.handleSuccess('Login successful');
         break;
       default:
         print('>>> ERROR: Invalid role');
-        WebErrorHandler.handleError('Invalid user role');
+        WebErrorHandler.handleError('No account detected');
         break;
     }
   }

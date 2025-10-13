@@ -148,9 +148,9 @@ class LoginController extends GetxController {
         }
       }
 
-      // Check if user (customer)
+      // Check if user
       if (!matched) {
-        print('>>> Step 3: Checking if CUSTOMER...');
+        print('>>> Step 3: Checking if User...');
         final userDoc = await authRepository.getUserById(userId);
         if (userDoc != null) {
           role = userDoc.data["role"];
@@ -178,7 +178,7 @@ class LoginController extends GetxController {
           await authRepository.logout(sessionId);
         }
         throw Exception(
-            "No role found for this account. Please contact support.");
+            "No account detected");
       }
 
       _getStorage.write("role", role);
