@@ -5,10 +5,15 @@ class Appointment {
   final String petId;
   final String service;
   final DateTime dateTime;
-  final String status; // pending, accepted, in_progress, completed, no_show, declined, cancelled
-  final String? notes;
+  final String status;
+  final String? notes; // User's original booking notes
   final DateTime createdAt;
   final DateTime updatedAt;
+  
+  // NEW: Cancellation/rejection tracking
+  final String? cancellationReason; // Why was it cancelled/declined
+  final String? cancelledBy; // 'user' or 'clinic'
+  final DateTime? cancelledAt; // When was it cancelled
   
   // Medical record fields
   final DateTime? checkedInAt;
@@ -19,9 +24,9 @@ class Appointment {
   final String? prescription;
   final String? vetNotes;
   final List<String>? attachments;
-  final double? totalCost;  // Keep but don't use
-  final bool isPaid;  // Keep but don't use
-  final String? paymentMethod;  // Keep but don't use
+  final double? totalCost;
+  final bool isPaid;
+  final String? paymentMethod;
   final String? followUpInstructions;
   final DateTime? nextAppointmentDate;
   final Map<String, dynamic>? vitals;
@@ -37,6 +42,9 @@ class Appointment {
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.cancellationReason,
+    this.cancelledBy,
+    this.cancelledAt,
     this.checkedInAt,
     this.serviceStartedAt,
     this.serviceCompletedAt,
@@ -66,6 +74,9 @@ class Appointment {
       notes: map['notes'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      cancellationReason: map['cancellationReason'],
+      cancelledBy: map['cancelledBy'],
+      cancelledAt: map['cancelledAt'] != null ? DateTime.parse(map['cancelledAt']) : null,
       checkedInAt: map['checkedInAt'] != null ? DateTime.parse(map['checkedInAt']) : null,
       serviceStartedAt: map['serviceStartedAt'] != null ? DateTime.parse(map['serviceStartedAt']) : null,
       serviceCompletedAt: map['serviceCompletedAt'] != null ? DateTime.parse(map['serviceCompletedAt']) : null,
@@ -94,6 +105,9 @@ class Appointment {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'cancellationReason': cancellationReason,
+      'cancelledBy': cancelledBy,
+      'cancelledAt': cancelledAt?.toIso8601String(),
       'checkedInAt': checkedInAt?.toIso8601String(),
       'serviceStartedAt': serviceStartedAt?.toIso8601String(),
       'serviceCompletedAt': serviceCompletedAt?.toIso8601String(),
@@ -122,6 +136,9 @@ class Appointment {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? cancellationReason,
+    String? cancelledBy,
+    DateTime? cancelledAt,
     DateTime? checkedInAt,
     DateTime? serviceStartedAt,
     DateTime? serviceCompletedAt,
@@ -148,6 +165,9 @@ class Appointment {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
+      cancelledBy: cancelledBy ?? this.cancelledBy,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
       checkedInAt: checkedInAt ?? this.checkedInAt,
       serviceStartedAt: serviceStartedAt ?? this.serviceStartedAt,
       serviceCompletedAt: serviceCompletedAt ?? this.serviceCompletedAt,
@@ -177,7 +197,10 @@ class Appointment {
   bool get hasServiceCompleted => serviceCompletedAt != null;
   bool get hasMedicalRecord => diagnosis != null || treatment != null || prescription != null;
 
-  // Check if appointment is today
+  // NEW: Check if cancelled by user
+  bool get isCancelledByUser => isCancelled && cancelledBy == 'user';
+  bool get isCancelledByClinic => (isCancelled || isDeclined) && cancelledBy == 'clinic';
+
   bool get isToday {
     final now = DateTime.now();
     return dateTime.year == now.year &&
@@ -185,7 +208,6 @@ class Appointment {
            dateTime.day == now.day;
   }
 
-  // Check if appointment is in the past
   bool get isPast {
     final now = DateTime.now();
     final appointmentDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
@@ -193,7 +215,6 @@ class Appointment {
     return appointmentDate.isBefore(today);
   }
 
-  // Get service duration
   Duration? get serviceDuration {
     if (serviceStartedAt != null && serviceCompletedAt != null) {
       return serviceCompletedAt!.difference(serviceStartedAt!);
@@ -201,7 +222,6 @@ class Appointment {
     return null;
   }
 
-  // Get waiting time
   Duration? get waitingTime {
     if (checkedInAt != null && serviceStartedAt != null) {
       return serviceStartedAt!.difference(checkedInAt!);

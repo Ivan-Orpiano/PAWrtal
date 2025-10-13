@@ -385,7 +385,7 @@ class EnhancedUserAppointmentTile extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              controller.cancelAppointment(appointment.documentId!);
+              controller.cancelPendingAppointment(appointment.documentId!);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Cancel Appointment', style: TextStyle(color: Colors.white)),
