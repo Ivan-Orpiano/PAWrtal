@@ -587,25 +587,25 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
         ),
         
         // Reschedule button for pending appointments
-        if (appointment.status == 'pending') ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showRescheduleDialog(context),
-              icon: const Icon(Icons.schedule),
-              label: const Text('Request Reschedule'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color.fromARGB(255, 81, 115, 153),
-                side: const BorderSide(color: Color.fromARGB(255, 81, 115, 153)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
+        // if (appointment.status == 'pending') ...[
+        //   const SizedBox(height: 12),
+        //   SizedBox(
+        //     width: double.infinity,
+        //     child: OutlinedButton.icon(
+        //       onPressed: () => _showRescheduleDialog(context),
+        //       icon: const Icon(Icons.schedule),
+        //       label: const Text('Request Reschedule'),
+        //       style: OutlinedButton.styleFrom(
+        //         foregroundColor: const Color.fromARGB(255, 81, 115, 153),
+        //         side: const BorderSide(color: Color.fromARGB(255, 81, 115, 153)),
+        //         padding: const EdgeInsets.symmetric(vertical: 16),
+        //         shape: RoundedRectangleBorder(
+        //           borderRadius: BorderRadius.circular(12),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ],
       ],
     );
   }
@@ -710,36 +710,36 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
     );
   }
 
-  void _showRescheduleDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Request Reschedule'),
-        content: const Text('Would you like to request a reschedule for this appointment? The clinic will be notified and will contact you with available time slots.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement reschedule request functionality
-              Get.snackbar(
-                'Request Sent',
-                'Your reschedule request has been sent to the clinic.',
-                backgroundColor: Colors.green,
-                colorText: Colors.white,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-            ),
-            child: const Text('Send Request', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showRescheduleDialog(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  //       title: const Text('Request Reschedule'),
+  //       content: const Text('Would you like to request a reschedule for this appointment? The clinic will be notified and will contact you with available time slots.'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () {
+  //             Navigator.pop(context);
+  //             // TODO: Implement reschedule request functionality
+  //             Get.snackbar(
+  //               'Request Sent',
+  //               'Your reschedule request has been sent to the clinic.',
+  //               backgroundColor: Colors.green,
+  //               colorText: Colors.white,
+  //             );
+  //           },
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+  //           ),
+  //           child: const Text('Send Request', style: TextStyle(color: Colors.white)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }
