@@ -1508,6 +1508,8 @@ class _EnhancedWebAppointmentsPageState
     double selectedRating = 0.0; // Changed from int to double
     final TextEditingController reviewController = TextEditingController();
     List<PlatformFile> selectedImages = [];
+    bool isHovering = false;
+    double hoverRating = 0.0;
 
     return StatefulBuilder(
       builder: (context, setState) {
@@ -1630,25 +1632,63 @@ class _EnhancedWebAppointmentsPageState
                         ),
                         const SizedBox(height: 16),
 
-                        // Visual star display
+                        // Interactive star display with hover
                         Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(5, (index) {
                               final starValue = index + 1;
-                              return Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                child: Icon(
-                                  selectedRating >= starValue
-                                      ? Icons.star
-                                      : (selectedRating >= starValue - 0.5
-                                          ? Icons.star_half
-                                          : Icons.star_border),
-                                  color: selectedRating >= starValue - 0.5
-                                      ? Colors.amber
-                                      : Colors.grey.shade400,
-                                  size: 40,
+                              return MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    // Full star click
+                                    setState(() {
+                                      selectedRating = starValue.toDouble();
+                                    });
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: Stack(
+                                      children: [
+                                        Icon(
+                                          selectedRating >= starValue
+                                              ? Icons.star
+                                              : (selectedRating >= starValue - 0.5
+                                                  ? Icons.star_half
+                                                  : Icons.star_border),
+                                          color: selectedRating >= starValue - 0.5
+                                              ? Colors.amber
+                                              : Colors.grey.shade400,
+                                          size: 40,
+                                        ),
+                                        // Left half - for half star
+                                        Positioned(
+                                          left: 0,
+                                          top: 0,
+                                          bottom: 0,
+                                          width: 20,
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            onEnter: (_) {
+                                              // Visual feedback on hover (optional)
+                                            },
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                // Half star click
+                                                setState(() {
+                                                  selectedRating = starValue - 0.5;
+                                                });
+                                              },
+                                              child: Container(
+                                                color: Colors.transparent,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               );
                             }),
@@ -1680,8 +1720,7 @@ class _EnhancedWebAppointmentsPageState
                               ),
                               if (selectedRating > 0)
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       '${selectedRating.toStringAsFixed(1)} stars',
@@ -1695,8 +1734,7 @@ class _EnhancedWebAppointmentsPageState
                                       _getRatingTextFromDouble(selectedRating),
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: _getRatingColorFromDouble(
-                                            selectedRating),
+                                        color: _getRatingColorFromDouble(selectedRating),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),

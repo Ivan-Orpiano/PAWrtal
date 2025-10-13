@@ -168,70 +168,25 @@ class _WebPetsPageState extends State<WebPetsPage> with TickerProviderStateMixin
   Widget _buildHeader() {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > tabletWidth;
-
-    // return Container(
-    //   decoration: BoxDecoration(
-    //     gradient: LinearGradient(
-    //       begin: Alignment.topLeft,
-    //       end: Alignment.bottomRight,
-    //       colors: [
-    //         Colors.white,
-    //         lightPetGreen.withOpacity(0.3),
-    //         Colors.white
-    //       ],
-    //     ),
-    //     boxShadow: [
-    //       BoxShadow(
-    //         color: primaryTeal.withOpacity(0.15),
-    //         blurRadius: 8,
-    //         offset: const Offset(0, 4),
-    //         spreadRadius: 1,
-    //       ),
-    //     ],
-    //   ),
-    //   child: Column(
-    //     children: [
-    //       // Title bar
-    //       Container(
-    //         padding: EdgeInsets.symmetric(
-    //           horizontal: isTablet ? 24 : 16,
-    //           vertical: 20,
-    //         ),
-    //         decoration: BoxDecoration(
-    //           gradient: LinearGradient(
-    //             begin: Alignment.topLeft,
-    //             end: Alignment.bottomRight,
-    //             colors: [
-    //               primaryBlue.withOpacity(0.08),
-    //               primaryTeal.withOpacity(0.12),
-    //               softBlue.withOpacity(0.06),
-    //             ],
-    //           ),
-    //         ),
-    //         child: _buildTitleSection(isTablet),
-    //       ),
-
-          // Search bar
-          return Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isTablet ? 24 : 16,
-              vertical: 18,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white.withOpacity(0.8),
-                  lightGray.withOpacity(0.5)
-                ],
-              ),
-            ),
-            child: _buildSearchBar(),
-          );
-    //     ],
-    //   ),
-    // );
+    
+    // Search bar
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 24 : 16,
+        vertical: 18,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withOpacity(0.8),
+            lightGray.withOpacity(0.5)
+          ],
+        ),
+      ),
+      child: _buildSearchBar(),
+    );
   }
 
   Widget _buildTitleSection(bool isTablet) {
