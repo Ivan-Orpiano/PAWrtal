@@ -639,23 +639,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Info Box
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: primaryBlue.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
                   // Password Field
                   TextField(
                     controller: passwordController,
@@ -1155,36 +1138,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Warning Box
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: vetOrange.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: vetOrange, size: 20),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Staff should change this password after first login',
-                            style: TextStyle(
-                              fontSize: 13,
-                              height: 1.3,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
                   // Actions
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -1524,6 +1477,9 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+        ],
         decoration: InputDecoration(
           labelText: label,
           labelStyle:
