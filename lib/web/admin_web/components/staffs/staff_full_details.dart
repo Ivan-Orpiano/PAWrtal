@@ -746,8 +746,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           labelText: 'Phone Number (Optional)',
           labelStyle: const TextStyle(color: mediumGray, fontSize: 14),
           hintText: '123456789',
-          helperText: 'Format: 09XXXXXXXXX',
-          helperStyle: const TextStyle(fontSize: 11),
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
