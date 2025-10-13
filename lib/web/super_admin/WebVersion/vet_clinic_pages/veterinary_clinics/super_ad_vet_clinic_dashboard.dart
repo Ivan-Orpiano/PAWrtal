@@ -42,32 +42,160 @@ class _SuperAdminVetClinicDashboardState
     super.dispose();
   }
 
-  void _setupRealtimeListeners() {
-    _clinicSubscription =
-        controller.authRepository.subscribeToClinicChanges().listen((event) {
-      print('Clinic event: ${event.events}');
+    void _setupRealtimeListeners() {
+        print('🔔 Setting up real-time listeners for clinic updates...');
+        
+        // Enhanced Clinic Changes Listener
+        _clinicSubscription = controller.authRepository
+            .subscribeToClinicChanges()
+            .listen((event) {
+          print('🔔 Clinic real-time event received');
+          print('   Events: ${event.events}');
+          print('   Payload ID: ${event.payload['\$id']}');
+          
+          final eventType = event.events.first;
+          
+          if (eventType.contains('.create')) {
+            print('✅ New clinic created - refreshing list');
+            _showRealTimeNotification(
+              'New clinic added',
+              Icons.add_business_rounded,
+              Colors.green,
+            );
+            controller.fetchAllClinics();
+          } else if (eventType.contains('.update')) {
+            print('🔄 Clinic updated - refreshing list');
+            
+            // Find the updated clinic name
+            final clinicName = event.payload['clinicName'] as String?;
+            _showRealTimeNotification(
+              'Clinic "${clinicName ?? 'Unknown'}" updated',
+              Icons.sync_rounded,
+              const Color.fromRGBO(81, 115, 153, 1),
+            );
+            controller.fetchAllClinics();
+          } else if (eventType.contains('.delete')) {
+            print('🗑️ Clinic deleted - refreshing list');
+            _showRealTimeNotification(
+              'Clinic removed',
+              Icons.delete_rounded,
+              Colors.red,
+            );
+            controller.fetchAllClinics();
+          }
+        }, onError: (error) {
+          print('❌ Clinic subscription error: $error');
+        });
 
-      if (event.events
-              .contains('databases.*.collections.*.documents.*.create') ||
-          event.events
-              .contains('databases.*.collections.*.documents.*.update') ||
-          event.events
-              .contains('databases.*.collections.*.documents.*.delete')) {
-        controller.fetchAllClinics();
+        // Enhanced Settings Changes Listener
+        _settingsSubscription = controller.authRepository
+            .subscribeToClinicSettingsChanges()
+            .listen((event) {
+          print('🔔 Settings real-time event received');
+          print('   Events: ${event.events}');
+          
+          final eventType = event.events.first;
+          
+          if (eventType.contains('.update')) {
+            print('🔄 Clinic settings updated - refreshing list');
+            
+            // Get clinic ID from payload
+            final clinicId = event.payload['clinicId'] as String?;
+            
+            if (clinicId != null) {
+              _showRealTimeNotification(
+                'Clinic settings updated',
+                Icons.settings_rounded,
+                Colors.orange,
+              );
+              controller.fetchAllClinics();
+            }
+          } else if (eventType.contains('.create')) {
+            print('✅ New clinic settings created - refreshing list');
+            controller.fetchAllClinics();
+          }
+        }, onError: (error) {
+          print('❌ Settings subscription error: $error');
+        });
+        
+        print('✅ Real-time listeners initialized successfully');
       }
-    });
 
-    _settingsSubscription = controller.authRepository
-        .subscribeToClinicSettingsChanges()
-        .listen((event) {
-      print('Settings event: ${event.events}');
-
-      if (event.events
-          .contains('databases.*.collections.*.documents.*.update')) {
-        controller.fetchAllClinics();
+      // Enhanced real-time notification with beautiful UI
+      void _showRealTimeNotification(String message, IconData icon, Color color) {
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      color: color,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Real-Time Update',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          message,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.wifi_tethering_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            backgroundColor: const Color.fromRGBO(81, 115, 153, 0.95),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+            elevation: 8,
+          ),
+        );
       }
-    });
-  }
+
 
   @override
   Widget build(BuildContext context) {
