@@ -27,7 +27,7 @@ class WebAppointmentTile extends StatelessWidget {
       case 'no_show':
         return Colors.red;
       case 'cancelled':
-        return Colors.grey; // Changed from red to gray to match mobile
+        return Colors.grey;
       default:
         return Colors.grey;
     }
@@ -107,15 +107,41 @@ class WebAppointmentTile extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    if (appointment.status == 'completed')
-                      // IconButton(
-                      //   onPressed: () {
-                      //     // Rating functionality can be added here
-                      //   },
-                      //   icon: const Icon(Icons.rate_review),
-                      //   color: Colors.amber,
-                      //   tooltip: 'Rate & Review',
-                      // ),
+                    
+                    // NEW: Show cancellation reason badge if cancelled
+                    if (appointment.isCancelled && appointment.cancellationReason != null) ...[
+                      Tooltip(
+                        message: appointment.cancellationReason!,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                appointment.cancelledBy == 'user' ? 'You cancelled' : 'Clinic cancelled',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    
                     Icon(
                       Icons.keyboard_arrow_right_rounded,
                       color: Colors.grey.shade400,
