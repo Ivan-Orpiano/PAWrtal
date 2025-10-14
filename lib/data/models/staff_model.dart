@@ -4,8 +4,8 @@ class Staff {
   String? createdBy;
   late String image;
   late String createdAt;
-  late String email; // Display email (can be changed with template)
-  late String authEmail; // CRITICAL: Authentication email (NEVER changes)
+  late String username; // NEW: Primary authentication field
+  late String email; // OPTIONAL: For display/contact only
   String? phone;
   late String role;
   String? documentId;
@@ -21,8 +21,8 @@ class Staff {
     this.createdBy,
     required this.image,
     required this.createdAt,
-    required this.email,
-    required this.authEmail, // Authentication email
+    required this.username, // NEW: Required field
+    String? email, // OPTIONAL: Made optional
     this.phone,
     required this.role,
     this.documentId,
@@ -31,7 +31,8 @@ class Staff {
     required this.authorities,
     this.isActive = true,
     String? updatedAt,
-  }) : updatedAt = updatedAt ?? DateTime.now().toIso8601String();
+  })  : email = email ?? '', // Default to empty string if not provided
+        updatedAt = updatedAt ?? DateTime.now().toIso8601String();
 
   Staff.fromMap(Map<String, dynamic> map) {
     name = map["name"] ?? 'Unknown';
@@ -39,9 +40,8 @@ class Staff {
     createdBy = map["createdBy"]?.toString() ?? 'Unknown';
     image = map["image"] ?? '';
     createdAt = map["createdAt"] ?? '';
-    email = map["email"] ?? '';
-    // CRITICAL: Use authEmail if available, otherwise fallback to email
-    authEmail = map["authEmail"] ?? map["email"] ?? '';
+    username = map["username"] ?? ''; // NEW: Parse username
+    email = map["email"] ?? ''; // Optional contact email
     phone = map["phone"];
     role = map["role"] ?? 'staff';
     documentId = map["\$id"] ?? '';
@@ -59,8 +59,8 @@ class Staff {
       "createdBy": createdBy ?? 'Unknown',
       "image": image,
       "createdAt": createdAt,
-      "email": email, // Display email
-      "authEmail": authEmail, // Authentication email (never changes)
+      "username": username, // NEW: Include username
+      "email": email, // Optional contact email
       "phone": phone,
       "role": role,
       "clinicId": clinicId,
@@ -77,8 +77,8 @@ class Staff {
     String? createdBy,
     String? image,
     String? createdAt,
+    String? username, // NEW: Add to copyWith
     String? email,
-    String? authEmail,
     String? phone,
     String? role,
     String? documentId,
@@ -94,8 +94,8 @@ class Staff {
       createdBy: createdBy ?? this.createdBy,
       image: image ?? this.image,
       createdAt: createdAt ?? this.createdAt,
+      username: username ?? this.username, // NEW: Include username
       email: email ?? this.email,
-      authEmail: authEmail ?? this.authEmail,
       phone: phone ?? this.phone,
       role: role ?? this.role,
       documentId: documentId ?? this.documentId,

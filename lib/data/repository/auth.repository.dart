@@ -406,26 +406,29 @@ class AuthRepository {
 
   // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
+  // MODIFIED: Create staff account with username
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
-    required String email,
+    required String username, // NEW: Username instead of email
     required String password,
     required String clinicId,
     required List<String> authorities,
     String? department,
     String? image,
     String? phone,
+    String? email, // OPTIONAL: For display/contact
     String? createdBy,
   }) {
     return appWriteProvider.createStaffAccount(
       name: name,
-      email: email,
+      username: username, // Pass username
       password: password,
       clinicId: clinicId,
       authorities: authorities,
       department: department,
       image: image,
       phone: phone,
+      email: email, // Pass optional email
       createdBy: createdBy,
     );
   }
@@ -458,24 +461,24 @@ class AuthRepository {
     return null;
   }
 
-  /// NEW: Get staff by email (fallback method)
-  Future<Staff?> getStaffByEmail(String email) async {
-    print('>>> AUTH REPO: Getting staff by email: $email');
+  // RENAMED: getStaffByEmail -> getStaffByUsername
+  Future<Staff?> getStaffByUsername(String username) async {
+    print('>>> AUTH REPO: Getting staff by username: $username');
 
-    final doc = await appWriteProvider.getStaffByEmail(email);
+    final doc = await appWriteProvider.getStaffByUsername(username);
     if (doc != null) {
       final staff = Staff.fromMap(doc.data);
       staff.documentId = doc.$id;
 
-      print('>>> AUTH REPO: Staff found by email');
+      print('>>> AUTH REPO: Staff found by username');
       print('>>> Staff Role: ${staff.role}');
       print('>>> Staff Name: ${staff.name}');
-      print('>>> Staff UserId: ${staff.userId}');
+      print('>>> Staff Username: ${staff.username}');
 
       return staff;
     }
 
-    print('>>> AUTH REPO: No staff found by email');
+    print('>>> AUTH REPO: No staff found by username');
     return null;
   }
 
@@ -500,6 +503,7 @@ class AuthRepository {
     String? name,
     String? department,
     String? image,
+    String? email,
     String? phone, // Add this
     List<String>? authorities,
   }) async {
@@ -521,26 +525,9 @@ class AuthRepository {
     return appWriteProvider.deleteStaffAccount(staffDocumentId);
   }
 
-  Future<void> updateClinicSettingsEmailTemplate(
-    String clinicSettingsDocumentId,
-    String newTemplate,
-  ) async {
-    await appWriteProvider.updateClinicSettingsEmailTemplate(
-      clinicSettingsDocumentId,
-      newTemplate,
-    );
-  }
-
-  Future<void> updateAllStaffEmailsForClinic(
-    String clinicId,
-    String newTemplate,
-  ) {
-    return appWriteProvider.updateAllStaffEmailsForClinic(
-        clinicId, newTemplate);
-  }
-
-  Future<Map<String, dynamic>> staffLogin(String email, String password) {
-    return appWriteProvider.staffLogin(email, password);
+  // MODIFIED: Staff login with username
+  Future<Map<String, dynamic>> staffLogin(String username, String password) {
+    return appWriteProvider.staffLogin(username, password);
   }
 
   Future<bool> checkStaffAuthority(String userId, String authority) {

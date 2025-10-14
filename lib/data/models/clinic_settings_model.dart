@@ -15,7 +15,7 @@ class ClinicSettings {
   late bool autoAcceptAppointments;
   late String createdAt;
   late String updatedAt;
-  late String staffEmailTemplate;
+  // REMOVED: staffEmailTemplate field completely
 
   ClinicSettings({
     this.documentId,
@@ -32,13 +32,11 @@ class ClinicSettings {
     this.autoAcceptAppointments = false,
     String? createdAt,
     String? updatedAt,
-    String? staffEmailTemplate,
   })  : operatingHours = operatingHours ?? _getDefaultOperatingHours(),
         gallery = gallery ?? [],
         services = services ?? [],
         createdAt = createdAt ?? DateTime.now().toIso8601String(),
-        updatedAt = updatedAt ?? DateTime.now().toIso8601String(),
-        staffEmailTemplate = staffEmailTemplate ?? '@clinic.vet';
+        updatedAt = updatedAt ?? DateTime.now().toIso8601String();
 
   static Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
     return {
@@ -68,7 +66,6 @@ class ClinicSettings {
       autoAcceptAppointments: map['autoAcceptAppointments'] ?? false,
       createdAt: map['createdAt'] ?? DateTime.now().toIso8601String(),
       updatedAt: map['updatedAt'] ?? DateTime.now().toIso8601String(),
-      staffEmailTemplate: map['staffEmailTemplate'] ?? '@clinic.vet',
     );
   }
 
@@ -129,69 +126,43 @@ class ClinicSettings {
       'autoAcceptAppointments': autoAcceptAppointments,
       'createdAt': createdAt,
       'updatedAt': DateTime.now().toIso8601String(),
-      'staffEmailTemplate': staffEmailTemplate,
     };
   }
 
-  // ========== STAFF EMAIL TEMPLATE METHODS ==========
+  // ========== HELPER METHODS (UNCHANGED) ==========
 
-  String generateStaffEmail(String staffName) {
-    final cleanName = staffName
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .replaceAll(' ', '.');
-
-    if (staffEmailTemplate.startsWith('@')) {
-      return '$cleanName$staffEmailTemplate';
-    }
-
-    return staffEmailTemplate.replaceAll('{name}', cleanName);
-  }
-
-  static bool isValidEmailTemplate(String template) {
-    return template.contains('@') &&
-        template.split('@').length == 2 &&
-        template.split('@')[1].isNotEmpty;
-  }
-
-  // ========== EXISTING HELPER METHODS (UPDATED) ==========
-
-  /// Check if clinic is open on today's day of week
   bool isOpenToday() {
     final today = DateTime.now().weekday;
     final dayName = _getDayName(today);
     return operatingHours[dayName]?['isOpen'] ?? false;
   }
 
-  /// NEW: Check if clinic is currently open (considering both day AND time)
   bool isOpenNow() {
-    // First check if clinic is generally accepting appointments
     if (!isOpen) return false;
-    
+
     final now = DateTime.now();
     final dayName = _getDayName(now.weekday);
     final dayHours = operatingHours[dayName];
-    
-    // Check if clinic is open on this day
+
     if (dayHours?['isOpen'] != true) return false;
-    
-    // Parse operating hours
+
     try {
       final openTime = dayHours?['openTime'] as String;
       final closeTime = dayHours?['closeTime'] as String;
-      
+
       final openParts = openTime.split(':');
       final closeParts = closeTime.split(':');
-      
+
       final openHour = int.parse(openParts[0]);
       final openMinute = int.parse(openParts[1]);
       final closeHour = int.parse(closeParts[0]);
       final closeMinute = int.parse(closeParts[1]);
-      
-      final openDateTime = DateTime(now.year, now.month, now.day, openHour, openMinute);
-      final closeDateTime = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
-      
-      // Check if current time is within operating hours
+
+      final openDateTime =
+          DateTime(now.year, now.month, now.day, openHour, openMinute);
+      final closeDateTime =
+          DateTime(now.year, now.month, now.day, closeHour, closeMinute);
+
       return now.isAfter(openDateTime) && now.isBefore(closeDateTime);
     } catch (e) {
       print('Error parsing operating hours: $e');
@@ -210,12 +181,10 @@ class ClinicSettings {
     return 'Closed';
   }
 
-  /// NEW: Get current status with more detail
   String getDetailedStatus() {
     if (!isOpen) return 'Closed for appointments';
     if (!isOpenToday()) return 'Closed today';
     if (!isOpenNow()) {
-      // Clinic is open today but outside operating hours
       final today = DateTime.now().weekday;
       final dayName = _getDayName(today);
       final dayHours = operatingHours[dayName];
@@ -325,7 +294,6 @@ class ClinicSettings {
     bool? autoAcceptAppointments,
     String? createdAt,
     String? updatedAt,
-    String? staffEmailTemplate,
   }) {
     return ClinicSettings(
       documentId: documentId ?? this.documentId,
@@ -343,7 +311,6 @@ class ClinicSettings {
           autoAcceptAppointments ?? this.autoAcceptAppointments,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      staffEmailTemplate: staffEmailTemplate ?? this.staffEmailTemplate,
     );
   }
 }

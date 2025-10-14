@@ -61,20 +61,30 @@ class _StaffTileState extends State<StaffTile>
       imageBytes = null;
     }
 
+    // Debug: Check what fields are available
+    print('>>> Staff data available:');
+    print('>>> Name: ${widget.staff.name}');
+    print('>>> Username: ${widget.staff.username}');
+    print('>>> Has phone: ${widget.staff.phone}');
+
+    // Get email safely - it might be empty string or null
+    final staffEmail = widget.staff.email;
+    print('>>> Email: $staffEmail');
+
     showDialog(
       context: context,
       builder: (_) => StaffFullDetails(
         staffName: widget.staff.name,
-        email: widget.staff.email,
+        username: widget.staff.username,
         phone: widget.staff.phone,
+        email: staffEmail.isNotEmpty ? staffEmail : null, // Pass null if empty
         initialAuthorities: widget.staff.authorities,
         onAuthoritiesUpdated: widget.onUpdate,
         onRemove: widget.onRemove,
         imageBytes: imageBytes,
         staffDocumentId: widget.staff.documentId!,
-        currentImageUrl: widget.staff.image.isNotEmpty
-            ? widget.staff.image
-            : null, // Pass the current image URL
+        currentImageUrl:
+            widget.staff.image.isNotEmpty ? widget.staff.image : null,
       ),
     );
   }
@@ -248,217 +258,151 @@ class _StaffTileState extends State<StaffTile>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 20),
 
-                        // Email
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                mediumGray.withOpacity(0.1),
-                                lightVetGreen.withOpacity(0.2),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            widget.staff.email,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: mediumGray,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-
-                        // Phone (if available)
-                        if (widget.staff.phone != null &&
-                            widget.staff.phone!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                        // Permissions Preview (BIGGER SECTION)
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                                 colors: [
-                                  vetOrange.withOpacity(0.1),
-                                  primaryBlue.withOpacity(0.1),
+                                  lightGray,
+                                  lightVetGreen.withOpacity(0.3),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: primaryTeal.withOpacity(0.2)),
                             ),
-                            child: Row(
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.phone, size: 10, color: vetOrange),
-                                const SizedBox(width: 4),
-                                Text(
-                                  widget.staff.phone!,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: darkText,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: 14),
-
-                        // Permissions Preview
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                lightGray,
-                                lightVetGreen.withOpacity(0.3),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border:
-                                Border.all(color: primaryTeal.withOpacity(0.2)),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          primaryTeal.withOpacity(0.2),
-                                          primaryBlue.withOpacity(0.1),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Icon(Icons.security,
-                                        size: 12, color: primaryTeal),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Text(
-                                    'Permissions',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: darkText,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              if (widget.staff.authorities.isEmpty)
-                                Text(
-                                  'No permissions assigned',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey[500],
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                )
-                              else
-                                Wrap(
-                                  spacing: 4,
-                                  runSpacing: 4,
-                                  alignment: WrapAlignment.center,
-                                  children: widget.staff.authorities
-                                      .take(4)
-                                      .map((auth) {
-                                    IconData icon;
-                                    List<Color> colors;
-                                    switch (auth) {
-                                      case 'Clinic':
-                                        icon = Icons.local_hospital;
-                                        colors = [primaryTeal, primaryBlue];
-                                        break;
-                                      case 'Appointments':
-                                        icon = Icons.calendar_month;
-                                        colors = [primaryBlue, softBlue];
-                                        break;
-                                      case 'Messages':
-                                        icon = Icons.message;
-                                        colors = [vetOrange, primaryTeal];
-                                        break;
-                                      default:
-                                        icon = Icons.check_circle;
-                                        colors = [mediumGray, mediumGray];
-                                    }
-
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(3),
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            colors.first.withOpacity(0.2),
-                                            colors.last.withOpacity(0.1),
+                                            primaryTeal.withOpacity(0.2),
+                                            primaryBlue.withOpacity(0.1),
                                           ],
                                         ),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                            color:
-                                                colors.first.withOpacity(0.3)),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(icon,
-                                              size: 10, color: colors.first),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            auth.length > 8
-                                                ? '${auth.substring(0, 6)}...'
-                                                : auth,
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              color: colors.first,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              if (widget.staff.authorities.length > 4)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.grey[200]!,
-                                          lightVetGreen.withOpacity(0.3),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
+                                      child: const Icon(Icons.security,
+                                          size: 12, color: primaryTeal),
                                     ),
-                                    child: Text(
-                                      '+${widget.staff.authorities.length - 4} more',
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        color: mediumGray,
-                                        fontStyle: FontStyle.italic,
-                                        fontWeight: FontWeight.w600,
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'Permissions',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: darkText,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                if (widget.staff.authorities.isEmpty)
+                                  Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        'No permissions assigned',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[500],
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        children: widget.staff.authorities
+                                            .map((auth) {
+                                          IconData icon;
+                                          List<Color> colors;
+                                          switch (auth) {
+                                            case 'Clinic':
+                                              icon = Icons.local_hospital;
+                                              colors = [
+                                                primaryTeal,
+                                                primaryBlue
+                                              ];
+                                              break;
+                                            case 'Appointments':
+                                              icon = Icons.calendar_month;
+                                              colors = [primaryBlue, softBlue];
+                                              break;
+                                            case 'Messages':
+                                              icon = Icons.message;
+                                              colors = [vetOrange, primaryTeal];
+                                              break;
+                                            default:
+                                              icon = Icons.check_circle;
+                                              colors = [mediumGray, mediumGray];
+                                          }
+
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 6),
+                                            child: Container(
+                                              width: double.infinity,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6),
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    colors.first
+                                                        .withOpacity(0.2),
+                                                    colors.last
+                                                        .withOpacity(0.1),
+                                                  ],
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                    color: colors.first
+                                                        .withOpacity(0.3)),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(icon,
+                                                      size: 12,
+                                                      color: colors.first),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    auth,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: colors.first,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],

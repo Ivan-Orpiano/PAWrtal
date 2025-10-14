@@ -1278,21 +1278,22 @@ class AppWriteProvider {
 
   // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
-  /// CRITICAL FIX: Staff account creation without session conflicts
+  // REPLACE createStaffAccount METHOD:
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
-    required String email,
+    required String username,
     required String password,
     required String clinicId,
     required List<String> authorities,
     String? department,
     String? image,
     String? phone,
+    String? email,
     String? createdBy,
   }) async {
     try {
       print('>>> ============================================');
-      print('>>> STAFF ACCOUNT CREATION START');
+      print('>>> STAFF ACCOUNT CREATION START (USERNAME ONLY)');
       print('>>> ============================================');
 
       // Store current admin session
@@ -1300,16 +1301,26 @@ class AppWriteProvider {
       final currentSession = await account!.getSession(sessionId: 'current');
       print('>>> Current admin session: ${currentSession.$id}');
 
-      print('>>> Step 1: Creating Appwrite auth user...');
-      // This creates the user but doesn't create a session
+      print('>>> Step 1: Creating Appwrite auth user with username...');
+
+      // Create user with username and password ONLY
+      // Appwrite will handle username-based authentication internally
       final authUser = await account!.create(
         userId: ID.unique(),
-        email: email, // This is the AUTHENTICATION email (permanent)
+        email:
+            '$username@${AppwriteConstants.projectID}.internal', // Required by Appwrite but hidden
         password: password,
         name: name,
       );
+
+      // IMPORTANT: Update user preferences to set username
+      await account!.updatePrefs(prefs: {
+        'username': username,
+        'isStaff': true,
+      });
+
       print('>>> Auth user created: ${authUser.$id}');
-      print('>>> Auth email (permanent): ${authUser.email}');
+      print('>>> Username set in preferences: $username');
 
       // Verify admin session is still active
       final verifySession = await account!.get();
@@ -1320,8 +1331,8 @@ class AppWriteProvider {
       final staffData = {
         'userId': authUser.$id,
         'name': name,
-        'email': email, // Display email (can be changed)
-        'authEmail': email, // CRITICAL: Authentication email (NEVER changes)
+        'username': username,
+        'email': email ?? '',
         'phone': phone ?? '',
         'clinicId': clinicId,
         'authorities': authorities,
@@ -1335,8 +1346,8 @@ class AppWriteProvider {
       };
 
       print('>>> Staff data:');
-      print('>>> - Display email: ${staffData['email']}');
-      print('>>> - Auth email: ${staffData['authEmail']}');
+      print('>>> - Username: ${staffData['username']}');
+      print('>>> - Contact email: ${staffData['email']}');
       print('>>> - Role: ${staffData['role']}');
 
       final staffDoc = await databases!.createDocument(
@@ -1366,79 +1377,6 @@ class AppWriteProvider {
       print('>>> ============================================');
       print('>>> STAFF ACCOUNT CREATION ERROR: $e');
       print('>>> ============================================');
-      rethrow;
-    }
-  }
-
-  /// CRITICAL FIX: Update ONLY display emails, NOT authentication emails
-  Future<void> updateAllStaffEmailsForClinic(
-    String clinicId,
-    String newTemplate,
-  ) async {
-    try {
-      print('>>> ============================================');
-      print('>>> UPDATING STAFF DISPLAY EMAILS');
-      print('>>> New template: $newTemplate');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
-
-      final staffList = await getClinicStaff(clinicId);
-      print('>>> Found ${staffList.length} staff members to update');
-
-      int successCount = 0;
-      int errorCount = 0;
-
-      for (var staffDoc in staffList) {
-        try {
-          final staffName = staffDoc.data['name'] as String;
-          final authEmail = staffDoc.data['authEmail'] as String? ??
-              staffDoc.data['email'] as String;
-
-          // Generate new DISPLAY email using template
-          final cleanName = staffName
-              .toLowerCase()
-              .replaceAll(RegExp(r'[^a-z0-9]'), '')
-              .replaceAll(' ', '.');
-
-          String newDisplayEmail;
-          if (newTemplate.startsWith('@')) {
-            newDisplayEmail = '$cleanName$newTemplate';
-          } else {
-            newDisplayEmail = newTemplate.replaceAll('{name}', cleanName);
-          }
-
-          print('>>> Updating staff: ${staffDoc.$id}');
-          print('>>>   - Name: $staffName');
-          print('>>>   - Auth Email (permanent): $authEmail');
-          print('>>>   - New Display Email: $newDisplayEmail');
-
-          // CRITICAL: Update display email only, keep authEmail unchanged
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.staffCollectionID,
-            documentId: staffDoc.$id,
-            data: {
-              'email': newDisplayEmail, // Update display email
-              'authEmail': authEmail, // KEEP authentication email unchanged
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
-
-          successCount++;
-          print('>>> ✓ Successfully updated');
-        } catch (e) {
-          errorCount++;
-          print('>>> ✗ Error updating ${staffDoc.$id}: $e');
-        }
-      }
-
-      print('>>> ============================================');
-      print('>>> UPDATE COMPLETE');
-      print('>>> Success: $successCount');
-      print('>>> Errors: $errorCount');
-      print('>>> ============================================');
-    } catch (e) {
-      print('>>> CRITICAL ERROR updating staff emails: $e');
       rethrow;
     }
   }
@@ -1502,42 +1440,42 @@ class AppWriteProvider {
     }
   }
 
-  /// NEW: Get staff by email (fallback method when userId doesn't match)
-  Future<Document?> getStaffByEmail(String email) async {
+  // RENAMED: getStaffByEmail -> getStaffByUsername
+  Future<Document?> getStaffByUsername(String username) async {
     try {
       print('>>> ==========================================');
-      print('>>> GET STAFF BY EMAIL');
-      print('>>> Email: $email');
+      print('>>> GET STAFF BY USERNAME');
+      print('>>> Username: $username');
 
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         queries: [
-          Query.equal('email', email),
+          Query.equal('username', username),
           Query.equal('isActive', true),
         ],
       );
 
       if (result.documents.isEmpty) {
-        print('>>> No staff found for email: $email');
+        print('>>> No staff found for username: $username');
         print('>>> ==========================================');
         return null;
       }
 
       final doc = result.documents.first;
 
-      print('>>> Staff found by email!');
+      print('>>> Staff found by username!');
       print('>>> Document ID: ${doc.$id}');
       print('>>> Name: ${doc.data['name']}');
       print('>>> UserId in DB: ${doc.data['userId']}');
-      print('>>> Email: ${doc.data['email']}');
+      print('>>> Username: ${doc.data['username']}');
       print('>>> Role: ${doc.data['role']}');
       print('>>> Clinic ID: ${doc.data['clinicId']}');
       print('>>> ==========================================');
 
       return doc;
     } catch (e) {
-      print('>>> Error getting staff by email: $e');
+      print('>>> Error getting staff by username: $e');
       print('>>> ==========================================');
       return null;
     }
@@ -1587,12 +1525,12 @@ class AppWriteProvider {
     }
   }
 
-  /// MIGRATION: Add authEmail to existing staff records
+  // MODIFIED: Migration for existing staff records
   Future<void> migrateExistingStaffRecords() async {
     try {
       print('>>> ============================================');
       print('>>> MIGRATING STAFF RECORDS');
-      print('>>> Adding authEmail field to existing records');
+      print('>>> Adding username field to existing records');
       print('>>> ============================================');
 
       final result = await databases!.listDocuments(
@@ -1605,8 +1543,9 @@ class AppWriteProvider {
       for (var doc in result.documents) {
         try {
           final currentRole = doc.data['role'];
-          final currentAuthEmail = doc.data['authEmail'];
+          final currentUsername = doc.data['username'];
           final email = doc.data['email'];
+          final name = doc.data['name'];
 
           // If role is missing, add it
           if (currentRole == null || currentRole.isEmpty) {
@@ -1625,17 +1564,32 @@ class AppWriteProvider {
             );
           }
 
-          // CRITICAL: If authEmail is missing, set it to current email
-          if (currentAuthEmail == null || currentAuthEmail.isEmpty) {
+          // CRITICAL: If username is missing, generate one from name or email
+          if (currentUsername == null || currentUsername.isEmpty) {
             print('>>> Updating staff: ${doc.data['name']}');
-            print('>>>   - Adding authEmail field: $email');
+
+            // Generate username from name or email
+            String generatedUsername;
+            if (name != null && name.isNotEmpty) {
+              generatedUsername = name
+                  .toString()
+                  .toLowerCase()
+                  .replaceAll(RegExp(r'[^a-z0-9]'), '')
+                  .replaceAll(' ', '.');
+            } else if (email != null && email.isNotEmpty) {
+              generatedUsername = email.toString().split('@')[0];
+            } else {
+              generatedUsername = 'staff${doc.$id.substring(0, 8)}';
+            }
+
+            print('>>>   - Adding username field: $generatedUsername');
 
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId: AppwriteConstants.staffCollectionID,
               documentId: doc.$id,
               data: {
-                'authEmail': email, // Set authEmail to current email
+                'username': generatedUsername,
                 'updatedAt': DateTime.now().toIso8601String(),
               },
             );
@@ -1643,7 +1597,7 @@ class AppWriteProvider {
             print('>>>   ✓ Migration successful');
           } else {
             print(
-                '>>> Staff already has authEmail: ${doc.data['name']} - $currentAuthEmail');
+                '>>> Staff already has username: ${doc.data['name']} - $currentUsername');
           }
         } catch (e) {
           print('>>> Error updating staff ${doc.$id}: $e');
@@ -1715,45 +1669,25 @@ class AppWriteProvider {
     }
   }
 
-  Future<Document> updateClinicSettingsEmailTemplate(
-    String clinicSettingsDocumentId,
-    String newTemplate,
-  ) async {
-    try {
-      return await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicSettingsCollectionID,
-        documentId: clinicSettingsDocumentId,
-        data: {
-          'staffEmailTemplate': newTemplate,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-      );
-    } catch (e) {
-      print('Error updating email template: $e');
-      rethrow;
-    }
-  }
-
-  /// CRITICAL FIX: Check staff using authEmail (authentication email)
-  Future<Map<String, dynamic>> checkIfStaffAccount(String email) async {
+  // UPDATE checkIfStaffAccount METHOD to be more robust:
+  Future<Map<String, dynamic>> checkIfStaffAccount(String username) async {
     try {
       print('>>> ============================================');
       print('>>> CHECKING STAFF ACCOUNT');
-      print('>>> Login email: $email');
+      print('>>> Login username: $username');
       print('>>> ============================================');
 
-      // CRITICAL: Check using authEmail field (authentication email)
+      // Check using username field in database
       final staffResult = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         queries: [
-          Query.equal('authEmail', email), // Use authEmail for authentication
+          Query.equal('username', username),
         ],
       );
 
       if (staffResult.documents.isEmpty) {
-        print('>>> No staff found with authEmail: $email');
+        print('>>> No staff found with username: $username');
         return {'isStaff': false};
       }
 
@@ -1762,14 +1696,11 @@ class AppWriteProvider {
       final role = staffDoc.data['role'] ?? 'staff';
       final clinicId = staffDoc.data['clinicId'] ?? '';
       final authorities = staffDoc.data['authorities'] ?? [];
-      final displayEmail = staffDoc.data['email'] ?? email;
-      final authEmail = staffDoc.data['authEmail'] ?? email;
 
       print('>>> ============================================');
       print('>>> STAFF FOUND!');
       print('>>> Staff Document ID: ${staffDoc.$id}');
-      print('>>> Display Email: $displayEmail');
-      print('>>> Auth Email: $authEmail');
+      print('>>> Username: $username');
       print('>>> Is active: $isActive');
       print('>>> Role: $role');
       print('>>> Clinic ID: $clinicId');
@@ -1790,17 +1721,18 @@ class AppWriteProvider {
     }
   }
 
-  /// Enhanced staff login using authEmail
-  Future<Map<String, dynamic>> staffLogin(String email, String password) async {
+  // REPLACE staffLogin METHOD:
+  Future<Map<String, dynamic>> staffLogin(
+      String username, String password) async {
     try {
       print('>>> ============================================');
-      print('>>> STAFF LOGIN START');
+      print('>>> STAFF LOGIN START (USERNAME ONLY)');
       print('>>> ============================================');
-      print('>>> Login email: $email');
+      print('>>> Login username: $username');
 
-      // Step 1: Check if staff account exists using authEmail
+      // Step 1: Check if staff account exists using username
       print('>>> Step 1: Checking staff account...');
-      final staffCheck = await checkIfStaffAccount(email);
+      final staffCheck = await checkIfStaffAccount(username);
 
       if (staffCheck['isStaff'] != true) {
         print('>>> ERROR: Not a staff account');
@@ -1822,10 +1754,17 @@ class AppWriteProvider {
 
       print('>>> Step 2: Staff account confirmed and active');
 
-      // Step 2: Create session using authentication email
-      print('>>> Step 3: Creating Appwrite session...');
+      // Step 3: Get the auth user ID from staff record
+      final staffDoc = staffCheck['staffDoc'];
+      final authUserId = staffDoc.data['userId'];
+
+      print('>>> Step 3: Creating session with username...');
+
+      // Use the internal email format that was created during registration
+      final internalEmail = '$username@${AppwriteConstants.projectID}.internal';
+
       final session = await account!.createEmailPasswordSession(
-        email: email, // Use the authentication email
+        email: internalEmail,
         password: password,
       );
       print('>>> Session created successfully: ${session.$id}');
@@ -1833,17 +1772,17 @@ class AppWriteProvider {
       final user = await account!.get();
       print('>>> User retrieved: ${user.$id}');
 
-      final staffDoc = staffCheck['staffDoc'];
       final role = staffCheck['role'] ?? 'staff';
       final clinicId = staffCheck['clinicId'] ?? '';
       final authorities = staffCheck['authorities'] ?? [];
 
       print('>>> ============================================');
       print('>>> STAFF LOGIN DATA:');
+      print('>>> Username: $username');
       print('>>> Role: $role');
       print('>>> Clinic ID: $clinicId');
       print('>>> Authorities: $authorities');
-      print('>>> Staff Doc ID: ${staffDoc?.$id}');
+      print('>>> Staff Doc ID: ${staffDoc.$id}');
       print('>>> ============================================');
 
       return {
@@ -1855,7 +1794,7 @@ class AppWriteProvider {
         'clinicId': clinicId,
         'staffDoc': staffDoc,
         'authorities': authorities,
-        'staffDocumentId': staffDoc?.$id ?? '',
+        'staffDocumentId': staffDoc.$id,
         'message': 'Staff login successful',
       };
     } catch (e) {
@@ -1866,7 +1805,7 @@ class AppWriteProvider {
       return {
         'success': false,
         'isStaff': true,
-        'message': 'Authentication failed: ${e.toString()}',
+        'message': 'Invalid username or password',
       };
     }
   }
