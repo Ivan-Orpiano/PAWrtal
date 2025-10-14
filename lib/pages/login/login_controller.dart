@@ -29,6 +29,9 @@ class LoginController extends GetxController {
   // Observable for error message
   final errorMessage = ''.obs;
 
+  // NEW: Observable for Google Sign-In loading
+  final isGoogleLoading = false.obs;
+
   @override
   void onClose() {
     super.onClose();

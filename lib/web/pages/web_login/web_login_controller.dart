@@ -26,6 +26,9 @@ class WebLoginController extends GetxController {
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
   final errorMessage = ''.obs; // NEW: For unified error messages
+  final isGoogleLoading = false.obs;
+
+  final AppWriteProvider _appWriteProvider = AppWriteProvider();
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
@@ -227,8 +230,10 @@ class WebLoginController extends GetxController {
   }
 
   Future<void> signInWithGoogle() async {
+    if (isLoading.value || isGoogleLoading.value) return;
+
     try {
-      isLoading.value = true;
+      isGoogleLoading.value = true;
 
       // CRITICAL FIX: Clear existing controllers before Google sign-in
       _clearExistingControllers();

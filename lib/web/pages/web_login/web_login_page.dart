@@ -303,7 +303,13 @@ class WebLoginPage extends GetView<WebLoginController> {
                                               text: "Sign In",
                                               isLoading:
                                                   controller.isLoading.value,
-                                              onPressed: controller.signIn,
+                                              onPressed:
+                                                  controller.isLoading.value ||
+                                                          controller
+                                                              .isGoogleLoading
+                                                              .value
+                                                      ? null
+                                                      : controller.signIn,
                                             )),
                                       ),
                                       const SizedBox(height: 24),
@@ -340,11 +346,14 @@ class WebLoginPage extends GetView<WebLoginController> {
                                             const Text("Sign in with"),
                                             const SizedBox(height: 16),
                                             Obx(() => InkWell(
-                                                  onTap:
-                                                      controller.isLoading.value
-                                                          ? null
-                                                          : controller
-                                                              .signInWithGoogle,
+                                                  onTap: controller.isLoading
+                                                              .value ||
+                                                          controller
+                                                              .isGoogleLoading
+                                                              .value
+                                                      ? null
+                                                      : controller
+                                                          .signInWithGoogle,
                                                   child: Container(
                                                     width: 50,
                                                     height: 50,
@@ -361,17 +370,11 @@ class WebLoginPage extends GetView<WebLoginController> {
                                                                       0, 2))
                                                         ]),
                                                     child: controller
-                                                            .isLoading.value
+                                                            .isGoogleLoading
+                                                            .value
                                                         ? const Center(
-                                                            child: SizedBox(
-                                                              width: 20,
-                                                              height: 20,
-                                                              child:
-                                                                  CircularProgressIndicator(
-                                                                strokeWidth: 2,
-                                                              ),
-                                                            ),
-                                                          )
+                                                            child:
+                                                                CircularProgressIndicator())
                                                         : Image.asset(
                                                             'lib/images/google_logo.png'),
                                                   ),
