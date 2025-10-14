@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -45,6 +46,58 @@ class WebFeedbackController extends GetxController {
     }
   }
 
+  // ============= NOTIFICATION HELPER =============
+
+  /// Show compact toast notification at top right
+  void _showCompactNotification(String message, {required Color bgColor, required IconData icon, required Color iconColor}) {
+    Get.rawSnackbar(
+      messageText: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: iconColor, size: 16),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: bgColor,
+      snackPosition: SnackPosition.TOP,
+      borderRadius: 4,
+      margin: const EdgeInsets.only(top: 16, right: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      duration: const Duration(seconds: 2),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+      maxWidth: 300,
+    );
+  }
+
+  void _showSuccess(String message) {
+    _showCompactNotification(message, bgColor: Colors.green[600]!, icon: Icons.check_circle_outline, iconColor: Colors.white);
+  }
+
+  void _showError(String message) {
+    _showCompactNotification(message, bgColor: Colors.red[600]!, icon: Icons.error_outline, iconColor: Colors.white);
+  }
+
+  void _showInfo(String message) {
+    _showCompactNotification(message, bgColor: Colors.blue[600]!, icon: Icons.info_outline, iconColor: Colors.white);
+  }
+
+  void _showWarning(String message) {
+    _showCompactNotification(message, bgColor: Colors.amber[700]!, icon: Icons.warning_amber, iconColor: Colors.white);
+  }
+
   // ============= USER-SIDE METHODS =============
 
   /// Validate file before adding
@@ -56,27 +109,18 @@ class WebFeedbackController extends GetxController {
     final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
     
     if (!isImage && !isVideo) {
-      WebSnackBarService.showError(
-        title: "Invalid File",
-        message: "Only images (JPG, PNG, GIF) and videos (MP4, MOV, AVI) are allowed",
-      );
+      _showError("Only images (JPG, PNG, GIF) and videos (MP4, MOV, AVI) allowed");
       return false;
     }
 
     // Check file size limits
     if (isImage && file.size > 5 * 1024 * 1024) {
-      WebSnackBarService.showError(
-        title: "File Too Large",
-        message: "Image files must be under 5MB. File size: ${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB",
-      );
+      _showError("Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
       return false;
     }
 
     if (isVideo && file.size > 25 * 1024 * 1024) {
-      WebSnackBarService.showError(
-        title: "File Too Large",
-        message: "Video files must be under 25MB. File size: ${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB",
-      );
+      _showError("Video files must be under 25MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
       return false;
     }
 
@@ -86,10 +130,7 @@ class WebFeedbackController extends GetxController {
   /// Pick files (images/videos)
   Future<void> pickFiles() async {
     if (selectedFiles.length >= 5) {
-      WebSnackBarService.showError(
-        title: "Limit Reached",
-        message: "You can only attach up to 5 files",
-      );
+      _showError("You can only attach up to 5 files");
       return;
     }
 
@@ -103,10 +144,7 @@ class WebFeedbackController extends GetxController {
       if (result != null) {
         for (var file in result.files) {
           if (selectedFiles.length >= 5) {
-            WebSnackBarService.showWarning(
-              title: "Limit Reached",
-              message: "Maximum 5 files allowed. Remaining files not added.",
-            );
+            _showWarning("Maximum 5 files allowed. Remaining files not added.");
             break;
           }
 
@@ -116,10 +154,7 @@ class WebFeedbackController extends GetxController {
         }
       }
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to pick files: $e",
-      );
+      _showError("Failed to pick files: $e");
     }
   }
 
@@ -154,42 +189,27 @@ class WebFeedbackController extends GetxController {
   /// Validate feedback form
   bool validateForm() {
     if (subject.value.trim().isEmpty) {
-      WebSnackBarService.showError(
-        title: "Required Field",
-        message: "Please enter a subject",
-      );
+      _showError("Please enter a subject");
       return false;
     }
 
     if (subject.value.trim().length < 5) {
-      WebSnackBarService.showError(
-        title: "Invalid Subject",
-        message: "Subject must be at least 5 characters long",
-      );
+      _showError("Subject must be at least 5 characters long");
       return false;
     }
 
     if (description.value.trim().isEmpty) {
-      WebSnackBarService.showError(
-        title: "Required Field",
-        message: "Please provide details about your feedback",
-      );
+      _showError("Please provide details about your feedback");
       return false;
     }
 
     if (description.value.trim().length < 20) {
-      WebSnackBarService.showError(
-        title: "More Details Needed",
-        message: "Please provide at least 20 characters of description",
-      );
+      _showError("Please provide at least 20 characters of description");
       return false;
     }
 
     if (selectedFiles.isEmpty) {
-      WebSnackBarService.showError(
-        title: "Required Attachment",
-        message: "Please attach at least one image or video",
-      );
+      _showError("Please attach at least one image or video");
       return false;
     }
 
@@ -197,128 +217,123 @@ class WebFeedbackController extends GetxController {
   }
 
   /// Submit feedback
-/// Submit feedback - FIXED VERSION
-Future<bool> submitFeedback() async {
-  if (!validateForm()) return false;
+  Future<bool> submitFeedback() async {
+    if (!validateForm()) return false;
 
-  isSubmitting.value = true;
+    isSubmitting.value = true;
 
-  try {
-    // Get user information
-    final userId = session.userId;
-    final userName = session.userName;
-    final userEmail = session.userEmail;
-    
-    // DEBUG: Print to verify data
-    print('=== SUBMITTING FEEDBACK ===');
-    print('User ID: $userId');
-    print('User Name: $userName');
-    print('User Email: $userEmail');
-    print('Subject: ${subject.value}');
-    print('Description: ${description.value}');
-    print('Type: ${selectedType.value}');
-    print('Category: ${selectedCategory.value}');
-    print('Files: ${selectedFiles.length}');
-    
-    // Validate user data exists
-    if (userId.isEmpty) {
-      WebSnackBarService.showError(
-        title: "Session Error",
-        message: "User session data is missing. Please log in again.",
+    try {
+      // Get user information
+      final userId = session.userId;
+      final userName = session.userName;
+      final userEmail = session.userEmail;
+      
+      // DEBUG: Print to verify data
+      print('=== SUBMITTING FEEDBACK ===');
+      print('User ID: $userId');
+      print('User Name: $userName');
+      print('User Email: $userEmail');
+      print('Subject: ${subject.value}');
+      print('Description: ${description.value}');
+      print('Type: ${selectedType.value}');
+      print('Category: ${selectedCategory.value}');
+      print('Files: ${selectedFiles.length}');
+      
+      // Validate user data exists
+      if (userId.isEmpty) {
+        _showError("User session data is missing. Please log in again.");
+        isSubmitting.value = false;
+        return false;
+      }
+
+      // Upload attachments first
+      _showInfo("Uploading ${selectedFiles.length} file(s)...");
+
+      final uploadedFiles = await authRepository.uploadFeedbackAttachments(selectedFiles);
+      final attachmentIds = uploadedFiles.map((f) => f.$id).toList();
+
+      print('Uploaded ${attachmentIds.length} attachments: $attachmentIds');
+
+      // Get device/platform info
+      final platform = 'web';
+      final appVersion = '1.0.0';
+      final deviceInfo = 'Web Browser';
+      final now = DateTime.now();
+
+      // Create feedback object
+      final feedback = FeedbackAndReport(
+        userId: userId,
+        userName: userName.isNotEmpty ? userName : 'Unknown User',
+        userEmail: userEmail.isNotEmpty ? userEmail : 'unknown@email.com',
+        feedbackType: selectedType.value,
+        category: selectedCategory.value,
+        subject: subject.value.trim(),
+        description: description.value.trim(),
+        attachments: attachmentIds,
+        priority: Priority.medium,
+        status: FeedbackStatus.pending,
+        appVersion: appVersion,
+        deviceInfo: deviceInfo,
+        platform: platform,
+        submittedAt: now,
       );
-      isSubmitting.value = false;
+
+      print('Feedback object created, submitting to database...');
+      print('Feedback data map: ${feedback.toMap()}');
+
+      // Submit to database
+      final createdFeedback = await authRepository.createFeedbackAndReport(feedback);
+      
+      print('Feedback created successfully with ID: ${createdFeedback.documentId}');
+
+      // Clear form COMPLETELY before showing success
+      clearForm();
+
+      // Show success notification
+      _showSuccess("Feedback submitted successfully");
+
+      return true;
+    } catch (e, stackTrace) {
+      print('=== ERROR SUBMITTING FEEDBACK ===');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('================================');
+      
+      _showError("Failed to submit feedback. Please try again.");
       return false;
+    } finally {
+      isSubmitting.value = false;
     }
-
-    // Upload attachments first
-    WebSnackBarService.showInfo(
-      title: "Uploading",
-      message: "Uploading ${selectedFiles.length} file(s)...",
-    );
-
-    final uploadedFiles = await authRepository.uploadFeedbackAttachments(selectedFiles);
-    final attachmentIds = uploadedFiles.map((f) => f.$id).toList();
-
-    print('Uploaded ${attachmentIds.length} attachments: $attachmentIds');
-
-    // Get device/platform info
-    final platform = 'web';
-    final appVersion = '1.0.0';
-    final deviceInfo = 'Web Browser';
-    final now = DateTime.now();
-
-    // Create feedback object - ensure ALL required fields are present
-    final feedback = FeedbackAndReport(
-      userId: userId,
-      userName: userName.isNotEmpty ? userName : 'Unknown User',
-      userEmail: userEmail.isNotEmpty ? userEmail : 'unknown@email.com',
-      feedbackType: selectedType.value,
-      category: selectedCategory.value,
-      subject: subject.value.trim(),
-      description: description.value.trim(),
-      attachments: attachmentIds,
-      priority: Priority.medium,
-      status: FeedbackStatus.pending,
-      appVersion: appVersion,
-      deviceInfo: deviceInfo,
-      platform: platform,
-      submittedAt: now,
-    );
-
-    print('Feedback object created, submitting to database...');
-    print('Feedback data map: ${feedback.toMap()}');
-
-    // Submit to database
-    final createdFeedback = await authRepository.createFeedbackAndReport(feedback);
-    
-    print('Feedback created successfully with ID: ${createdFeedback.documentId}');
-
-    // Clear form only after successful submission
-    clearForm();
-
-    WebSnackBarService.showSuccess(
-      title: "Success",
-      message: "Thank you! Your feedback has been submitted successfully.",
-    );
-
-    return true;
-  } catch (e, stackTrace) {
-    print('=== ERROR SUBMITTING FEEDBACK ===');
-    print('Error: $e');
-    print('Stack trace: $stackTrace');
-    print('================================');
-    
-    WebSnackBarService.showError(
-      title: "Submission Failed",
-      message: "Failed to submit feedback. Please try again.",
-    );
-    return false;
-  } finally {
-    isSubmitting.value = false;
   }
-}
 
-// Also add this helper method to check the toMap output
-void debugFeedbackData() {
-  print('=== FEEDBACK FORM DATA ===');
-  print('Subject: ${subject.value}');
-  print('Description: ${description.value}');
-  print('Type: ${selectedType.value}');
-  print('Category: ${selectedCategory.value}');
-  print('Files: ${selectedFiles.length}');
-  print('User ID: ${session.userId}');
-  print('User Name: ${session.userName}');
-  print('User Email: ${session.userEmail}');
-  print('========================');
-}
-
-  /// Clear the feedback form
+  /// Clear the feedback form completely
   void clearForm() {
     subject.value = '';
     description.value = '';
     selectedFiles.clear();
     selectedType.value = FeedbackType.bug;
     selectedCategory.value = FeedbackCategory.other;
+    
+    // Force refresh to ensure UI updates
+    subject.refresh();
+    description.refresh();
+    selectedFiles.refresh();
+    selectedType.refresh();
+    selectedCategory.refresh();
+  }
+
+  /// Debug helper method
+  void debugFeedbackData() {
+    print('=== FEEDBACK FORM DATA ===');
+    print('Subject: ${subject.value}');
+    print('Description: ${description.value}');
+    print('Type: ${selectedType.value}');
+    print('Category: ${selectedCategory.value}');
+    print('Files: ${selectedFiles.length}');
+    print('User ID: ${session.userId}');
+    print('User Name: ${session.userName}');
+    print('User Email: ${session.userEmail}');
+    print('========================');
   }
 
   // ============= ADMIN-SIDE METHODS =============
@@ -336,16 +351,8 @@ void debugFeedbackData() {
       allFeedback.value = feedback;
       filterFeedback();
       updateStatistics();
-
-      WebSnackBarService.showSuccess(
-        title: "Loaded",
-        message: "Feedback loaded successfully",
-      );
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to load feedback: $e",
-      );
+      _showError("Failed to load feedback: $e");
     } finally {
       isLoadingFeedback.value = false;
     }
@@ -383,7 +390,6 @@ void debugFeedbackData() {
 
     // Sort by priority and date
     filtered.sort((a, b) {
-      // First sort by priority
       final priorityOrder = {
         Priority.critical: 0,
         Priority.high: 1,
@@ -398,7 +404,6 @@ void debugFeedbackData() {
         return aPriority.compareTo(bPriority);
       }
       
-      // Then sort by date (newest first)
       return b.submittedAt.compareTo(a.submittedAt);
     });
 
@@ -424,7 +429,6 @@ void debugFeedbackData() {
     try {
       await authRepository.updateFeedbackStatus(documentId, status);
       
-      // Update local list
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(status: status);
@@ -433,15 +437,9 @@ void debugFeedbackData() {
       filterFeedback();
       updateStatistics();
 
-      WebSnackBarService.showSuccess(
-        title: "Updated",
-        message: "Feedback status updated to ${status.displayName}",
-      );
+      _showSuccess("Feedback status updated to ${status.displayName}");
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to update status: $e",
-      );
+      _showError("Failed to update status: $e");
     }
   }
 
@@ -450,7 +448,6 @@ void debugFeedbackData() {
     try {
       await authRepository.updateFeedbackPriority(documentId, priority);
       
-      // Update local list
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(priority: priority);
@@ -459,15 +456,9 @@ void debugFeedbackData() {
       filterFeedback();
       updateStatistics();
 
-      WebSnackBarService.showSuccess(
-        title: "Updated",
-        message: "Feedback priority updated to ${priority.displayName}",
-      );
+      _showSuccess("Feedback priority updated to ${priority.displayName}");
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to update priority: $e",
-      );
+      _showError("Failed to update priority: $e");
     }
   }
 
@@ -477,18 +468,11 @@ void debugFeedbackData() {
       final adminName = session.userName;
       await authRepository.addFeedbackReply(documentId, reply, adminName);
       
-      // Reload feedback
       await loadAllFeedback();
 
-      WebSnackBarService.showSuccess(
-        title: "Reply Sent",
-        message: "Your reply has been sent successfully",
-      );
+      _showSuccess("Reply sent successfully");
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to send reply: $e",
-      );
+      _showError("Failed to send reply: $e");
     }
   }
 
@@ -498,7 +482,6 @@ void debugFeedbackData() {
       final archivedBy = session.userName;
       await authRepository.archiveFeedback(documentId, archivedBy);
       
-      // Update local list
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(
@@ -511,15 +494,9 @@ void debugFeedbackData() {
       filterFeedback();
       updateStatistics();
 
-      WebSnackBarService.showSuccess(
-        title: "Archived",
-        message: "Feedback has been archived",
-      );
+      _showSuccess("Feedback has been archived");
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to archive feedback: $e",
-      );
+      _showError("Failed to archive feedback: $e");
     }
   }
 
@@ -528,21 +505,14 @@ void debugFeedbackData() {
     try {
       await authRepository.deleteFeedback(documentId, attachmentIds);
       
-      // Remove from local list
       allFeedback.removeWhere((f) => f.documentId == documentId);
       
       filterFeedback();
       updateStatistics();
 
-      WebSnackBarService.showSuccess(
-        title: "Deleted",
-        message: "Feedback has been permanently deleted",
-      );
+      _showSuccess("Feedback has been permanently deleted");
     } catch (e) {
-      WebSnackBarService.showError(
-        title: "Error",
-        message: "Failed to delete feedback: $e",
-      );
+      _showError("Failed to delete feedback: $e");
     }
   }
 

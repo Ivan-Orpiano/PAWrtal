@@ -1664,21 +1664,6 @@ Widget _buildFeedbackContent() {
             ],
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
-        // Info Cards
-        Row(
-          children: [
-            Expanded(
-              child: _buildInfoCard('Response Time', '24-48 hours', Icons.access_time, Colors.blue),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildInfoCard('Privacy', 'Your data is secure', Icons.lock_outline, Colors.green),
-            ),
-          ],
-        ),
       ],
     ),
   ));
