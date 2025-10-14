@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
+import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -2807,4 +2808,331 @@ class AppWriteProvider {
       documentId: documentId,
     );
   }
+  // ============= FEEDBACK AND REPORT METHODS =============
+
+  /// Create new feedback/report
+  Future<Document> createFeedbackAndReport(Map<String, dynamic> data) async {
+    try {
+      print('>>> Creating feedback and report...');
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error creating feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all feedback (for admin)
+  Future<List<Document>> getAllFeedback({
+    FeedbackStatus? status,
+    Priority? priority,
+    int limit = 100,
+  }) async {
+    try {
+      List<String> queries = [
+        Query.orderDesc('submittedAt'),
+        Query.limit(limit),
+      ];
+
+      if (status != null) {
+        queries.add(Query.equal('status', status.toString().split('.').last));
+      }
+
+      if (priority != null) {
+        queries.add(Query.equal('priority', priority.toString().split('.').last));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('Error getting all feedback: $e');
+      return [];
+    }
+  }
+
+  /// Get user's feedback
+  Future<List<Document>> getUserFeedback(String userId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.orderDesc('submittedAt'),
+        ],
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('Error getting user feedback: $e');
+      return [];
+    }
+  }
+
+  /// Update feedback (for admin)
+  Future<Document> updateFeedback(
+    String documentId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      data['updatedAt'] = DateTime.now().toIso8601String();
+
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: data,
+      );
+    } catch (e) {
+      print('Error updating feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Update feedback status
+  Future<void> updateFeedbackStatus(String documentId, FeedbackStatus status) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'status': status.toString().split('.').last,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error updating feedback status: $e');
+      rethrow;
+    }
+  }
+
+  /// Update feedback priority
+  Future<void> updateFeedbackPriority(String documentId, Priority priority) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'priority': priority.toString().split('.').last,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error updating feedback priority: $e');
+      rethrow;
+    }
+  }
+
+  /// Add admin reply to feedback
+  Future<void> addFeedbackReply(
+    String documentId,
+    String reply,
+    String adminName,
+  ) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'adminReply': reply,
+          'repliedAt': DateTime.now().toIso8601String(),
+          'repliedBy': adminName,
+          'status': FeedbackStatus.resolved.toString().split('.').last,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error adding feedback reply: $e');
+      rethrow;
+    }
+  }
+
+  /// Archive feedback
+  Future<void> archiveFeedback(String documentId, String archivedBy) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'status': FeedbackStatus.archived.toString().split('.').last,
+          'archivedAt': DateTime.now().toIso8601String(),
+          'archivedBy': archivedBy,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error archiving feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete feedback
+  Future<void> deleteFeedback(String documentId, List<String> attachmentIds) async {
+    try {
+      // Delete attachments first
+      if (attachmentIds.isNotEmpty) {
+        await deleteFeedbackAttachments(attachmentIds);
+      }
+
+      // Delete feedback document
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+      );
+    } catch (e) {
+      print('Error deleting feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload feedback attachments (images and videos)
+  Future<List<models.File>> uploadFeedbackAttachments(
+    List<PlatformFile> files,
+  ) async {
+    final List<models.File> uploadedFiles = [];
+
+    for (int i = 0; i < files.length; i++) {
+      try {
+        final file = files[i];
+        final extension = file.extension ?? 'jpg';
+        String fileName = "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
+
+        // Validate file size
+        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension.toLowerCase());
+        final isVideo = ['mp4', 'mov', 'avi', 'mkv'].contains(extension.toLowerCase());
+        
+        if (isImage && file.size > 5 * 1024 * 1024) {
+          print('Error: Image file ${file.name} exceeds 5MB limit');
+          continue;
+        }
+        
+        if (isVideo && file.size > 25 * 1024 * 1024) {
+          print('Error: Video file ${file.name} exceeds 25MB limit');
+          continue;
+        }
+
+        InputFile inputFile;
+
+        if (file.bytes != null) {
+          inputFile = InputFile.fromBytes(
+            bytes: file.bytes!,
+            filename: fileName,
+          );
+        } else if (file.path != null) {
+          inputFile = InputFile.fromPath(
+            path: file.path!,
+            filename: fileName,
+          );
+        } else {
+          print("Error: File has neither bytes nor path");
+          continue;
+        }
+
+        final response = await storage!.createFile(
+          bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
+          fileId: ID.unique(),
+          file: inputFile,
+        );
+
+        uploadedFiles.add(response);
+        print("Successfully uploaded feedback attachment: ${response.$id}");
+      } catch (e) {
+        print("Error uploading feedback attachment ${files[i].name}: $e");
+      }
+    }
+
+    return uploadedFiles;
+  }
+
+  /// Delete feedback attachments
+  Future<void> deleteFeedbackAttachments(List<String> fileIds) async {
+    for (String fileId in fileIds) {
+      try {
+        await storage!.deleteFile(
+          bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
+          fileId: fileId,
+        );
+      } catch (e) {
+        print("Error deleting feedback attachment $fileId: $e");
+      }
+    }
+  }
+
+  /// Get feedback attachment URL
+  String getFeedbackAttachmentUrl(String fileId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.feedbackAttachmentsBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+  }
+
+  /// Subscribe to feedback changes (real-time for admin)
+  Stream<RealtimeMessage> subscribeToFeedbackChanges() {
+    final realtime = Realtime(client);
+    return realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.feedbackAndReportCollectionID}.documents',
+    ]).stream;
+  }
+
+  /// Get feedback statistics (for admin dashboard)
+  Future<Map<String, int>> getFeedbackStatistics() async {
+    try {
+      final allFeedback = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+      );
+
+      int pending = 0;
+      int inProgress = 0;
+      int resolved = 0;
+      int closed = 0;
+      int archived = 0;
+      int critical = 0;
+
+      for (var doc in allFeedback.documents) {
+        final status = doc.data['status'];
+        final priority = doc.data['priority'];
+
+        if (status == 'pending') pending++;
+        if (status == 'inProgress') inProgress++;
+        if (status == 'resolved') resolved++;
+        if (status == 'closed') closed++;
+        if (status == 'archived') archived++;
+        if (priority == 'critical') critical++;
+      }
+
+      return {
+        'total': allFeedback.documents.length,
+        'pending': pending,
+        'inProgress': inProgress,
+        'resolved': resolved,
+        'closed': closed,
+        'archived': archived,
+        'critical': critical,
+      };
+    } catch (e) {
+      print('Error getting feedback statistics: $e');
+      return {
+        'total': 0,
+        'pending': 0,
+        'inProgress': 0,
+        'resolved': 0,
+        'closed': 0,
+        'archived': 0,
+        'critical': 0,
+      };
+    }
+  }
 }
+

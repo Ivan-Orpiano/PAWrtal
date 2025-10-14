@@ -20,6 +20,8 @@ import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 
+import '../models/feedback_and_report_model.dart';
+
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
   AuthRepository(this.appWriteProvider);
@@ -795,5 +797,81 @@ class AuthRepository {
 
   Future<void> deleteVaccination(String documentId) async {
     await appWriteProvider.deleteVaccination(documentId);
+  }
+  // ============= FEEDBACK AND REPORT METHODS =============
+
+  Future<FeedbackAndReport> createFeedbackAndReport(FeedbackAndReport feedback) async {
+    final doc = await appWriteProvider.createFeedbackAndReport(feedback.toMap());
+    return feedback.copyWith(documentId: doc.$id);
+  }
+
+  Future<List<FeedbackAndReport>> getAllFeedback({
+    FeedbackStatus? status,
+    Priority? priority,
+    int limit = 100,
+  }) async {
+    final docs = await appWriteProvider.getAllFeedback(
+      status: status,
+      priority: priority,
+      limit: limit,
+    );
+    
+    return docs.map((doc) {
+      final feedback = FeedbackAndReport.fromMap(doc.data);
+      return feedback.copyWith(documentId: doc.$id);
+    }).toList();
+  }
+
+  Future<List<FeedbackAndReport>> getUserFeedback(String userId) async {
+    final docs = await appWriteProvider.getUserFeedback(userId);
+    
+    return docs.map((doc) {
+      final feedback = FeedbackAndReport.fromMap(doc.data);
+      return feedback.copyWith(documentId: doc.$id);
+    }).toList();
+  }
+
+  Future<void> updateFeedbackStatus(String documentId, FeedbackStatus status) {
+    return appWriteProvider.updateFeedbackStatus(documentId, status);
+  }
+
+  Future<void> updateFeedbackPriority(String documentId, Priority priority) {
+    return appWriteProvider.updateFeedbackPriority(documentId, priority);
+  }
+
+  Future<void> addFeedbackReply(
+    String documentId,
+    String reply,
+    String adminName,
+  ) {
+    return appWriteProvider.addFeedbackReply(documentId, reply, adminName);
+  }
+
+  Future<void> archiveFeedback(String documentId, String archivedBy) {
+    return appWriteProvider.archiveFeedback(documentId, archivedBy);
+  }
+
+  Future<void> deleteFeedback(String documentId, List<String> attachmentIds) {
+    return appWriteProvider.deleteFeedback(documentId, attachmentIds);
+  }
+
+  Future<List<models.File>> uploadFeedbackAttachments(List<PlatformFile> files) {
+    return appWriteProvider.uploadFeedbackAttachments(files);
+  }
+
+  Future<void> deleteFeedbackAttachments(List<String> fileIds) {
+    return appWriteProvider.deleteFeedbackAttachments(fileIds);
+  }
+
+  String getFeedbackAttachmentUrl(String fileId) {
+    return appWriteProvider.getFeedbackAttachmentUrl(fileId);
+  }
+
+  Stream<RealtimeMessage> subscribeToFeedbackChanges() {
+    return appWriteProvider.subscribeToFeedbackChanges();
+  }
+
+  Future<Map<String, int>> getFeedbackStatistics() {
+    return appWriteProvider.getFeedbackStatistics();
   }
 }
