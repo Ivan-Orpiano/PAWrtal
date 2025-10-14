@@ -21,6 +21,15 @@ class WebSignUpController extends GetxController {
   final isPasswordVisible = false.obs;
   final isConfirmPasswordVisible = false.obs;
   final termsAccepted = false.obs;
+  final isGoogleLoading = false.obs;
+
+  // Error messages for each field
+  final emailError = Rx<String?>(null);
+  final nameError = Rx<String?>(null);
+  final passwordError = Rx<String?>(null);
+  final confirmPasswordError = Rx<String?>(null);
+  final termsError = Rx<String?>(null);
+  final generalError = Rx<String?>(null);
 
   @override
   void onInit() {
@@ -29,6 +38,18 @@ class WebSignUpController extends GetxController {
     nameController = TextEditingController();
     passwordController = TextEditingController();
     confirmPasswordController = TextEditingController();
+
+    // Add listeners to clear errors on text change
+    emailController.addListener(() => emailError.value = null);
+    nameController.addListener(() => nameError.value = null);
+    passwordController.addListener(() {
+      passwordError.value = null;
+      if (confirmPasswordController.text.isNotEmpty) {
+        confirmPasswordError.value = null;
+      }
+    });
+    confirmPasswordController
+        .addListener(() => confirmPasswordError.value = null);
   }
 
   void togglePasswordVisibility() {
@@ -51,9 +72,19 @@ class WebSignUpController extends GetxController {
       passwordController.clear();
       confirmPasswordController.clear();
       termsAccepted.value = false;
+      _clearAllErrors();
     } catch (e) {
       print('Controller clear error: $e');
     }
+  }
+
+  void _clearAllErrors() {
+    emailError.value = null;
+    nameError.value = null;
+    passwordError.value = null;
+    confirmPasswordError.value = null;
+    termsError.value = null;
+    generalError.value = null;
   }
 
   void showTermsAndConditions() {
@@ -204,17 +235,13 @@ class WebSignUpController extends GetxController {
   }
 
   Future<void> signUp() async {
+    _clearAllErrors();
+
     if (!_validateForm()) return;
 
     // Check if terms are accepted
     if (!termsAccepted.value) {
-      Get.snackbar(
-        'Terms Required',
-        'Please accept the Terms and Conditions to continue',
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      termsError.value = 'Please accept the Terms and Conditions to continue';
       return;
     }
 
@@ -237,74 +264,116 @@ class WebSignUpController extends GetxController {
         "role": "user",
       });
 
-      Get.snackbar(
-        'Success',
-        'User account created successfully!',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
+      // Show success dialog instead of snackbar
+      Get.dialog(
+        Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F5E9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF4CAF50),
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Account Created!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Your account has been created successfully. You can now sign in.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      _clearControllersBeforeNavigation();
+                      Get.offAllNamed(Routes.login);
+                    },
+                    child: const Text(
+                      'Continue to Sign In',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        barrierDismissible: false,
       );
-
-      _clearControllersBeforeNavigation();
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      Get.offAllNamed(Routes.login);
     } catch (error) {
-      String errorMessage = "Something went wrong";
+      String errorMessage = "Something went wrong. Please try again.";
 
       if (error is AppwriteException) {
         if (error.code == 409) {
-          errorMessage = "This email is already registered.";
+          emailError.value = "This email is already registered";
+          errorMessage =
+              "This email is already registered. Please use a different email or sign in.";
         } else {
-          errorMessage = error.response ?? "An error occurred";
+          errorMessage = error.response ?? "An error occurred during sign up";
         }
       }
 
-      Get.snackbar(
-        'Error',
-        errorMessage,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      generalError.value = errorMessage;
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<void> signUpWithGoogle() async {
+    if (isLoading.value || isGoogleLoading.value) return;
+
     try {
-      isLoading.value = true;
+      isGoogleLoading.value = true;
+      _clearAllErrors();
 
       final appWriteProvider = AppWriteProvider();
       final success = await appWriteProvider.signInWithGoogle();
 
       if (success) {
-        Get.snackbar(
-          'Success',
-          'Account created with Google successfully!',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-
         Get.offAllNamed(Routes.userHome);
       } else {
-        Get.snackbar(
-          'Error',
-          'Failed to create account with Google',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        generalError.value =
+            'Failed to create account with Google. Please try again.';
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Google sign-up error: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      generalError.value = 'Google sign-up error';
     } finally {
-      isLoading.value = false;
+      isGoogleLoading.value = false;
     }
   }
 
@@ -314,83 +383,86 @@ class WebSignUpController extends GetxController {
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
 
-    if (email.isEmpty ||
-        name.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please fill in all fields',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+    bool isValid = true;
+
+    // Check empty fields
+    if (email.isEmpty) {
+      emailError.value = 'Email is required';
+      isValid = false;
+    }
+
+    if (name.isEmpty) {
+      nameError.value = 'Full name is required';
+      isValid = false;
+    }
+
+    if (password.isEmpty) {
+      passwordError.value = 'Password is required';
+      isValid = false;
+    }
+
+    if (confirmPassword.isEmpty) {
+      confirmPasswordError.value = 'Please confirm your password';
+      isValid = false;
     }
 
     // Email validation
-    if (!GetUtils.isEmail(email)) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid email address',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+    if (email.isNotEmpty && !GetUtils.isEmail(email)) {
+      emailError.value = 'Please enter a valid email address';
+      isValid = false;
     }
 
-    // Text length limit (already enforced visually but we check anyway)
-    if (email.length > 50 || name.length > 50 || password.length > 50) {
-      Get.snackbar(
-        'Error',
-        'Each field must not exceed 50 characters',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+    // Text length limit
+    if (email.length > 50) {
+      emailError.value = 'Email must not exceed 50 characters';
+      isValid = false;
+    }
+
+    if (name.length > 50) {
+      nameError.value = 'Name must not exceed 50 characters';
+      isValid = false;
+    }
+
+    if (password.length > 50) {
+      passwordError.value = 'Password must not exceed 50 characters';
+      isValid = false;
     }
 
     // Password length
-    if (password.length < 8) {
-      Get.snackbar(
-        'Error',
-        'Password must be at least 8 characters long',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+    if (password.isNotEmpty && password.length < 8) {
+      passwordError.value = 'Password must be at least 8 characters';
+      isValid = false;
     }
 
-    // Password complexity: 1 uppercase, 1 digit, 1 special character
-    final passwordRegex =
-        RegExp(r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>]).{8,}$');
-    if (!passwordRegex.hasMatch(password)) {
-      Get.snackbar(
-        'Error',
-        'Password must contain at least one uppercase letter, one digit, and one special character',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+    // Password complexity
+    if (password.isNotEmpty && password.length >= 8) {
+      final passwordRegex =
+          RegExp(r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>]).{8,}$');
+      if (!passwordRegex.hasMatch(password)) {
+        passwordError.value =
+            'Password must contain uppercase, digit, and special character';
+        isValid = false;
+      }
     }
 
     // Password confirmation
-    if (password != confirmPassword) {
-      Get.snackbar(
-        'Error',
-        'Passwords do not match',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+    if (password.isNotEmpty &&
+        confirmPassword.isNotEmpty &&
+        password != confirmPassword) {
+      confirmPasswordError.value = 'Passwords do not match';
+      isValid = false;
     }
 
-    return true;
+    return isValid;
   }
 
   @override
   void onClose() {
     try {
-      _clearControllersBeforeNavigation();
+      emailController.dispose();
+      nameController.dispose();
+      passwordController.dispose();
+      confirmPasswordController.dispose();
     } catch (e) {
       print('Controller disposal error: $e');
     }

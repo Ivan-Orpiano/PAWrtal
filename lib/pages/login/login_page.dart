@@ -321,29 +321,35 @@ class _LoginPageState extends State<LoginPage> {
                       SizedBox(
                         width: 300,
                         height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            elevation: 5,
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                        child: Obx(
+                          // WRAP WITH Obx
+                          () => ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              elevation: 5,
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
-                          ),
-                          onPressed: () {
-                            controller.validateAndLogin(
-                              emailOrUsername:
-                                  controller.emailEditingController.text.trim(),
-                              password:
-                                  controller.passwordEditingController.text,
-                            );
-                          },
-                          child: const Text(
-                            "Sign In",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.white,
+                            onPressed: controller.isGoogleLoading.value
+                                ? null
+                                : () {
+                                    controller.validateAndLogin(
+                                      emailOrUsername: controller
+                                          .emailEditingController.text
+                                          .trim(),
+                                      password: controller
+                                          .passwordEditingController.text,
+                                    );
+                                  },
+                            child: const Text(
+                              "Sign In",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -374,43 +380,56 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
 
                       // Google Button
-                      GestureDetector(
-                        onTap: () {
-                          appWriteProvider.signInWithGoogle().then((value) {
-                            if (value) {
-                              CustomSnackBar.showInfoSnackBar(
-                                context: Get.overlayContext,
-                                title: "Success",
-                                message: "Logged in with Google successfully",
-                              );
-                              Get.toNamed(Routes.userHome);
-                            } else {
-                              CustomSnackBar.showErrorSnackBar(
-                                context: Get.overlayContext,
-                                title: "Error",
-                                message: "Failed to login with Google",
-                              );
-                            }
-                          });
-                        },
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                color: Colors.grey.shade400,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                          child: Image.asset(
-                            "lib/images/google_logo.png",
-                            fit: BoxFit.cover,
+                      Obx(
+                        () => GestureDetector(
+                          onTap: controller.isGoogleLoading.value
+                              ? null
+                              : () async {
+                                  try {
+                                    controller.isGoogleLoading.value = true;
+                                    final value = await appWriteProvider
+                                        .signInWithGoogle();
+                                    if (value) {
+                                      CustomSnackBar.showInfoSnackBar(
+                                        context: Get.overlayContext,
+                                        title: "Success",
+                                        message:
+                                            "Logged in with Google successfully",
+                                      );
+                                      Get.toNamed(Routes.userHome);
+                                    } else {
+                                      CustomSnackBar.showErrorSnackBar(
+                                        context: Get.overlayContext,
+                                        title: "Error",
+                                        message: "Failed to login with Google",
+                                      );
+                                    }
+                                  } finally {
+                                    controller.isGoogleLoading.value = false;
+                                  }
+                                },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  color: Colors.grey.shade400,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: controller.isGoogleLoading.value
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : Image.asset(
+                                    "lib/images/google_logo.png",
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       ),
