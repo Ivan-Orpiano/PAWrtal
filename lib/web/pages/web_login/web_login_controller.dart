@@ -25,6 +25,7 @@ class WebLoginController extends GetxController {
   // Reactive variables
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
+  final errorMessage = ''.obs; // NEW: For unified error messages
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
@@ -34,22 +35,41 @@ class WebLoginController extends GetxController {
     Get.toNamed(Routes.signup);
   }
 
-  // Form validation methods
-  String? validateEmail(String? value) {
+  // REMOVED: Old validateEmail method - only used for password reset now
+  // Keeping separate method for password reset since it requires actual email
+  String? validateEmailForReset(String? value) {
     if (value == null || !GetUtils.isEmail(value)) {
       return "Provide a valid Email";
     }
     return null;
   }
 
+  /// NEW: Validator for username or email - accepts both formats
+  /// Just checks: not empty and max 50 characters
+  String? validateEmailOrUsername(String? value) {
+    if (value!.trim().length > 50) {
+      return "Maximum 50 characters allowed";
+    }
+
+    return null;
+  }
+
+  /// UPDATED: Password validator with 50 character limit
   String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return "Provide valid password";
+      return "Please enter your password";
+    }
+
+    if (value.length > 50) {
+      return "Maximum 50 characters allowed";
     }
     return null;
   }
 
   Future<void> signIn() async {
+    // Clear any previous error
+    errorMessage.value = '';
+
     if (!formKey.currentState!.validate()) return;
 
     try {
@@ -62,9 +82,14 @@ class WebLoginController extends GetxController {
       // CRITICAL FIX: Clear any existing dashboard controller before login
       _clearExistingControllers();
 
+      final emailOrUsername = emailController.text.trim();
+      print('>>> Input: $emailOrUsername');
+      print(
+          '>>> Input Type: ${emailOrUsername.contains('@') ? 'EMAIL' : 'USERNAME'}');
+
       // Call the repository login method
       final value = await _authRepository.login({
-        "email": emailController.text.trim(),
+        "email": emailOrUsername,
         "password": passwordController.text,
       });
 
@@ -158,14 +183,19 @@ class WebLoginController extends GetxController {
       print('>>> Navigating to home...');
       _navigateBasedOnRole(role);
 
-
       // Clear controllers
       _clearControllers();
     } catch (e) {
       print('>>> ============================================');
       print('>>> WEB LOGIN CONTROLLER ERROR: $e');
       print('>>> ============================================');
-      WebErrorHandler.handleError(e, context: 'Login');
+
+      // UNIFIED ERROR MESSAGE: Always show this for any login error
+      errorMessage.value =
+          'Invalid username/email or password. Please check your credentials.';
+
+      // Don't use WebErrorHandler for login errors - show in UI instead
+      // WebErrorHandler.handleError(e, context: 'Login');
     } finally {
       isLoading.value = false;
     }
@@ -275,6 +305,14 @@ class WebLoginController extends GetxController {
   void _clearControllers() {
     emailController.clear();
     passwordController.clear();
+    errorMessage.value = '';
   }
 
+  @override
+  void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    emailForPasswordResetController.dispose();
+    super.onClose();
+  }
 }

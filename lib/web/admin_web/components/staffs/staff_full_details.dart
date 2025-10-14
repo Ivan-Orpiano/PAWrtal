@@ -8,19 +8,21 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 
 class StaffFullDetails extends StatefulWidget {
   final String staffName;
-  final String email;
+  final String username;
   final String? phone;
+  final String? email; // Keep this for compatibility
   final Function(List<String>) onAuthoritiesUpdated;
   final List<String> initialAuthorities;
   final VoidCallback onRemove;
   final Uint8List? imageBytes;
   final String staffDocumentId;
-  final String? currentImageUrl; // current image URL
+  final String? currentImageUrl;
 
   const StaffFullDetails({
     required this.staffName,
-    required this.email,
+    required this.username,
     this.phone,
+    this.email, // Make sure this is here
     required this.onAuthoritiesUpdated,
     required this.initialAuthorities,
     required this.onRemove,
@@ -39,6 +41,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   late bool hasAppointmentsAuthority;
   late bool hasMessagesAuthority;
   late TextEditingController phoneController;
+  late TextEditingController emailController;
 
   bool isEditMode = false;
   bool showDeleteConfirm = false;
@@ -53,6 +56,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   late bool originalAppointmentsAuth;
   late bool originalMessagesAuth;
   late String originalPhone;
+  late String originalEmail;
 
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
@@ -82,19 +86,25 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
 
     // Initialize phone controller
     final phoneValue = widget.phone ?? '';
-    // Remove '09' prefix if exists for editing
     final phoneDigits = phoneValue.startsWith('09') && phoneValue.length == 11
         ? phoneValue.substring(2)
         : phoneValue;
     phoneController = TextEditingController(text: phoneDigits);
     originalPhone = phoneDigits;
 
+    // Initialize email controller
+    final emailValue = widget.email ?? '';
+    emailController = TextEditingController(text: emailValue);
+    originalEmail = emailValue;
+
     phoneController.addListener(_checkForChanges);
+    emailController.addListener(_checkForChanges);
   }
 
   @override
   void dispose() {
     phoneController.dispose();
+    emailController.dispose();
     super.dispose();
   }
 
@@ -104,6 +114,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           hasAppointmentsAuthority != originalAppointmentsAuth ||
           hasMessagesAuthority != originalMessagesAuth ||
           phoneController.text.trim() != originalPhone ||
+          emailController.text.trim() != originalEmail ||
           imageChanged;
     });
   }
@@ -161,6 +172,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           hasAppointmentsAuthority = originalAppointmentsAuth;
           hasMessagesAuthority = originalMessagesAuth;
           phoneController.text = originalPhone;
+          emailController.text = originalEmail;
           hasChanges = false;
           imageChanged = false;
           newImageBytes = null;
@@ -212,11 +224,11 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               setState(() {
                 isEditMode = false;
                 showDeleteConfirm = false;
-                // Reset to original values
                 hasClinicAuthority = originalClinicAuth;
                 hasAppointmentsAuthority = originalAppointmentsAuth;
                 hasMessagesAuthority = originalMessagesAuth;
                 phoneController.text = originalPhone;
+                emailController.text = originalEmail;
                 hasChanges = false;
                 imageChanged = false;
                 newImageBytes = null;
@@ -245,6 +257,8 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     final phoneValue = phoneController.text.trim();
     final fullPhone = phoneValue.isNotEmpty ? '09$phoneValue' : '';
 
+    final emailValue = emailController.text.trim();
+
     try {
       final authRepo = Get.find<AuthRepository>();
 
@@ -269,8 +283,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                   widget.currentImageUrl!.split('/').last.split('?').first;
               await authRepo.deleteImage(oldFileId);
             } catch (e) {
-              // Non-fatal
-              // ignore: avoid_print
               print('>>> Warning: Could not delete old image: $e');
             }
           }
@@ -291,10 +303,11 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         updatedAuthorities,
       );
 
-      // Update staff info (phone + image)
+      // Update staff info (phone + email + image)
       await authRepo.updateStaffInfo(
         staffDocumentId: widget.staffDocumentId,
         phone: fullPhone,
+        email: emailValue,
         image: finalImageUrl,
       );
 
@@ -303,6 +316,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       originalAppointmentsAuth = hasAppointmentsAuthority;
       originalMessagesAuth = hasMessagesAuthority;
       originalPhone = phoneValue;
+      originalEmail = emailValue;
 
       widget.onAuthoritiesUpdated(updatedAuthorities);
 
@@ -362,7 +376,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 768;
-    final dialogWidth = isDesktop ? 480.0 : screenWidth * 0.9;
+    final dialogWidth = isDesktop ? 520.0 : screenWidth * 0.9;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -420,12 +434,13 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader(
-                      'Contact Information',
-                      Icons.contact_mail_outlined,
+                      'Account Information',
+                      Icons.account_circle_outlined,
                       primaryBlue,
+                      subtitle: 'Login credentials and contact details',
                     ),
                     const SizedBox(height: 20),
-                    _buildContactInfoSection(),
+                    _buildAccountInfoSection(),
                     const SizedBox(height: 28),
                     _buildSectionHeader(
                       'Access Permissions',
@@ -583,7 +598,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   }
 
   Widget _getCurrentImage() {
-    // Show new image if changed
     if (imageChanged && newImageBytes != null) {
       return Image.memory(
         newImageBytes!,
@@ -593,7 +607,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       );
     }
 
-    // Show current image from URL
     if (widget.currentImageUrl != null && widget.currentImageUrl!.isNotEmpty) {
       return Image.network(
         widget.currentImageUrl!,
@@ -625,7 +638,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       );
     }
 
-    // Show default image from bytes (fallback)
     if (widget.imageBytes != null) {
       return Image.memory(
         widget.imageBytes!,
@@ -635,7 +647,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       );
     }
 
-    // Default avatar
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -668,11 +679,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Contact Information', // title is set below
-                  style:
-                      TextStyle(), // placeholder to keep const use consistent
-                ),
                 Text(
                   title,
                   style: const TextStyle(
@@ -694,7 +700,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     );
   }
 
-  Widget _buildContactInfoSection() {
+  Widget _buildAccountInfoSection() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -711,19 +717,149 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       ),
       child: Column(
         children: [
-          _buildInfoRow(Icons.email_outlined, 'Email', widget.email),
+          // Username (Read-only)
+          _buildInfoRow(
+            Icons.account_circle,
+            'Username',
+            widget.username,
+            isReadOnly: true,
+          ),
           const SizedBox(height: 16),
+
+          // Password (Hidden, Read-only)
+          _buildPasswordRow(),
+          const SizedBox(height: 16),
+
+          // Email (Editable)
+          if (isEditMode)
+            _buildEmailEditField()
+          else
+            _buildInfoRow(
+              Icons.email_outlined,
+              'Email',
+              (widget.email != null && widget.email!.isNotEmpty)
+                  ? widget.email!
+                  : 'Not provided',
+            ),
+          const SizedBox(height: 16),
+
+          // Phone (Editable)
           if (isEditMode)
             _buildPhoneEditField()
           else
             _buildInfoRow(
               Icons.phone_outlined,
               'Phone',
-              widget.phone != null && widget.phone!.isNotEmpty
+              (widget.phone != null && widget.phone!.isNotEmpty)
                   ? widget.phone!
                   : 'Not provided',
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordRow() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: vetOrange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.lock_outline, size: 20, color: vetOrange),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Password',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: mediumGray,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Text(
+                    '••••••••',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: darkText,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock, size: 10, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Hidden',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailEditField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: vetPurple.withOpacity(0.3)),
+      ),
+      child: TextFormField(
+        controller: emailController,
+        keyboardType: TextInputType.emailAddress,
+        decoration: InputDecoration(
+          labelText: 'Email (Optional)',
+          labelStyle: const TextStyle(color: mediumGray, fontSize: 14),
+          hintText: 'example@email.com',
+          hintStyle: TextStyle(color: mediumGray.withOpacity(0.4)),
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: vetPurple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.email_outlined, color: vetPurple, size: 18),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: false,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
     );
   }
@@ -746,6 +882,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           labelText: 'Phone Number (Optional)',
           labelStyle: const TextStyle(color: mediumGray, fontSize: 14),
           hintText: '123456789',
+          hintStyle: TextStyle(color: mediumGray.withOpacity(0.4)),
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -984,7 +1121,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
 
   Widget _buildActionButtons(bool isWide) {
     if (!isEditMode) {
-      // View mode buttons
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1029,7 +1165,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       );
     }
 
-    // Edit mode buttons
     if (isWide) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1123,7 +1258,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         ],
       );
     } else {
-      // Mobile layout
       return Column(
         children: [
           if (showDeleteConfirm) ...[
@@ -1228,7 +1362,8 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     }
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(IconData icon, String label, String value,
+      {bool isReadOnly = false}) {
     return Row(
       children: [
         Container(
@@ -1244,13 +1379,44 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: mediumGray,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: mediumGray,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (isReadOnly) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock, size: 9, color: Colors.grey[600]),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Read-only',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 4),
               Text(
