@@ -423,10 +423,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () {},
-          ),
-          IconButton(
             icon: Icon(_showStarters ? Icons.close : Icons.auto_awesome),
             tooltip: _showStarters ? 'Hide Starters' : 'Show Starters',
             onPressed: () {

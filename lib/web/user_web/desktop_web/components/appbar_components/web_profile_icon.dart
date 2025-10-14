@@ -291,7 +291,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                           _popupItem(Icons.settings_outlined, "Settings", () {
                             _navigateToSettings(1);
                           }),
-                          _popupItem(Icons.help_outline, "Help & Support", () {
+                          _popupItem(Icons.help_outline, "Help", () {
                             _navigateToSettings(2);
                           }),
                           _popupItem(Icons.feedback_outlined, "Give feedback", () {
