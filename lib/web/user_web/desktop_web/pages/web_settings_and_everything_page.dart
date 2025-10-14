@@ -179,7 +179,7 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                         children: [
                           _buildSidebarItem('Profile', Icons.person, 0),
                           _buildSidebarItem('Settings', Icons.settings, 1),
-                          _buildSidebarItem('Help & Support', Icons.help_outline, 2),
+                          _buildSidebarItem('Help', Icons.help_outline, 2),
                           _buildSidebarItem('Give Feedback', Icons.feedback_outlined, 3),
                           const Divider(color: Colors.grey),
                           _buildSidebarItem('Sign out', Icons.logout, -1, isDestructive: true),
@@ -929,7 +929,7 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Help & Support',
+                      'Help',
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: 28,
