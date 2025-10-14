@@ -12,7 +12,8 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignUpPage> {
-  final SignUpController controller = SignUpController(Get.find<AuthRepository>());
+  final SignUpController controller =
+      SignUpController(Get.find<AuthRepository>());
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +64,8 @@ class _SignupPageState extends State<SignUpPage> {
                         child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.keyboard_arrow_left_rounded),
+                              icon:
+                                  const Icon(Icons.keyboard_arrow_left_rounded),
                               onPressed: () {
                                 controller.moveToLogin();
                               },
@@ -71,7 +73,7 @@ class _SignupPageState extends State<SignUpPage> {
                           ],
                         ),
                       ),
-                      
+
                       // Logo
                       Image.asset(
                         "lib/images/PAWrtal_logo.png",
@@ -84,6 +86,7 @@ class _SignupPageState extends State<SignUpPage> {
                       SizedBox(
                         width: 300,
                         child: TextFormField(
+                          maxLength: 50,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.email_rounded),
                             hintText: "Email",
@@ -104,6 +107,7 @@ class _SignupPageState extends State<SignUpPage> {
                       SizedBox(
                         width: 300,
                         child: TextFormField(
+                          maxLength: 50,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.person_rounded),
                             hintText: "Full Name",
@@ -124,6 +128,7 @@ class _SignupPageState extends State<SignUpPage> {
                       SizedBox(
                         width: 300,
                         child: Obx(() => TextFormField(
+                              maxLength: 50,
                               obscureText: !controller.isPasswordVisible.value,
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.lock_rounded),
@@ -133,7 +138,8 @@ class _SignupPageState extends State<SignUpPage> {
                                         ? Icons.visibility
                                         : Icons.visibility_off,
                                   ),
-                                  onPressed: controller.togglePasswordVisibility,
+                                  onPressed:
+                                      controller.togglePasswordVisibility,
                                 ),
                                 hintText: "Password",
                                 border: OutlineInputBorder(
@@ -153,16 +159,20 @@ class _SignupPageState extends State<SignUpPage> {
                       SizedBox(
                         width: 300,
                         child: Obx(() => TextFormField(
-                              obscureText: !controller.isConfirmPasswordVisible.value,
+                              maxLength: 50,
+                              obscureText:
+                                  !controller.isConfirmPasswordVisible.value,
                               decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                prefixIcon:
+                                    const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     controller.isConfirmPasswordVisible.value
                                         ? Icons.visibility
                                         : Icons.visibility_off,
                                   ),
-                                  onPressed: controller.toggleConfirmPasswordVisibility,
+                                  onPressed: controller
+                                      .toggleConfirmPasswordVisibility,
                                 ),
                                 hintText: "Confirm Password",
                                 border: OutlineInputBorder(
@@ -170,9 +180,11 @@ class _SignupPageState extends State<SignUpPage> {
                                 ),
                               ),
                               keyboardType: TextInputType.visiblePassword,
-                              controller: controller.confirmPasswordEditingController,
+                              controller:
+                                  controller.confirmPasswordEditingController,
                               validator: (value) {
-                                return controller.validateConfirmPassword(value!);
+                                return controller
+                                    .validateConfirmPassword(value!);
                               },
                             )),
                       ),
@@ -186,9 +198,11 @@ class _SignupPageState extends State<SignUpPage> {
                                 Checkbox(
                                   value: controller.termsAccepted.value,
                                   onChanged: (value) {
-                                    controller.termsAccepted.value = value ?? false;
+                                    controller.termsAccepted.value =
+                                        value ?? false;
                                   },
-                                  activeColor: const Color.fromARGB(255, 81, 115, 153),
+                                  activeColor:
+                                      const Color.fromARGB(255, 81, 115, 153),
                                 ),
                                 Expanded(
                                   child: RichText(
@@ -202,13 +216,16 @@ class _SignupPageState extends State<SignUpPage> {
                                         TextSpan(
                                           text: "Terms and Conditions",
                                           style: const TextStyle(
-                                            color: Color.fromARGB(255, 81, 115, 153),
+                                            color: Color.fromARGB(
+                                                255, 81, 115, 153),
                                             fontWeight: FontWeight.bold,
-                                            decoration: TextDecoration.underline,
+                                            decoration:
+                                                TextDecoration.underline,
                                           ),
                                           recognizer: TapGestureRecognizer()
                                             ..onTap = () {
-                                              controller.showTermsAndConditions();
+                                              controller
+                                                  .showTermsAndConditions();
                                             },
                                         ),
                                       ],
@@ -227,7 +244,8 @@ class _SignupPageState extends State<SignUpPage> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             elevation: 5,
-                            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -235,7 +253,8 @@ class _SignupPageState extends State<SignUpPage> {
                           onPressed: () {
                             controller.validateAndSignUp(
                               email: controller.emailEditingController.text,
-                              password: controller.passwordEditingController.text,
+                              password:
+                                  controller.passwordEditingController.text,
                               name: controller.nameEditingController.text,
                             );
                           },

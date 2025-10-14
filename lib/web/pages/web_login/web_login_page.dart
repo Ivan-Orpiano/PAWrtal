@@ -265,8 +265,8 @@ class WebLoginPage extends GetView<WebLoginController> {
                                                       .errorMessage.value = '';
                                                 }
                                               },
-                                              validator:
-                                                  controller.validatePassword,
+                                              // validator:
+                                              //     controller.validatePassword,
                                             )),
                                       ),
 

@@ -66,8 +66,10 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                     width: 400,
                     child: TextFormField(
                       controller: controller.emailController,
-                      keyboardType: TextInputType.emailAddress,
+                      keyboardType: TextInputType.emailAddress, 
+                      maxLength: 50,
                       decoration: InputDecoration(
+                        counterText: "",
                         prefixIcon: const Icon(Icons.email_rounded),
                         hintText: "Email",
                         border: OutlineInputBorder(
@@ -81,7 +83,10 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                     width: 400,
                     child: TextFormField(
                       controller: controller.nameController,
+                      keyboardType: TextInputType.name,
+                      maxLength: 50,
                       decoration: InputDecoration(
+                        counterText: "",
                         prefixIcon: const Icon(Icons.person_rounded),
                         hintText: "Full Name",
                         border: OutlineInputBorder(
@@ -96,8 +101,10 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                     child: Obx(
                       () => TextFormField(
                         controller: controller.passwordController,
+                        maxLength: 50,
                         obscureText: !controller.isPasswordVisible.value,
                         decoration: InputDecoration(
+                          counterText: "",
                           prefixIcon: const Icon(Icons.lock_rounded),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -121,8 +128,10 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                     child: Obx(
                       () => TextFormField(
                         controller: controller.confirmPasswordController,
+                        maxLength: 50,                
                         obscureText: !controller.isConfirmPasswordVisible.value,
                         decoration: InputDecoration(
+                          counterText: "",
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                           suffixIcon: IconButton(
                             icon: Icon(

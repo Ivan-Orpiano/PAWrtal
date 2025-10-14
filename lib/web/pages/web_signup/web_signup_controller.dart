@@ -309,9 +309,15 @@ class WebSignUpController extends GetxController {
   }
 
   bool _validateForm() {
-    if (emailController.text.isEmpty ||
-        nameController.text.isEmpty ||
-        passwordController.text.isEmpty) {
+    final email = emailController.text.trim();
+    final name = nameController.text.trim();
+    final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    if (email.isEmpty ||
+        name.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
       Get.snackbar(
         'Error',
         'Please fill in all fields',
@@ -321,7 +327,8 @@ class WebSignUpController extends GetxController {
       return false;
     }
 
-    if (!GetUtils.isEmail(emailController.text.trim())) {
+    // Email validation
+    if (!GetUtils.isEmail(email)) {
       Get.snackbar(
         'Error',
         'Please enter a valid email address',
@@ -331,7 +338,19 @@ class WebSignUpController extends GetxController {
       return false;
     }
 
-    if (passwordController.text.length < 8) {
+    // Text length limit (already enforced visually but we check anyway)
+    if (email.length > 50 || name.length > 50 || password.length > 50) {
+      Get.snackbar(
+        'Error',
+        'Each field must not exceed 50 characters',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    // Password length
+    if (password.length < 8) {
       Get.snackbar(
         'Error',
         'Password must be at least 8 characters long',
@@ -341,8 +360,21 @@ class WebSignUpController extends GetxController {
       return false;
     }
 
-    if (confirmPasswordController.text.isNotEmpty &&
-        passwordController.text != confirmPasswordController.text) {
+    // Password complexity: 1 uppercase, 1 digit, 1 special character
+    final passwordRegex =
+        RegExp(r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>]).{8,}$');
+    if (!passwordRegex.hasMatch(password)) {
+      Get.snackbar(
+        'Error',
+        'Password must contain at least one uppercase letter, one digit, and one special character',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    // Password confirmation
+    if (password != confirmPassword) {
       Get.snackbar(
         'Error',
         'Passwords do not match',

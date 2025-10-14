@@ -58,10 +58,23 @@ class SignUpController extends GetxController {
     return null;
   }
 
+  // 🔒 Updated password validation rule to match web version
   String? validatePassword(String? value) {
-    if (value == null || value.length < 8) {
-      return "Password must be at least 8 characters";
+    if (value == null || value.isEmpty) {
+      return "Password is required";
     }
+
+    if (value.length < 8) {
+      return "Password must be at least 8 characters long";
+    }
+
+    // Require at least 1 uppercase, 1 digit, and 1 special character
+    final passwordRegex =
+        RegExp(r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>]).{8,}$');
+    if (!passwordRegex.hasMatch(value)) {
+      return "Password must contain an uppercase letter, a digit, and a special character";
+    }
+
     return null;
   }
 
@@ -219,12 +232,12 @@ class SignUpController extends GetxController {
   Future<void> signUpWithGoogle() async {
     try {
       FullScreenDialogLoader.showDialog();
-      
+
       final appWriteProvider = AppWriteProvider();
       final success = await appWriteProvider.signInWithGoogle();
-      
+
       FullScreenDialogLoader.cancelDialog();
-      
+
       if (success) {
         CustomSnackBar.showSuccessSnackBar(
           context: Get.overlayContext,

@@ -218,9 +218,9 @@ class _LoginPageState extends State<LoginPage> {
                                       .trim(),
                                 );
                               },
-                              validator: (value) {
-                                return controller.validatePassword(value!);
-                              },
+                              // validator: (value) {
+                              //   return controller.validatePassword(value!);
+                              // },
                             )),
                       ),
 

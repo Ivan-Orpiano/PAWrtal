@@ -192,7 +192,7 @@ class WebLoginController extends GetxController {
 
       // UNIFIED ERROR MESSAGE: Always show this for any login error
       errorMessage.value =
-          'Invalid username/email or password. Please check your credentials.';
+          'Invalid username/email or password. Please try again.';
 
       // Don't use WebErrorHandler for login errors - show in UI instead
       // WebErrorHandler.handleError(e, context: 'Login');
@@ -310,8 +310,8 @@ class WebLoginController extends GetxController {
 
   @override
   void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
+    // emailController.dispose();
+    // passwordController.dispose();
     emailForPasswordResetController.dispose();
     super.onClose();
   }
