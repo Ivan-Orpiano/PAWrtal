@@ -2,6 +2,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart';
+import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -17,6 +18,7 @@ class AdminWebDashboard extends StatefulWidget {
 
 class _AdminWebDashboardState extends State<AdminWebDashboard> {
   late AdminDashboardController controller;
+  late WebAdminHomeController permissionController;
   bool _isInitialized = false;
 
   @override
@@ -28,7 +30,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   @override
   void dispose() {
     // CRITICAL FIX: Delete controller when dashboard is disposed
-    // This ensures fresh data when switching between clinics
     if (Get.isRegistered<AdminDashboardController>()) {
       Get.delete<AdminDashboardController>(force: true);
       print('>>> Dashboard disposed - controller deleted');
@@ -36,8 +37,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     super.dispose();
   }
 
-  // FIX: Force fresh controller creation every time
   void _initializeController() {
+    // Initialize permission controller
+    permissionController = Get.find<WebAdminHomeController>();
+
     // CRITICAL FIX: Always delete existing controller first
     if (Get.isRegistered<AdminDashboardController>()) {
       Get.delete<AdminDashboardController>(force: true);
@@ -50,7 +53,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         authRepository: Get.find<AuthRepository>(),
         session: Get.find<UserSessionService>(),
       ),
-      permanent: false, // CRITICAL FIX: Changed from true to false
+      permanent: false,
     );
 
     print('>>> Created new AdminDashboardController');
@@ -84,7 +87,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Wait for controller to be initialized
     if (!_isInitialized) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8FAFC),
@@ -278,6 +280,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   Widget _buildQuickStats(
       AdminDashboardController controller, bool isMobile, bool isTablet) {
+    // Everyone sees the same stats - permission check only on click
     final stats = [
       {
         'title': 'Today\'s Appointments',
@@ -285,7 +288,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         'subtitle': 'Scheduled today',
         'icon': Icons.event_available,
         'color': Colors.blue,
-        'onTap': () => controller.navigateToAppointments('today'),
+        'permission': 'appointments',
+        'onTap': () => _handleNavigateToAppointments('today'),
       },
       {
         'title': 'Pending Appointments',
@@ -293,7 +297,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         'subtitle': 'Need approval',
         'icon': Icons.pending_actions,
         'color': Colors.orange,
-        'onTap': () => controller.navigateToAppointments('pending'),
+        'permission': 'appointments',
+        'onTap': () => _handleNavigateToAppointments('pending'),
       },
       {
         'title': 'Today\'s In Progress',
@@ -304,7 +309,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         'subtitle': 'Currently being treated',
         'icon': Icons.medical_services,
         'color': Colors.purple,
-        'onTap': () => controller.navigateToAppointments('in_progress'),
+        'permission': 'appointments',
+        'onTap': () => _handleNavigateToAppointments('in_progress'),
       },
       {
         'title': 'Today\'s Completed',
@@ -315,7 +321,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         'subtitle': 'Finished appointments today',
         'icon': Icons.check_circle,
         'color': Colors.green,
-        'onTap': () => controller.navigateToAppointments('completed'),
+        'permission': 'appointments',
+        'onTap': () => _handleNavigateToAppointments('completed'),
       },
     ];
 
@@ -373,7 +380,53 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     }
   }
 
+  // FIXED: Navigate to appointments using correct index
+  void _handleNavigateToAppointments(String filter) {
+    if (!permissionController.canAccessFeature('appointments')) {
+      permissionController.showPermissionDeniedDialog('Appointments');
+      return;
+    }
+
+    // Find the correct index for Appointments page
+    final appointmentsIndex =
+        permissionController.navigationLabels.indexOf('Appointments');
+
+    if (appointmentsIndex == -1) {
+      print('>>> ERROR: Appointments page not found in navigation');
+      return;
+    }
+
+    print(
+        '>>> Navigating to Appointments at index $appointmentsIndex with filter: $filter');
+
+    // Navigate to the appointments page
+    permissionController.setSelectedIndex(appointmentsIndex);
+
+    // Set the filter in the dashboard controller
+    controller.navigateToAppointments(filter);
+  }
+
+  void _handleNavigateToMessages() {
+    if (!permissionController.canAccessFeature('messages')) {
+      permissionController.showPermissionDeniedDialog('Messages');
+      return;
+    }
+
+    // Find the correct index for Messages page
+    final messagesIndex =
+        permissionController.navigationLabels.indexOf('Messages');
+
+    if (messagesIndex == -1) {
+      print('>>> ERROR: Messages page not found in navigation');
+      return;
+    }
+
+    print('>>> Navigating to Messages at index $messagesIndex');
+    permissionController.setSelectedIndex(messagesIndex);
+  }
+
   Widget _buildStatCard(Map<String, dynamic> stat) {
+    // Everyone sees the same card - permission check only on click
     return InkWell(
       onTap: stat['onTap'],
       borderRadius: BorderRadius.circular(12),
@@ -442,6 +495,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   }
 
   Widget _buildMobileLayout(AdminDashboardController controller) {
+    // Everyone sees all sections - permission check only on click
     return Column(
       children: [
         _buildTodaySchedule(controller, true),
@@ -454,6 +508,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   }
 
   Widget _buildTabletLayout(AdminDashboardController controller) {
+    // Everyone sees all sections - permission check only on click
     return Column(
       children: [
         _buildTodaySchedule(controller, false),
@@ -471,6 +526,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   }
 
   Widget _buildDesktopLayout(AdminDashboardController controller) {
+    // Everyone sees all sections - permission check only on click
     return Column(
       children: [
         Row(
@@ -522,7 +578,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               }).toList(),
             ),
       actionLabel: 'View All',
-      onAction: () => controller.navigateToAppointments('today'),
+      onAction: () => _handleNavigateToAppointments('today'),
     );
   }
 
@@ -635,7 +691,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               }).toList(),
             ),
       actionLabel: 'View All',
-      onAction: () => controller.navigateToMessages(),
+      onAction: _handleNavigateToMessages,
     );
   }
 
@@ -756,7 +812,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               }).toList(),
             ),
       actionLabel: 'View All',
-      onAction: () => controller.navigateToAppointments(),
+      onAction: () => _handleNavigateToAppointments('all'),
     );
   }
 
