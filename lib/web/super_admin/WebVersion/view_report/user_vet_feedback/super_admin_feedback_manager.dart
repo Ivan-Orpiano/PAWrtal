@@ -278,7 +278,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     context,
                     PageRouteBuilder(
                       pageBuilder: (context, animation, secondaryAnimation) =>
-                          const ApplicationReport(),
+                          const AdminFeedbackManagement(),
                       transitionDuration: const Duration(milliseconds: 300),
                       reverseTransitionDuration:
                           const Duration(milliseconds: 250),
