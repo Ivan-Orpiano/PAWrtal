@@ -218,75 +218,9 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   void _showBrowserOpenedScreen() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('ID Verification'),
-            backgroundColor: const Color(0xFF1976D2),
-            foregroundColor: Colors.white,
-          ),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.open_in_browser,
-                    size: 80,
-                    color: Color(0xFF1976D2),
-                  ),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Verification Opened in Browser',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Please complete the ID verification process in your browser. The camera will activate automatically for scanning your ID.',
-                    style: TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Column(
-                      children: [
-                        Icon(Icons.info_outline, color: Color(0xFF1976D2)),
-                        SizedBox(height: 8),
-                        Text(
-                          'After completing verification in the browser, return to this app. Your verification status will be updated automatically.',
-                          style: TextStyle(fontSize: 14),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(false);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1976D2),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: const Text('Back to Home'),
-                  ),
-                ],
-              ),
-            ),
+        builder: (context) => _ResponsiveVerificationScreen(
+          child: _BrowserOpenedContent(
+            onBackToHome: () => Navigator.of(context).pop(false),
           ),
         ),
       ),
@@ -399,10 +333,12 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   void _showSuccessScreen() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => _VerificationResultScreen(
-          success: true,
-          message: 'Your ID has been successfully verified!',
-          onComplete: () => Navigator.of(context).pop(true),
+        builder: (context) => _ResponsiveVerificationScreen(
+          child: _VerificationResultContent(
+            success: true,
+            message: 'Your ID has been successfully verified!',
+            onComplete: () => Navigator.of(context).pop(true),
+          ),
         ),
       ),
     );
@@ -411,11 +347,13 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   void _showPendingScreen() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => _VerificationResultScreen(
-          success: null,
-          message:
-              'Your ID verification is being processed. You will be notified once it\'s complete.',
-          onComplete: () => Navigator.of(context).pop(false),
+        builder: (context) => _ResponsiveVerificationScreen(
+          child: _VerificationResultContent(
+            success: null,
+            message:
+                'Your ID verification is being processed. You will be notified once it\'s complete.',
+            onComplete: () => Navigator.of(context).pop(false),
+          ),
         ),
       ),
     );
@@ -424,22 +362,24 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   void _showRejectedScreen() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => _VerificationResultScreen(
-          success: false,
-          message:
-              'Your ID verification was rejected. ${_currentVerification?.rejectionReason ?? "Please try again with a valid ID."}',
-          onComplete: () => Navigator.of(context).pop(false),
-          onRetry: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => IdVerificationScreen(
-                  userId: widget.userId,
-                  email: widget.email,
-                  authRepository: widget.authRepository,
+        builder: (context) => _ResponsiveVerificationScreen(
+          child: _VerificationResultContent(
+            success: false,
+            message:
+                'Your ID verification was rejected. ${_currentVerification?.rejectionReason ?? "Please try again with a valid ID."}',
+            onComplete: () => Navigator.of(context).pop(false),
+            onRetry: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => IdVerificationScreen(
+                    userId: widget.userId,
+                    email: widget.email,
+                    authRepository: widget.authRepository,
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -448,10 +388,12 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   void _showErrorScreen(String error) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => _VerificationResultScreen(
-          success: false,
-          message: 'An error occurred: $error',
-          onComplete: () => Navigator.of(context).pop(false),
+        builder: (context) => _ResponsiveVerificationScreen(
+          child: _VerificationResultContent(
+            success: false,
+            message: 'An error occurred: $error',
+            onComplete: () => Navigator.of(context).pop(false),
+          ),
         ),
       ),
     );
@@ -460,42 +402,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('ID Verification'),
-          backgroundColor: const Color(0xFF1976D2),
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.open_in_new,
-                  size: 64,
-                  color: Color(0xFF1976D2),
-                ),
-                SizedBox(height: 24),
-                Text(
-                  'Verification opened in new window',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Please complete the verification process in the opened browser window.',
-                  style: TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
+      return _ResponsiveVerificationScreen(
+        child: _WebVerificationContent(),
       );
     }
 
@@ -541,13 +449,157 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   }
 }
 
-class _VerificationResultScreen extends StatelessWidget {
+// Responsive wrapper for desktop/mobile layouts
+class _ResponsiveVerificationScreen extends StatelessWidget {
+  final Widget child;
+
+  const _ResponsiveVerificationScreen({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ID Verification'),
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        centerTitle: false,
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 800;
+          
+          if (isDesktop) {
+            // Desktop layout - center content with max width
+            return Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 600),
+                padding: const EdgeInsets.all(24.0),
+                child: child,
+              ),
+            );
+          } else {
+            // Mobile layout - full width
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: child,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
+// Web verification content
+class _WebVerificationContent extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.open_in_new,
+          size: 64,
+          color: Color(0xFF1976D2),
+        ),
+        SizedBox(height: 24),
+        Text(
+          'Verification opened in new window',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 16),
+        Text(
+          'Please complete the verification process in the opened browser window.',
+          style: TextStyle(fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+// Browser opened content
+class _BrowserOpenedContent extends StatelessWidget {
+  final VoidCallback onBackToHome;
+
+  const _BrowserOpenedContent({required this.onBackToHome});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(
+          Icons.open_in_browser,
+          size: 80,
+          color: Color(0xFF1976D2),
+        ),
+        const SizedBox(height: 32),
+        const Text(
+          'Verification Opened in Browser',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Please complete the ID verification process in your browser. The camera will activate automatically for scanning your ID.',
+          style: TextStyle(fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Column(
+            children: [
+              Icon(Icons.info_outline, color: Color(0xFF1976D2)),
+              SizedBox(height: 8),
+              Text(
+                'After completing verification in the browser, return to this app. Your verification status will be updated automatically.',
+                style: TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        ElevatedButton(
+          onPressed: onBackToHome,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1976D2),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32,
+              vertical: 16,
+            ),
+          ),
+          child: const Text('Back to Home'),
+        ),
+      ],
+    );
+  }
+}
+
+// Verification result content
+class _VerificationResultContent extends StatelessWidget {
   final bool? success;
   final String message;
   final VoidCallback onComplete;
   final VoidCallback? onRetry;
 
-  const _VerificationResultScreen({
+  const _VerificationResultContent({
     required this.success,
     required this.message,
     required this.onComplete,
@@ -574,63 +626,56 @@ class _VerificationResultScreen extends StatelessWidget {
       title = 'Verification Failed';
     }
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 100,
-                color: color,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: 100,
+          color: color,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          message,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        if (onRetry != null)
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1976D2),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 48,
+                vertical: 16,
               ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              if (onRetry != null)
-                ElevatedButton(
-                  onPressed: onRetry,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 48,
-                      vertical: 16,
-                    ),
-                  ),
-                  child: const Text('Retry Verification'),
-                ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: onComplete,
-                child: const Text(
-                  'Back to Home',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-            ],
+            ),
+            child: const Text('Retry Verification'),
+          ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: onComplete,
+          child: const Text(
+            'Back to Home',
+            style: TextStyle(fontSize: 16),
           ),
         ),
-      ),
+      ],
     );
   }
 }
