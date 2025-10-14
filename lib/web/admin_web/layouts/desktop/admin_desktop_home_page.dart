@@ -76,7 +76,7 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
                   controller,
                   controller.navigationLabels[index],
                   index,
-                  widget.selectedIndex == index,
+                  controller.selectedIndex.value == index,
                 ),
               ),
             )),
@@ -96,14 +96,19 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
         ],
       ),
       body: Obx(() {
-        if (widget.selectedIndex >= controller.pages.length) {
+        // Use controller's selectedIndex instead of widget's
+        final currentIndex = controller.selectedIndex.value;
+        
+        // Safety check
+        if (currentIndex >= controller.pages.length) {
+          print('>>> ERROR: Index $currentIndex out of bounds (max: ${controller.pages.length - 1})');
           return const Center(child: Text('Page not found'));
         }
 
         // Wrap the current page with permission guard
         return _wrapWithPermissionGuard(
-          controller.pages[widget.selectedIndex],
-          widget.selectedIndex,
+          controller.pages[currentIndex],
+          currentIndex,
           controller,
         );
       }),

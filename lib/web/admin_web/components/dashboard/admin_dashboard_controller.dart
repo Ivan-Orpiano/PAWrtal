@@ -698,39 +698,71 @@ class AdminDashboardController extends GetxController {
     }
   }
 
+  // ✅ FIXED: Dynamic index lookup for Appointments
   void navigateToAppointments([String? filter]) {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(2);
 
-      if (filter != null) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          try {
-            final appointmentController = Get.find<WebAppointmentController>();
-            appointmentController.setSelectedTab(filter);
-          } catch (e) {
-            print("Appointment controller not ready for filter: $filter");
-          }
-        });
+      // Find the correct index dynamically
+      final appointmentsIndex =
+          homeController.navigationLabels.indexOf('Appointments');
+
+      if (appointmentsIndex != -1) {
+        print('>>> Navigating to Appointments at index $appointmentsIndex');
+        homeController.setSelectedIndex(appointmentsIndex);
+
+        if (filter != null) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            try {
+              final appointmentController =
+                  Get.find<WebAppointmentController>();
+              appointmentController.setSelectedTab(filter);
+            } catch (e) {
+              print("Appointment controller not ready for filter: $filter");
+            }
+          });
+        }
+      } else {
+        print('>>> ERROR: Appointments page not available in navigation');
       }
     } catch (e) {
       print("Navigation error: $e");
     }
   }
 
+  // ✅ FIXED: Dynamic index lookup for Messages
   void navigateToMessages() {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(3);
+
+      // Find the correct index dynamically
+      final messagesIndex = homeController.navigationLabels.indexOf('Messages');
+
+      if (messagesIndex != -1) {
+        print('>>> Navigating to Messages at index $messagesIndex');
+        homeController.setSelectedIndex(messagesIndex);
+      } else {
+        print('>>> ERROR: Messages page not available in navigation');
+      }
     } catch (e) {
       print("Navigation error: $e");
     }
   }
 
+  // ✅ FIXED: Dynamic index lookup for Clinic
   void navigateToClinic() {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(1);
+
+      // Find the correct index dynamically
+      final clinicIndex = homeController.navigationLabels.indexOf('Clinic');
+
+      if (clinicIndex != -1) {
+        print('>>> Navigating to Clinic at index $clinicIndex');
+        homeController.setSelectedIndex(clinicIndex);
+      } else {
+        print('>>> ERROR: Clinic page not available in navigation');
+      }
     } catch (e) {
       print("Navigation error: $e");
     }

@@ -61,15 +61,7 @@ class _StaffTileState extends State<StaffTile>
       imageBytes = null;
     }
 
-    // Debug: Check what fields are available
-    print('>>> Staff data available:');
-    print('>>> Name: ${widget.staff.name}');
-    print('>>> Username: ${widget.staff.username}');
-    print('>>> Has phone: ${widget.staff.phone}');
-
-    // Get email safely - it might be empty string or null
     final staffEmail = widget.staff.email;
-    print('>>> Email: $staffEmail');
 
     showDialog(
       context: context,
@@ -77,7 +69,7 @@ class _StaffTileState extends State<StaffTile>
         staffName: widget.staff.name,
         username: widget.staff.username,
         phone: widget.staff.phone,
-        email: staffEmail.isNotEmpty ? staffEmail : null, // Pass null if empty
+        email: staffEmail.isNotEmpty ? staffEmail : null,
         initialAuthorities: widget.staff.authorities,
         onAuthoritiesUpdated: widget.onUpdate,
         onRemove: widget.onRemove,
@@ -154,6 +146,7 @@ class _StaffTileState extends State<StaffTile>
                     padding: const EdgeInsets.all(18),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Profile Image with Badge
                         Stack(
@@ -258,151 +251,136 @@ class _StaffTileState extends State<StaffTile>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
-                        // Permissions Preview (BIGGER SECTION)
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  lightGray,
-                                  lightVetGreen.withOpacity(0.3),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: primaryTeal.withOpacity(0.2)),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            primaryTeal.withOpacity(0.2),
-                                            primaryBlue.withOpacity(0.1),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Icon(Icons.security,
-                                          size: 12, color: primaryTeal),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Permissions',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: darkText,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                if (widget.staff.authorities.isEmpty)
-                                  Expanded(
-                                    child: Center(
-                                      child: Text(
-                                        'No permissions assigned',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey[500],
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        children: widget.staff.authorities
-                                            .map((auth) {
-                                          IconData icon;
-                                          List<Color> colors;
-                                          switch (auth) {
-                                            case 'Clinic':
-                                              icon = Icons.local_hospital;
-                                              colors = [
-                                                primaryTeal,
-                                                primaryBlue
-                                              ];
-                                              break;
-                                            case 'Appointments':
-                                              icon = Icons.calendar_month;
-                                              colors = [primaryBlue, softBlue];
-                                              break;
-                                            case 'Messages':
-                                              icon = Icons.message;
-                                              colors = [vetOrange, primaryTeal];
-                                              break;
-                                            default:
-                                              icon = Icons.check_circle;
-                                              colors = [mediumGray, mediumGray];
-                                          }
-
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 6),
-                                            child: Container(
-                                              width: double.infinity,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 6),
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    colors.first
-                                                        .withOpacity(0.2),
-                                                    colors.last
-                                                        .withOpacity(0.1),
-                                                  ],
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                    color: colors.first
-                                                        .withOpacity(0.3)),
-                                              ),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(icon,
-                                                      size: 12,
-                                                      color: colors.first),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    auth,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: colors.first,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
+                        // Permissions Preview (RESPONSIVE TO CONTENT)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                lightGray,
+                                lightVetGreen.withOpacity(0.3),
                               ],
                             ),
+                            borderRadius: BorderRadius.circular(12),
+                            border:
+                                Border.all(color: primaryTeal.withOpacity(0.2)),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          primaryTeal.withOpacity(0.2),
+                                          primaryBlue.withOpacity(0.1),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.security,
+                                        size: 12, color: primaryTeal),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Permissions',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: darkText,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (widget.staff.authorities.isEmpty)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(
+                                    'No permissions assigned',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey[500],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              else
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children:
+                                      widget.staff.authorities.map((auth) {
+                                    IconData icon;
+                                    List<Color> colors;
+                                    switch (auth) {
+                                      case 'Clinic':
+                                        icon = Icons.local_hospital;
+                                        colors = [primaryTeal, primaryBlue];
+                                        break;
+                                      case 'Appointments':
+                                        icon = Icons.calendar_month;
+                                        colors = [primaryBlue, softBlue];
+                                        break;
+                                      case 'Messages':
+                                        icon = Icons.message;
+                                        colors = [vetOrange, primaryTeal];
+                                        break;
+                                      default:
+                                        icon = Icons.check_circle;
+                                        colors = [mediumGray, mediumGray];
+                                    }
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              colors.first.withOpacity(0.2),
+                                              colors.last.withOpacity(0.1),
+                                            ],
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                              color: colors.first
+                                                  .withOpacity(0.3)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(icon,
+                                                size: 12, color: colors.first),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              auth,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: colors.first,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                            ],
                           ),
                         ),
                       ],
