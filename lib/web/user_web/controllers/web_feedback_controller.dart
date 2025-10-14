@@ -31,6 +31,7 @@ class WebFeedbackController extends GetxController {
   Rx<FeedbackStatus?> statusFilter = Rx<FeedbackStatus?>(null);
   Rx<Priority?> priorityFilter = Rx<Priority?>(null);
   Rx<FeedbackType?> typeFilter = Rx<FeedbackType?>(null);
+  Rx<FeedbackCategory?> categoryFilter = Rx<FeedbackCategory?>(null);
   RxString searchQuery = ''.obs;
 
   // Statistics
@@ -49,7 +50,10 @@ class WebFeedbackController extends GetxController {
   // ============= NOTIFICATION HELPER =============
 
   /// Show compact toast notification at top right
-  void _showCompactNotification(String message, {required Color bgColor, required IconData icon, required Color iconColor}) {
+  void _showCompactNotification(String message,
+      {required Color bgColor,
+      required IconData icon,
+      required Color iconColor}) {
     Get.rawSnackbar(
       messageText: Row(
         mainAxisSize: MainAxisSize.min,
@@ -83,19 +87,31 @@ class WebFeedbackController extends GetxController {
   }
 
   void _showSuccess(String message) {
-    _showCompactNotification(message, bgColor: Colors.green[600]!, icon: Icons.check_circle_outline, iconColor: Colors.white);
+    _showCompactNotification(message,
+        bgColor: Colors.green[600]!,
+        icon: Icons.check_circle_outline,
+        iconColor: Colors.white);
   }
 
   void _showError(String message) {
-    _showCompactNotification(message, bgColor: Colors.red[600]!, icon: Icons.error_outline, iconColor: Colors.white);
+    _showCompactNotification(message,
+        bgColor: Colors.red[600]!,
+        icon: Icons.error_outline,
+        iconColor: Colors.white);
   }
 
   void _showInfo(String message) {
-    _showCompactNotification(message, bgColor: Colors.blue[600]!, icon: Icons.info_outline, iconColor: Colors.white);
+    _showCompactNotification(message,
+        bgColor: Colors.blue[600]!,
+        icon: Icons.info_outline,
+        iconColor: Colors.white);
   }
 
   void _showWarning(String message) {
-    _showCompactNotification(message, bgColor: Colors.amber[700]!, icon: Icons.warning_amber, iconColor: Colors.white);
+    _showCompactNotification(message,
+        bgColor: Colors.amber[700]!,
+        icon: Icons.warning_amber,
+        iconColor: Colors.white);
   }
 
   // ============= USER-SIDE METHODS =============
@@ -103,24 +119,28 @@ class WebFeedbackController extends GetxController {
   /// Validate file before adding
   bool _validateFile(PlatformFile file) {
     final extension = file.extension?.toLowerCase() ?? '';
-    
+
     // Check if it's an image or video
-    final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
+    final isImage =
+        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
     final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
-    
+
     if (!isImage && !isVideo) {
-      _showError("Only images (JPG, PNG, GIF) and videos (MP4, MOV, AVI) allowed");
+      _showError(
+          "Only images (JPG, PNG, GIF) and videos (MP4, MOV, AVI) allowed");
       return false;
     }
 
     // Check file size limits
     if (isImage && file.size > 5 * 1024 * 1024) {
-      _showError("Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
+      _showError(
+          "Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
       return false;
     }
 
     if (isVideo && file.size > 25 * 1024 * 1024) {
-      _showError("Video files must be under 25MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
+      _showError(
+          "Video files must be under 25MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
       return false;
     }
 
@@ -137,7 +157,19 @@ class WebFeedbackController extends GetxController {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'mp4', 'mov', 'avi', 'mkv', 'webm'],
+        allowedExtensions: [
+          'jpg',
+          'jpeg',
+          'png',
+          'gif',
+          'webp',
+          'bmp',
+          'mp4',
+          'mov',
+          'avi',
+          'mkv',
+          'webm'
+        ],
         allowMultiple: true,
       );
 
@@ -227,7 +259,7 @@ class WebFeedbackController extends GetxController {
       final userId = session.userId;
       final userName = session.userName;
       final userEmail = session.userEmail;
-      
+
       // DEBUG: Print to verify data
       print('=== SUBMITTING FEEDBACK ===');
       print('User ID: $userId');
@@ -238,7 +270,7 @@ class WebFeedbackController extends GetxController {
       print('Type: ${selectedType.value}');
       print('Category: ${selectedCategory.value}');
       print('Files: ${selectedFiles.length}');
-      
+
       // Validate user data exists
       if (userId.isEmpty) {
         _showError("User session data is missing. Please log in again.");
@@ -249,7 +281,8 @@ class WebFeedbackController extends GetxController {
       // Upload attachments first
       _showInfo("Uploading ${selectedFiles.length} file(s)...");
 
-      final uploadedFiles = await authRepository.uploadFeedbackAttachments(selectedFiles);
+      final uploadedFiles =
+          await authRepository.uploadFeedbackAttachments(selectedFiles);
       final attachmentIds = uploadedFiles.map((f) => f.$id).toList();
 
       print('Uploaded ${attachmentIds.length} attachments: $attachmentIds');
@@ -282,9 +315,11 @@ class WebFeedbackController extends GetxController {
       print('Feedback data map: ${feedback.toMap()}');
 
       // Submit to database
-      final createdFeedback = await authRepository.createFeedbackAndReport(feedback);
-      
-      print('Feedback created successfully with ID: ${createdFeedback.documentId}');
+      final createdFeedback =
+          await authRepository.createFeedbackAndReport(feedback);
+
+      print(
+          'Feedback created successfully with ID: ${createdFeedback.documentId}');
 
       // Clear form COMPLETELY before showing success
       clearForm();
@@ -298,7 +333,7 @@ class WebFeedbackController extends GetxController {
       print('Error: $e');
       print('Stack trace: $stackTrace');
       print('================================');
-      
+
       _showError("Failed to submit feedback. Please try again.");
       return false;
     } finally {
@@ -313,7 +348,7 @@ class WebFeedbackController extends GetxController {
     selectedFiles.clear();
     selectedType.value = FeedbackType.bug;
     selectedCategory.value = FeedbackCategory.other;
-    
+
     // Force refresh to ensure UI updates
     subject.refresh();
     description.refresh();
@@ -366,27 +401,51 @@ class WebFeedbackController extends GetxController {
     if (searchQuery.value.isNotEmpty) {
       filtered = filtered.where((f) {
         final query = searchQuery.value.toLowerCase();
-        return f.subject.toLowerCase().contains(query) ||
-            f.description.toLowerCase().contains(query) ||
-            f.userName.toLowerCase().contains(query) ||
-            f.userEmail.toLowerCase().contains(query);
+
+        final subjectMatch = f.subject.toLowerCase().contains(query);
+        final categoryMatch =
+            f.category.displayName.toLowerCase().contains(query);
+        final typeMatch =
+            f.feedbackType.displayName.toLowerCase().contains(query);
+        final nameMatch = f.userName.toLowerCase().contains(query);
+        final emailMatch = f.userEmail.toLowerCase().contains(query);
+        final descriptionMatch = f.description.toLowerCase().contains(query);
+
+        return subjectMatch ||
+            categoryMatch ||
+            typeMatch ||
+            nameMatch ||
+            emailMatch ||
+            descriptionMatch;
       }).toList();
     }
 
-    // Apply status filter
+    // Apply status filter - Only filter if a specific status is selected (not null)
     if (statusFilter.value != null) {
       filtered = filtered.where((f) => f.status == statusFilter.value).toList();
     }
+    // If statusFilter.value is null, show all statuses (no filtering)
 
-    // Apply priority filter
+    // Apply priority filter - Only filter if a specific priority is selected (not null)
     if (priorityFilter.value != null) {
-      filtered = filtered.where((f) => f.priority == priorityFilter.value).toList();
+      filtered =
+          filtered.where((f) => f.priority == priorityFilter.value).toList();
     }
+    // If priorityFilter.value is null, show all priorities (no filtering)
 
-    // Apply type filter
+    // Apply type filter - Only filter if a specific type is selected (not null)
     if (typeFilter.value != null) {
-      filtered = filtered.where((f) => f.feedbackType == typeFilter.value).toList();
+      filtered =
+          filtered.where((f) => f.feedbackType == typeFilter.value).toList();
     }
+    // If typeFilter.value is null, show all types (no filtering)
+
+    // Apply category filter - Only filter if a specific category is selected (not null)
+    if (categoryFilter.value != null) {
+      filtered =
+          filtered.where((f) => f.category == categoryFilter.value).toList();
+    }
+    // If categoryFilter.value is null, show all categories (no filtering)
 
     // Sort by priority and date
     filtered.sort((a, b) {
@@ -396,14 +455,14 @@ class WebFeedbackController extends GetxController {
         Priority.medium: 2,
         Priority.low: 3,
       };
-      
+
       final aPriority = priorityOrder[a.priority] ?? 999;
       final bPriority = priorityOrder[b.priority] ?? 999;
-      
+
       if (aPriority != bPriority) {
         return aPriority.compareTo(bPriority);
       }
-      
+
       return b.submittedAt.compareTo(a.submittedAt);
     });
 
@@ -414,12 +473,19 @@ class WebFeedbackController extends GetxController {
   void updateStatistics() {
     feedbackStats.value = {
       'total': allFeedback.length,
-      'pending': allFeedback.where((f) => f.status == FeedbackStatus.pending).length,
-      'inProgress': allFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
-      'resolved': allFeedback.where((f) => f.status == FeedbackStatus.resolved).length,
-      'closed': allFeedback.where((f) => f.status == FeedbackStatus.closed).length,
-      'archived': allFeedback.where((f) => f.status == FeedbackStatus.archived).length,
-      'critical': allFeedback.where((f) => f.priority == Priority.critical).length,
+      'pending':
+          allFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+      'inProgress': allFeedback
+          .where((f) => f.status == FeedbackStatus.inProgress)
+          .length,
+      'resolved':
+          allFeedback.where((f) => f.status == FeedbackStatus.resolved).length,
+      'closed':
+          allFeedback.where((f) => f.status == FeedbackStatus.closed).length,
+      'archived':
+          allFeedback.where((f) => f.status == FeedbackStatus.archived).length,
+      'critical':
+          allFeedback.where((f) => f.priority == Priority.critical).length,
       'high': allFeedback.where((f) => f.priority == Priority.high).length,
     };
   }
@@ -428,12 +494,12 @@ class WebFeedbackController extends GetxController {
   Future<void> updateStatus(String documentId, FeedbackStatus status) async {
     try {
       await authRepository.updateFeedbackStatus(documentId, status);
-      
+
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(status: status);
       }
-      
+
       filterFeedback();
       updateStatistics();
 
@@ -447,12 +513,12 @@ class WebFeedbackController extends GetxController {
   Future<void> updatePriority(String documentId, Priority priority) async {
     try {
       await authRepository.updateFeedbackPriority(documentId, priority);
-      
+
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(priority: priority);
       }
-      
+
       filterFeedback();
       updateStatistics();
 
@@ -467,7 +533,7 @@ class WebFeedbackController extends GetxController {
     try {
       final adminName = session.userName;
       await authRepository.addFeedbackReply(documentId, reply, adminName);
-      
+
       await loadAllFeedback();
 
       _showSuccess("Reply sent successfully");
@@ -481,7 +547,7 @@ class WebFeedbackController extends GetxController {
     try {
       final archivedBy = session.userName;
       await authRepository.archiveFeedback(documentId, archivedBy);
-      
+
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(
@@ -490,7 +556,7 @@ class WebFeedbackController extends GetxController {
           archivedBy: archivedBy,
         );
       }
-      
+
       filterFeedback();
       updateStatistics();
 
@@ -501,12 +567,13 @@ class WebFeedbackController extends GetxController {
   }
 
   /// Delete feedback permanently
-  Future<void> deleteFeedback(String documentId, List<String> attachmentIds) async {
+  Future<void> deleteFeedback(
+      String documentId, List<String> attachmentIds) async {
     try {
       await authRepository.deleteFeedback(documentId, attachmentIds);
-      
+
       allFeedback.removeWhere((f) => f.documentId == documentId);
-      
+
       filterFeedback();
       updateStatistics();
 
@@ -527,11 +594,13 @@ class WebFeedbackController extends GetxController {
     FeedbackStatus? status,
     Priority? priority,
     FeedbackType? type,
+    FeedbackCategory? category,
   }) {
     if (status != null) statusFilter.value = status;
     if (priority != null) priorityFilter.value = priority;
     if (type != null) typeFilter.value = type;
-    
+    if (category != null) categoryFilter.value = category;
+
     filterFeedback();
   }
 
@@ -540,6 +609,7 @@ class WebFeedbackController extends GetxController {
     statusFilter.value = null;
     priorityFilter.value = null;
     typeFilter.value = null;
+    categoryFilter.value = null;
     searchQuery.value = '';
     filterFeedback();
   }

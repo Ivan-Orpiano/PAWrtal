@@ -176,11 +176,11 @@ class _SuperAdminVetClinicDetailPageState
           children: [
             Icon(Icons.info_outline, color: Colors.orange[700], size: 28),
             const SizedBox(width: 12),
-            const Text('Clinic Deleted'),
+            const Text('Clinic Archived'),
           ],
         ),
         content: const Text(
-          'This clinic has been deleted by another administrator.',
+          'This clinic has been archived by another administrator.',
           style: TextStyle(fontSize: 16),
         ),
         actions: [
@@ -564,9 +564,9 @@ class _SuperAdminVetClinicDetailPageState
         const SizedBox(width: 12),
         Expanded(
           child: _buildActionButton(
-            icon: isDeleting ? Icons.hourglass_empty : Icons.delete_forever,
-            label: isDeleting ? 'Deleting...' : 'Delete',
-            subtitle: 'Remove Clinic',
+            icon: isDeleting ? Icons.hourglass_empty : Icons.archive,
+            label: isDeleting ? 'Archiving...' : 'Archive',
+            subtitle: 'Archive Clinic',
             color: Colors.red[700]!,
             onPressed: isDeleting
                 ? null
@@ -1768,7 +1768,7 @@ class _SuperAdminVetClinicDetailPageState
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 28),
             const SizedBox(width: 12),
-            const Text('Delete Clinic'),
+            const Text('Archive Clinic'),
           ],
         ),
         content: Column(
@@ -1776,7 +1776,7 @@ class _SuperAdminVetClinicDetailPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to permanently delete "${clinic.clinicName}"?',
+              'Are you sure you want to archive "${clinic.clinicName}"?',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
@@ -1796,7 +1796,7 @@ class _SuperAdminVetClinicDetailPageState
                           size: 18, color: Colors.red[700]),
                       const SizedBox(width: 8),
                       Text(
-                        'This will delete:',
+                        'This will archive the following, including the:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.red[700],
@@ -1808,11 +1808,11 @@ class _SuperAdminVetClinicDetailPageState
                   const Text('• All appointments'),
                   const Text('• All medical records'),
                   const Text('• All conversations'),
-                  const Text('• Staff accounts (deactivated)'),
+                  const Text('• Staff accounts'),
                   const Text('• Gallery images'),
                   const SizedBox(height: 8),
                   Text(
-                    'This cannot be undone!',
+                    'All of these would be archived.',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.red[700],
@@ -1837,7 +1837,7 @@ class _SuperAdminVetClinicDetailPageState
               backgroundColor: Colors.red[700],
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete'),
+            child: const Text('Archive'),
           ),
         ],
       ),
@@ -1864,7 +1864,7 @@ class _SuperAdminVetClinicDetailPageState
               ),
               SizedBox(height: 16),
               Text(
-                'Deleting clinic...',
+                'Archiving clinic...',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
@@ -1886,7 +1886,7 @@ class _SuperAdminVetClinicDetailPageState
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       } else {
-        _showErrorSnackbar('Failed to delete clinic');
+        _showErrorSnackbar('Failed to archive clinic');
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -1909,7 +1909,7 @@ class _SuperAdminVetClinicDetailPageState
           children: [
             Icon(Icons.check_circle, color: Colors.green[700], size: 28),
             const SizedBox(width: 12),
-            const Text('Deletion Complete'),
+            const Text('Archiving Complete'),
           ],
         ),
         content: Column(
@@ -1917,7 +1917,7 @@ class _SuperAdminVetClinicDetailPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Successfully deleted:',
+              'Successfully archived:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),

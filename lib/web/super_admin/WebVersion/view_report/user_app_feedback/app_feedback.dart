@@ -204,6 +204,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           const SizedBox(height: 12),
           
           // Filter Dropdowns
+         // Filter Dropdowns
           Row(
             children: [
               Expanded(
@@ -223,6 +224,16 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   FeedbackType.values,
                   (value) => controller.updateFilters(type: value),
                   (type) => type.displayName,
+                )),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(() => _buildFilterDropdown<FeedbackCategory>(
+                  'Category',
+                  controller.categoryFilter.value,
+                  FeedbackCategory.values,
+                  (value) => controller.updateFilters(category: value),
+                  (category) => category.displayName,
                 )),
               ),
               const SizedBox(width: 12),
@@ -394,24 +405,27 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               
               // Quick Actions for Closed/Resolved
               if (feedback.status == FeedbackStatus.closed ||
-                  feedback.status == FeedbackStatus.resolved) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    if (feedback.status == FeedbackStatus.closed)
-                      ElevatedButton.icon(
-                        onPressed: () => _archiveFeedback(feedback),
-                        icon: const Icon(Icons.archive, size: 16, color: Colors.white),
-                        label: const Text('Archive'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF517399),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                feedback.status == FeedbackStatus.resolved) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (feedback.status == FeedbackStatus.closed)
+                    ElevatedButton.icon(
+                      onPressed: () => _archiveFeedback(feedback), // Now with confirmation
+                      icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                      label: const Text('Archive'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[600], // Changed color for better visibility
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                  ],
-                ),
-              ],
+                    ),
+                ],
+              ),
+            ],
             ],
           ),
         ),
@@ -580,35 +594,137 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   }
 
   void _archiveFeedback(FeedbackAndReport feedback) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: const Text('Archive Feedback'),
-        content: Text(
-          'Are you sure you want to archive this feedback?\n\nSubject: ${feedback.subject}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              controller.archiveFeedback(feedback.documentId!);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF517399),
-              foregroundColor: Colors.white,
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      title: Row(
+        children: [
+          Icon(Icons.archive, color: Colors.orange[700], size: 24),
+          const SizedBox(width: 12),
+          const Text(
+            'Archive Feedback',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
             ),
-            child: const Text('Archive'),
           ),
         ],
       ),
-    );
-  }
-
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Are you sure you want to archive this feedback?',
+            style: TextStyle(
+              color: Colors.grey[800],
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.subject, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        feedback.subject,
+                        style: TextStyle(
+                          color: Colors.grey[800],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      feedback.userName,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Archived feedback can be permanently deleted later.',
+                    style: TextStyle(
+                      color: Colors.orange[900],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            controller.archiveFeedback(feedback.documentId!);
+            Navigator.pop(context);
+          },
+          icon: const Icon(Icons.archive, size: 18),
+          label: const Text('Archive'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange[600],
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   void _showFeedbackDetails(FeedbackAndReport feedback) {
     showDialog(
       context: context,
