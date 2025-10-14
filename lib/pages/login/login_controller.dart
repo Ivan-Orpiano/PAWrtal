@@ -262,7 +262,7 @@ class LoginController extends GetxController {
 
         FullScreenDialogLoader.cancelDialog();
         errorMessage.value =
-            'Invalid username/email or password. Please check your credentials.';
+            'Invalid username/email or password. Please try again.';
         return;
       }
 
