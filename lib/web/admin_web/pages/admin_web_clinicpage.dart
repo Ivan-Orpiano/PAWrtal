@@ -2,6 +2,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/components/clinic/clinic_settings_controller.dart';
 import 'package:capstone_app/web/admin_web/components/clinic/admin_pin_maps_page.dart';
+import 'package:capstone_app/web/admin_web/components/clinic/admin_clinic_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -16,11 +17,13 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late ClinicSettingsController controller;
+  bool _showEditingPage = false; // Toggle between preview and editing
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController =
+        TabController(length: 3, vsync: this); // Gallery, Schedule, Settings
 
     // Initialize controller
     controller = Get.put(ClinicSettingsController(
@@ -36,6 +39,12 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     super.dispose();
   }
 
+  void _toggleView() {
+    setState(() {
+      _showEditingPage = !_showEditingPage;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,370 +54,161 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
           return const Center(child: CircularProgressIndicator());
         }
 
-        return Column(
+        return Stack(
           children: [
-            // Header with clinic status
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          controller.clinic.value?.clinicName ??
-                              "Clinic Settings",
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Manage your clinic information and settings",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Clinic status toggle
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: controller.clinicStatusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: controller.clinicStatusColor.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              controller.isClinicOpen.value
-                                  ? Icons.check_circle
-                                  : Icons.cancel,
-                              color: controller.clinicStatusColor,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Clinic Status: ${controller.clinicStatusText}",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: controller.clinicStatusColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Switch(
-                          value: controller.isClinicOpen.value,
-                          onChanged: (value) => controller.toggleClinicStatus(),
-                          activeColor: Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Main content - either preview or editing page
+            if (!_showEditingPage) _buildPreviewPage() else _buildEditingPage(),
 
-            // Tab bar
-            Container(
-              color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                labelColor: const Color.fromARGB(255, 81, 115, 153),
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: const Color.fromARGB(255, 81, 115, 153),
-                tabs: const [
-                  Tab(text: "Basic Info"),
-                  Tab(text: "Services"),
-                  Tab(text: "Gallery"),
-                  Tab(text: "Schedule"),
-                  Tab(text: "Settings"),
-                ],
+            // Floating action button (only show on preview)
+            if (!_showEditingPage)
+              Positioned(
+                bottom: 32,
+                right: 32,
+                child: FloatingActionButton.extended(
+                  onPressed: _toggleView,
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  label: const Text(
+                    'Edit Settings',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
-            ),
-
-            // Tab content
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildBasicInfoTab(),
-                  _buildServicesTab(),
-                  _buildGalleryTab(),
-                  _buildScheduleTab(),
-                  _buildSettingsTab(),
-                ],
-              ),
-            ),
           ],
         );
       }),
     );
   }
 
-  Widget _buildBasicInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildSectionCard(
-            title: "Clinic Information",
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: controller.clinicNameController,
-                        label: "Clinic Name",
-                        icon: Icons.business,
-                        required: true,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: controller.emailController,
-                        label: "Email",
-                        icon: Icons.email,
-                        keyboardType: TextInputType.emailAddress,
-                        required: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: controller.addressController,
-                        label: "Address",
-                        icon: Icons.location_on,
-                        required: true,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: controller.contactController,
-                        label: "Contact Number",
-                        icon: Icons.phone,
-                        keyboardType: TextInputType.phone,
-                        required: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: controller.descriptionController,
-                  label: "Description",
-                  icon: Icons.description,
-                  maxLines: 4,
-                  hint: "Tell customers about your clinic...",
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: controller.isSaving.value
-                          ? null
-                          : controller.saveClinicBasicInfo,
-                      icon: controller.isSaving.value
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value
-                          ? "Saving..."
-                          : "Save Changes"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 81, 115, 153),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Widget _buildPreviewPage() {
+    return AdminClinicPreview(controller: controller);
   }
 
-  Widget _buildServicesTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildSectionCard(
-            title: "Services Offered",
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Select the services your clinic offers:",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[700],
+  Widget _buildEditingPage() {
+    return Column(
+      children: [
+        // Header with back button and clinic status
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Back button
+              IconButton(
+                onPressed: _toggleView,
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back to Preview',
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      controller.clinic.value?.clinicName ?? "Clinic Settings",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Manage gallery, schedule, and advanced settings",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Clinic status toggle
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: controller.clinicStatusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: controller.clinicStatusColor.withOpacity(0.3),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: controller.availableServices.map((service) {
-                    return Obx(() => FilterChip(
-                          label: Text(service),
-                          selected:
-                              controller.selectedServices.contains(service),
-                          onSelected: (selected) =>
-                              controller.toggleService(service),
-                          selectedColor: const Color.fromARGB(255, 81, 115, 153)
-                              .withOpacity(0.2),
-                          checkmarkColor:
-                              const Color.fromARGB(255, 81, 115, 153),
-                        ));
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-                // Custom service input
-                Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          labelText: "Add Custom Service",
-                          hintText: "Enter service name...",
-                          border: OutlineInputBorder(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          controller.isClinicOpen.value
+                              ? Icons.check_circle
+                              : Icons.cancel,
+                          color: controller.clinicStatusColor,
+                          size: 20,
                         ),
-                        onSubmitted: (value) {
-                          controller.addCustomService(value);
-                        },
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Clinic Status: ${controller.clinicStatusText}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: controller.clinicStatusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Switch(
+                      value: controller.isClinicOpen.value,
+                      onChanged: (value) => controller.toggleClinicStatus(),
+                      activeColor: Colors.green,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                // Selected services
-                Obx(() {
-                  if (controller.selectedServices.isEmpty) {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: Colors.orange.withOpacity(0.3)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.warning, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Text("Please select at least one service"),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Selected Services (${controller.selectedServices.length}):",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: controller.selectedServices.map((service) {
-                          return Chip(
-                            label: Text(service),
-                            onDeleted: () => controller.removeService(service),
-                            deleteIcon: const Icon(Icons.close, size: 18),
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153)
-                                    .withOpacity(0.1),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  );
-                }),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: controller.isSaving.value
-                          ? null
-                          : controller.saveClinicSettings,
-                      icon: controller.isSaving.value
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value
-                          ? "Saving..."
-                          : "Save Services"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 81, 115, 153),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+
+        // Tab bar
+        Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            labelColor: const Color.fromARGB(255, 81, 115, 153),
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: const Color.fromARGB(255, 81, 115, 153),
+            tabs: const [
+              Tab(text: "Gallery"),
+              Tab(text: "Schedule"),
+              Tab(text: "Settings"),
+            ],
+          ),
+        ),
+
+        // Tab content
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildGalleryTab(),
+              _buildScheduleTab(),
+              _buildSettingsTab(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -516,9 +316,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                   );
                                 },
                                 errorBuilder: (context, error, stackTrace) {
-                                  print(
-                                      "Error loading image: ${controller.galleryImages[index]}");
-                                  print("Error details: $error");
                                   return Container(
                                     color: Colors.grey[200],
                                     child: Column(
@@ -810,22 +607,29 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                 Row(
                   children: [
                     Expanded(
-                      child: _buildTextField(
+                      child: TextField(
                         controller: controller.emergencyContactController,
-                        label: "Emergency Contact",
-                        icon: Icons.emergency,
                         keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: "Emergency Contact",
+                          prefixIcon: Icon(Icons.emergency),
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(
+                TextField(
                   controller: controller.specialInstructionsController,
-                  label: "Special Instructions for Customers",
-                  icon: Icons.info,
                   maxLines: 3,
-                  hint: "Any special instructions or notes for customers...",
+                  decoration: const InputDecoration(
+                    labelText: "Special Instructions for Customers",
+                    prefixIcon: Icon(Icons.info),
+                    hintText:
+                        "Any special instructions or notes for customers...",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Container(
@@ -886,7 +690,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             ),
           ),
           const SizedBox(height: 24),
-          // REPLACE THE EXISTING LOCATION SECTION WITH THIS:
           _buildSectionCard(
             title: "Clinic Location",
             child: Column(
@@ -900,16 +703,13 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Map interface
                 Obx(() => AdminPinMapsPage(
                       currentLocation: controller.selectedLocation.value,
                       onLocationSelected: (location) {
-                        // FIX: set the reactive value directly to avoid calling an undefined method
                         controller.selectedLocation.value = location;
                       },
                     )),
                 const SizedBox(height: 16),
-                // Save location button
                 Row(
                   children: [
                     const Spacer(),
@@ -979,31 +779,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
           const SizedBox(height: 20),
           child,
         ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    IconData? icon,
-    String? hint,
-    bool required = false,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: required ? "$label *" : label,
-        hintText: hint,
-        prefixIcon: icon != null ? Icon(icon) : null,
-        border: const OutlineInputBorder(),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Color.fromARGB(255, 81, 115, 153)),
-        ),
       ),
     );
   }

@@ -66,6 +66,13 @@ class ClinicSettingsController extends GetxController {
     'Euthanasia Services',
   ];
 
+  // Character limits
+  static const int emailMaxLength = 40;
+  static const int contactMaxLength = 20;
+  static const int addressMaxLength = 200;
+  static const int descriptionMaxLength = 1000;
+  static const int serviceNameMaxLength = 50;
+
   @override
   void onInit() {
     super.onInit();
@@ -170,9 +177,59 @@ class ClinicSettingsController extends GetxController {
     specialInstructionsController.text = settings.specialInstructions;
   }
 
-  // Save clinic basic information
+  // Validation methods
+  bool _validateEmail(String email) {
+    if (email.isEmpty) return true; // Allow empty
+    if (email.length > emailMaxLength) {
+      _showSnackBar("Email must not exceed $emailMaxLength characters", isError: true);
+      return false;
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showSnackBar("Please enter a valid email address", isError: true);
+      return false;
+    }
+    return true;
+  }
+
+  bool _validateContact(String contact) {
+    if (contact.isEmpty) return true; // Allow empty
+    if (contact.length > contactMaxLength) {
+      _showSnackBar("Contact number must not exceed $contactMaxLength characters", isError: true);
+      return false;
+    }
+    return true;
+  }
+
+  bool _validateAddress(String address) {
+    if (address.isEmpty) {
+      _showSnackBar("Address is required", isError: true);
+      return false;
+    }
+    if (address.length > addressMaxLength) {
+      _showSnackBar("Address must not exceed $addressMaxLength characters", isError: true);
+      return false;
+    }
+    return true;
+  }
+
+  bool _validateDescription(String description) {
+    if (description.length > descriptionMaxLength) {
+      _showSnackBar("Description must not exceed $descriptionMaxLength characters", isError: true);
+      return false;
+    }
+    return true;
+  }
+
+  // Save clinic basic information with validation
   Future<void> saveClinicBasicInfo() async {
     if (clinic.value == null) return;
+
+    // Validate all fields
+    if (!_validateAddress(addressController.text.trim())) return;
+    if (!_validateEmail(emailController.text.trim())) return;
+    if (!_validateContact(contactController.text.trim())) return;
+    if (!_validateDescription(descriptionController.text.trim())) return;
 
     try {
       isSaving.value = true;
@@ -246,7 +303,7 @@ class ClinicSettingsController extends GetxController {
     operatingHours.refresh();
   }
 
-  // Add/remove services
+  // Add/remove services with validation
   void toggleService(String service) {
     if (selectedServices.contains(service)) {
       selectedServices.remove(service);
@@ -256,17 +313,32 @@ class ClinicSettingsController extends GetxController {
   }
 
   void addCustomService(String service) {
-    if (service.trim().isNotEmpty &&
-        !selectedServices.contains(service.trim())) {
-      selectedServices.add(service.trim());
+    final trimmedService = service.trim();
+    
+    if (trimmedService.isEmpty) {
+      _showSnackBar("Service name cannot be empty", isError: true);
+      return;
     }
+    
+    if (trimmedService.length > serviceNameMaxLength) {
+      _showSnackBar("Service name must not exceed $serviceNameMaxLength characters", isError: true);
+      return;
+    }
+    
+    if (selectedServices.contains(trimmedService)) {
+      _showSnackBar("This service already exists", isError: true);
+      return;
+    }
+    
+    selectedServices.add(trimmedService);
+    _showSnackBar("Custom service added successfully!");
   }
 
   void removeService(String service) {
     selectedServices.remove(service);
   }
 
-  // Gallery management - using same approach as pet creation
+  // Gallery management
   Future<void> addGalleryImages() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -279,40 +351,32 @@ class ClinicSettingsController extends GetxController {
 
         final newImageUrls = <String>[];
 
-        // Process each file individually, similar to pet creation
         for (int i = 0; i < result.files.length; i++) {
           final file = result.files[i];
 
           try {
-            // For web: use bytes, for mobile: use path (same logic as pet creation)
             String? imagePath;
             if (file.bytes != null) {
-              // Handle web platform - we need to create a temporary approach
-              // For now, let's use the uploadClinicGalleryImages method but simplified
               final uploadedFiles =
                   await authRepository.uploadClinicGalleryImages([file]);
               if (uploadedFiles.isNotEmpty) {
                 final imageId = uploadedFiles.first.$id;
-                // Use exact same URL construction as pet creation
                 final imageUrl =
                     '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
                 newImageUrls.add(imageUrl);
-                print("Added image URL: $imageUrl"); // Debug log
+                print("Added image URL: $imageUrl");
               }
             } else if (file.path != null) {
-              // Handle mobile platform - use existing uploadImage method like pet creation
               final imageResponse =
                   await authRepository.uploadImage(file.path!);
               final imageId = imageResponse.$id;
-              // Use exact same URL construction as pet creation
               final imageUrl =
                   '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
               newImageUrls.add(imageUrl);
-              print("Added image URL: $imageUrl"); // Debug log
+              print("Added image URL: $imageUrl");
             }
           } catch (e) {
             print("Error uploading image ${file.name}: $e");
-            // Continue with other images
           }
         }
 
@@ -336,6 +400,8 @@ class ClinicSettingsController extends GetxController {
   void removeGalleryImage(int index) {
     if (index >= 0 && index < galleryImages.length) {
       galleryImages.removeAt(index);
+      // Auto-save after removing
+      saveClinicSettings();
     }
   }
 
@@ -384,5 +450,17 @@ class ClinicSettingsController extends GetxController {
       margin: const EdgeInsets.all(16),
       borderRadius: 8,
     );
+  }
+
+  @override
+  void onClose() {
+    clinicNameController.dispose();
+    addressController.dispose();
+    contactController.dispose();
+    emailController.dispose();
+    descriptionController.dispose();
+    emergencyContactController.dispose();
+    specialInstructionsController.dispose();
+    super.onClose();
   }
 }
