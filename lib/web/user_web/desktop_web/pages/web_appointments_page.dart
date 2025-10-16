@@ -23,9 +23,12 @@ class EnhancedWebAppointmentsPage extends StatefulWidget {
 
 class _EnhancedWebAppointmentsPageState
     extends State<EnhancedWebAppointmentsPage> {
-  int selectedTabIndex = 0; // 0: Upcoming, 1: Pending, 2: Completed, 3: History
+  int selectedTabIndex = 0;
   final double tabletWidth = 1100;
   late EnhancedUserAppointmentController appointmentController;
+  
+  // Track reviewed appointments in memory
+  final Set<String> _reviewedAppointments = {};
 
   @override
   void initState() {
@@ -43,6 +46,33 @@ class _EnhancedWebAppointmentsPageState
       appointmentController = Get.find<EnhancedUserAppointmentController>();
       appointmentController.fetchAppointments();
     }
+  }
+
+  // Method to check if appointment has been reviewed
+  Future<bool> _checkIfReviewed(String appointmentId) async {
+    // Check memory first
+    if (_reviewedAppointments.contains(appointmentId)) {
+      return true;
+    }
+    
+    // Check database
+    final hasReview = await Get.find<AuthRepository>()
+        .hasUserReviewedAppointment(appointmentId);
+    
+    if (hasReview) {
+      setState(() {
+        _reviewedAppointments.add(appointmentId);
+      });
+    }
+    
+    return hasReview;
+  }
+
+  // Mark appointment as reviewed in memory
+  void _markAsReviewed(String appointmentId) {
+    setState(() {
+      _reviewedAppointments.add(appointmentId);
+    });
   }
 
   @override
@@ -947,90 +977,124 @@ class _EnhancedWebAppointmentsPageState
   Widget _buildDialogActionButtons(
       Appointment appointment, Clinic? clinic, Pet? pet) {
     final controller = Get.find<EnhancedUserAppointmentController>();
-    return Column(
-      children: [
-        if (appointment.status == 'completed')
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                _showRatingDialog(appointment, clinic, pet);
-              },
-              icon: const Icon(Icons.rate_review),
-              label: const Text('Rate & Review'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.shade50,
-                foregroundColor: Colors.amber.shade700,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.amber.shade200),
+    
+    return FutureBuilder<bool>(
+      future: _checkIfReviewed(appointment.documentId!),
+      builder: (context, snapshot) {
+        final hasReviewed = snapshot.data ?? false;
+        
+        return Column(
+          children: [
+            if (appointment.status == 'completed')
+              SizedBox(
+                width: double.infinity,
+                child: hasReviewed
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green.shade600,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Rating & Review Submitted',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showRatingDialog(appointment, clinic, pet);
+                        },
+                        icon: const Icon(Icons.rate_review),
+                        label: const Text('Rate & Review'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber.shade50,
+                          foregroundColor: Colors.amber.shade700,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.amber.shade200),
+                          ),
+                        ),
+                      ),
+              ),
+            if (appointment.status == 'completed') const SizedBox(height: 12),
+            if (controller.canCancelAppointment(appointment))
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showCancelDialog(appointment),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(appointment.status == 'pending'
+                      ? 'Cancel Request'
+                      : 'Cancel Appointment'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: appointment.status == 'pending'
+                        ? Colors.orange.shade50
+                        : Colors.red.shade50,
+                    foregroundColor: appointment.status == 'pending'
+                        ? Colors.orange.shade700
+                        : Colors.red.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: appointment.status == 'pending'
+                            ? Colors.orange.shade200
+                            : Colors.red.shade200,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        if (appointment.status == 'completed') const SizedBox(height: 12),
-        if (controller.canCancelAppointment(appointment))
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showCancelDialog(appointment),
-              icon: const Icon(Icons.cancel_outlined),
-              label: Text(appointment.status == 'pending'
-                  ? 'Cancel Request'
-                  : 'Cancel Appointment'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appointment.status == 'pending'
-                    ? Colors.orange.shade50
-                    : Colors.red.shade50,
-                foregroundColor: appointment.status == 'pending'
-                    ? Colors.orange.shade700
-                    : Colors.red.shade700,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: appointment.status == 'pending'
-                        ? Colors.orange.shade200
-                        : Colors.red.shade200,
+            if (appointmentController.canCancelAppointment(appointment))
+              const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showContactOptions(appointment),
+                icon: const Icon(Icons.phone),
+                label: const Text('Contact Clinic'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
-          ),
-        if (appointmentController.canCancelAppointment(appointment))
-          const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => _showContactOptions(appointment),
-            icon: const Icon(Icons.phone),
-            label: const Text('Contact Clinic'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
   void _showCancelDialog(Appointment appointment) {
     final controller = Get.find<EnhancedUserAppointmentController>();
 
-    // Check if this is a pending appointment (no reason needed)
     if (appointment.status == 'pending') {
       _showPendingCancelDialog(appointment, controller);
       return;
     }
 
-    // For accepted appointments, show full cancellation dialog with reason
     _showAcceptedCancelDialog(appointment, controller);
   }
 
@@ -1105,7 +1169,7 @@ class _EnhancedWebAppointmentsPageState
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pop(context); // Close appointment details
+              Navigator.pop(context);
               controller.cancelPendingAppointment(appointment.documentId!);
             },
             style: ElevatedButton.styleFrom(
@@ -1154,7 +1218,6 @@ class _EnhancedWebAppointmentsPageState
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     Row(
                       children: [
                         Container(
@@ -1192,7 +1255,6 @@ class _EnhancedWebAppointmentsPageState
                     ),
                     const SizedBox(height: 20),
 
-                    // Warning message
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1219,7 +1281,6 @@ class _EnhancedWebAppointmentsPageState
                     ),
                     const SizedBox(height: 20),
 
-                    // Appointment details
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1265,7 +1326,6 @@ class _EnhancedWebAppointmentsPageState
                     ),
                     const SizedBox(height: 20),
 
-                    // Reason selection
                     const Text(
                       'Please select a reason for cancellation:',
                       style: TextStyle(
@@ -1275,7 +1335,6 @@ class _EnhancedWebAppointmentsPageState
                     ),
                     const SizedBox(height: 12),
 
-                    // Predefined reasons
                     ...predefinedReasons.map((reason) {
                       return RadioListTile<String>(
                         title:
@@ -1295,7 +1354,6 @@ class _EnhancedWebAppointmentsPageState
 
                     const SizedBox(height: 16),
 
-                    // Custom reason text field
                     TextField(
                       controller: customReasonController,
                       decoration: InputDecoration(
@@ -1312,7 +1370,6 @@ class _EnhancedWebAppointmentsPageState
 
                     const SizedBox(height: 8),
 
-                    // Cancellation policy note
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1339,7 +1396,6 @@ class _EnhancedWebAppointmentsPageState
 
                     const SizedBox(height: 24),
 
-                    // Action buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -1350,7 +1406,6 @@ class _EnhancedWebAppointmentsPageState
                         const SizedBox(width: 16),
                         ElevatedButton(
                           onPressed: () {
-                            // Validate reason selection
                             if (selectedReason.isEmpty) {
                               Get.snackbar(
                                 'Required Field',
@@ -1362,7 +1417,6 @@ class _EnhancedWebAppointmentsPageState
                               return;
                             }
 
-                            // For "Other", require custom text
                             if (selectedReason == 'Other (specify below)' &&
                                 customReasonController.text.trim().isEmpty) {
                               Get.snackbar(
@@ -1375,7 +1429,6 @@ class _EnhancedWebAppointmentsPageState
                               return;
                             }
 
-                            // Build final reason
                             String finalReason = selectedReason;
                             if (customReasonController.text.trim().isNotEmpty) {
                               finalReason = selectedReason ==
@@ -1384,9 +1437,8 @@ class _EnhancedWebAppointmentsPageState
                                   : '$selectedReason - ${customReasonController.text.trim()}';
                             }
 
-                            // Close dialogs and cancel appointment
-                            Navigator.pop(context); // Close cancel dialog
-                            Navigator.pop(context); // Close appointment details
+                            Navigator.pop(context);
+                            Navigator.pop(context);
                             controller.cancelAcceptedAppointment(
                               appointment.documentId!,
                               finalReason,
@@ -1505,11 +1557,9 @@ class _EnhancedWebAppointmentsPageState
   }
 
   Widget _buildRatingDialog(Appointment appointment, Clinic? clinic, Pet? pet) {
-    double selectedRating = 0.0; // Changed from int to double
+    double selectedRating = 0.0;
     final TextEditingController reviewController = TextEditingController();
     List<PlatformFile> selectedImages = [];
-    bool isHovering = false;
-    double hoverRating = 0.0;
 
     return StatefulBuilder(
       builder: (context, setState) {
@@ -1527,7 +1577,6 @@ class _EnhancedWebAppointmentsPageState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -1569,7 +1618,6 @@ class _EnhancedWebAppointmentsPageState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Appointment info
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -1622,7 +1670,6 @@ class _EnhancedWebAppointmentsPageState
 
                         const SizedBox(height: 24),
 
-                        // Rating stars with slider
                         const Text(
                           'How would you rate your experience?',
                           style: TextStyle(
@@ -1632,7 +1679,6 @@ class _EnhancedWebAppointmentsPageState
                         ),
                         const SizedBox(height: 16),
 
-                        // Interactive star display with hover
                         Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1642,7 +1688,6 @@ class _EnhancedWebAppointmentsPageState
                                 cursor: SystemMouseCursors.click,
                                 child: GestureDetector(
                                   onTap: () {
-                                    // Full star click
                                     setState(() {
                                       selectedRating = starValue.toDouble();
                                     });
@@ -1662,7 +1707,6 @@ class _EnhancedWebAppointmentsPageState
                                               : Colors.grey.shade400,
                                           size: 40,
                                         ),
-                                        // Left half - for half star
                                         Positioned(
                                           left: 0,
                                           top: 0,
@@ -1670,12 +1714,8 @@ class _EnhancedWebAppointmentsPageState
                                           width: 20,
                                           child: MouseRegion(
                                             cursor: SystemMouseCursors.click,
-                                            onEnter: (_) {
-                                              // Visual feedback on hover (optional)
-                                            },
                                             child: GestureDetector(
                                               onTap: () {
-                                                // Half star click
                                                 setState(() {
                                                   selectedRating = starValue - 0.5;
                                                 });
@@ -1697,7 +1737,6 @@ class _EnhancedWebAppointmentsPageState
 
                         const SizedBox(height: 16),
 
-                        // Rating slider for precise control
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
@@ -1706,7 +1745,7 @@ class _EnhancedWebAppointmentsPageState
                                 value: selectedRating,
                                 min: 0.0,
                                 max: 5.0,
-                                divisions: 10, // 0.5 increments
+                                divisions: 10,
                                 activeColor: Colors.amber,
                                 inactiveColor: Colors.grey.shade300,
                                 label: selectedRating > 0
@@ -1746,7 +1785,6 @@ class _EnhancedWebAppointmentsPageState
 
                         const SizedBox(height: 24),
 
-                        // Review text
                         const Text(
                           'Share your experience (Optional)',
                           style: TextStyle(
@@ -1779,7 +1817,6 @@ class _EnhancedWebAppointmentsPageState
 
                         const SizedBox(height: 24),
 
-                        // Image upload section
                         const Text(
                           'Add Photos (Optional)',
                           style: TextStyle(
@@ -1789,7 +1826,6 @@ class _EnhancedWebAppointmentsPageState
                         ),
                         const SizedBox(height: 12),
 
-                        // Image picker button
                         InkWell(
                           onTap: () async {
                             final result = await FilePicker.platform.pickFiles(
@@ -1799,8 +1835,31 @@ class _EnhancedWebAppointmentsPageState
                             );
 
                             if (result != null && result.files.isNotEmpty) {
+                              List<PlatformFile> validFiles = [];
+                              List<String> rejectedFiles = [];
+                              
+                              for (var file in result.files) {
+                                // Check 5MB limit (5 * 1024 * 1024 bytes)
+                                if (file.size <= 5 * 1024 * 1024) {
+                                  validFiles.add(file);
+                                } else {
+                                  rejectedFiles.add(file.name);
+                                }
+                              }
+                              
+                              if (rejectedFiles.isNotEmpty) {
+                                Get.snackbar(
+                                  'File Size Limit',
+                                  'The following files exceed 5MB limit and were not added:\n${rejectedFiles.join(", ")}',
+                                  backgroundColor: Colors.orange.shade50,
+                                  colorText: Colors.orange.shade700,
+                                  duration: const Duration(seconds: 4),
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              }
+                              
                               setState(() {
-                                selectedImages.addAll(result.files);
+                                selectedImages.addAll(validFiles);
                                 if (selectedImages.length > 5) {
                                   selectedImages =
                                       selectedImages.take(5).toList();
@@ -1829,7 +1888,7 @@ class _EnhancedWebAppointmentsPageState
                                 const SizedBox(width: 8),
                                 Text(
                                   selectedImages.isEmpty
-                                      ? 'Add photos (up to 5)'
+                                      ? 'Add photos (up to 5, max 5MB each)'
                                       : '${selectedImages.length} photo${selectedImages.length > 1 ? 's' : ''} selected',
                                   style: TextStyle(
                                     color: Colors.grey.shade700,
@@ -1841,7 +1900,6 @@ class _EnhancedWebAppointmentsPageState
                           ),
                         ),
 
-                        // Display selected images
                         if (selectedImages.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           SizedBox(
@@ -1905,14 +1963,13 @@ class _EnhancedWebAppointmentsPageState
 
                         const SizedBox(height: 24),
 
-                        // Submit button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: selectedRating > 0
                                 ? () => _submitRating(
                                       appointment,
-                                      selectedRating, // Now passing double
+                                      selectedRating,
                                       reviewController.text,
                                       selectedImages,
                                       clinic,
@@ -1991,7 +2048,7 @@ class _EnhancedWebAppointmentsPageState
       // Get user info
       final user = await Get.find<AuthRepository>().getUser();
       if (user == null) {
-        Get.back(); // Close loading
+        Get.back();
         Get.snackbar('Error', 'User not found');
         return;
       }
@@ -2001,7 +2058,7 @@ class _EnhancedWebAppointmentsPageState
           .hasUserReviewedAppointment(appointment.documentId!);
 
       if (alreadyReviewed) {
-        Get.back(); // Close loading
+        Get.back();
         Get.snackbar(
           'Already Reviewed',
           'You have already reviewed this appointment.',
@@ -2022,7 +2079,6 @@ class _EnhancedWebAppointmentsPageState
           print('Successfully uploaded ${imageIds.length} images');
         } catch (e) {
           print('Error uploading images: $e');
-          // Continue without images if upload fails
         }
       }
 
@@ -2034,7 +2090,7 @@ class _EnhancedWebAppointmentsPageState
         userId: appointment.userId,
         clinicId: appointment.clinicId,
         appointmentId: appointment.documentId!,
-        rating: rating, // Already a double
+        rating: rating,
         reviewText: review.isNotEmpty ? review : null,
         images: imageIds,
         userName: user.name,
@@ -2044,9 +2100,19 @@ class _EnhancedWebAppointmentsPageState
 
       await Get.find<AuthRepository>().createRatingAndReview(ratingReview);
 
+      // Mark as reviewed in memory
+      _markAsReviewed(appointment.documentId!);
+
+      // Close loading dialog
       Get.back();
+      
+      // Close rating dialog
       Navigator.pop(context);
 
+      // Refresh appointments to update the UI
+      await appointmentController.fetchAppointments();
+
+      // Show success message
       Get.snackbar(
         'Review Submitted!',
         'Thank you for your feedback. Your ${rating.toStringAsFixed(1)}-star review helps other pet owners.',
