@@ -8,6 +8,7 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AdminWebMessages extends StatefulWidget {
   const AdminWebMessages({super.key});
@@ -37,6 +38,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     _initializeMessaging();
   }
 
+  @override
+  void dispose() {
+    // Don't dispose controller - it's managed by GetX
+    // Just cancel any local operations
+    super.dispose();
+  }
+
   void _loadUserRole() {
     _userRole = _getStorage.read("role") as String?;
     print('>>> ============================================');
@@ -57,8 +65,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       print('>>> ADMIN_WEB_MESSAGES: Initializing...');
       print('>>> ============================================');
 
-      // CRITICAL FIX: Read clinicId directly from storage FIRST
-      // This was stored during login for both admin and staff
       String? clinicId = _getStorage.read('clinicId') as String?;
 
       print('>>> Step 1: Checking storage for clinicId');
@@ -66,7 +72,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       print('>>>   - user role: $_userRole');
       print('>>>   - user ID: ${_userSession.userId}');
 
-      // If no clinicId in storage, try to fetch it
       if (clinicId == null || clinicId.isEmpty) {
         print('>>> Step 2: No clinicId in storage, attempting to fetch...');
 
@@ -77,7 +82,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
           if (clinicDoc != null) {
             clinicId = clinicDoc.$id;
-            // Store it for future use
             await _getStorage.write('clinicId', clinicId);
             print('>>>   - Found and stored clinic ID: $clinicId');
           } else {
@@ -88,7 +92,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           print('>>>   - Mode: STAFF - Should have clinicId in storage');
           print('>>>   - ERROR: Staff account missing clinicId in storage!');
 
-          // Try to look up staff record to get clinicId
           final staff =
               await _authRepository.getStaffByUserId(_userSession.userId);
           if (staff != null) {
@@ -110,9 +113,16 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
         print('>>> Step 3: Initializing controller with clinic ID: $_clinicId');
         await _controller.initializeForClinic(_clinicId!);
+
+        // CRITICAL: Ensure real-time subscriptions are active for conversation list
+        print(
+            '>>> Step 4: Activating real-time subscriptions for conversation list...');
+        _controller.subscribeToClinicConversationUpdates(_clinicId!);
+
         print('>>> ============================================');
         print('>>> INITIALIZATION SUCCESSFUL');
         print('>>> Clinic ID: $_clinicId');
+        print('>>> Real-time subscriptions ACTIVE');
         print('>>> ============================================');
       } else {
         print('>>> ============================================');
@@ -169,6 +179,26 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     _controller.openConversation(conversation, userId, 'user');
   }
 
+  Future<void> _openConversationInMobile(
+      Conversation conversation, String userId, String userName) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _AdminMobileMessagesPage(
+          conversation: conversation,
+          userId: userId,
+          userName: userName,
+          controller: _controller,
+        ),
+      ),
+    );
+
+    // Reload conversations when returning to ensure we have latest data
+    if (mounted) {
+      await _controller.loadClinicConversations(_clinicId!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -197,7 +227,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  // Try to reinitialize
                   setState(() => _isLoading = true);
                   _initializeMessaging();
                 },
@@ -209,6 +238,348 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       );
     }
 
+    // Check screen width to determine layout
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          // Mobile layout - show conversation list
+          return _buildMobileLayout();
+        } else {
+          // Tablet/Desktop layout - show split view
+          return _buildDesktopLayout();
+        }
+      },
+    );
+  }
+
+  // MOBILE LAYOUT - Conversation List Only
+  Widget _buildMobileLayout() {
+    return Scaffold(
+      backgroundColor: Colors.blue.shade50,
+      body: Column(
+        children: [
+          // Header
+          Container(
+            height: 75,
+            padding: const EdgeInsets.only(top: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      "Messages",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.auto_awesome),
+                  tooltip: 'Manage Starters',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConversationStartersPage(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ),
+
+          // Main Content
+          Expanded(
+            child: Container(
+              width: double.maxFinite,
+              height: double.maxFinite,
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 248, 253, 255),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Search Bar
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(25.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.shade400,
+                            spreadRadius: 2,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _controller.searchController,
+                        decoration: const InputDecoration(
+                          hintText: "Search conversations...",
+                          border: InputBorder.none,
+                          prefixIcon: Icon(Icons.search),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Conversations List
+                  Expanded(
+                    child: Obx(() {
+                      if (_controller.isLoading.value) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Color.fromARGB(255, 81, 115, 153),
+                          ),
+                        );
+                      }
+
+                      if (_controller.conversations.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No conversations yet",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Conversations will appear here when\nusers message your clinic",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // Real-time updates are handled by controller
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          await _controller.loadClinicConversations(_clinicId!);
+                        },
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          itemCount: _controller.conversations.length,
+                          itemBuilder: (context, index) {
+                            final conversation =
+                                _controller.conversations[index];
+                            return FutureBuilder<Map<String, dynamic>>(
+                              future: _getUserData(conversation.userId),
+                              builder: (context, snapshot) {
+                                final userData = snapshot.data ??
+                                    {
+                                      'name': 'Loading...',
+                                      'email': '',
+                                      'phone': ''
+                                    };
+                                return _buildMobileConversationTile(
+                                  conversation,
+                                  userData,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileConversationTile(
+      Conversation conversation, Map<String, dynamic> userData) {
+    final hasUnreadMessages = conversation.clinicUnreadCount > 0;
+
+    return InkWell(
+      onTap: () async {
+        // Navigate and wait for return
+        await _openConversationInMobile(
+          conversation,
+          conversation.userId,
+          userData['name'],
+        );
+        // Refresh conversations when returning
+        await _controller.loadClinicConversations(_clinicId!);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: hasUnreadMessages
+              ? Border.all(
+                  color: const Color.fromARGB(255, 81, 115, 153),
+                  width: 2,
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Profile Image with Online Status
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  child: Text(
+                    userData['name'][0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Obx(() {
+                  final status = _controller.getUserStatus(conversation.userId);
+                  if (status?.isOnline == true) {
+                    return Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+              ],
+            ),
+            const SizedBox(width: 12),
+
+            // Conversation Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          userData['name'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (conversation.lastMessageTime != null)
+                        Text(
+                          conversation.timeAgo,
+                          style: TextStyle(
+                            color: hasUnreadMessages
+                                ? const Color.fromARGB(255, 81, 115, 153)
+                                : Colors.grey[600],
+                            fontSize: 12,
+                            fontWeight: hasUnreadMessages
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conversation.conversationPreview,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: hasUnreadMessages
+                                ? Colors.black87
+                                : Colors.grey[600],
+                            fontWeight: hasUnreadMessages
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (hasUnreadMessages) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 81, 115, 153),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            conversation.clinicUnreadCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // DESKTOP/TABLET LAYOUT - Split View
+  Widget _buildDesktopLayout() {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 238, 238, 238),
       body: Row(
@@ -562,6 +933,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         return const Center(child: Text('No messages yet'));
       }
 
+      // Real-time updates handled by Obx wrapper
       return ListView.builder(
         controller: _controller.scrollController,
         padding: const EdgeInsets.all(16),
@@ -667,6 +1039,406 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                       },
               )),
         ],
+      ),
+    );
+  }
+}
+
+// MOBILE MESSAGES PAGE - Separate page for mobile conversation view
+class _AdminMobileMessagesPage extends StatefulWidget {
+  final Conversation conversation;
+  final String userId;
+  final String userName;
+  final AdminMessagingController controller;
+
+  const _AdminMobileMessagesPage({
+    required this.conversation,
+    required this.userId,
+    required this.userName,
+    required this.controller,
+  });
+
+  @override
+  State<_AdminMobileMessagesPage> createState() =>
+      _AdminMobileMessagesPageState();
+}
+
+class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.controller.openConversation(
+        widget.conversation,
+        widget.userId,
+        'user',
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    // Don't dispose the controller since it's shared
+    // Just navigate back
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: AppBar(
+            leading: IconButton(
+              icon: const Icon(
+                Icons.keyboard_arrow_left_rounded,
+                size: 30,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            title: Row(
+              children: [
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                      child: Text(
+                        widget.userName[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    // Online status indicator
+                    Obx(() {
+                      final status =
+                          widget.controller.getUserStatus(widget.userId);
+                      if (status?.isOnline == true) {
+                        return Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.userName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Obx(() {
+                        final status =
+                            widget.controller.getUserStatus(widget.userId);
+                        return Text(
+                          status?.statusText ?? 'Offline',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Messages List with Reverse ListView
+          Expanded(
+            child: Obx(() {
+              if (widget.controller.isLoadingConversation.value) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Color.fromARGB(255, 81, 115, 153),
+                  ),
+                );
+              }
+
+              if (widget.controller.currentMessages.isEmpty) {
+                return _buildEmptyMessageState();
+              }
+
+              return ListView.builder(
+                controller: widget.controller.scrollController,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                reverse: true,
+                itemCount: widget.controller.currentMessages.length,
+                itemBuilder: (context, index) {
+                  final reversedIndex =
+                      widget.controller.currentMessages.length - 1 - index;
+                  final message =
+                      widget.controller.currentMessages[reversedIndex];
+                  return _buildMessageBubble(message);
+                },
+              );
+            }),
+          ),
+
+          // Message Input
+          _buildMessageInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyMessageState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Start a conversation",
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Send a message to ${widget.userName}",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(Message message) {
+    final isCurrentUser = widget.controller.isCurrentUser(message.senderId);
+    final isStarterMessage = message.isStarterMessage;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment:
+            isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isCurrentUser) ...[
+            CircleAvatar(
+              radius: 12,
+              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+              child: Text(
+                widget.userName[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isCurrentUser
+                    ? const Color.fromARGB(255, 81, 115, 153)
+                    : isStarterMessage
+                        ? Colors.blue[50]
+                        : Colors.grey[200],
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isCurrentUser ? 16 : 4),
+                  bottomRight: Radius.circular(isCurrentUser ? 4 : 16),
+                ),
+                border: isStarterMessage
+                    ? Border.all(color: Colors.blue[200]!, width: 1)
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isStarterMessage)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        "Auto-response",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  Text(
+                    message.messageText,
+                    style: TextStyle(
+                      color: isCurrentUser ? Colors.white : Colors.black87,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        message.timeFormatted,
+                        style: TextStyle(
+                          color: isCurrentUser
+                              ? Colors.white.withOpacity(0.8)
+                              : Colors.grey[600],
+                          fontSize: 11,
+                        ),
+                      ),
+                      if (isCurrentUser && message.isRead) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.done_all,
+                          size: 12,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isCurrentUser) const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, -1),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            // Camera button
+            IconButton(
+              icon: Icon(
+                Icons.camera_alt_rounded,
+                color: Colors.grey[600],
+              ),
+              onPressed: () {
+                // Implement camera functionality
+              },
+            ),
+
+            // Photo button
+            IconButton(
+              icon: Icon(
+                Icons.photo,
+                color: Colors.grey[600],
+              ),
+              onPressed: () {
+                // Implement photo picker functionality
+              },
+            ),
+
+            // Message input
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.grey.shade200,
+                ),
+                child: TextField(
+                  controller: widget.controller.messageController,
+                  decoration: const InputDecoration(
+                    hintText: "Type a message...",
+                    border: InputBorder.none,
+                  ),
+                  maxLines: null,
+                  onSubmitted: (value) {
+                    if (value.trim().isNotEmpty) {
+                      widget.controller.sendMessage();
+                    }
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Send button
+            Obx(() => CircleAvatar(
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  child: IconButton(
+                    icon: widget.controller.isSendingMessage.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                    onPressed: widget.controller.isSendingMessage.value
+                        ? null
+                        : () {
+                            if (widget.controller.messageController.text
+                                .trim()
+                                .isNotEmpty) {
+                              widget.controller.sendMessage();
+                            }
+                          },
+                  ),
+                )),
+          ],
+        ),
       ),
     );
   }

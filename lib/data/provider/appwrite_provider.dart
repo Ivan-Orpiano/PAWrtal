@@ -1178,26 +1178,76 @@ class AppWriteProvider {
   StreamSubscription<RealtimeMessage>? _statusSubscription;
 
   Stream<RealtimeMessage> subscribeToMessages(String conversationId) {
+    print('>>> ============================================');
+    print('>>> APPWRITE: Setting up message subscription');
+    print('>>> Conversation ID to monitor: $conversationId');
+    print('>>> ============================================');
+
     final realtime = Realtime(client);
+
+    final channel =
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.messagesCollectionID}.documents';
+
+    print('>>> Subscribing to channel: $channel');
+
     return realtime
-        .subscribe([
-          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.messagesCollectionID}.documents'
-        ])
+        .subscribe([channel])
         .stream
+        .map((message) {
+          print('>>> Message event received: ${message.events}');
+          print(
+              '>>> Payload conversationId: ${message.payload['conversationId']}');
+          return message;
+        })
         .where((message) {
-          return message.payload['conversationId'] == conversationId;
+          final messageConversationId = message.payload['conversationId'];
+          final matches = messageConversationId == conversationId;
+
+          if (matches) {
+            print('>>> ✓ Message matches conversation - forwarding');
+          } else {
+            print('>>> ✗ Message does not match - filtering out');
+          }
+
+          return matches;
         });
   }
 
-  Stream<RealtimeMessage> subscribeToConversations(String userId) {
+  Stream<RealtimeMessage> subscribeToConversations(String clinicId) {
+    print('>>> ============================================');
+    print('>>> APPWRITE: Setting up conversation subscription');
+    print('>>> Clinic ID to monitor: $clinicId');
+    print('>>> ============================================');
+
     final realtime = Realtime(client);
+
+    // Subscribe to ALL conversation events in the collection
+    final channel =
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
+
+    print('>>> Subscribing to channel: $channel');
+
     return realtime
-        .subscribe([
-          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents'
-        ])
+        .subscribe([channel])
         .stream
+        .map((message) {
+          print('>>> Raw event received: ${message.events}');
+          print('>>> Payload clinicId: ${message.payload['clinicId']}');
+          print('>>> Target clinicId: $clinicId');
+          return message;
+        })
         .where((message) {
-          return message.payload['userId'] == userId;
+          // Filter for this specific clinic's conversations
+          final messageClinicId = message.payload['clinicId'];
+          final matches = messageClinicId == clinicId;
+
+          if (matches) {
+            print('>>> ✓ Event matches clinic - forwarding to controller');
+          } else {
+            print('>>> ✗ Event does not match clinic - filtering out');
+          }
+
+          return matches;
         });
   }
 
@@ -2843,7 +2893,8 @@ class AppWriteProvider {
       }
 
       if (priority != null) {
-        queries.add(Query.equal('priority', priority.toString().split('.').last));
+        queries
+            .add(Query.equal('priority', priority.toString().split('.').last));
       }
 
       final result = await databases!.listDocuments(
@@ -2899,7 +2950,8 @@ class AppWriteProvider {
   }
 
   /// Update feedback status
-  Future<void> updateFeedbackStatus(String documentId, FeedbackStatus status) async {
+  Future<void> updateFeedbackStatus(
+      String documentId, FeedbackStatus status) async {
     try {
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
@@ -2917,7 +2969,8 @@ class AppWriteProvider {
   }
 
   /// Update feedback priority
-  Future<void> updateFeedbackPriority(String documentId, Priority priority) async {
+  Future<void> updateFeedbackPriority(
+      String documentId, Priority priority) async {
     try {
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
@@ -2980,7 +3033,8 @@ class AppWriteProvider {
   }
 
   /// Delete feedback
-  Future<void> deleteFeedback(String documentId, List<String> attachmentIds) async {
+  Future<void> deleteFeedback(
+      String documentId, List<String> attachmentIds) async {
     try {
       // Delete attachments first
       if (attachmentIds.isNotEmpty) {
@@ -3009,17 +3063,20 @@ class AppWriteProvider {
       try {
         final file = files[i];
         final extension = file.extension ?? 'jpg';
-        String fileName = "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
+        String fileName =
+            "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
 
         // Validate file size
-        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension.toLowerCase());
-        final isVideo = ['mp4', 'mov', 'avi', 'mkv'].contains(extension.toLowerCase());
-        
+        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+            .contains(extension.toLowerCase());
+        final isVideo =
+            ['mp4', 'mov', 'avi', 'mkv'].contains(extension.toLowerCase());
+
         if (isImage && file.size > 5 * 1024 * 1024) {
           print('Error: Image file ${file.name} exceeds 5MB limit');
           continue;
         }
-        
+
         if (isVideo && file.size > 25 * 1024 * 1024) {
           print('Error: Video file ${file.name} exceeds 25MB limit');
           continue;
@@ -3135,4 +3192,3 @@ class AppWriteProvider {
     }
   }
 }
-
