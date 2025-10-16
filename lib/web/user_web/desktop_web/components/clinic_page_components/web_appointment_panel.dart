@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:capstone_app/web/user_web/controllers/web_appointment_controller.dart';
+import 'package:capstone_app/web/user_web/controllers/user_web_appointment_controller.dart';
 
 class EnhancedWebAppointmentPanel extends StatefulWidget {
   final Clinic clinic;
