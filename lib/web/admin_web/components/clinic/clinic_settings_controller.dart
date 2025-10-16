@@ -23,14 +23,53 @@ class ClinicSettingsController extends GetxController {
   var clinic = Rxn<Clinic>();
   var clinicSettings = Rxn<ClinicSettings>();
 
-  // Form controllers
-  final clinicNameController = TextEditingController();
-  final addressController = TextEditingController();
-  final contactController = TextEditingController();
-  final emailController = TextEditingController();
-  final descriptionController = TextEditingController();
-  final emergencyContactController = TextEditingController();
-  final specialInstructionsController = TextEditingController();
+  // Flag to track if controllers are initialized
+  var _controllersInitialized = false;
+
+  // Form controllers - Make them nullable initially
+  TextEditingController? _clinicNameController;
+  TextEditingController? _addressController;
+  TextEditingController? _contactController;
+  TextEditingController? _emailController;
+  TextEditingController? _descriptionController;
+  TextEditingController? _emergencyContactController;
+  TextEditingController? _specialInstructionsController;
+
+  // Getters with lazy initialization
+  TextEditingController get clinicNameController {
+    _ensureControllersInitialized();
+    return _clinicNameController!;
+  }
+
+  TextEditingController get addressController {
+    _ensureControllersInitialized();
+    return _addressController!;
+  }
+
+  TextEditingController get contactController {
+    _ensureControllersInitialized();
+    return _contactController!;
+  }
+
+  TextEditingController get emailController {
+    _ensureControllersInitialized();
+    return _emailController!;
+  }
+
+  TextEditingController get descriptionController {
+    _ensureControllersInitialized();
+    return _descriptionController!;
+  }
+
+  TextEditingController get emergencyContactController {
+    _ensureControllersInitialized();
+    return _emergencyContactController!;
+  }
+
+  TextEditingController get specialInstructionsController {
+    _ensureControllersInitialized();
+    return _specialInstructionsController!;
+  }
 
   // Settings observables
   var isClinicOpen = true.obs;
@@ -76,7 +115,26 @@ class ClinicSettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _ensureControllersInitialized();
     initializeData();
+  }
+
+  // Ensure controllers are initialized only once
+  void _ensureControllersInitialized() {
+    if (!_controllersInitialized) {
+      _initializeControllers();
+      _controllersInitialized = true;
+    }
+  }
+
+  void _initializeControllers() {
+    _clinicNameController = TextEditingController();
+    _addressController = TextEditingController();
+    _contactController = TextEditingController();
+    _emailController = TextEditingController();
+    _descriptionController = TextEditingController();
+    _emergencyContactController = TextEditingController();
+    _specialInstructionsController = TextEditingController();
   }
 
   Future<void> initializeData() async {
@@ -85,6 +143,7 @@ class ClinicSettingsController extends GetxController {
       await fetchClinicData();
       await fetchClinicSettings();
     } catch (e) {
+      print("Error initializing data: $e");
       _showSnackBar("Failed to load clinic data: $e", isError: true);
     } finally {
       isLoading.value = false;
@@ -92,96 +151,141 @@ class ClinicSettingsController extends GetxController {
   }
 
   Future<void> fetchClinicData() async {
-    final user = await authRepository.getUser();
-    if (user == null) return;
-
-    // Get user role from storage
-    final storage = GetStorage();
-    final userRole = storage.read('role') as String?;
-
-    String? clinicId;
-
-    if (userRole == 'staff') {
-      // Staff: Get clinicId from storage
-      clinicId = storage.read('clinicId') as String?;
-      print(
-          '>>> CLINIC SETTINGS: Staff mode - using stored clinicId: $clinicId');
-    } else {
-      // Admin: Get clinic by admin ID
-      print('>>> CLINIC SETTINGS: Admin mode - looking up clinic');
-      final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
-      if (clinicDoc != null) {
-        clinicId = clinicDoc.$id;
+    try {
+      final user = await authRepository.getUser();
+      if (user == null) {
+        print(">>> No user found");
+        return;
       }
-    }
 
-    if (clinicId != null) {
-      final clinicDoc = await authRepository.getClinicById(clinicId);
-      if (clinicDoc != null) {
-        clinic.value = Clinic.fromMap(clinicDoc.data);
-        clinic.value!.documentId = clinicDoc.$id;
-        _populateClinicFields();
+      final storage = GetStorage();
+      final userRole = storage.read('role') as String?;
+
+      String? clinicId;
+
+      if (userRole == 'staff') {
+        clinicId = storage.read('clinicId') as String?;
         print(
-            '>>> CLINIC SETTINGS: Clinic loaded: ${clinic.value!.clinicName}');
+            '>>> CLINIC SETTINGS: Staff mode - using stored clinicId: $clinicId');
+      } else {
+        print('>>> CLINIC SETTINGS: Admin mode - looking up clinic');
+        final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
+        if (clinicDoc != null) {
+          clinicId = clinicDoc.$id;
+          print('>>> CLINIC SETTINGS: Admin clinic found: $clinicId');
+        } else {
+          print('>>> CLINIC SETTINGS: No clinic found for admin');
+        }
       }
+
+      if (clinicId != null && clinicId.isNotEmpty) {
+        print('>>> CLINIC SETTINGS: Fetching clinic with ID: $clinicId');
+        final clinicDoc = await authRepository.getClinicById(clinicId);
+        if (clinicDoc != null) {
+          clinic.value = Clinic.fromMap(clinicDoc.data);
+          clinic.value!.documentId = clinicDoc.$id;
+          _populateClinicFields();
+          print(
+              '>>> CLINIC SETTINGS: Clinic loaded successfully: ${clinic.value!.clinicName}');
+        } else {
+          print('>>> CLINIC SETTINGS: Clinic document not found');
+        }
+      } else {
+        print('>>> CLINIC SETTINGS: No clinic ID available');
+      }
+    } catch (e) {
+      print('>>> Error fetching clinic data: $e');
+      rethrow;
     }
   }
 
   Future<void> fetchClinicSettings() async {
-    if (clinic.value?.documentId == null) return;
+    try {
+      if (clinic.value?.documentId == null) {
+        print('>>> CLINIC SETTINGS: No clinic document ID available');
+        return;
+      }
 
-    final settings = await authRepository
-        .getClinicSettingsByClinicId(clinic.value!.documentId!);
-    if (settings != null) {
-      clinicSettings.value = settings;
-      _populateSettingsFields();
-    } else {
-      // Create default settings if none exist
-      await createDefaultSettings();
+      print(
+          '>>> CLINIC SETTINGS: Fetching settings for clinic: ${clinic.value!.documentId}');
+      final settings = await authRepository
+          .getClinicSettingsByClinicId(clinic.value!.documentId!);
+
+      if (settings != null) {
+        clinicSettings.value = settings;
+        _populateSettingsFields();
+        print('>>> CLINIC SETTINGS: Settings loaded successfully');
+      } else {
+        print('>>> CLINIC SETTINGS: No settings found, creating default');
+        await createDefaultSettings();
+      }
+    } catch (e) {
+      print('>>> Error fetching clinic settings: $e');
+      _showSnackBar("Failed to load clinic settings: $e", isError: true);
     }
   }
 
   Future<void> createDefaultSettings() async {
-    if (clinic.value?.documentId == null) return;
+    try {
+      if (clinic.value?.documentId == null) {
+        print('>>> CLINIC SETTINGS: Cannot create - no clinic ID');
+        return;
+      }
 
-    final defaultSettings = ClinicSettings(clinicId: clinic.value!.documentId!);
-    final createdSettings = await authRepository
-        .initializeClinicSettings(clinic.value!.documentId!);
-    clinicSettings.value = createdSettings;
-    _populateSettingsFields();
+      print('>>> CLINIC SETTINGS: Creating default settings');
+      final createdSettings = await authRepository
+          .initializeClinicSettings(clinic.value!.documentId!);
+      clinicSettings.value = createdSettings;
+      _populateSettingsFields();
+      print('>>> CLINIC SETTINGS: Default settings created');
+    } catch (e) {
+      print('>>> Error creating default settings: $e');
+      _showSnackBar("Failed to create default settings: $e", isError: true);
+    }
   }
 
   void _populateClinicFields() {
     if (clinic.value == null) return;
 
-    clinicNameController.text = clinic.value!.clinicName;
-    addressController.text = clinic.value!.address;
-    contactController.text = clinic.value!.contact;
-    emailController.text = clinic.value!.email;
-    descriptionController.text = clinic.value!.description;
+    try {
+      _ensureControllersInitialized();
+      clinicNameController.text = clinic.value!.clinicName;
+      addressController.text = clinic.value!.address;
+      contactController.text = clinic.value!.contact;
+      emailController.text = clinic.value!.email;
+      descriptionController.text = clinic.value!.description;
+    } catch (e) {
+      print('Error populating clinic fields: $e');
+    }
   }
 
   void _populateSettingsFields() {
     if (clinicSettings.value == null) return;
 
-    final settings = clinicSettings.value!;
-    isClinicOpen.value = settings.isOpen;
-    autoAcceptAppointments.value = settings.autoAcceptAppointments;
-    appointmentDuration.value = settings.appointmentDuration;
-    maxAdvanceBooking.value = settings.maxAdvanceBooking;
-    selectedServices.assignAll(settings.services);
-    galleryImages.assignAll(settings.gallery);
-    operatingHours.assignAll(settings.operatingHours);
-    selectedLocation.value = settings.location;
-    emergencyContactController.text = settings.emergencyContact;
-    specialInstructionsController.text = settings.specialInstructions;
+    try {
+      _ensureControllersInitialized();
+      final settings = clinicSettings.value!;
+      isClinicOpen.value = settings.isOpen;
+      autoAcceptAppointments.value = settings.autoAcceptAppointments;
+      appointmentDuration.value = settings.appointmentDuration;
+      maxAdvanceBooking.value = settings.maxAdvanceBooking;
+      selectedServices.assignAll(settings.services);
+      galleryImages.assignAll(settings.gallery);
+      operatingHours.assignAll(settings.operatingHours);
+      selectedLocation.value = settings.location;
+      emergencyContactController.text = settings.emergencyContact;
+      specialInstructionsController.text = settings.specialInstructions;
+    } catch (e) {
+      print('Error populating settings fields: $e');
+    }
   }
 
   // Validation methods
   bool _validateEmail(String email) {
-    if (email.isEmpty) return true; // Allow empty
+    if (email.isEmpty) return true;
     if (email.length > emailMaxLength) {
-      _showSnackBar("Email must not exceed $emailMaxLength characters", isError: true);
+      _showSnackBar("Email must not exceed $emailMaxLength characters",
+          isError: true);
       return false;
     }
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -193,9 +297,11 @@ class ClinicSettingsController extends GetxController {
   }
 
   bool _validateContact(String contact) {
-    if (contact.isEmpty) return true; // Allow empty
+    if (contact.isEmpty) return true;
     if (contact.length > contactMaxLength) {
-      _showSnackBar("Contact number must not exceed $contactMaxLength characters", isError: true);
+      _showSnackBar(
+          "Contact number must not exceed $contactMaxLength characters",
+          isError: true);
       return false;
     }
     return true;
@@ -207,7 +313,8 @@ class ClinicSettingsController extends GetxController {
       return false;
     }
     if (address.length > addressMaxLength) {
-      _showSnackBar("Address must not exceed $addressMaxLength characters", isError: true);
+      _showSnackBar("Address must not exceed $addressMaxLength characters",
+          isError: true);
       return false;
     }
     return true;
@@ -215,42 +322,58 @@ class ClinicSettingsController extends GetxController {
 
   bool _validateDescription(String description) {
     if (description.length > descriptionMaxLength) {
-      _showSnackBar("Description must not exceed $descriptionMaxLength characters", isError: true);
+      _showSnackBar(
+          "Description must not exceed $descriptionMaxLength characters",
+          isError: true);
       return false;
     }
     return true;
+  }
+
+  // Safe getter for controller text
+  String _safeGetText(TextEditingController? controller) {
+    try {
+      if (controller == null) return '';
+      return controller.text;
+    } catch (e) {
+      print('Error getting text from controller: $e');
+      return '';
+    }
   }
 
   // Save clinic basic information with validation
   Future<void> saveClinicBasicInfo() async {
     if (clinic.value == null) return;
 
-    // Validate all fields
-    if (!_validateAddress(addressController.text.trim())) return;
-    if (!_validateEmail(emailController.text.trim())) return;
-    if (!_validateContact(contactController.text.trim())) return;
-    if (!_validateDescription(descriptionController.text.trim())) return;
+    final address = _safeGetText(addressController).trim();
+    final email = _safeGetText(emailController).trim();
+    final contact = _safeGetText(contactController).trim();
+    final description = _safeGetText(descriptionController).trim();
+
+    if (!_validateAddress(address)) return;
+    if (!_validateEmail(email)) return;
+    if (!_validateContact(contact)) return;
+    if (!_validateDescription(description)) return;
 
     try {
       isSaving.value = true;
 
       final updatedData = {
-        'clinicName': clinicNameController.text.trim(),
-        'address': addressController.text.trim(),
-        'contact': contactController.text.trim(),
-        'email': emailController.text.trim(),
-        'description': descriptionController.text.trim(),
+        'clinicName': _safeGetText(clinicNameController).trim(),
+        'address': address,
+        'contact': contact,
+        'email': email,
+        'description': description,
       };
 
       await authRepository.updateClinic(clinic.value!.documentId!, updatedData);
 
-      // Update local clinic object
       clinic.value = clinic.value!
-        ..clinicName = clinicNameController.text.trim()
-        ..address = addressController.text.trim()
-        ..contact = contactController.text.trim()
-        ..email = emailController.text.trim()
-        ..description = descriptionController.text.trim();
+        ..clinicName = _safeGetText(clinicNameController).trim()
+        ..address = address
+        ..contact = contact
+        ..email = email
+        ..description = description;
 
       _showSnackBar("Clinic information updated successfully!");
     } catch (e) {
@@ -276,8 +399,8 @@ class ClinicSettingsController extends GetxController {
         gallery: galleryImages.toList(),
         operatingHours: Map<String, Map<String, dynamic>>.from(operatingHours),
         location: selectedLocation.value,
-        emergencyContact: emergencyContactController.text.trim(),
-        specialInstructions: specialInstructionsController.text.trim(),
+        emergencyContact: _safeGetText(emergencyContactController).trim(),
+        specialInstructions: _safeGetText(specialInstructionsController).trim(),
       );
 
       await authRepository.updateClinicSettings(updatedSettings);
@@ -314,22 +437,24 @@ class ClinicSettingsController extends GetxController {
 
   void addCustomService(String service) {
     final trimmedService = service.trim();
-    
+
     if (trimmedService.isEmpty) {
       _showSnackBar("Service name cannot be empty", isError: true);
       return;
     }
-    
+
     if (trimmedService.length > serviceNameMaxLength) {
-      _showSnackBar("Service name must not exceed $serviceNameMaxLength characters", isError: true);
+      _showSnackBar(
+          "Service name must not exceed $serviceNameMaxLength characters",
+          isError: true);
       return;
     }
-    
+
     if (selectedServices.contains(trimmedService)) {
       _showSnackBar("This service already exists", isError: true);
       return;
     }
-    
+
     selectedServices.add(trimmedService);
     _showSnackBar("Custom service added successfully!");
   }
@@ -355,7 +480,6 @@ class ClinicSettingsController extends GetxController {
           final file = result.files[i];
 
           try {
-            String? imagePath;
             if (file.bytes != null) {
               final uploadedFiles =
                   await authRepository.uploadClinicGalleryImages([file]);
@@ -400,7 +524,6 @@ class ClinicSettingsController extends GetxController {
   void removeGalleryImage(int index) {
     if (index >= 0 && index < galleryImages.length) {
       galleryImages.removeAt(index);
-      // Auto-save after removing
       saveClinicSettings();
     }
   }
@@ -416,20 +539,22 @@ class ClinicSettingsController extends GetxController {
 
   // Validation
   bool get isValidBasicInfo {
-    return clinicNameController.text.trim().isNotEmpty &&
-        addressController.text.trim().isNotEmpty &&
-        contactController.text.trim().isNotEmpty &&
-        emailController.text.trim().isNotEmpty;
+    return _safeGetText(clinicNameController).trim().isNotEmpty &&
+        _safeGetText(addressController).trim().isNotEmpty &&
+        _safeGetText(contactController).trim().isNotEmpty &&
+        _safeGetText(emailController).trim().isNotEmpty;
   }
 
   bool get hasUnsavedChanges {
     if (clinic.value == null || clinicSettings.value == null) return false;
 
-    return clinicNameController.text.trim() != clinic.value!.clinicName ||
-        addressController.text.trim() != clinic.value!.address ||
-        contactController.text.trim() != clinic.value!.contact ||
-        emailController.text.trim() != clinic.value!.email ||
-        descriptionController.text.trim() != clinic.value!.description ||
+    return _safeGetText(clinicNameController).trim() !=
+            clinic.value!.clinicName ||
+        _safeGetText(addressController).trim() != clinic.value!.address ||
+        _safeGetText(contactController).trim() != clinic.value!.contact ||
+        _safeGetText(emailController).trim() != clinic.value!.email ||
+        _safeGetText(descriptionController).trim() !=
+            clinic.value!.description ||
         isClinicOpen.value != clinicSettings.value!.isOpen ||
         autoAcceptAppointments.value !=
             clinicSettings.value!.autoAcceptAppointments;
@@ -454,13 +579,17 @@ class ClinicSettingsController extends GetxController {
 
   @override
   void onClose() {
-    clinicNameController.dispose();
-    addressController.dispose();
-    contactController.dispose();
-    emailController.dispose();
-    descriptionController.dispose();
-    emergencyContactController.dispose();
-    specialInstructionsController.dispose();
+    // Safely dispose all controllers
+    if (_controllersInitialized) {
+      _clinicNameController?.dispose();
+      _addressController?.dispose();
+      _contactController?.dispose();
+      _emailController?.dispose();
+      _descriptionController?.dispose();
+      _emergencyContactController?.dispose();
+      _specialInstructionsController?.dispose();
+      _controllersInitialized = false;
+    }
     super.onClose();
   }
 }
