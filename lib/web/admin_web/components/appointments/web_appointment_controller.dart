@@ -1,6 +1,8 @@
+import 'package:capstone_app/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
@@ -18,6 +20,8 @@ import 'appointment_view_mode.dart';
 class WebAppointmentController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
+
+  late final NotificationController _notificationController;
 
   WebAppointmentController({
     required this.authRepository,
@@ -50,6 +54,16 @@ class WebAppointmentController extends GetxController {
   void onInit() {
     super.onInit();
     fetchClinicData();
+
+    // Initialize notification controller
+    if (!Get.isRegistered<NotificationController>()) {
+      _notificationController = Get.put(NotificationController(
+        authRepository: authRepository,
+        session: session,
+      ));
+    } else {
+      _notificationController = Get.find<NotificationController>();
+    }
 
     // Listen to changes
     ever(selectedTab, (_) => updateFilteredAppointments());
@@ -217,14 +231,44 @@ class WebAppointmentController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
+    // Get.snackbar(
+    //   "New Appointment",
+    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
+    //   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 5),
+    //   snackPosition: SnackPosition.TOP,
+    // );
+    _createAppointmentNotification(
+      type: 'booked',
+      appointment: appointment,
     );
+  }
+
+  Future<void> _createAppointmentNotification({
+    required String type,
+    required Appointment appointment,
+    String? notes,
+  }) async {
+    try {
+      // Get owner and pet names
+      final ownerName = getOwnerName(appointment.userId);
+      final petName = getPetName(appointment.petId);
+
+      await authRepository.createAppointmentNotification(
+        type: type,
+        appointmentId: appointment.documentId!,
+        clinicId: appointment.clinicId,
+        userId: appointment.userId,
+        petName: petName,
+        ownerName: ownerName,
+        service: appointment.service,
+        appointmentTime: appointment.dateTime,
+        notes: notes,
+      );
+    } catch (e) {
+      print('Error creating appointment notification: $e');
+    }
   }
 
   void _setupFallbackPolling({int interval = 30}) {
@@ -563,18 +607,49 @@ class WebAppointmentController extends GetxController {
     );
 
     if (!isAvailable) {
-      Get.snackbar(
-        "Time Slot Unavailable",
-        "This time slot is already booked. Please ask the client to choose a different time.",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
+      // Get.snackbar(
+      //   "Time Slot Unavailable",
+      //   "This time slot is already booked. Please ask the client to choose a different time.",
+      //   backgroundColor: Colors.orange,
+      //   colorText: Colors.white,
+      // );
+
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: appointment.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.systemAlert,
+          priority: NotificationPriority.high,
+          title: 'Time Slot Unavailable',
+          message:
+              'This time slot is already booked. Please ask the client to choose a different time.',
+          appointmentId: appointment.documentId,
+        ),
       );
       return;
     }
 
     await _updateAppointmentStatus(appointment, 'accepted');
-    Get.snackbar(
-        "Success", "Appointment accepted! Time slot has been reserved.");
+
+    await _createAppointmentNotification(
+      type: 'accepted',
+      appointment: appointment,
+    );
+
+    // Get.snackbar(
+    //     "Success", "Appointment accepted! Time slot has been reserved.");
+
+    _notificationController.createNotification(
+      NotificationModel(
+        recipientId: appointment.clinicId,
+        recipientType: 'admin',
+        type: NotificationType.appointmentAccepted,
+        title: 'Appointment Accepted',
+        message:
+            'Appointment for ${getPetName(appointment.petId)} has been accepted',
+        appointmentId: appointment.documentId,
+      ),
+    );
   }
 
   Future<void> declineAppointment(Appointment appointment, String notes) async {
@@ -588,10 +663,41 @@ class WebAppointmentController extends GetxController {
       );
 
       await updateFullAppointment(updatedAppointment);
-      Get.snackbar(
-          "Success", "Appointment declined. Patient will be notified.");
+
+      // Get.snackbar(
+      //     "Success", "Appointment declined. Patient will be notified.");
+
+      // Create notification for user
+      await _createAppointmentNotification(
+        type: 'declined',
+        appointment: appointment,
+        notes: notes,
+      );
+
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: appointment.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.appointmentDeclined,
+          title: 'Appointment Declined',
+          message:
+              'Appointment for ${getPetName(appointment.petId)} has been declined',
+          appointmentId: appointment.documentId,
+        ),
+      );
     } catch (e) {
-      Get.snackbar("Error", "Failed to decline appointment: $e");
+      // Get.snackbar("Error", "Failed to decline appointment: $e");
+
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: appointment.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.systemAlert,
+          priority: NotificationPriority.high,
+          title: 'Error',
+          message: 'Failed to decline appointment: $e',
+        ),
+      );
     }
   }
 
@@ -694,11 +800,28 @@ class WebAppointmentController extends GetxController {
         return;
       }
 
-      Get.snackbar(
-        "Success",
-        "Service completed and medical record created!",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+      // Get.snackbar(
+      //   "Success",
+      //   "Service completed and medical record created!",
+      //   backgroundColor: Colors.green,
+      //   colorText: Colors.white,
+      // );
+
+      await _createAppointmentNotification(
+        type: 'completed',
+        appointment: appointment,
+        notes: followUpInstructions,
+      );
+
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: appointment.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.appointmentCompleted,
+          title: 'Service Completed',
+          message: 'Service for ${getPetName(appointment.petId)} has been completed successfully',
+          appointmentId: appointment.documentId,
+        ),
       );
     } catch (e) {
       print('>>> Error in completeServiceWithRecord: $e');

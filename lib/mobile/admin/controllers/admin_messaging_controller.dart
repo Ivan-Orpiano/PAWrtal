@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart' as models;
+import 'package:capstone_app/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -13,6 +15,7 @@ import 'package:get/get.dart';
 class AdminMessagingController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final UserSessionService _userSession = Get.find<UserSessionService>();
+  late final NotificationController _notificationController;
 
   // Observable variables
   final conversations = <Conversation>[].obs;
@@ -51,6 +54,16 @@ class AdminMessagingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    if (!Get.isRegistered<NotificationController>()) {
+      _notificationController = Get.put(NotificationController(
+        authRepository: _authRepository,
+        session: _userSession,
+      ));
+    } else {
+      _notificationController = Get.find<NotificationController>();
+    }
+
     setUserOnline();
   }
 
@@ -653,6 +666,11 @@ class AdminMessagingController extends GetxController {
             '>>> Clinic unread count: ${updatedConversation.clinicUnreadCount}');
         // If admin is not viewing this conversation, use the actual unread counts from server
         conversations[index] = updatedConversation;
+
+        if (updatedConversation.clinicUnreadCount > 0 &&
+            updatedConversation.lastMessageText != null) {
+          _createMessageNotification(updatedConversation);
+        }
       }
 
       // Move updated conversation to top if it has new messages and it's not already at the top
@@ -670,6 +688,27 @@ class AdminMessagingController extends GetxController {
     }
   }
 
+  Future<void> _createMessageNotification(Conversation conversation) async {
+    try {
+      final userData = await _getUserData(conversation.userId);
+
+      await _notificationController.createNotification(
+        NotificationModel(
+          recipientId: conversation.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.newMessage,
+          title: 'New Message',
+          message: '${userData['name']}: ${conversation.lastMessageText}',
+          conversationId: conversation.documentId,
+          userId: conversation.userId,
+          actionUrl: '/messages?conversation=${conversation.documentId}',
+        ),
+      );
+    } catch (e) {
+      print('Error creating message notification: $e');
+    }
+  }
+
   void _handleNewConversation(Conversation newConversation) {
     print('>>> _handleNewConversation called');
     print('>>> New conversation ID: ${newConversation.documentId}');
@@ -681,11 +720,50 @@ class AdminMessagingController extends GetxController {
     if (!exists) {
       print('>>> Adding new conversation to list at position 0');
       conversations.insert(0, newConversation);
+      _createNewConversationNotification(newConversation);
       print('>>> New conversation added successfully');
       print('>>> Total conversations: ${conversations.length}');
     } else {
       print('>>> Conversation already exists - skipping');
     }
+  }
+
+  Future<void> _createNewConversationNotification(
+      Conversation conversation) async {
+    try {
+      // Get user data for notification
+      final userData = await _getUserData(conversation.userId);
+
+      await _notificationController.createNotification(
+        NotificationModel(
+          recipientId: conversation.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.newMessage,
+          title: 'New Conversation Started',
+          message: '${userData['name']} started a new conversation',
+          conversationId: conversation.documentId,
+          userId: conversation.userId,
+          actionUrl: '/messages?conversation=${conversation.documentId}',
+        ),
+      );
+    } catch (e) {
+      print('Error creating new conversation notification: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> _getUserData(String userId) async {
+    try {
+      final userDoc = await _authRepository.getUserById(userId);
+      if (userDoc != null) {
+        return {
+          'name': userDoc.data['name'] ?? 'Unknown User',
+          'email': userDoc.data['email'] ?? '',
+        };
+      }
+    } catch (e) {
+      print('Error getting user data: $e');
+    }
+    return {'name': 'Unknown User', 'email': ''};
   }
 
   void subscribeToMessages(String conversationId) {
