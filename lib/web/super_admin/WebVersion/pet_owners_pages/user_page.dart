@@ -391,7 +391,7 @@ class _SuperAdminUserManagementScreenState
               ),
               const SizedBox(height: 16),
               const Text(
-                'Super Admin',
+                'Developer',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,

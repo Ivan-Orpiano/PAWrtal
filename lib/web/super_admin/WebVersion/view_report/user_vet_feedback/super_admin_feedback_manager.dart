@@ -808,7 +808,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Super Admin',
+                'Developer',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
