@@ -16,6 +16,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
         backgroundColor: const Color.fromARGB(255, 248, 253, 255),
         centerTitle: true,
@@ -25,21 +26,12 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
           height: 40,
         ),
         actions: [
-          Builder(
-            builder: (context) => IconButton(
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
-              icon: const Icon(
-                Icons.menu,
-                color: Color.fromRGBO(81, 115, 153, 0.8),
-                size: 30,
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 20.0),
+            child: _buildLogoutButton(context, screenWidth),
           ),
         ],
       ),
-      endDrawer: _buildProfileDrawer(context, screenWidth, screenHeight),
       backgroundColor: const Color.fromARGB(255, 248, 253, 255),
       body: SingleChildScrollView(
         child: Padding(
@@ -69,156 +61,127 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
     );
   }
 
-  Widget _buildProfileDrawer(
-      BuildContext context, double screenWidth, double screenHeight) {
-    // Responsive drawer width based on tablet screen size
-    double drawerWidth = screenWidth * 0.35; // 35% of screen width
-    if (drawerWidth < 300) drawerWidth = 300; // Minimum width
-    if (drawerWidth > 400) drawerWidth = 400; // Maximum width
+  Widget _buildLogoutButton(BuildContext context, double screenWidth) {
+    // Responsive sizing based on screen width
+    double containerSize = screenWidth * 0.065;
+    if (containerSize < 48) containerSize = 48;
+    if (containerSize > 60) containerSize = 60;
 
-    // Drawer height responsive to screen height
-    double drawerHeight = screenHeight * 0.5;
+    double iconSize = containerSize * 0.5;
+    if (iconSize < 24) iconSize = 24;
+    if (iconSize > 30) iconSize = 30;
 
-    // Calculate responsive sizing based on drawer dimensions
-    double avatarRadius = drawerWidth * 0.1; // 10% of drawer width
-    if (avatarRadius < 30) avatarRadius = 30;
-    if (avatarRadius > 40) avatarRadius = 40;
+    double fontSize = containerSize * 0.22;
+    if (fontSize < 11) fontSize = 11;
+    if (fontSize > 13) fontSize = 13;
 
-    double titleFontSize = drawerWidth * 0.05;
-    if (titleFontSize < 16) titleFontSize = 16;
-    if (titleFontSize > 20) titleFontSize = 20;
-
-    double emailFontSize = drawerWidth * 0.035;
-    if (emailFontSize < 12) emailFontSize = 12;
-    if (emailFontSize > 14) emailFontSize = 14;
-
-    return Align(
-      alignment: Alignment.topRight,
-      child: SizedBox(
-        width: drawerWidth,
-        height: drawerHeight,
-        child: Drawer(
-          backgroundColor: const Color.fromRGBO(249, 253, 255, 1),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Column(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _showLogoutDialog(context, screenWidth),
+        child: Container(
+          width: containerSize,
+          height: containerSize,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(81, 115, 153, 0.85),
+                Color.fromRGBO(81, 115, 153, 1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromRGBO(81, 115, 153, 0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(-2, -2),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Glossy effect overlay
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: containerSize * 0.4,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(14),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Main content
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Header section with user profile
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.fromLTRB(
-                      drawerWidth * 0.06,
-                      drawerHeight * 0.08,
-                      drawerWidth * 0.06,
-                      drawerHeight * 0.04,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Color.fromARGB(255, 248, 253, 255),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Color.fromARGB(50, 81, 115, 153),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          backgroundColor:
-                              const Color.fromARGB(255, 81, 115, 153),
-                          radius: avatarRadius,
-                          child: Text(
-                            controller.userName.isNotEmpty
-                                ? controller.userName[0].toUpperCase()
-                                : 'S',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: avatarRadius * 0.6,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: drawerHeight * 0.02),
-                        Text(
-                          controller.userName.isNotEmpty
-                              ? controller.userName
-                              : 'Super Admin',
-                          style: TextStyle(
-                            fontSize: titleFontSize,
-                            fontWeight: FontWeight.bold,
-                            color: const Color.fromARGB(255, 81, 115, 153),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: drawerHeight * 0.008),
-                        Text(
-                          controller.userEmail.isNotEmpty
-                              ? controller.userEmail
-                              : 'admin@pawrtal.com',
-                          style: TextStyle(
-                            fontSize: emailFontSize,
-                            color: Colors.grey[600],
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  Icon(
+                    Icons.logout_rounded,
+                    color: Colors.white,
+                    size: iconSize,
+                  ),
+                  SizedBox(height: containerSize * 0.08),
+                  Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.2),
+                          offset: const Offset(0, 1),
+                          blurRadius: 2,
                         ),
                       ],
                     ),
                   ),
-                  // Spacer to push logout button to bottom
-                  const Spacer(),
-                  // Logout button container - Fixed at bottom with responsive sizing
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(drawerWidth * 0.05),
-                    child: Card(
-                      elevation: 2,
-                      color: Colors.red[50],
-                      margin: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: Colors.red[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: drawerWidth * 0.06,
-                          vertical: drawerHeight * 0.02,
-                        ),
-                        leading: Icon(
-                          Icons.logout,
-                          color: Colors.red[600],
-                          size: drawerWidth * 0.065,
-                        ),
-                        title: Text(
-                          'Logout',
-                          style: TextStyle(
-                            color: Colors.red[600],
-                            fontSize: drawerWidth * 0.045,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.red[600],
-                          size: drawerWidth * 0.045,
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showLogoutDialog(context, screenWidth);
-                        },
-                      ),
-                    ),
-                  ),
                 ],
-              );
-            },
+              ),
+              // Decorative dot
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.3),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -227,17 +190,21 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
 
   void _showLogoutDialog(BuildContext context, double screenWidth) {
     // Responsive dialog sizing
-    double iconSize = screenWidth * 0.025;
-    if (iconSize < 22) iconSize = 22;
-    if (iconSize > 28) iconSize = 28;
+    double iconSize = screenWidth * 0.045;
+    if (iconSize < 32) iconSize = 32;
+    if (iconSize > 44) iconSize = 44;
 
-    double titleFontSize = screenWidth * 0.022;
-    if (titleFontSize < 18) titleFontSize = 18;
-    if (titleFontSize > 22) titleFontSize = 22;
+    double titleFontSize = screenWidth * 0.028;
+    if (titleFontSize < 19) titleFontSize = 19;
+    if (titleFontSize > 24) titleFontSize = 24;
 
-    double contentFontSize = screenWidth * 0.018;
-    if (contentFontSize < 14) contentFontSize = 14;
-    if (contentFontSize > 18) contentFontSize = 18;
+    double contentFontSize = screenWidth * 0.020;
+    if (contentFontSize < 15) contentFontSize = 15;
+    if (contentFontSize > 17) contentFontSize = 17;
+
+    double buttonPadding = screenWidth * 0.024;
+    if (buttonPadding < 18) buttonPadding = 18;
+    if (buttonPadding > 24) buttonPadding = 24;
 
     showDialog(
       context: context,
@@ -245,78 +212,150 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(24),
           ),
           backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-          title: Row(
+          contentPadding: EdgeInsets.all(buttonPadding * 1.2),
+          title: Column(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange[600],
-                size: iconSize,
+              Container(
+                padding: EdgeInsets.all(buttonPadding * 0.8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color.fromRGBO(81, 115, 153, 0.15),
+                      Color.fromRGBO(81, 115, 153, 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color.fromRGBO(81, 115, 153, 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  color: const Color.fromRGBO(81, 115, 153, 1),
+                  size: iconSize,
+                ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(height: buttonPadding * 0.8),
               Text(
                 'Confirm Logout',
                 style: TextStyle(
                   fontSize: titleFontSize,
                   fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 81, 115, 153),
+                  color: const Color.fromRGBO(81, 115, 153, 1),
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
           ),
-          content: Text(
-            'Are you sure you want to logout from your account?',
-            style: TextStyle(
-              fontSize: contentFontSize,
-              color: Colors.grey[700],
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: buttonPadding * 0.8,
+                  vertical: buttonPadding * 0.6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(81, 115, 153, 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Are you sure you want to logout from your account?',
+                  style: TextStyle(
+                    fontSize: contentFontSize,
+                    color: Colors.grey[700],
+                    height: 1.6,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.02,
-                  vertical: 10,
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        vertical: buttonPadding * 0.7,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(
+                        color: const Color.fromRGBO(81, 115, 153, 0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: contentFontSize,
+                        color: const Color.fromRGBO(81, 115, 153, 0.8),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  fontSize: contentFontSize,
-                  color: Colors.grey[600],
+                SizedBox(width: buttonPadding * 0.6),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      await LogoutHelper.logout();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        vertical: buttonPadding * 0.7,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                      shadowColor: const Color.fromRGBO(81, 115, 153, 0.4),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.logout_rounded,
+                          size: contentFontSize * 1.2,
+                        ),
+                        SizedBox(width: buttonPadding * 0.4),
+                        Text(
+                          'Logout',
+                          style: TextStyle(
+                            fontSize: contentFontSize,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await LogoutHelper.logout();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[600],
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.02,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Logout',
-                style: TextStyle(
-                  fontSize: contentFontSize,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              ],
             ),
           ],
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: EdgeInsets.fromLTRB(
+            buttonPadding * 1.2,
+            buttonPadding * 0.4,
+            buttonPadding * 1.2,
+            buttonPadding * 1.2,
+          ),
         );
       },
     );

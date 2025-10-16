@@ -5,10 +5,8 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/data/models/staff_model.dart' as StaffModel;
 import 'package:capstone_app/data/models/clinic_model.dart';
-import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/staff_tile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/new_staff_tile.dart';
-import 'package:capstone_app/web/admin_web/components/staffs/email_template_editor.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:appwrite/appwrite.dart';
 
@@ -31,7 +29,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   late Animation<double> _fadeAnimation;
 
   Clinic? _clinic;
-  ClinicSettings? _clinicSettings;
   List<StaffModel.Staff> staffList = [];
   bool _isLoading = true;
 
@@ -95,9 +92,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       }
 
       if (_clinic != null) {
-        _clinicSettings = await _authRepository
-            .getClinicSettingsByClinicId(_clinic!.documentId!);
-
         final staff =
             await _authRepository.getClinicStaff(_clinic!.documentId!);
         setState(() {
@@ -119,7 +113,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
   Future<void> _addNewStaff(
     String name,
-    String email,
+    String username, // NEW
+    String email, // NEW (optional)
     String phone,
     List<String> authorities,
     Uint8List? imageBytes,
@@ -153,13 +148,14 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
       final result = await _authRepository.createStaffAccount(
         name: name,
-        email: email,
+        username: username, // NEW: Pass username
         password: password,
         clinicId: _clinic!.documentId!,
         authorities: authorities,
         createdBy: _session.userId,
         image: imageUrl,
         phone: phone,
+        email: email, // NEW: Pass optional email
       );
 
       if (result['success'] == true) {
@@ -245,7 +241,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     return staffList.where((staff) {
       final matchesSearch = query.isEmpty ||
           staff.name.toLowerCase().contains(query) ||
-          staff.email.toLowerCase().contains(query);
+          staff.username.toLowerCase().contains(query);
       final matchesTag =
           selectedTag == null || staff.authorities.contains(selectedTag);
       return matchesSearch && matchesTag;
@@ -274,17 +270,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         ),
       );
     }
-
-    if (_clinicSettings == null) {
-      return const Scaffold(
-        backgroundColor: lightGray,
-        body: Center(
-          child: Text('Clinic settings not found. Please contact support.'),
-        ),
-      );
-    }
-
-    final bool hasStaffAccounts = staffList.isNotEmpty;
 
     return Scaffold(
       backgroundColor: lightGray,
@@ -331,17 +316,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                       ),
                     ),
                     child: _buildTitleSection(isLarge, isMedium, isSmall),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isMedium ? 24 : 16,
-                      vertical: 12,
-                    ),
-                    child: EmailTemplateEditor(
-                      clinicSettings: _clinicSettings!,
-                      onTemplateUpdated: _loadClinicAndStaff,
-                      hasStaffAccounts: hasStaffAccounts,
-                    ),
                   ),
                   LayoutBuilder(
                     builder: (context, cons) {
@@ -692,7 +666,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           controller: _searchController,
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
-            hintText: 'Search staff by name or email...',
+            hintText: 'Search staff by name or username...',
             hintStyle:
                 TextStyle(fontSize: 15, color: mediumGray.withOpacity(0.8)),
             prefixIcon: Container(
@@ -987,7 +961,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           itemBuilder: (context, index) {
             if (index == 0) {
               return NewStaffTile(
-                clinicSettings: _clinicSettings!,
                 onStaffCreated: _addNewStaff,
               );
             }

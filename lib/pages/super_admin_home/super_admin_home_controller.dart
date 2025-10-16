@@ -11,6 +11,13 @@ class SuperAdminHomeController extends GetxController {
 
   SuperAdminHomeController(this.authRepository);
 
+  static SuperAdminHomeController get instance {
+    if (!Get.isRegistered<SuperAdminHomeController>()) {
+      Get.put(SuperAdminHomeController(Get.find<AuthRepository>()));
+    }
+    return Get.find<SuperAdminHomeController>();
+  }
+
   // Observable lists
   final RxList<Map<String, dynamic>> clinicsWithSettings =
       <Map<String, dynamic>>[].obs;

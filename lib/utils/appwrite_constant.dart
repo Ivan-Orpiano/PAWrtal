@@ -16,6 +16,10 @@ class AppwriteConstants {
   static String userStatusCollectionID = "68d25b9d000b7005695c";
   static String ratingsAndReviewsCollectionID = "ratingsandreviews";
   static String idVerificationCollectionID = "68e74484002b415c4c9a";
+  static String vaccinationsCollectionID = "68eb734c00250f7c1e7b";
+  static String feedbackAndReportCollectionID = "feedbackandreport";
+  static String feedbackAttachmentsBucketID = "67ef83bd0022c1e63789";
+  static String notificationsCollectionID = "68f0f9cc00213417fa68";
 
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID !=

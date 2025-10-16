@@ -19,7 +19,7 @@ class SuperAdminVetClinicDetailPage extends StatefulWidget {
     this.settings,
   });
 
-  @override 
+  @override
   State<SuperAdminVetClinicDetailPage> createState() =>
       _SuperAdminVetClinicDetailPageState();
 }
@@ -176,11 +176,11 @@ class _SuperAdminVetClinicDetailPageState
           children: [
             Icon(Icons.info_outline, color: Colors.orange[700], size: 28),
             const SizedBox(width: 12),
-            const Text('Clinic Deleted'),
+            const Text('Clinic Archived'),
           ],
         ),
         content: const Text(
-          'This clinic has been deleted by another administrator.',
+          'This clinic has been archived by another administrator.',
           style: TextStyle(fontSize: 16),
         ),
         actions: [
@@ -564,9 +564,9 @@ class _SuperAdminVetClinicDetailPageState
         const SizedBox(width: 12),
         Expanded(
           child: _buildActionButton(
-            icon: isDeleting ? Icons.hourglass_empty : Icons.delete_forever,
-            label: isDeleting ? 'Deleting...' : 'Delete',
-            subtitle: 'Remove Clinic',
+            icon: isDeleting ? Icons.hourglass_empty : Icons.archive,
+            label: isDeleting ? 'Archiving...' : 'Archive',
+            subtitle: 'Archive Clinic',
             color: Colors.red[700]!,
             onPressed: isDeleting
                 ? null
@@ -653,64 +653,152 @@ class _SuperAdminVetClinicDetailPageState
   Widget _buildGallerySection(ClinicSettings settings, bool isMobile) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            const Color(0xFFF8FAFC),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color.fromRGBO(81, 115, 153, 0.2),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.1),
+            color: const Color.fromRGBO(81, 115, 153, 0.08),
             blurRadius: 20,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.all(isMobile ? 16 : 24),
+          // Enhanced Header
+          Container(
+            padding: EdgeInsets.all(isMobile ? 20 : 24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color.fromRGBO(81, 115, 153, 0.05),
+                  Colors.transparent,
+                ],
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(22),
+              ),
+            ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color.fromRGBO(81, 115, 153, 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromRGBO(81, 115, 153, 0.15),
+                        Color.fromRGBO(81, 115, 153, 0.08),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromRGBO(81, 115, 153, 0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: const Icon(
-                    Icons.photo_library,
+                    Icons.photo_library_rounded,
                     color: Color.fromRGBO(81, 115, 153, 1),
-                    size: 24,
+                    size: 28,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Clinic Gallery',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color.fromRGBO(81, 115, 153, 1),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Clinic Gallery',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Color.fromRGBO(81, 115, 153, 1),
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${settings.gallery.length} photos',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color.fromRGBO(81, 115, 153, 0.15),
+                              const Color.fromRGBO(81, 115, 153, 0.08),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color.fromRGBO(81, 115, 153, 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.image_rounded,
+                              size: 16,
+                              color: Color.fromRGBO(81, 115, 153, 1),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${settings.gallery.length} photos uploaded',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                // Real-time sync indicator
+                // Container(
+                //   padding: const EdgeInsets.all(10),
+                //   decoration: BoxDecoration(
+                //     color: const Color(0xFF10B981).withOpacity(0.1),
+                //     shape: BoxShape.circle,
+                //     border: Border.all(
+                //       color: const Color(0xFF10B981).withOpacity(0.3),
+                //       width: 2,
+                //     ),
+                //   ),
+                //   child: const Icon(
+                //     Icons.sync_rounded,
+                //     color: Color(0xFF10B981),
+                //     size: 20,
+                //   ),
+                // ),
               ],
             ),
           ),
 
-          // Main Gallery Image with PageView
-          SizedBox(
-            height: isMobile ? 250 : 400,
+          // Main Gallery Image with Enhanced PageView
+          Container(
+            height: isMobile ? 280 : 420,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             child: PageView.builder(
               controller: _galleryPageController,
               itemCount: settings.gallery.length,
@@ -721,25 +809,234 @@ class _SuperAdminVetClinicDetailPageState
               },
               itemBuilder: (context, index) {
                 final imageId = settings.gallery[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      getPetImageUrl(imageId),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              size: 64,
-                              color: Colors.grey,
+                return AnimatedBuilder(
+                  animation: _galleryPageController,
+                  builder: (context, child) {
+                    double value = 1.0;
+                    if (_galleryPageController.position.haveDimensions) {
+                      value = _galleryPageController.page! - index;
+                      value = (1 - (value.abs() * 0.3)).clamp(0.7, 1.0);
+                    }
+                    return Center(
+                      child: SizedBox(
+                        height: Curves.easeInOut.transform(value) *
+                            (isMobile ? 280 : 420),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromRGBO(81, 115, 153, 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            getPetImageUrl(imageId),
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      const Color(0xFFF8FAFC),
+                                      const Color.fromRGBO(81, 115, 153, 0.05),
+                                    ],
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color.fromRGBO(
+                                                      81, 115, 153, 0.2)
+                                                  .withOpacity(0.3),
+                                              blurRadius: 20,
+                                              spreadRadius: 5,
+                                            ),
+                                          ],
+                                        ),
+                                        child: CircularProgressIndicator(
+                                          value: loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                          strokeWidth: 3,
+                                          valueColor:
+                                              const AlwaysStoppedAnimation<
+                                                  Color>(
+                                            Color.fromRGBO(81, 115, 153, 1),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(24),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color.fromRGBO(
+                                                      81, 115, 153, 0.15)
+                                                  .withOpacity(0.3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          'Loading image ${index + 1}...',
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.red[50]!,
+                                      Colors.red[100]!,
+                                    ],
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.red.withOpacity(0.3),
+                                              blurRadius: 20,
+                                              spreadRadius: 5,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.broken_image_rounded,
+                                          size: 64,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(24),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.red.withOpacity(0.2),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          'Failed to load image',
+                                          style: TextStyle(
+                                            color: Colors.red[700],
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          // Image counter overlay
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.black.withOpacity(0.75),
+                                    Colors.black.withOpacity(0.65),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '${index + 1} / ${settings.gallery.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -747,14 +1044,14 @@ class _SuperAdminVetClinicDetailPageState
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Gallery Thumbnail Strip
-          SizedBox(
-            height: 80,
+          // Enhanced Gallery Thumbnail Strip
+          Container(
+            height: 90,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: settings.gallery.length,
               itemBuilder: (context, index) {
                 final imageId = settings.gallery[index];
@@ -763,33 +1060,75 @@ class _SuperAdminVetClinicDetailPageState
                   onTap: () {
                     _galleryPageController.animateToPage(
                       index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOutCubic,
                     );
                   },
-                  child: Container(
-                    width: 80,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: isSelected ? 100 : 85,
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isSelected
                             ? const Color.fromRGBO(81, 115, 153, 1)
                             : Colors.transparent,
-                        width: 3,
+                        width: isSelected ? 3.5 : 2,
                       ),
+                      boxShadow: [
+                        if (isSelected)
+                          BoxShadow(
+                            color: const Color.fromRGBO(81, 115, 153, 0.4),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 4),
+                          ),
+                      ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        getPetImageUrl(imageId),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.error, size: 32),
-                          );
-                        },
+                      borderRadius: BorderRadius.circular(13),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            getPetImageUrl(imageId),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.grey[200]!,
+                                      Colors.grey[300]!,
+                                    ],
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 28,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                          if (!isSelected)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.3),
+                              ),
+                            ),
+                          if (isSelected)
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.5),
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(13),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -797,7 +1136,69 @@ class _SuperAdminVetClinicDetailPageState
               },
             ),
           ),
+
           const SizedBox(height: 24),
+
+          // Real-time sync status footer
+          // Container(
+          //   margin: const EdgeInsets.symmetric(horizontal: 20),
+          //   padding: const EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     gradient: LinearGradient(
+          //       colors: [
+          //         const Color(0xFF10B981).withOpacity(0.08),
+          //         const Color(0xFF10B981).withOpacity(0.04),
+          //       ],
+          //     ),
+          //     borderRadius: BorderRadius.circular(16),
+          //     border: Border.all(
+          //       color: const Color(0xFF10B981).withOpacity(0.2),
+          //       width: 1.5,
+          //     ),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Container(
+          //         padding: const EdgeInsets.all(8),
+          //         decoration: BoxDecoration(
+          //           color: const Color(0xFF10B981).withOpacity(0.15),
+          //           shape: BoxShape.circle,
+          //         ),
+          //         child: const Icon(
+          //           Icons.cloud_done_rounded,
+          //           color: Color(0xFF10B981),
+          //           size: 18,
+          //         ),
+          //       ),
+          //       const SizedBox(width: 12),
+          //       Expanded(
+          //         child: Column(
+          //           crossAxisAlignment: CrossAxisAlignment.start,
+          //           children: [
+          //             const Text(
+          //               'Real-time Sync Active',
+          //               style: TextStyle(
+          //                 fontWeight: FontWeight.bold,
+          //                 fontSize: 13,
+          //                 color: Color(0xFF10B981),
+          //               ),
+          //             ),
+          //             Text(
+          //               'Gallery updates automatically from admin',
+          //               style: TextStyle(
+          //                 fontSize: 11,
+          //                 color: Colors.grey[600],
+          //                 fontWeight: FontWeight.w600,
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -1367,7 +1768,7 @@ class _SuperAdminVetClinicDetailPageState
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 28),
             const SizedBox(width: 12),
-            const Text('Delete Clinic'),
+            const Text('Archive Clinic'),
           ],
         ),
         content: Column(
@@ -1375,7 +1776,7 @@ class _SuperAdminVetClinicDetailPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to permanently delete "${clinic.clinicName}"?',
+              'Are you sure you want to archive "${clinic.clinicName}"?',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
@@ -1395,7 +1796,7 @@ class _SuperAdminVetClinicDetailPageState
                           size: 18, color: Colors.red[700]),
                       const SizedBox(width: 8),
                       Text(
-                        'This will delete:',
+                        'This will archive the following, including the:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.red[700],
@@ -1407,11 +1808,11 @@ class _SuperAdminVetClinicDetailPageState
                   const Text('• All appointments'),
                   const Text('• All medical records'),
                   const Text('• All conversations'),
-                  const Text('• Staff accounts (deactivated)'),
+                  const Text('• Staff accounts'),
                   const Text('• Gallery images'),
                   const SizedBox(height: 8),
                   Text(
-                    'This cannot be undone!',
+                    'All of these would be archived.',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.red[700],
@@ -1436,7 +1837,7 @@ class _SuperAdminVetClinicDetailPageState
               backgroundColor: Colors.red[700],
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete'),
+            child: const Text('Archive'),
           ),
         ],
       ),
@@ -1463,7 +1864,7 @@ class _SuperAdminVetClinicDetailPageState
               ),
               SizedBox(height: 16),
               Text(
-                'Deleting clinic...',
+                'Archiving clinic...',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
@@ -1485,7 +1886,7 @@ class _SuperAdminVetClinicDetailPageState
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       } else {
-        _showErrorSnackbar('Failed to delete clinic');
+        _showErrorSnackbar('Failed to archive clinic');
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -1508,7 +1909,7 @@ class _SuperAdminVetClinicDetailPageState
           children: [
             Icon(Icons.check_circle, color: Colors.green[700], size: 28),
             const SizedBox(width: 12),
-            const Text('Deletion Complete'),
+            const Text('Archiving Complete'),
           ],
         ),
         content: Column(
@@ -1516,7 +1917,7 @@ class _SuperAdminVetClinicDetailPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Successfully deleted:',
+              'Successfully archived:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),

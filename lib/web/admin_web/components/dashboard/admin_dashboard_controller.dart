@@ -1,5 +1,7 @@
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -17,6 +19,7 @@ import 'package:get_storage/get_storage.dart';
 class AdminDashboardController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
+  late final NotificationController _notificationController;
 
   AdminDashboardController({
     required this.authRepository,
@@ -45,6 +48,16 @@ class AdminDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    if (!Get.isRegistered<NotificationController>()) {
+      _notificationController = Get.put(NotificationController(
+        authRepository: authRepository,
+        session: session,
+      ));
+    } else {
+      _notificationController = Get.find<NotificationController>();
+    }
+
     print('>>> ============================================');
     print('>>> DASHBOARD CONTROLLER: onInit()');
     print('>>> ============================================');
@@ -293,18 +306,32 @@ class AdminDashboardController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
-      mainButton: TextButton(
-        onPressed: () {
-          navigateToAppointments('pending');
-        },
-        child: const Text("View", style: TextStyle(color: Colors.white)),
+    // Get.snackbar(
+    //   "New Appointment",
+    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
+    //   backgroundColor: Colors.green,
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 5),
+    //   snackPosition: SnackPosition.TOP,
+    //   mainButton: TextButton(
+    //     onPressed: () {
+    //       navigateToAppointments('pending');
+    //     },
+    //     child: const Text("View", style: TextStyle(color: Colors.white)),
+    //   ),
+    // );
+
+    _notificationController.createNotification(
+      NotificationModel(
+        recipientId: clinicData.value!.documentId!,
+        recipientType: 'admin',
+        type: NotificationType.appointmentBooked,
+        priority: NotificationPriority.high,
+        title: 'New Appointment Booked',
+        message: '${getOwnerName(appointment.userId)} booked an appointment for ${getPetName(appointment.petId)}',
+        appointmentId: appointment.documentId,
+        userId: appointment.userId,
+        actionUrl: '/appointments?filter=pending',
       ),
     );
   }
@@ -692,45 +719,107 @@ class AdminDashboardController extends GetxController {
     try {
       await authRepository.updateAppointmentStatus(
           appointment.documentId!, 'accepted');
-      Get.snackbar("Success", "Appointment accepted!");
+      
+      // Create success notification
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: clinicData.value!.documentId!,
+          recipientType: 'admin',
+          type: NotificationType.appointmentAccepted,
+          title: 'Appointment Accepted',
+          message: 'Successfully accepted appointment for ${getPetName(appointment.petId)}',
+          appointmentId: appointment.documentId,
+        ),
+      );
+
+      // Also create notification for user
+      authRepository.createAppointmentNotification(
+        type: 'accepted',
+        appointmentId: appointment.documentId!,
+        clinicId: appointment.clinicId,
+        userId: appointment.userId,
+        petName: getPetName(appointment.petId),
+        ownerName: getOwnerName(appointment.userId),
+      );
     } catch (e) {
-      Get.snackbar("Error", "Failed to accept appointment: $e");
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: clinicData.value!.documentId!,
+          recipientType: 'admin',
+          type: NotificationType.systemAlert,
+          priority: NotificationPriority.high,
+          title: 'Error',
+          message: 'Failed to accept appointment: $e',
+        ),
+      );
     }
   }
 
+  // ✅ FIXED: Dynamic index lookup for Appointments
   void navigateToAppointments([String? filter]) {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(2);
 
-      if (filter != null) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          try {
-            final appointmentController = Get.find<WebAppointmentController>();
-            appointmentController.setSelectedTab(filter);
-          } catch (e) {
-            print("Appointment controller not ready for filter: $filter");
-          }
-        });
+      // Find the correct index dynamically
+      final appointmentsIndex =
+          homeController.navigationLabels.indexOf('Appointments');
+
+      if (appointmentsIndex != -1) {
+        print('>>> Navigating to Appointments at index $appointmentsIndex');
+        homeController.setSelectedIndex(appointmentsIndex);
+
+        if (filter != null) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            try {
+              final appointmentController =
+                  Get.find<WebAppointmentController>();
+              appointmentController.setSelectedTab(filter);
+            } catch (e) {
+              print("Appointment controller not ready for filter: $filter");
+            }
+          });
+        }
+      } else {
+        print('>>> ERROR: Appointments page not available in navigation');
       }
     } catch (e) {
       print("Navigation error: $e");
     }
   }
 
+  // ✅ FIXED: Dynamic index lookup for Messages
   void navigateToMessages() {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(3);
+
+      // Find the correct index dynamically
+      final messagesIndex = homeController.navigationLabels.indexOf('Messages');
+
+      if (messagesIndex != -1) {
+        print('>>> Navigating to Messages at index $messagesIndex');
+        homeController.setSelectedIndex(messagesIndex);
+      } else {
+        print('>>> ERROR: Messages page not available in navigation');
+      }
     } catch (e) {
       print("Navigation error: $e");
     }
   }
 
+  // ✅ FIXED: Dynamic index lookup for Clinic
   void navigateToClinic() {
     try {
       final homeController = Get.find<WebAdminHomeController>();
-      homeController.setSelectedIndex(1);
+
+      // Find the correct index dynamically
+      final clinicIndex = homeController.navigationLabels.indexOf('Clinic');
+
+      if (clinicIndex != -1) {
+        print('>>> Navigating to Clinic at index $clinicIndex');
+        homeController.setSelectedIndex(clinicIndex);
+      } else {
+        print('>>> ERROR: Clinic page not available in navigation');
+      }
     } catch (e) {
       print("Navigation error: $e");
     }
@@ -744,4 +833,111 @@ class AdminDashboardController extends GetxController {
       isRealTimeConnected.value ? "Connected" : "Polling";
   String get lastUpdateDisplay =>
       "Last update: ${DateFormat('hh:mm:ss a').format(lastUpdateTime.value)}";
+
+  /// Check if user can view appointments widget
+  bool canViewAppointmentsWidget() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return homeController.canAccessFeature('appointments');
+    } catch (e) {
+      print('Error checking appointments permission: $e');
+      return false;
+    }
+  }
+
+  /// Check if user can view messages widget
+  bool canViewMessagesWidget() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return homeController.canAccessFeature('messages');
+    } catch (e) {
+      print('Error checking messages permission: $e');
+      return false;
+    }
+  }
+
+  /// Check if user can view clinic widget
+  bool canViewClinicWidget() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return homeController.canAccessFeature('clinic_info');
+    } catch (e) {
+      print('Error checking clinic permission: $e');
+      return false;
+    }
+  }
+
+  /// NEW: Get only visible stats based on permissions
+  List<Map<String, dynamic>> getVisibleStats() {
+    final allStats = [
+      {
+        'title': 'Today\'s Appointments',
+        'value': todayAppointments.length.toString(),
+        'subtitle': 'Scheduled today',
+        'icon': Icons.event_available,
+        'color': Colors.blue,
+        'permission': 'appointments',
+      },
+      {
+        'title': 'Pending Appointments',
+        'value': pendingCount.toString(),
+        'subtitle': 'Need approval',
+        'icon': Icons.pending_actions,
+        'color': Colors.orange,
+        'permission': 'appointments',
+      },
+      {
+        'title': 'Today\'s In Progress',
+        'value': todayAppointments
+            .where((a) => a.status == 'in_progress')
+            .length
+            .toString(),
+        'subtitle': 'Currently being treated',
+        'icon': Icons.medical_services,
+        'color': Colors.purple,
+        'permission': 'appointments',
+      },
+      {
+        'title': 'Today\'s Completed',
+        'value': todayAppointments
+            .where((a) => a.status == 'completed')
+            .length
+            .toString(),
+        'subtitle': 'Finished appointments today',
+        'icon': Icons.check_circle,
+        'color': Colors.green,
+        'permission': 'appointments',
+      },
+    ];
+
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return allStats
+          .where((stat) =>
+              homeController.canAccessFeature(stat['permission'] as String))
+          .toList();
+    } catch (e) {
+      print('Error filtering stats: $e');
+      return allStats;
+    }
+  }
+
+  /// NEW: Get count of visible widgets for layout purposes
+  Map<String, bool> getVisibleWidgets() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return {
+        'appointments': homeController.canAccessFeature('appointments'),
+        'messages': homeController.canAccessFeature('messages'),
+        'clinic': homeController.canAccessFeature('clinic_info'),
+      };
+    } catch (e) {
+      print('Error getting visible widgets: $e');
+      return {
+        'appointments': true,
+        'messages': true,
+        'clinic': true,
+      };
+    }
+  }
 }

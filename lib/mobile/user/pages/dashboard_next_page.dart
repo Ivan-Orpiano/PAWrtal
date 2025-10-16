@@ -4,11 +4,13 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/pages/clinic_page_maps.dart';
 import 'package:capstone_app/mobile/user/pages/schedule_appointment.dart';
 import 'package:capstone_app/mobile/user/pages/clinic_reviews_page.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
 import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:capstone_app/data/id_verification/guards/appointment_verification_guard.dart';
 
@@ -27,14 +29,21 @@ class DashboardNextPage extends StatefulWidget {
 }
 
 class _DashboardNextPageState extends State<DashboardNextPage> {
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
   bool _isSaved = false;
+  
+  // Review related state
+  List<RatingAndReview> reviews = [];
+  ClinicRatingStats? stats;
+  bool _isLoadingReviews = true;
 
   @override
   void initState() {
     super.initState();
     _loadClinicSettings();
+    _loadReviews();
   }
 
   Future<void> _loadClinicSettings() async {
@@ -60,6 +69,42 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         _isLoadingSettings = false;
       });
     }
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() => _isLoadingReviews = true);
+    
+    try {
+      final fetchedReviews = await _authRepo.getClinicReviews(widget.clinic.documentId!);
+      final fetchedStats = await _authRepo.getClinicRatingStats(widget.clinic.documentId!);
+      
+      setState(() {
+        reviews = fetchedReviews;
+        stats = fetchedStats;
+        _isLoadingReviews = false;
+      });
+    } catch (e) {
+      print('Error loading reviews: $e');
+      setState(() => _isLoadingReviews = false);
+    }
+  }
+
+  Widget _buildStarRating(double rating, {double size = 20}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        double starFill = (rating - index).clamp(0.0, 1.0);
+        return Stack(
+          children: [
+            Icon(Icons.star_border, size: size, color: Colors.amber),
+            ClipRect(
+              clipper: _StarClipper(starFill),
+              child: Icon(Icons.star, size: size, color: Colors.amber),
+            ),
+          ],
+        );
+      }),
+    );
   }
 
   Widget _buildStatusCard() {
@@ -157,9 +202,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: galleryImages.length + 1, // +1 for "Show all" tile
+            itemCount: galleryImages.length + 1,
             itemBuilder: (context, index) {
-              // Show "Show all pictures" tile at the end
               if (index == galleryImages.length) {
                 return GestureDetector(
                   onTap: () => _showAllPicturesDialog(galleryImages),
@@ -244,7 +288,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             ),
             child: Column(
               children: [
-                // Header
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -265,7 +308,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                   ),
                 ),
                 const Divider(height: 1),
-                // Grid of images
                 Expanded(
                   child: GridView.builder(
                     padding: const EdgeInsets.all(16),
@@ -496,102 +538,339 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   }
 
   Widget _buildRatingsSection() {
-    const double averageRating = 4.8;
-    const int totalReviews = 124;
+    if (_isLoadingReviews) {
+      return const Padding(
+        padding: EdgeInsets.all(40),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final averageRating = stats?.averageRating ?? 0.0;
+    final totalReviews = stats?.totalReviews ?? 0;
+    final displayReviews = reviews.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 20, top: 20, bottom: 12),
-          child: Text(
-            "Ratings & Reviews",
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
+        Padding(
+          padding: const EdgeInsets.only(left: 20, top: 20, bottom: 12),
           child: Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    averageRating.toString(),
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: List.generate(5, (index) {
-                      return Icon(
-                        index < averageRating.floor()
-                            ? Icons.star
-                            : index < averageRating
-                                ? Icons.star_half
-                                : Icons.star_border,
-                        color: Colors.amber,
-                        size: 20,
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$totalReviews reviews',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+              const Text(
+                "Ratings & Reviews",
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
               ),
+              const Spacer(),
+              if (reviews.isNotEmpty)
+                Row(
+                  children: [
+                    Text(
+                      averageRating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                      size: 20,
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ClinicReviewsPage(
-                    clinic: widget.clinic,
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.black),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Show all $totalReviews reviews",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+
+        if (reviews.isEmpty)
+          _buildNoReviews()
+        else ...[
+          // Rating distribution
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: _buildRatingDistribution(),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Review cards
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: displayReviews.map((review) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildReviewCard(review),
+              )).toList(),
+            ),
+          ),
+
+          // Show all reviews button
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ClinicReviewsPage(
+                      clinic: widget.clinic,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_rounded, size: 18),
-                ],
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.black),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Show all $totalReviews reviews",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 18),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ],
+    );
+  }
+
+  List<Widget> _buildRatingDistribution() {
+    if (stats == null) return [];
+
+    final ratingPercentages = <int, double>{};
+    if (stats!.totalReviews > 0) {
+      for (var i = 1; i <= 5; i++) {
+        final count = stats!.ratingDistribution[i] ?? 0;
+        ratingPercentages[i] = count / stats!.totalReviews;
+      }
+    }
+
+    return (ratingPercentages.entries.toList()
+      ..sort((a, b) => b.key.compareTo(a.key)))
+        .map((entry) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  child: Text(
+                    entry.key.toString(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: entry.value,
+                        child: Container(
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList();
+  }
+
+  Widget _buildNoReviews() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.rate_review_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No reviews yet',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Be the first to review this clinic!',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewCard(RatingAndReview review) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                child: Text(
+                  review.userName[0].toUpperCase(),
+                  style: const TextStyle(
+                    color: Color.fromARGB(255, 81, 115, 153),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.userName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      review.getTimeAgo(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildStarRating(review.rating, size: 16),
+            ],
+          ),
+          
+          const SizedBox(height: 10),
+          
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          
+          if (review.hasReview) ...[
+            const SizedBox(height: 10),
+            Text(
+              review.reviewText!,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          
+          if (review.hasImages) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 70,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: review.images.length > 3 ? 3 : review.images.length,
+                itemBuilder: (context, index) {
+                  final imageUrl = _authRepo.getImageUrl(review.images[index]);
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrl,
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 70,
+                            height: 70,
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.image_not_supported, size: 24),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -799,7 +1078,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
           ),
         ),
-        // Address and action buttons
         Container(
           width: double.infinity,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -845,7 +1123,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Action buttons
               Row(
                 children: [
                   Expanded(
@@ -885,7 +1162,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             ],
           ),
         ),
-        // Map container
         Container(
           width: double.infinity,
           height: 300,
@@ -950,7 +1226,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                // Implement actual calling functionality
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 81, 115, 153),
@@ -1081,7 +1356,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         child: SafeArea(
           child: Row(
             children: [
-              // Save Button
               InkWell(
                 customBorder: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -1120,7 +1394,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Book Appointment Button
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -1159,7 +1432,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Message Button
               InkWell(
                 customBorder: const CircleBorder(),
                 onTap: () async {
@@ -1282,5 +1554,21 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         ],
       ),
     );
+  }
+}
+
+// Star clipper helper class
+class _StarClipper extends CustomClipper<Rect> {
+  final double fillPercentage;
+  _StarClipper(this.fillPercentage);
+
+  @override
+  Rect getClip(Size size) {
+    return Rect.fromLTRB(0, 0, size.width * fillPercentage, size.height);
+  }
+
+  @override
+  bool shouldReclip(_StarClipper oldClipper) {
+    return oldClipper.fillPercentage != fillPercentage;
   }
 }

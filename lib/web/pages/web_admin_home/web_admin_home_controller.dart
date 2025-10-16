@@ -14,23 +14,9 @@ class WebAdminHomeController extends GetxController {
   final userRole = ''.obs;
   final userAuthorities = <String>[].obs;
 
-  // ALL pages are ALWAYS available - both admin and staff see all 5 pages
-  final RxList<Widget> pages = <Widget>[
-    const AdminWebDashboard(),
-    const AdminWebClinicpage(),
-    const AdminWebAppointments(),
-    const AdminWebMessages(),
-    const AdminWebStaffs(), // ALWAYS AVAILABLE
-  ].obs;
-
-  // ALL navigation labels are ALWAYS available
-  final RxList<String> navigationLabels = <String>[
-    "Home",
-    "Clinic",
-    "Appointments",
-    "Messages",
-    "Staffs", // ALWAYS VISIBLE
-  ].obs;
+  // Dynamic pages based on permissions
+  final RxList<Widget> pages = <Widget>[].obs;
+  final RxList<String> navigationLabels = <String>[].obs;
 
   @override
   void onInit() {
@@ -40,6 +26,7 @@ class WebAdminHomeController extends GetxController {
     print('>>> ============================================');
 
     _loadUserRole();
+    _buildNavigationBasedOnPermissions();
   }
 
   void _loadUserRole() {
@@ -89,30 +76,88 @@ class WebAdminHomeController extends GetxController {
     _printAccessSummary();
   }
 
+  void _buildNavigationBasedOnPermissions() {
+    print('>>> ============================================');
+    print('>>> BUILDING NAVIGATION BASED ON PERMISSIONS');
+    print('>>> ============================================');
+
+    // Clear existing pages and labels
+    pages.clear();
+    navigationLabels.clear();
+
+    // HOME is always available for everyone
+    pages.add(const AdminWebDashboard());
+    navigationLabels.add("Home");
+    print('>>> Added: Home (always visible)');
+
+    if (userRole.value == "admin") {
+      // Admin sees all pages
+      pages.add(const AdminWebClinicpage());
+      navigationLabels.add("Clinic");
+      print('>>> Added: Clinic (admin full access)');
+
+      pages.add(const AdminWebAppointments());
+      navigationLabels.add("Appointments");
+      print('>>> Added: Appointments (admin full access)');
+
+      pages.add(const AdminWebMessages());
+      navigationLabels.add("Messages");
+      print('>>> Added: Messages (admin full access)');
+
+      pages.add(const AdminWebStaffs());
+      navigationLabels.add("Staffs");
+      print('>>> Added: Staffs (admin only)');
+    } else if (userRole.value == "staff") {
+      // Staff only sees pages they have permission for
+      if (hasAuthority("Clinic")) {
+        pages.add(const AdminWebClinicpage());
+        navigationLabels.add("Clinic");
+        print('>>> Added: Clinic (staff has permission)');
+      }
+
+      if (hasAuthority("Appointments")) {
+        pages.add(const AdminWebAppointments());
+        navigationLabels.add("Appointments");
+        print('>>> Added: Appointments (staff has permission)');
+      }
+
+      if (hasAuthority("Messages")) {
+        pages.add(const AdminWebMessages());
+        navigationLabels.add("Messages");
+        print('>>> Added: Messages (staff has permission)');
+      }
+
+      // Staffs page is NEVER shown to staff users
+      print('>>> Staffs page: HIDDEN (staff user)');
+    }
+
+    print('>>> Total pages built: ${pages.length}');
+    print('>>> Navigation labels: ${navigationLabels.join(", ")}');
+    print('>>> ============================================');
+  }
+
   void _printAccessSummary() {
     print('>>> ============================================');
     print('>>> ACCESS SUMMARY');
     print('>>> ============================================');
     print('>>> Current role: "${userRole.value}"');
     print('>>> Current authorities: ${userAuthorities.value}');
-    print('>>> Total pages visible: ${pages.length}');
-    print('>>> Navigation labels: ${navigationLabels.join(", ")}');
 
     if (userRole.value == "admin") {
-      print('>>> ADMIN: Full access to all pages including Staffs');
+      print('>>> ADMIN: Full access to all pages');
     } else if (userRole.value == "staff") {
-      print('>>> STAFF: Can view all pages');
-      print('>>> Full access to: ${userAuthorities.join(", ")}');
-      print('>>> View-only access to: ${_getViewOnlyPages().join(", ")}');
-      print('>>> IMPORTANT: Staffs page is ALWAYS view-only for staff');
+      print('>>> STAFF: Limited access based on permissions');
+      print('>>> Has access to: ${userAuthorities.join(", ")}');
+      final allPages = ["Clinic", "Appointments", "Messages"];
+      final noAccess =
+          allPages.where((page) => !userAuthorities.contains(page)).toList();
+      if (noAccess.isNotEmpty) {
+        print('>>> No access to: ${noAccess.join(", ")}');
+      }
+      print('>>> Staffs page: ALWAYS HIDDEN');
     }
 
     print('>>> ============================================');
-  }
-
-  List<String> _getViewOnlyPages() {
-    final allPages = ["Clinic", "Appointments", "Messages", "Staffs"];
-    return allPages.where((page) => !userAuthorities.contains(page)).toList();
   }
 
   void setSelectedIndex(int index) {
@@ -124,12 +169,10 @@ class WebAdminHomeController extends GetxController {
       selectedIndex.value = index;
       print('>>> Navigation: Success - now at ${navigationLabels[index]}');
 
-      // Check if user has permission for this page
+      // Permission info
       if (userRole.value == "staff" && index > 0) {
         final pageName = navigationLabels[index];
-        final hasPermission = hasAuthority(pageName);
-        print(
-            '>>> Permission check for "$pageName": ${hasPermission ? "FULL ACCESS" : "VIEW-ONLY"}');
+        print('>>> Page "$pageName" - Staff has permission (page is visible)');
       }
     } else {
       print('>>> Navigation: ERROR - Index $index out of bounds');
@@ -158,14 +201,8 @@ class WebAdminHomeController extends GetxController {
       return true; // Admins have full access to everything
     }
 
-    // IMPORTANT: Staff can NEVER have "Staffs" authority
-    if (authority == "Staffs") {
-      return false; // Always false for staff users
-    }
-
-    // Staff users - check their authorities for other pages
+    // Staff users - check their authorities
     final hasAuth = userAuthorities.contains(authority);
-    print('>>> Authority check for "$authority": $hasAuth');
     return hasAuth;
   }
 
@@ -174,21 +211,206 @@ class WebAdminHomeController extends GetxController {
     if (selectedIndex.value == 0) return true; // Home is always accessible
 
     final pageName = navigationLabels[selectedIndex.value];
-
-    // Staffs page is always view-only for staff
-    if (pageName == "Staffs" && isStaff) return false;
-
     return hasAuthority(pageName);
   }
 
   String getCurrentPagePermission() {
-    if (selectedIndex.value == 0) return "Home"; // Home page
+    if (selectedIndex.value == 0) return "Home";
     return navigationLabels[selectedIndex.value];
+  }
+
+  /// NEW: Check if staff can access a specific dashboard feature/widget
+  bool canAccessFeature(String featureName) {
+    if (isAdmin) return true;
+
+    // Map feature names to permissions
+    final featurePermissions = {
+      'appointments': 'Appointments',
+      'messages': 'Messages',
+      'clinic_info': 'Clinic',
+      'clinic_settings': 'Clinic',
+      'staffs': 'admin_only', // Admin only - staff never see this
+    };
+
+    final requiredPermission = featurePermissions[featureName];
+
+    // Staff can never access admin-only features
+    if (requiredPermission == 'admin_only') {
+      return false;
+    }
+
+    // If no permission mapping, allow by default
+    if (requiredPermission == null) {
+      return true;
+    }
+
+    // Check if staff has the required authority
+    return hasAuthority(requiredPermission);
+  }
+
+  /// NEW: Get a list of accessible features for the current user
+  List<String> getAccessibleFeatures() {
+    final allFeatures = [
+      'appointments',
+      'messages',
+      'clinic_info',
+      'clinic_settings',
+    ];
+
+    if (isAdmin) {
+      return [...allFeatures, 'staffs'];
+    }
+
+    return allFeatures.where((feature) => canAccessFeature(feature)).toList();
+  }
+
+  /// NEW: Get dashboard widget visibility
+  Map<String, bool> getDashboardWidgetVisibility() {
+    return {
+      'todaySchedule': canAccessFeature('appointments'),
+      'recentMessages': canAccessFeature('messages'),
+      'upcomingAppointments': canAccessFeature('appointments'),
+      'appointmentCalendar': canAccessFeature('appointments'),
+      'quickStats': canAccessFeature('appointments'),
+      'clinicInfo': canAccessFeature('clinic_info'),
+    };
+  }
+
+  /// NEW: Enhanced permission denied dialog with suggestion
+  void showPermissionDeniedDialog(String featureName) {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Colors.orange[700], size: 28),
+            const SizedBox(width: 12),
+            const Text('Access Denied'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You do not have permission to access $featureName.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Permission Required',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Contact your administrator to request access to $featureName.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb, color: Colors.blue[700], size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your current permissions: ${userAuthorities.value.join(", ")}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[900],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void refreshRoleData() {
     print('>>> Manual refresh of role data requested');
     _loadUserRole();
+    _buildNavigationBasedOnPermissions();
+  }
+
+  /// NEW: Get permission summary for staff
+  String getPermissionSummary() {
+    if (isAdmin) {
+      return 'Admin - Full access to all features';
+    }
+
+    final features = getAccessibleFeatures();
+    if (features.isEmpty) {
+      return 'No features available';
+    }
+
+    if (features.length == 4) {
+      return 'Full staff access';
+    }
+
+    return 'Access: ${features.join(", ")}';
+  }
+
+  /// NEW: Log permission details for debugging
+  void debugPrintPermissions() {
+    print('>>> ============================================');
+    print('>>> PERMISSION DEBUG INFO');
+    print('>>> ============================================');
+    print('>>> Role: $userRole');
+    print('>>> Is Admin: $isAdmin');
+    print('>>> Is Staff: $isStaff');
+    print('>>> Authorities: ${userAuthorities.value}');
+    print('>>> Accessible Features: ${getAccessibleFeatures().join(", ")}');
+    print('>>> Dashboard Widget Visibility:');
+    getDashboardWidgetVisibility().forEach((widget, visible) {
+      print('>>>   - $widget: ${visible ? "VISIBLE" : "HIDDEN"}');
+    });
+    print('>>> Permission Summary: ${getPermissionSummary()}');
+    print('>>> ============================================');
   }
 
   void debugPrintState() {

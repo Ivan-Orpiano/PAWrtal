@@ -1,6 +1,11 @@
+import 'package:appwrite/models.dart';
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/data/id_verification/screens/id_verification_screen.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/user_web/responsive_page_handlers/web_settings_and_everything_page_handler.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class WebProfileIcon extends StatefulWidget {
@@ -18,7 +23,44 @@ class WebProfileIcon extends StatefulWidget {
 class _WebProfileIconState extends State<WebProfileIcon> {
   OverlayEntry? _overlayEntry;
   final GetStorage storage = GetStorage();
+  final AppWriteProvider appWriteProvider = AppWriteProvider();
+  final AuthRepository authRepository = Get.find<AuthRepository>();
   Size? _lastScreenSize;
+  
+  User? currentUser;
+  bool isIdVerified = false;
+  bool isLoadingVerification = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserVerificationStatus();
+  }
+
+  Future<void> _loadUserVerificationStatus() async {
+    try {
+      final user = await appWriteProvider.getUser();
+      if (user != null) {
+        final verificationStatus =
+            await appWriteProvider.getUserVerificationStatus(user.$id);
+
+        if (mounted) {
+          setState(() {
+            currentUser = user;
+            isIdVerified = verificationStatus['isVerified'] as bool? ?? false;
+            isLoadingVerification = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading verification status: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingVerification = false;
+        });
+      }
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -154,10 +196,35 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     );
   }
 
+  Future<void> _handleVerifyNow() async {
+    if (currentUser == null) return;
+    
+    _closePopup();
+    
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => IdVerificationScreen(
+          userId: currentUser!.$id,
+          email: currentUser!.email,
+          authRepository: authRepository,
+        ),
+      ),
+    );
+
+    // Refresh verification status if verification was completed
+    if (result == true) {
+      await _loadUserVerificationStatus();
+    }
+  }
+
   OverlayEntry _createOverlayEntry(BuildContext context) {
     final userEmail = storage.read("email") ?? "user@example.com";
     final userName = storage.read("userName") ?? "User";
     final userRole = storage.read("role") ?? "user";
+    
+    // Determine if user should show ID verification (only for regular users, not admin/staff)
+    final shouldShowIdVerification =
+        userRole == 'customer' || userRole == 'user';
 
     return OverlayEntry(
       builder: (context) => LayoutBuilder(
@@ -207,6 +274,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // User Profile Header
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             child: Row(
@@ -281,6 +349,76 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                               ],
                             ),
                           ),
+                          
+                          // ID Verification Status (only for regular users)
+                          if (shouldShowIdVerification && !isLoadingVerification)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isIdVerified
+                                      ? const Color(0xFF4CAF50).withOpacity(0.1)
+                                      : const Color(0xFFFF9800).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isIdVerified
+                                        ? const Color(0xFF4CAF50)
+                                        : const Color(0xFFFF9800),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isIdVerified
+                                          ? Icons.verified_user_rounded
+                                          : Icons.badge_outlined,
+                                      color: isIdVerified
+                                          ? const Color(0xFF4CAF50)
+                                          : const Color(0xFFFF9800),
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        isIdVerified ? "ID Verified" : "ID Not Verified",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: isIdVerified
+                                              ? const Color(0xFF4CAF50)
+                                              : const Color(0xFFFF9800),
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isIdVerified)
+                                      GestureDetector(
+                                        onTap: _handleVerifyNow,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF1976D2),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            "Verify Now",
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             child: Divider(color: Colors.grey.shade300, height: 1),
@@ -291,7 +429,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                           _popupItem(Icons.settings_outlined, "Settings", () {
                             _navigateToSettings(1);
                           }),
-                          _popupItem(Icons.help_outline, "Help & Support", () {
+                          _popupItem(Icons.help_outline, "Help", () {
                             _navigateToSettings(2);
                           }),
                           _popupItem(Icons.feedback_outlined, "Give feedback", () {

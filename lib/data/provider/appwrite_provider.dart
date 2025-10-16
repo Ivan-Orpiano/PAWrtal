@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
+import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -1177,26 +1179,76 @@ class AppWriteProvider {
   StreamSubscription<RealtimeMessage>? _statusSubscription;
 
   Stream<RealtimeMessage> subscribeToMessages(String conversationId) {
+    print('>>> ============================================');
+    print('>>> APPWRITE: Setting up message subscription');
+    print('>>> Conversation ID to monitor: $conversationId');
+    print('>>> ============================================');
+
     final realtime = Realtime(client);
+
+    final channel =
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.messagesCollectionID}.documents';
+
+    print('>>> Subscribing to channel: $channel');
+
     return realtime
-        .subscribe([
-          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.messagesCollectionID}.documents'
-        ])
+        .subscribe([channel])
         .stream
+        .map((message) {
+          print('>>> Message event received: ${message.events}');
+          print(
+              '>>> Payload conversationId: ${message.payload['conversationId']}');
+          return message;
+        })
         .where((message) {
-          return message.payload['conversationId'] == conversationId;
+          final messageConversationId = message.payload['conversationId'];
+          final matches = messageConversationId == conversationId;
+
+          if (matches) {
+            print('>>> ✓ Message matches conversation - forwarding');
+          } else {
+            print('>>> ✗ Message does not match - filtering out');
+          }
+
+          return matches;
         });
   }
 
-  Stream<RealtimeMessage> subscribeToConversations(String userId) {
+  Stream<RealtimeMessage> subscribeToConversations(String clinicId) {
+    print('>>> ============================================');
+    print('>>> APPWRITE: Setting up conversation subscription');
+    print('>>> Clinic ID to monitor: $clinicId');
+    print('>>> ============================================');
+
     final realtime = Realtime(client);
+
+    // Subscribe to ALL conversation events in the collection
+    final channel =
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
+
+    print('>>> Subscribing to channel: $channel');
+
     return realtime
-        .subscribe([
-          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents'
-        ])
+        .subscribe([channel])
         .stream
+        .map((message) {
+          print('>>> Raw event received: ${message.events}');
+          print('>>> Payload clinicId: ${message.payload['clinicId']}');
+          print('>>> Target clinicId: $clinicId');
+          return message;
+        })
         .where((message) {
-          return message.payload['userId'] == userId;
+          // Filter for this specific clinic's conversations
+          final messageClinicId = message.payload['clinicId'];
+          final matches = messageClinicId == clinicId;
+
+          if (matches) {
+            print('>>> ✓ Event matches clinic - forwarding to controller');
+          } else {
+            print('>>> ✗ Event does not match clinic - filtering out');
+          }
+
+          return matches;
         });
   }
 
@@ -1278,21 +1330,22 @@ class AppWriteProvider {
 
   // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
-  /// CRITICAL FIX: Staff account creation without session conflicts
+  // REPLACE createStaffAccount METHOD:
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
-    required String email,
+    required String username,
     required String password,
     required String clinicId,
     required List<String> authorities,
     String? department,
     String? image,
     String? phone,
+    String? email,
     String? createdBy,
   }) async {
     try {
       print('>>> ============================================');
-      print('>>> STAFF ACCOUNT CREATION START');
+      print('>>> STAFF ACCOUNT CREATION START (USERNAME ONLY)');
       print('>>> ============================================');
 
       // Store current admin session
@@ -1300,16 +1353,26 @@ class AppWriteProvider {
       final currentSession = await account!.getSession(sessionId: 'current');
       print('>>> Current admin session: ${currentSession.$id}');
 
-      print('>>> Step 1: Creating Appwrite auth user...');
-      // This creates the user but doesn't create a session
+      print('>>> Step 1: Creating Appwrite auth user with username...');
+
+      // Create user with username and password ONLY
+      // Appwrite will handle username-based authentication internally
       final authUser = await account!.create(
         userId: ID.unique(),
-        email: email, // This is the AUTHENTICATION email (permanent)
+        email:
+            '$username@${AppwriteConstants.projectID}.internal', // Required by Appwrite but hidden
         password: password,
         name: name,
       );
+
+      // IMPORTANT: Update user preferences to set username
+      await account!.updatePrefs(prefs: {
+        'username': username,
+        'isStaff': true,
+      });
+
       print('>>> Auth user created: ${authUser.$id}');
-      print('>>> Auth email (permanent): ${authUser.email}');
+      print('>>> Username set in preferences: $username');
 
       // Verify admin session is still active
       final verifySession = await account!.get();
@@ -1320,8 +1383,8 @@ class AppWriteProvider {
       final staffData = {
         'userId': authUser.$id,
         'name': name,
-        'email': email, // Display email (can be changed)
-        'authEmail': email, // CRITICAL: Authentication email (NEVER changes)
+        'username': username,
+        'email': email ?? '',
         'phone': phone ?? '',
         'clinicId': clinicId,
         'authorities': authorities,
@@ -1335,8 +1398,8 @@ class AppWriteProvider {
       };
 
       print('>>> Staff data:');
-      print('>>> - Display email: ${staffData['email']}');
-      print('>>> - Auth email: ${staffData['authEmail']}');
+      print('>>> - Username: ${staffData['username']}');
+      print('>>> - Contact email: ${staffData['email']}');
       print('>>> - Role: ${staffData['role']}');
 
       final staffDoc = await databases!.createDocument(
@@ -1366,79 +1429,6 @@ class AppWriteProvider {
       print('>>> ============================================');
       print('>>> STAFF ACCOUNT CREATION ERROR: $e');
       print('>>> ============================================');
-      rethrow;
-    }
-  }
-
-  /// CRITICAL FIX: Update ONLY display emails, NOT authentication emails
-  Future<void> updateAllStaffEmailsForClinic(
-    String clinicId,
-    String newTemplate,
-  ) async {
-    try {
-      print('>>> ============================================');
-      print('>>> UPDATING STAFF DISPLAY EMAILS');
-      print('>>> New template: $newTemplate');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
-
-      final staffList = await getClinicStaff(clinicId);
-      print('>>> Found ${staffList.length} staff members to update');
-
-      int successCount = 0;
-      int errorCount = 0;
-
-      for (var staffDoc in staffList) {
-        try {
-          final staffName = staffDoc.data['name'] as String;
-          final authEmail = staffDoc.data['authEmail'] as String? ??
-              staffDoc.data['email'] as String;
-
-          // Generate new DISPLAY email using template
-          final cleanName = staffName
-              .toLowerCase()
-              .replaceAll(RegExp(r'[^a-z0-9]'), '')
-              .replaceAll(' ', '.');
-
-          String newDisplayEmail;
-          if (newTemplate.startsWith('@')) {
-            newDisplayEmail = '$cleanName$newTemplate';
-          } else {
-            newDisplayEmail = newTemplate.replaceAll('{name}', cleanName);
-          }
-
-          print('>>> Updating staff: ${staffDoc.$id}');
-          print('>>>   - Name: $staffName');
-          print('>>>   - Auth Email (permanent): $authEmail');
-          print('>>>   - New Display Email: $newDisplayEmail');
-
-          // CRITICAL: Update display email only, keep authEmail unchanged
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.staffCollectionID,
-            documentId: staffDoc.$id,
-            data: {
-              'email': newDisplayEmail, // Update display email
-              'authEmail': authEmail, // KEEP authentication email unchanged
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
-
-          successCount++;
-          print('>>> ✓ Successfully updated');
-        } catch (e) {
-          errorCount++;
-          print('>>> ✗ Error updating ${staffDoc.$id}: $e');
-        }
-      }
-
-      print('>>> ============================================');
-      print('>>> UPDATE COMPLETE');
-      print('>>> Success: $successCount');
-      print('>>> Errors: $errorCount');
-      print('>>> ============================================');
-    } catch (e) {
-      print('>>> CRITICAL ERROR updating staff emails: $e');
       rethrow;
     }
   }
@@ -1502,42 +1492,42 @@ class AppWriteProvider {
     }
   }
 
-  /// NEW: Get staff by email (fallback method when userId doesn't match)
-  Future<Document?> getStaffByEmail(String email) async {
+  // RENAMED: getStaffByEmail -> getStaffByUsername
+  Future<Document?> getStaffByUsername(String username) async {
     try {
       print('>>> ==========================================');
-      print('>>> GET STAFF BY EMAIL');
-      print('>>> Email: $email');
+      print('>>> GET STAFF BY USERNAME');
+      print('>>> Username: $username');
 
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         queries: [
-          Query.equal('email', email),
+          Query.equal('username', username),
           Query.equal('isActive', true),
         ],
       );
 
       if (result.documents.isEmpty) {
-        print('>>> No staff found for email: $email');
+        print('>>> No staff found for username: $username');
         print('>>> ==========================================');
         return null;
       }
 
       final doc = result.documents.first;
 
-      print('>>> Staff found by email!');
+      print('>>> Staff found by username!');
       print('>>> Document ID: ${doc.$id}');
       print('>>> Name: ${doc.data['name']}');
       print('>>> UserId in DB: ${doc.data['userId']}');
-      print('>>> Email: ${doc.data['email']}');
+      print('>>> Username: ${doc.data['username']}');
       print('>>> Role: ${doc.data['role']}');
       print('>>> Clinic ID: ${doc.data['clinicId']}');
       print('>>> ==========================================');
 
       return doc;
     } catch (e) {
-      print('>>> Error getting staff by email: $e');
+      print('>>> Error getting staff by username: $e');
       print('>>> ==========================================');
       return null;
     }
@@ -1587,12 +1577,12 @@ class AppWriteProvider {
     }
   }
 
-  /// MIGRATION: Add authEmail to existing staff records
+  // MODIFIED: Migration for existing staff records
   Future<void> migrateExistingStaffRecords() async {
     try {
       print('>>> ============================================');
       print('>>> MIGRATING STAFF RECORDS');
-      print('>>> Adding authEmail field to existing records');
+      print('>>> Adding username field to existing records');
       print('>>> ============================================');
 
       final result = await databases!.listDocuments(
@@ -1605,8 +1595,9 @@ class AppWriteProvider {
       for (var doc in result.documents) {
         try {
           final currentRole = doc.data['role'];
-          final currentAuthEmail = doc.data['authEmail'];
+          final currentUsername = doc.data['username'];
           final email = doc.data['email'];
+          final name = doc.data['name'];
 
           // If role is missing, add it
           if (currentRole == null || currentRole.isEmpty) {
@@ -1625,17 +1616,32 @@ class AppWriteProvider {
             );
           }
 
-          // CRITICAL: If authEmail is missing, set it to current email
-          if (currentAuthEmail == null || currentAuthEmail.isEmpty) {
+          // CRITICAL: If username is missing, generate one from name or email
+          if (currentUsername == null || currentUsername.isEmpty) {
             print('>>> Updating staff: ${doc.data['name']}');
-            print('>>>   - Adding authEmail field: $email');
+
+            // Generate username from name or email
+            String generatedUsername;
+            if (name != null && name.isNotEmpty) {
+              generatedUsername = name
+                  .toString()
+                  .toLowerCase()
+                  .replaceAll(RegExp(r'[^a-z0-9]'), '')
+                  .replaceAll(' ', '.');
+            } else if (email != null && email.isNotEmpty) {
+              generatedUsername = email.toString().split('@')[0];
+            } else {
+              generatedUsername = 'staff${doc.$id.substring(0, 8)}';
+            }
+
+            print('>>>   - Adding username field: $generatedUsername');
 
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId: AppwriteConstants.staffCollectionID,
               documentId: doc.$id,
               data: {
-                'authEmail': email, // Set authEmail to current email
+                'username': generatedUsername,
                 'updatedAt': DateTime.now().toIso8601String(),
               },
             );
@@ -1643,7 +1649,7 @@ class AppWriteProvider {
             print('>>>   ✓ Migration successful');
           } else {
             print(
-                '>>> Staff already has authEmail: ${doc.data['name']} - $currentAuthEmail');
+                '>>> Staff already has username: ${doc.data['name']} - $currentUsername');
           }
         } catch (e) {
           print('>>> Error updating staff ${doc.$id}: $e');
@@ -1715,45 +1721,25 @@ class AppWriteProvider {
     }
   }
 
-  Future<Document> updateClinicSettingsEmailTemplate(
-    String clinicSettingsDocumentId,
-    String newTemplate,
-  ) async {
-    try {
-      return await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicSettingsCollectionID,
-        documentId: clinicSettingsDocumentId,
-        data: {
-          'staffEmailTemplate': newTemplate,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-      );
-    } catch (e) {
-      print('Error updating email template: $e');
-      rethrow;
-    }
-  }
-
-  /// CRITICAL FIX: Check staff using authEmail (authentication email)
-  Future<Map<String, dynamic>> checkIfStaffAccount(String email) async {
+  // UPDATE checkIfStaffAccount METHOD to be more robust:
+  Future<Map<String, dynamic>> checkIfStaffAccount(String username) async {
     try {
       print('>>> ============================================');
       print('>>> CHECKING STAFF ACCOUNT');
-      print('>>> Login email: $email');
+      print('>>> Login username: $username');
       print('>>> ============================================');
 
-      // CRITICAL: Check using authEmail field (authentication email)
+      // Check using username field in database
       final staffResult = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         queries: [
-          Query.equal('authEmail', email), // Use authEmail for authentication
+          Query.equal('username', username),
         ],
       );
 
       if (staffResult.documents.isEmpty) {
-        print('>>> No staff found with authEmail: $email');
+        print('>>> No staff found with username: $username');
         return {'isStaff': false};
       }
 
@@ -1762,14 +1748,11 @@ class AppWriteProvider {
       final role = staffDoc.data['role'] ?? 'staff';
       final clinicId = staffDoc.data['clinicId'] ?? '';
       final authorities = staffDoc.data['authorities'] ?? [];
-      final displayEmail = staffDoc.data['email'] ?? email;
-      final authEmail = staffDoc.data['authEmail'] ?? email;
 
       print('>>> ============================================');
       print('>>> STAFF FOUND!');
       print('>>> Staff Document ID: ${staffDoc.$id}');
-      print('>>> Display Email: $displayEmail');
-      print('>>> Auth Email: $authEmail');
+      print('>>> Username: $username');
       print('>>> Is active: $isActive');
       print('>>> Role: $role');
       print('>>> Clinic ID: $clinicId');
@@ -1790,17 +1773,18 @@ class AppWriteProvider {
     }
   }
 
-  /// Enhanced staff login using authEmail
-  Future<Map<String, dynamic>> staffLogin(String email, String password) async {
+  // REPLACE staffLogin METHOD:
+  Future<Map<String, dynamic>> staffLogin(
+      String username, String password) async {
     try {
       print('>>> ============================================');
-      print('>>> STAFF LOGIN START');
+      print('>>> STAFF LOGIN START (USERNAME ONLY)');
       print('>>> ============================================');
-      print('>>> Login email: $email');
+      print('>>> Login username: $username');
 
-      // Step 1: Check if staff account exists using authEmail
+      // Step 1: Check if staff account exists using username
       print('>>> Step 1: Checking staff account...');
-      final staffCheck = await checkIfStaffAccount(email);
+      final staffCheck = await checkIfStaffAccount(username);
 
       if (staffCheck['isStaff'] != true) {
         print('>>> ERROR: Not a staff account');
@@ -1822,10 +1806,17 @@ class AppWriteProvider {
 
       print('>>> Step 2: Staff account confirmed and active');
 
-      // Step 2: Create session using authentication email
-      print('>>> Step 3: Creating Appwrite session...');
+      // Step 3: Get the auth user ID from staff record
+      final staffDoc = staffCheck['staffDoc'];
+      final authUserId = staffDoc.data['userId'];
+
+      print('>>> Step 3: Creating session with username...');
+
+      // Use the internal email format that was created during registration
+      final internalEmail = '$username@${AppwriteConstants.projectID}.internal';
+
       final session = await account!.createEmailPasswordSession(
-        email: email, // Use the authentication email
+        email: internalEmail,
         password: password,
       );
       print('>>> Session created successfully: ${session.$id}');
@@ -1833,17 +1824,17 @@ class AppWriteProvider {
       final user = await account!.get();
       print('>>> User retrieved: ${user.$id}');
 
-      final staffDoc = staffCheck['staffDoc'];
       final role = staffCheck['role'] ?? 'staff';
       final clinicId = staffCheck['clinicId'] ?? '';
       final authorities = staffCheck['authorities'] ?? [];
 
       print('>>> ============================================');
       print('>>> STAFF LOGIN DATA:');
+      print('>>> Username: $username');
       print('>>> Role: $role');
       print('>>> Clinic ID: $clinicId');
       print('>>> Authorities: $authorities');
-      print('>>> Staff Doc ID: ${staffDoc?.$id}');
+      print('>>> Staff Doc ID: ${staffDoc.$id}');
       print('>>> ============================================');
 
       return {
@@ -1855,7 +1846,7 @@ class AppWriteProvider {
         'clinicId': clinicId,
         'staffDoc': staffDoc,
         'authorities': authorities,
-        'staffDocumentId': staffDoc?.$id ?? '',
+        'staffDocumentId': staffDoc.$id,
         'message': 'Staff login successful',
       };
     } catch (e) {
@@ -1866,7 +1857,7 @@ class AppWriteProvider {
       return {
         'success': false,
         'isStaff': true,
-        'message': 'Authentication failed: ${e.toString()}',
+        'message': 'Invalid username or password',
       };
     }
   }
@@ -2790,5 +2781,783 @@ class AppWriteProvider {
         .where((message) {
           return message.payload['clinicId'] == clinicId;
         });
+  }
+
+  // ============= VACCINATION METHODS =============
+
+  Future<models.Document> createVaccination(Map<String, dynamic> data) async {
+    return await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.vaccinationsCollectionID,
+      documentId: ID.unique(),
+      data: data,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPetVaccinations(String petId) async {
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vaccinationsCollectionID,
+        queries: [
+          Query.equal("petId", petId),
+          Query.orderDesc("dateGiven"),
+        ],
+      );
+
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getPetVaccinations: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getClinicVaccinations(
+      String clinicId) async {
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vaccinationsCollectionID,
+        queries: [
+          Query.equal("clinicId", clinicId),
+          Query.orderDesc("dateGiven"),
+        ],
+      );
+
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getClinicVaccinations: $e');
+      return [];
+    }
+  }
+
+  Future<Document> updateVaccination(
+      String documentId, Map<String, dynamic> data) async {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.vaccinationsCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<void> deleteVaccination(String documentId) async {
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.vaccinationsCollectionID,
+      documentId: documentId,
+    );
+  }
+  // ============= FEEDBACK AND REPORT METHODS =============
+
+  /// Create new feedback/report
+  Future<Document> createFeedbackAndReport(Map<String, dynamic> data) async {
+    try {
+      print('>>> Creating feedback and report...');
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error creating feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all feedback (for admin)
+  Future<List<Document>> getAllFeedback({
+    FeedbackStatus? status,
+    Priority? priority,
+    int limit = 100,
+  }) async {
+    try {
+      List<String> queries = [
+        Query.orderDesc('submittedAt'),
+        Query.limit(limit),
+      ];
+
+      if (status != null) {
+        queries.add(Query.equal('status', status.toString().split('.').last));
+      }
+
+      if (priority != null) {
+        queries
+            .add(Query.equal('priority', priority.toString().split('.').last));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('Error getting all feedback: $e');
+      return [];
+    }
+  }
+
+  /// Get user's feedback
+  Future<List<Document>> getUserFeedback(String userId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.orderDesc('submittedAt'),
+        ],
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('Error getting user feedback: $e');
+      return [];
+    }
+  }
+
+  /// Update feedback (for admin)
+  Future<Document> updateFeedback(
+    String documentId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      data['updatedAt'] = DateTime.now().toIso8601String();
+
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: data,
+      );
+    } catch (e) {
+      print('Error updating feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Update feedback status
+  Future<void> updateFeedbackStatus(
+      String documentId, FeedbackStatus status) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'status': status.toString().split('.').last,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error updating feedback status: $e');
+      rethrow;
+    }
+  }
+
+  /// Update feedback priority
+  Future<void> updateFeedbackPriority(
+      String documentId, Priority priority) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'priority': priority.toString().split('.').last,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error updating feedback priority: $e');
+      rethrow;
+    }
+  }
+
+  /// Add admin reply to feedback
+  Future<void> addFeedbackReply(
+    String documentId,
+    String reply,
+    String adminName,
+  ) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'adminReply': reply,
+          'repliedAt': DateTime.now().toIso8601String(),
+          'repliedBy': adminName,
+          'status': FeedbackStatus.resolved.toString().split('.').last,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error adding feedback reply: $e');
+      rethrow;
+    }
+  }
+
+  /// Archive feedback
+  Future<void> archiveFeedback(String documentId, String archivedBy) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'status': FeedbackStatus.archived.toString().split('.').last,
+          'archivedAt': DateTime.now().toIso8601String(),
+          'archivedBy': archivedBy,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error archiving feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete feedback
+  Future<void> deleteFeedback(
+      String documentId, List<String> attachmentIds) async {
+    try {
+      // Delete attachments first
+      if (attachmentIds.isNotEmpty) {
+        await deleteFeedbackAttachments(attachmentIds);
+      }
+
+      // Delete feedback document
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+      );
+    } catch (e) {
+      print('Error deleting feedback: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload feedback attachments (images and videos)
+  Future<List<models.File>> uploadFeedbackAttachments(
+    List<PlatformFile> files,
+  ) async {
+    final List<models.File> uploadedFiles = [];
+
+    for (int i = 0; i < files.length; i++) {
+      try {
+        final file = files[i];
+        final extension = file.extension ?? 'jpg';
+        String fileName =
+            "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
+
+        // Validate file size
+        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+            .contains(extension.toLowerCase());
+        final isVideo =
+            ['mp4', 'mov', 'avi', 'mkv'].contains(extension.toLowerCase());
+
+        if (isImage && file.size > 5 * 1024 * 1024) {
+          print('Error: Image file ${file.name} exceeds 5MB limit');
+          continue;
+        }
+
+        if (isVideo && file.size > 25 * 1024 * 1024) {
+          print('Error: Video file ${file.name} exceeds 25MB limit');
+          continue;
+        }
+
+        InputFile inputFile;
+
+        if (file.bytes != null) {
+          inputFile = InputFile.fromBytes(
+            bytes: file.bytes!,
+            filename: fileName,
+          );
+        } else if (file.path != null) {
+          inputFile = InputFile.fromPath(
+            path: file.path!,
+            filename: fileName,
+          );
+        } else {
+          print("Error: File has neither bytes nor path");
+          continue;
+        }
+
+        final response = await storage!.createFile(
+          bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
+          fileId: ID.unique(),
+          file: inputFile,
+        );
+
+        uploadedFiles.add(response);
+        print("Successfully uploaded feedback attachment: ${response.$id}");
+      } catch (e) {
+        print("Error uploading feedback attachment ${files[i].name}: $e");
+      }
+    }
+
+    return uploadedFiles;
+  }
+
+  /// Delete feedback attachments
+  Future<void> deleteFeedbackAttachments(List<String> fileIds) async {
+    for (String fileId in fileIds) {
+      try {
+        await storage!.deleteFile(
+          bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
+          fileId: fileId,
+        );
+      } catch (e) {
+        print("Error deleting feedback attachment $fileId: $e");
+      }
+    }
+  }
+
+  /// Get feedback attachment URL
+  String getFeedbackAttachmentUrl(String fileId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.feedbackAttachmentsBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+  }
+
+  /// Subscribe to feedback changes (real-time for admin)
+  Stream<RealtimeMessage> subscribeToFeedbackChanges() {
+    final realtime = Realtime(client);
+    return realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.feedbackAndReportCollectionID}.documents',
+    ]).stream;
+  }
+
+  /// Get feedback statistics (for admin dashboard)
+  Future<Map<String, int>> getFeedbackStatistics() async {
+    try {
+      final allFeedback = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+      );
+
+      int pending = 0;
+      int inProgress = 0;
+      int resolved = 0;
+      int closed = 0;
+      int archived = 0;
+      int critical = 0;
+
+      for (var doc in allFeedback.documents) {
+        final status = doc.data['status'];
+        final priority = doc.data['priority'];
+
+        if (status == 'pending') pending++;
+        if (status == 'inProgress') inProgress++;
+        if (status == 'resolved') resolved++;
+        if (status == 'closed') closed++;
+        if (status == 'archived') archived++;
+        if (priority == 'critical') critical++;
+      }
+
+      return {
+        'total': allFeedback.documents.length,
+        'pending': pending,
+        'inProgress': inProgress,
+        'resolved': resolved,
+        'closed': closed,
+        'archived': archived,
+        'critical': critical,
+      };
+    } catch (e) {
+      print('Error getting feedback statistics: $e');
+      return {
+        'total': 0,
+        'pending': 0,
+        'inProgress': 0,
+        'resolved': 0,
+        'closed': 0,
+        'archived': 0,
+        'critical': 0,
+      };
+    }
+  }
+
+  // ============= NOTIFICATION METHODS =============
+
+  /// Create a new notification
+  Future<Document> createNotification(Map<String, dynamic> data) async {
+    try {
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      print('Error creating notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Get notifications for a specific recipient
+  Future<List<Document>> getNotifications({
+    required String recipientId,
+    required String recipientType,
+    String filter = 'all',
+    bool showArchived = false,
+    int limit = 20,
+    String? lastDocumentId,
+  }) async {
+    try {
+      List<String> queries = [
+        Query.equal('recipientId', recipientId),
+        Query.equal('recipientType', recipientType),
+        Query.orderDesc('createdAt'),
+        Query.limit(limit),
+      ];
+
+      // Add filter conditions
+      if (!showArchived) {
+        queries.add(Query.equal('isArchived', false));
+      }
+
+      switch (filter) {
+        case 'unread':
+          queries.add(Query.equal('isRead', false));
+          break;
+        case 'appointments':
+          queries.add(Query.startsWith('type', 'appointment'));
+          break;
+        case 'messages':
+          queries.add(Query.equal('type', 'newMessage'));
+          break;
+      }
+
+      // Add pagination
+      if (lastDocumentId != null) {
+        queries.add(Query.cursorAfter(lastDocumentId));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('Error getting notifications: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark notification as read
+  Future<Document> markNotificationAsRead(String documentId) async {
+    try {
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: documentId,
+        data: {
+          'isRead': true,
+          'readAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error marking notification as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark all notifications as read for a recipient
+  Future<void> markAllNotificationsAsRead({
+    required String recipientId,
+    required String recipientType,
+  }) async {
+    try {
+      // Get all unread notifications
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        queries: [
+          Query.equal('recipientId', recipientId),
+          Query.equal('recipientType', recipientType),
+          Query.equal('isRead', false),
+          Query.limit(100), // Process in batches if needed
+        ],
+      );
+
+      // Update each notification
+      for (var doc in result.documents) {
+        await databases!.updateDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.notificationsCollectionID,
+          documentId: doc.$id,
+          data: {
+            'isRead': true,
+            'readAt': DateTime.now().toIso8601String(),
+          },
+        );
+      }
+    } catch (e) {
+      print('Error marking all notifications as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Archive notification
+  Future<Document> archiveNotification(String documentId) async {
+    try {
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: documentId,
+        data: {
+          'isArchived': true,
+          'archivedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('Error archiving notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete notification
+  Future<void> deleteNotification(String documentId) async {
+    try {
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: documentId,
+      );
+    } catch (e) {
+      print('Error deleting notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadNotificationCount({
+    required String recipientId,
+    required String recipientType,
+  }) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        queries: [
+          Query.equal('recipientId', recipientId),
+          Query.equal('recipientType', recipientType),
+          Query.equal('isRead', false),
+          Query.equal('isArchived', false),
+          Query.limit(1), // We only need the count
+        ],
+      );
+
+      return result.total;
+    } catch (e) {
+      print('Error getting unread count: $e');
+      return 0;
+    }
+  }
+
+  /// Subscribe to notifications real-time
+  Stream<RealtimeMessage> subscribeToNotifications(String recipientId) {
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.notificationsCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          return message.payload['recipientId'] == recipientId;
+        });
+  }
+
+  // ============= NOTIFICATION CREATION HELPERS =============
+
+  /// Create appointment notification
+  Future<void> createAppointmentNotification({
+    required String type, // 'booked', 'accepted', 'declined', etc.
+    required String appointmentId,
+    required String clinicId,
+    required String userId,
+    required String petName,
+    required String ownerName,
+    String? service,
+    DateTime? appointmentTime,
+    String? notes,
+  }) async {
+    try {
+      NotificationModel notification;
+
+      switch (type) {
+        case 'booked':
+          notification = NotificationModel.appointmentBooked(
+            clinicId: clinicId,
+            appointmentId: appointmentId,
+            userId: userId,
+            petName: petName,
+            ownerName: ownerName,
+            service: service ?? 'General Checkup',
+            appointmentTime: appointmentTime ?? DateTime.now(),
+          );
+          break;
+
+        case 'accepted':
+        case 'declined':
+        case 'completed':
+          // Get clinic name for user notification
+          final clinicDoc = await getClinicById(clinicId);
+          final clinicName =
+              clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
+
+          notification = NotificationModel.appointmentStatusUpdate(
+            userId: userId,
+            appointmentId: appointmentId,
+            petName: petName,
+            clinicName: clinicName,
+            status: type,
+            notes: notes,
+          );
+          break;
+
+        default:
+          return;
+      }
+
+      await createNotification(notification.toMap());
+
+      // Also create an automated message for status updates
+      if (type != 'booked') {
+        await _createAutomatedMessage(
+          clinicId: clinicId,
+          userId: userId,
+          type: type,
+          petName: petName,
+          notes: notes,
+        );
+      }
+    } catch (e) {
+      print('Error creating appointment notification: $e');
+    }
+  }
+
+  /// Create message notification
+  Future<void> createMessageNotification({
+    required String conversationId,
+    required String messageId,
+    required String senderId,
+    required String receiverId,
+    required String senderName,
+    required String messageText,
+    required String recipientType, // 'admin' or 'user'
+  }) async {
+    try {
+      // Get the recipient ID (clinicId for admin, userId for user)
+      String recipientId = recipientType == 'admin'
+          ? await _getClinicIdFromConversation(conversationId)
+          : receiverId;
+
+      final notification = NotificationModel.newMessage(
+        clinicId: recipientType == 'admin' ? recipientId : senderId,
+        conversationId: conversationId,
+        messageId: messageId,
+        userId: recipientType == 'admin' ? senderId : receiverId,
+        senderName: senderName,
+        messagePreview: messageText.length > 50
+            ? '${messageText.substring(0, 50)}...'
+            : messageText,
+      );
+
+      await createNotification(notification.toMap());
+    } catch (e) {
+      print('Error creating message notification: $e');
+    }
+  }
+
+  /// Helper method to create automated messages
+  Future<void> _createAutomatedMessage({
+    required String clinicId,
+    required String userId,
+    required String type,
+    required String petName,
+    String? notes,
+  }) async {
+    try {
+      // Get or create conversation
+      final conversation = await getOrCreateConversation(userId, clinicId);
+      if (conversation == null) return;
+
+      String messageText;
+      switch (type) {
+        case 'accepted':
+          messageText =
+              'Great news! Your appointment for $petName has been accepted. We look forward to seeing you!';
+          if (notes != null && notes.isNotEmpty) {
+            messageText += '\n\nNote from clinic: $notes';
+          }
+          break;
+        case 'declined':
+          messageText =
+              'We regret to inform you that your appointment for $petName has been declined.';
+          if (notes != null && notes.isNotEmpty) {
+            messageText += '\n\nReason: $notes';
+          }
+          messageText += '\n\nPlease contact us to reschedule.';
+          break;
+        case 'completed':
+          messageText =
+              'Your appointment for $petName has been completed. Thank you for visiting our clinic!';
+          if (notes != null && notes.isNotEmpty) {
+            messageText += '\n\nFollow-up notes: $notes';
+          }
+          break;
+        default:
+          return;
+      }
+
+      // Create automated message
+      await createMessage({
+        'conversationId': conversation.$id,
+        'senderId': clinicId,
+        'senderType': 'admin',
+        'receiverId': userId,
+        'messageText': messageText,
+        'messageType': 'automated',
+        'timestamp': DateTime.now().toIso8601String(),
+        'isRead': false,
+        'isDeleted': false,
+      });
+    } catch (e) {
+      print('Error creating automated message: $e');
+    }
+  }
+
+  /// Helper to get clinic ID from conversation
+  Future<String> _getClinicIdFromConversation(String conversationId) async {
+    try {
+      final conversation = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+      );
+      return conversation.data['clinicId'] ?? '';
+    } catch (e) {
+      print('Error getting clinic ID from conversation: $e');
+      return '';
+    }
   }
 }

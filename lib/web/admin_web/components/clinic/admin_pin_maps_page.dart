@@ -23,7 +23,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
   LatLng? selectedLocation;
   bool isLoading = true;
 
-  // San Jose del Monte bounds
   final sanJoseDelMonteBounds = LatLngBounds(
     const LatLng(14.7500, 121.0000),
     const LatLng(14.8700, 121.1000),
@@ -33,6 +32,12 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
   void initState() {
     super.initState();
     _initializeMap();
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeMap() async {
@@ -48,35 +53,45 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
         if (!_isWithinBounds(fetchedLocation)) {
           fetchedLocation = sanJoseDelMonteBounds.center;
         }
-        setState(() {
-          userLocation = fetchedLocation;
-        });
+        if (mounted) {
+          setState(() {
+            userLocation = fetchedLocation;
+          });
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            userLocation = sanJoseDelMonteBounds.center;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user location: $e");
+      if (mounted) {
         setState(() {
           userLocation = sanJoseDelMonteBounds.center;
         });
       }
-    } catch (e) {
-      print("Error fetching user location: $e");
-      setState(() {
-        userLocation = sanJoseDelMonteBounds.center;
-      });
     }
   }
 
   void _setInitialLocation() {
     if (widget.currentLocation != null) {
-      setState(() {
-        selectedLocation = LatLng(
-          widget.currentLocation!['lat']!,
-          widget.currentLocation!['lng']!,
-        );
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          selectedLocation = LatLng(
+            widget.currentLocation!['lat']!,
+            widget.currentLocation!['lng']!,
+          );
+          isLoading = false;
+        });
+      }
     } else {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -115,7 +130,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
       selectedLocation = point;
     });
 
-    // Call the callback with the selected coordinates
     widget.onLocationSelected({
       'lat': point.latitude,
       'lng': point.longitude,
@@ -158,7 +172,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
   List<Marker> _getMarkers() {
     final markers = <Marker>[];
 
-    // Add user location marker
     if (userLocation != null) {
       markers.add(
         Marker(
@@ -181,7 +194,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
       );
     }
 
-    // Add selected location marker
     if (selectedLocation != null) {
       markers.add(
         Marker(
@@ -220,11 +232,18 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
     return markers;
   }
 
+  bool _isMobileLayout(double screenWidth) {
+    return screenWidth <= 785;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = _isMobileLayout(screenWidth);
+
     if (isLoading) {
       return Container(
-        height: 400,
+        height: isMobile ? 300 : 400,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           color: Colors.grey.shade100,
@@ -244,19 +263,22 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
 
     if (userLocation == null) {
       return Container(
-        height: 400,
+        height: isMobile ? 300 : 400,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           color: Colors.grey.shade100,
         ),
-        child: const Center(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.location_off, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('Unable to load map'),
-              Text('Please check your internet connection'),
+              Icon(Icons.location_off,
+                  size: isMobile ? 48 : 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text('Unable to load map',
+                  style: TextStyle(fontSize: isMobile ? 14 : 16)),
+              Text('Please check your internet connection',
+                  style: TextStyle(fontSize: isMobile ? 12 : 14)),
             ],
           ),
         ),
@@ -266,32 +288,30 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Instructions
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(isMobile ? 10 : 12),
           decoration: BoxDecoration(
             color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.blue.withOpacity(0.3)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.info, color: Colors.blue),
-              SizedBox(width: 8),
+              Icon(Icons.info, color: Colors.blue, size: isMobile ? 18 : 20),
+              SizedBox(width: isMobile ? 6 : 8),
               Expanded(
                 child: Text(
                   'Tap on the map to pin your clinic location. Only locations within San Jose del Monte area are allowed.',
-                  style: TextStyle(color: Colors.blue),
+                  style: TextStyle(
+                      color: Colors.blue, fontSize: isMobile ? 12 : 13),
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-
-        // Map
         Container(
-          height: 400,
+          height: isMobile ? 300 : 400,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey[300]!),
@@ -321,8 +341,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
                   ],
                 ),
               ),
-
-              // Control buttons
               Positioned(
                 top: 10,
                 right: 10,
@@ -336,6 +354,7 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
                       child: const Icon(
                         Icons.my_location,
                         color: Colors.black,
+                        size: 20,
                       ),
                     ),
                     if (selectedLocation != null) ...[
@@ -348,6 +367,7 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
                         child: const Icon(
                           Icons.clear,
                           color: Colors.white,
+                          size: 20,
                         ),
                       ),
                     ],
@@ -358,11 +378,9 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Selected location info
         if (selectedLocation != null)
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(isMobile ? 10 : 12),
             decoration: BoxDecoration(
               color: Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
@@ -371,15 +389,17 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.location_on, color: Colors.green),
-                    SizedBox(width: 8),
+                    Icon(Icons.location_on,
+                        color: Colors.green, size: isMobile ? 18 : 20),
+                    SizedBox(width: isMobile ? 6 : 8),
                     Text(
                       'Selected Location:',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.green,
+                        fontSize: isMobile ? 13 : 14,
                       ),
                     ),
                   ],
@@ -387,30 +407,34 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
                 const SizedBox(height: 4),
                 Text(
                   'Latitude: ${selectedLocation!.latitude.toStringAsFixed(6)}',
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: isMobile ? 11 : 12),
                 ),
                 Text(
                   'Longitude: ${selectedLocation!.longitude.toStringAsFixed(6)}',
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: isMobile ? 11 : 12),
                 ),
               ],
             ),
           )
         else
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(isMobile ? 10 : 12),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.warning, color: Colors.orange),
-                SizedBox(width: 8),
-                Text(
-                  'No location selected yet. Tap on the map to pin your clinic location.',
-                  style: TextStyle(color: Colors.orange),
+                Icon(Icons.warning,
+                    color: Colors.orange, size: isMobile ? 18 : 20),
+                SizedBox(width: isMobile ? 6 : 8),
+                Expanded(
+                  child: Text(
+                    'No location selected yet. Tap on the map to pin your clinic location.',
+                    style: TextStyle(
+                        color: Colors.orange, fontSize: isMobile ? 12 : 13),
+                  ),
                 ),
               ],
             ),

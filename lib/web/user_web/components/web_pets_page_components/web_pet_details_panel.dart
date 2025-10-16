@@ -1,5 +1,10 @@
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/medical_record_model.dart';
+import 'package:capstone_app/data/models/vaccination_model.dart';
+import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
 
 enum CardView { front, back, medicalHistory, vaccinationHistory }
@@ -27,6 +32,10 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   CardView _currentView = CardView.front;
   CardView _previousView = CardView.front;
   bool _isGoingForward = true;
+  
+  // Selected record for detail view
+  MedicalRecord? _selectedMedicalRecord;
+  Vaccination? _selectedVaccination;
 
   @override
   void initState() {
@@ -38,6 +47,15 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+    
+    // Fetch histories when panel opens
+    _fetchHistories();
+  }
+
+  void _fetchHistories() {
+    final controller = Get.find<WebPetsController>();
+    controller.fetchPetMedicalHistory(widget.pet.petId);
+    controller.fetchPetVaccinationHistory(widget.pet.petId);
   }
 
   @override
@@ -63,6 +81,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       _previousView = _currentView;
       _isGoingForward = _getViewLevel(newView) > _getViewLevel(_currentView);
       _currentView = newView;
+      // Clear selections when changing views
+      _selectedMedicalRecord = null;
+      _selectedVaccination = null;
     });
     _controller.forward(from: 0);
   }
@@ -268,9 +289,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.flip, color: Colors.white),
+                        icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
                         onPressed: () => _flipToView(CardView.back),
-                        tooltip: "Flip Card",
+                        tooltip: "More",
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.white),
@@ -340,20 +361,20 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => _flipToView(CardView.front),
+                    tooltip: "Back",
+                  ),
+                  const SizedBox(width: 8,),
                   const Text(
-                    'Additional Information',
+                    'Health Records',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.flip, color: Colors.white),
-                    onPressed: () => _flipToView(CardView.front),
-                    tooltip: "Flip Card",
                   ),
                 ],
               ),
@@ -366,21 +387,23 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Medical History section
-                  _buildEmptyStateButton(
+                  _buildHistoryButton(
                     'Medical History',
-                    'View Medical History',
+                    'View complete medical records',
                     Icons.medical_services_outlined,
                     () => _flipToView(CardView.medicalHistory),
+                    _getMedicalRecordCount(),
                   ),
                   
                   const SizedBox(height: 24),
                   
                   // Vaccination History section
-                  _buildEmptyStateButton(
+                  _buildHistoryButton(
                     'Vaccination History',
-                    'View Vaccination History',
+                    'View vaccination records',
                     Icons.vaccines_outlined,
                     () => _flipToView(CardView.vaccinationHistory),
+                    _getVaccinationCount(),
                   ),
                 ],
               ),
@@ -391,14 +414,19 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     );
   }
 
-  Widget _buildMedicalHistoryView() {
-    // Sample medical history data - replace with actual data from your model
-    final medicalRecords = [
-      {'date': '2024-03-15', 'condition': 'Annual Checkup', 'treatment': 'Routine examination', 'vet': 'Dr. Smith'},
-      {'date': '2024-01-20', 'condition': 'Ear Infection', 'treatment': 'Antibiotics prescribed', 'vet': 'Dr. Johnson'},
-      {'date': '2023-11-10', 'condition': 'Dental Cleaning', 'treatment': 'Professional cleaning', 'vet': 'Dr. Smith'},
-    ];
+  int _getMedicalRecordCount() {
+    final controller = Get.find<WebPetsController>();
+    return controller.medicalRecords.length;
+  }
 
+  int _getVaccinationCount() {
+    final controller = Get.find<WebPetsController>();
+    return controller.vaccinations.length;
+  }
+
+  Widget _buildMedicalHistoryView() {
+    final controller = Get.find<WebPetsController>();
+    
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -429,94 +457,62 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => _flipToView(CardView.back),
+                  onPressed: () {
+                    setState(() {
+                      _selectedMedicalRecord = null;
+                    });
+                    _flipToView(CardView.back);
+                  },
                   tooltip: "Back",
                 ),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Medical History',
-                    style: TextStyle(
+                    _selectedMedicalRecord != null 
+                        ? 'Medical Record Details'
+                        : 'Medical History',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                 ),
+                if (_selectedMedicalRecord != null)
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _selectedMedicalRecord = null;
+                      });
+                    },
+                    tooltip: "Close Details",
+                  ),
               ],
             ),
           ),
           
-          // Table content
+          // Content
           Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Table
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(1.5),
-                            1: FlexColumnWidth(2),
-                            2: FlexColumnWidth(2.5),
-                            3: FlexColumnWidth(1.5),
-                          },
-                          border: TableBorder.symmetric(
-                            inside: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          children: [
-                            // Header row
-                            TableRow(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                              ),
-                              children: [
-                                _buildTableHeader('Date'),
-                                _buildTableHeader('Condition'),
-                                _buildTableHeader('Treatment'),
-                                _buildTableHeader('Veterinarian'),
-                              ],
-                            ),
-                            // Data rows
-                            ...medicalRecords.map((record) => TableRow(
-                              children: [
-                                _buildTableCell(record['date']!),
-                                _buildTableCell(record['condition']!),
-                                _buildTableCell(record['treatment']!),
-                                _buildTableCell(record['vet']!),
-                              ],
-                            )),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    if (medicalRecords.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            'No medical history records available',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+            child: Obx(() {
+              if (controller.isLoadingMedical.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (controller.medicalRecords.isEmpty) {
+                return _buildEmptyState(
+                  'No Medical Records',
+                  'No medical history available for this pet yet.',
+                  Icons.medical_services_outlined,
+                );
+              }
+              
+              if (_selectedMedicalRecord != null) {
+                return _buildMedicalRecordDetails(_selectedMedicalRecord!);
+              }
+              
+              return _buildMedicalRecordsList(controller.medicalRecords);
+            }),
           ),
         ],
       ),
@@ -524,13 +520,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   }
 
   Widget _buildVaccinationHistoryView() {
-    // Sample vaccination data - replace with actual data from your model
-    final vaccinationRecords = [
-      {'date': '2024-02-15', 'vaccine': 'Rabies', 'nextDue': '2025-02-15', 'vet': 'Dr. Smith'},
-      {'date': '2024-01-10', 'vaccine': 'DHPP', 'nextDue': '2025-01-10', 'vet': 'Dr. Johnson'},
-      {'date': '2023-12-05', 'vaccine': 'Bordetella', 'nextDue': '2024-12-05', 'vet': 'Dr. Smith'},
-    ];
-
+    final controller = Get.find<WebPetsController>();
+    
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -561,17 +552,371 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => _flipToView(CardView.back),
+                  onPressed: () {
+                    setState(() {
+                      _selectedVaccination = null;
+                    });
+                    _flipToView(CardView.back);
+                  },
                   tooltip: "Back",
                 ),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Vaccination History',
-                    style: TextStyle(
+                    _selectedVaccination != null 
+                        ? 'Vaccination Details'
+                        : 'Vaccination History',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                    ),
+                  ),
+                ),
+                if (_selectedVaccination != null)
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _selectedVaccination = null;
+                      });
+                    },
+                    tooltip: "Close Details",
+                  ),
+              ],
+            ),
+          ),
+          
+          // Content
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingVaccinations.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (controller.vaccinations.isEmpty) {
+                return _buildEmptyState(
+                  'No Vaccination Records',
+                  'No vaccination history available for this pet yet.',
+                  Icons.vaccines_outlined,
+                );
+              }
+              
+              if (_selectedVaccination != null) {
+                return _buildVaccinationDetails(_selectedVaccination!);
+              }
+              
+              return _buildVaccinationsList(controller.vaccinations);
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalRecordsList(List<MedicalRecord> records) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: records.length,
+      itemBuilder: (context, index) {
+        final record = records[index];
+        return _buildMedicalRecordCard(record);
+      },
+    );
+  }
+
+  Widget _buildMedicalRecordCard(MedicalRecord record) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedMedicalRecord = record;
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3498DB).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.medical_services,
+                  color: Color(0xFF3498DB),
+                  size: 24,
+                ),
+              ),
+              
+              const SizedBox(width: 16),
+              
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      record.service,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      DateFormat('MMM dd, yyyy').format(record.visitDate),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (record.diagnosis.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        record.diagnosis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[700],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Arrow
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedicalRecordDetails(MedicalRecord record) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDetailCard(
+            'Visit Information',
+            [
+              _buildDetailRow('Date', DateFormat('MMMM dd, yyyy').format(record.visitDate)),
+              _buildDetailRow('Service', record.service),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          _buildDetailCard(
+            'Diagnosis & Treatment',
+            [
+              _buildDetailRow('Diagnosis', record.diagnosis),
+              _buildDetailRow('Treatment', record.treatment),
+              if (record.prescription != null && record.prescription!.isNotEmpty)
+                _buildDetailRow('Prescription', record.prescription!),
+            ],
+          ),
+          
+          if (record.vitals != null && record.vitals!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildDetailCard(
+              'Vital Signs',
+              record.vitals!.entries.map((e) => 
+                _buildDetailRow(e.key, e.value.toString())
+              ).toList(),
+            ),
+          ],
+          
+          if (record.notes != null && record.notes!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildDetailCard(
+              'Additional Notes',
+              [_buildDetailRow('Notes', record.notes!)],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVaccinationsList(List<Vaccination> vaccinations) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: vaccinations.length,
+      itemBuilder: (context, index) {
+        final vaccination = vaccinations[index];
+        return _buildVaccinationCard(vaccination);
+      },
+    );
+  }
+
+  Widget _buildVaccinationCard(Vaccination vaccination) {
+    Color statusColor;
+    if (vaccination.isOverdue) {
+      statusColor = Colors.red;
+    } else if (vaccination.isDueSoon) {
+      statusColor = Colors.orange;
+    } else {
+      statusColor = Colors.green;
+    }
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedVaccination = vaccination;
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.vaccines,
+                  color: statusColor,
+                  size: 24,
+                ),
+              ),
+              
+              const SizedBox(width: 16),
+              
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            vaccination.vaccineName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            vaccination.statusText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Given: ${DateFormat('MMM dd, yyyy').format(vaccination.dateGiven)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (vaccination.nextDueDate != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Next Due: ${DateFormat('MMM dd, yyyy').format(vaccination.nextDueDate!)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: statusColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Arrow
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVaccinationDetails(Vaccination vaccination) {
+    Color statusColor;
+    if (vaccination.isOverdue) {
+      statusColor = Colors.red;
+    } else if (vaccination.isDueSoon) {
+      statusColor = Colors.orange;
+    } else {
+      statusColor = Colors.green;
+    }
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: statusColor.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: statusColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    vaccination.statusText,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
                     ),
                   ),
                 ),
@@ -579,74 +924,111 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
             ),
           ),
           
-          // Table content
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Table
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(1.5),
-                            1: FlexColumnWidth(2),
-                            2: FlexColumnWidth(1.5),
-                            3: FlexColumnWidth(1.5),
-                          },
-                          border: TableBorder.symmetric(
-                            inside: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          children: [
-                            // Header row
-                            TableRow(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                              ),
-                              children: [
-                                _buildTableHeader('Date Given'),
-                                _buildTableHeader('Vaccine'),
-                                _buildTableHeader('Next Due'),
-                                _buildTableHeader('Veterinarian'),
-                              ],
-                            ),
-                            // Data rows
-                            ...vaccinationRecords.map((record) => TableRow(
-                              children: [
-                                _buildTableCell(record['date']!),
-                                _buildTableCell(record['vaccine']!),
-                                _buildTableCell(record['nextDue']!),
-                                _buildTableCell(record['vet']!),
-                              ],
-                            )),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    if (vaccinationRecords.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            'No vaccination records available',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+          const SizedBox(height: 16),
+          
+          _buildDetailCard(
+            'Vaccine Information',
+            [
+              _buildDetailRow('Vaccine Name', vaccination.vaccineName),
+              _buildDetailRow('Type', vaccination.vaccineType),
+              _buildDetailRow('Booster', vaccination.isBooster ? 'Yes' : 'No'),
+              if (vaccination.manufacturer != null && vaccination.manufacturer!.isNotEmpty)
+                _buildDetailRow('Manufacturer', vaccination.manufacturer!),
+              if (vaccination.batchNumber != null && vaccination.batchNumber!.isNotEmpty)
+                _buildDetailRow('Batch Number', vaccination.batchNumber!),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          _buildDetailCard(
+            'Vaccination Dates',
+            [
+              _buildDetailRow(
+                'Date Given',
+                DateFormat('MMMM dd, yyyy').format(vaccination.dateGiven),
+              ),
+              if (vaccination.nextDueDate != null)
+                _buildDetailRow(
+                  'Next Due Date',
+                  DateFormat('MMMM dd, yyyy').format(vaccination.nextDueDate!),
                 ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          _buildDetailCard(
+            'Administered By',
+            [
+              _buildDetailRow('Veterinarian', vaccination.veterinarianName),
+            ],
+          ),
+          
+          if (vaccination.notes != null && vaccination.notes!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildDetailCard(
+              'Additional Notes',
+              [_buildDetailRow('Notes', vaccination.notes!)],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailCard(String title, List<Widget> children) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF2C3E50),
               ),
             ),
           ),
@@ -655,28 +1037,44 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     );
   }
 
-  Widget _buildTableHeader(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
-          color: Color(0xFF2C3E50),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTableCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey[700],
+  Widget _buildEmptyState(String title, String message, IconData icon) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2C3E50),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -712,85 +1110,99 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     );
   }
 
-  Widget _buildDetailSection(String title, String content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
-          child: Text(
-            content.isEmpty ? 'No information available' : content,
-            style: TextStyle(
-              fontSize: 14,
-              color: content.isEmpty ? Colors.grey[500] : const Color(0xFF2C3E50),
-              height: 1.5,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyStateButton(
+  Widget _buildHistoryButton(
     String title,
-    String buttonText,
+    String subtitle,
     IconData icon,
     VoidCallback onPressed,
+    int count,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3498DB),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2C3E50),
+              padding: const EdgeInsets.all(20),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey[300]!),
               ),
               elevation: 0,
             ),
             onPressed: onPressed,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  buttonText,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3498DB).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: const Color(0xFF3498DB), size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3498DB).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3498DB),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'records',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward, size: 20),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
               ],
             ),
           ),

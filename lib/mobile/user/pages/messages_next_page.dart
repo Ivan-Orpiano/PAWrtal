@@ -158,15 +158,6 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
               ],
             ),
             actions: [
-              IconButton(
-                icon: const Icon(
-                  Icons.call_rounded,
-                  size: 24,
-                ),
-                onPressed: () {
-                  // Implement call functionality
-                },
-              ),
               if (widget.receiverType == 'clinic')
                 IconButton(
                   icon: const Icon(

@@ -6,6 +6,8 @@ import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_compo
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:async';
+import 'package:appwrite/appwrite.dart';
 
 class WebDashboardPage extends StatefulWidget {
   const WebDashboardPage({super.key});
@@ -22,21 +24,173 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   String? error;
   bool _showMap = false;
   String searchQuery = '';
-  String selectedFilter =
-      'All'; // All, Open, Closed, Nearby, Popular, Recommended
+  String selectedFilter = 'All';
+
+  // Real-time subscriptions
+  StreamSubscription? _clinicSubscription;
+  StreamSubscription? _settingsSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchClinicsData();
+    _setupRealtimeListeners();
+  }
+
+  @override
+  void dispose() {
+    _clinicSubscription?.cancel();
+    _settingsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListeners() {
+    print('🔔 Setting up real-time listeners for clinic updates...');
+    
+    final authRepository = Get.find<AuthRepository>();
+
+    // Listen to clinic changes (create, update, delete)
+    _clinicSubscription = authRepository
+        .subscribeToClinicChanges()
+        .listen((RealtimeMessage event) {
+      print('🔔 Clinic real-time event received');
+      print('   Events: ${event.events}');
+      
+      final eventType = event.events.first;
+      
+      if (eventType.contains('.create')) {
+        print('✅ New clinic created - refreshing list');
+        _showRealTimeNotification(
+          'New clinic added to the network',
+          Icons.add_business_rounded,
+          Colors.green,
+        );
+        _fetchClinicsData();
+      } else if (eventType.contains('.update')) {
+        print('🔄 Clinic updated - refreshing list');
+        final clinicName = event.payload['clinicName'] as String?;
+        _showRealTimeNotification(
+          'Clinic "${clinicName ?? 'Unknown'}" information updated',
+          Icons.sync_rounded,
+          Colors.blue,
+        );
+        _fetchClinicsData();
+      } else if (eventType.contains('.delete')) {
+        print('🗑️ Clinic deleted - refreshing list');
+        _showRealTimeNotification(
+          'A clinic has been removed',
+          Icons.delete_rounded,
+          Colors.red,
+        );
+        _fetchClinicsData();
+      }
+    }, onError: (error) {
+      print('❌ Clinic subscription error: $error');
+    });
+
+    // Listen to settings changes (affects availability and operating hours)
+    _settingsSubscription = authRepository
+        .subscribeToClinicSettingsChanges()
+        .listen((RealtimeMessage event) {
+      print('🔔 Settings real-time event received');
+      print('   Events: ${event.events}');
+      
+      final eventType = event.events.first;
+      
+      if (eventType.contains('.update') || eventType.contains('.create')) {
+        print('🔄 Clinic settings updated - refreshing list');
+        _fetchClinicsData();
+      }
+    }, onError: (error) {
+      print('❌ Settings subscription error: $error');
+    });
+    
+    print('✅ Real-time listeners initialized successfully');
+  }
+
+  void _showRealTimeNotification(String message, IconData icon, Color color) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Real-Time Update',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.wifi_tethering_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: Colors.black87,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+        elevation: 8,
+      ),
+    );
   }
 
   Future<void> _fetchClinicsData() async {
     try {
-      setState(() {
-        isLoading = true;
-        error = null;
-      });
+      // Don't show loading spinner if we're just refreshing
+      if (allClinics.isEmpty) {
+        setState(() {
+          isLoading = true;
+          error = null;
+        });
+      }
 
       final authRepository = Get.find<AuthRepository>();
 
@@ -112,18 +266,14 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
               (settings?.isOpenToday() ?? true);
         }).toList();
         break;
-      // Add more filters as needed
       case 'Nearby':
         // For now, just return all clinics
-        // In the future, you can implement location-based filtering
         break;
       case 'Popular':
         // For now, just return all clinics
-        // In the future, you can implement rating/review-based filtering
         break;
       case 'Recommended':
         // For now, just return all clinics
-        // In the future, you can implement recommendation-based filtering
         break;
     }
 
@@ -258,16 +408,13 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           return !(settings?.isOpen ?? true);
         }).length;
       case 'Nearby':
-        // For future implementation
         return allClinics.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           return settings?.location != null;
         }).length;
       case 'Popular':
-        // For future implementation based on ratings/reviews
         return 0;
       case 'Recommended':
-        // For future implementation based on recommendation algorithm
         return 0;
       default:
         return 0;

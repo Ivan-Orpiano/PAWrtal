@@ -12,6 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/pages/super_admin_home/super_admin_home_controller.dart';
 import 'dart:async';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
+import 'package:capstone_app/utils/logout_helper.dart';
 
 class SuperAdminVetClinicDashboard extends StatefulWidget {
   const SuperAdminVetClinicDashboard({super.key});
@@ -23,8 +27,12 @@ class SuperAdminVetClinicDashboard extends StatefulWidget {
 
 class _SuperAdminVetClinicDashboardState
     extends State<SuperAdminVetClinicDashboard> {
-  final SuperAdminHomeController controller =
-      Get.find<SuperAdminHomeController>();
+  final SuperAdminHomeController controller = SuperAdminHomeController.instance;
+
+
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isLoggingOut = false;
 
   StreamSubscription? _clinicSubscription;
   StreamSubscription? _settingsSubscription;
@@ -42,32 +50,160 @@ class _SuperAdminVetClinicDashboardState
     super.dispose();
   }
 
-  void _setupRealtimeListeners() {
-    _clinicSubscription =
-        controller.authRepository.subscribeToClinicChanges().listen((event) {
-      print('Clinic event: ${event.events}');
+    void _setupRealtimeListeners() {
+        print('🔔 Setting up real-time listeners for clinic updates...');
+        
+        // Enhanced Clinic Changes Listener
+        _clinicSubscription = controller.authRepository
+            .subscribeToClinicChanges()
+            .listen((event) {
+          print('🔔 Clinic real-time event received');
+          print('   Events: ${event.events}');
+          print('   Payload ID: ${event.payload['\$id']}');
+          
+          final eventType = event.events.first;
+          
+          if (eventType.contains('.create')) {
+            print('✅ New clinic created - refreshing list');
+            _showRealTimeNotification(
+              'New clinic added',
+              Icons.add_business_rounded,
+              Colors.green,
+            );
+            controller.fetchAllClinics();
+          } else if (eventType.contains('.update')) {
+            print('🔄 Clinic updated - refreshing list');
+            
+            // Find the updated clinic name
+            final clinicName = event.payload['clinicName'] as String?;
+            _showRealTimeNotification(
+              'Clinic "${clinicName ?? 'Unknown'}" updated',
+              Icons.sync_rounded,
+              const Color.fromRGBO(81, 115, 153, 1),
+            );
+            controller.fetchAllClinics();
+          } else if (eventType.contains('.delete')) {
+            print('🗑️ Clinic deleted - refreshing list');
+            _showRealTimeNotification(
+              'Clinic removed',
+              Icons.delete_rounded,
+              Colors.red,
+            );
+            controller.fetchAllClinics();
+          }
+        }, onError: (error) {
+          print('❌ Clinic subscription error: $error');
+        });
 
-      if (event.events
-              .contains('databases.*.collections.*.documents.*.create') ||
-          event.events
-              .contains('databases.*.collections.*.documents.*.update') ||
-          event.events
-              .contains('databases.*.collections.*.documents.*.delete')) {
-        controller.fetchAllClinics();
+        // Enhanced Settings Changes Listener
+        _settingsSubscription = controller.authRepository
+            .subscribeToClinicSettingsChanges()
+            .listen((event) {
+          print('🔔 Settings real-time event received');
+          print('   Events: ${event.events}');
+          
+          final eventType = event.events.first;
+          
+          if (eventType.contains('.update')) {
+            print('🔄 Clinic settings updated - refreshing list');
+            
+            // Get clinic ID from payload
+            final clinicId = event.payload['clinicId'] as String?;
+            
+            if (clinicId != null) {
+              _showRealTimeNotification(
+                'Clinic settings updated',
+                Icons.settings_rounded,
+                Colors.orange,
+              );
+              controller.fetchAllClinics();
+            }
+          } else if (eventType.contains('.create')) {
+            print('✅ New clinic settings created - refreshing list');
+            controller.fetchAllClinics();
+          }
+        }, onError: (error) {
+          print('❌ Settings subscription error: $error');
+        });
+        
+        print('✅ Real-time listeners initialized successfully');
       }
-    });
 
-    _settingsSubscription = controller.authRepository
-        .subscribeToClinicSettingsChanges()
-        .listen((event) {
-      print('Settings event: ${event.events}');
-
-      if (event.events
-          .contains('databases.*.collections.*.documents.*.update')) {
-        controller.fetchAllClinics();
+      // Enhanced real-time notification with beautiful UI
+      void _showRealTimeNotification(String message, IconData icon, Color color) {
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      color: color,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Real-Time Update',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          message,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.wifi_tethering_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            backgroundColor: const Color.fromRGBO(81, 115, 153, 0.95),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+            elevation: 8,
+          ),
+        );
       }
-    });
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +229,9 @@ class _SuperAdminVetClinicDashboardState
             : (screenWidth * 0.08).clamp(40.0, 80.0);
 
     return Scaffold(
-      appBar: _buildAppBar(context, screenHeight, horizontalPadding, isMobile),
+      key: _scaffoldKey,  
+  appBar: _buildAppBar(context, screenHeight, horizontalPadding, isMobile),
+  drawer: _buildDrawer(context),  
       backgroundColor: const Color(0xFFF8FAFC),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -161,57 +299,348 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    double screenHeight,
-    double horizontalPadding,
-    bool isMobile,
-  ) {
-    return AppBar(
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: Icon(
-          Icons.arrow_back_rounded,
-          color: const Color.fromRGBO(81, 115, 153, 1),
-          size: isMobile ? 24 : 28,
-        ),
-        onPressed: () {
-          final width = MediaQuery.of(context).size.width;
-          Widget destination;
-          if (width < 600) {
-            destination = const SuperAdminMobileHomePage();
-          } else if (width >= 480 && width < 1000) {
-            destination = const SuperAdminTabletHomePage();
-          } else {
-            destination = const SuperAdminDesktopHomePage();
-          }
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
-        },
-        tooltip: 'Back',
-      ),
-      backgroundColor: const Color(0xFFF8FAFC),
-      centerTitle: true,
-      toolbarHeight: isMobile ? screenHeight * 0.08 : screenHeight * 0.1,
-      flexibleSpace: Container(
-        margin: EdgeInsets.only(
-          top: isMobile ? screenHeight * 0.015 : screenHeight * 0.02,
-          left: horizontalPadding * 0.5,
-          right: horizontalPadding * 0.5,
-        ),
-        child: Center(
-          child: Image.asset(
-            "lib/images/PAWrtal_logo.png",
-            height: double.infinity,
-            width: double.infinity,
-            fit: BoxFit.contain,
+        PreferredSizeWidget _buildAppBar(
+        BuildContext context,
+        double screenHeight,
+        double horizontalPadding,
+        bool isMobile,
+        ) {
+        return AppBar(
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(
+              Icons.menu_rounded,
+              color: const Color.fromRGBO(81, 115, 153, 1),
+              size: isMobile ? 24 : 28,
+            ),
+            onPressed: () {
+              _scaffoldKey.currentState?.openDrawer();
+            },
+            tooltip: 'Menu',
+          ),
+          backgroundColor: const Color(0xFFF8FAFC),
+          centerTitle: true,
+          toolbarHeight: isMobile ? screenHeight * 0.08 : screenHeight * 0.1,
+          flexibleSpace: Container(
+            margin: EdgeInsets.only(
+              top: isMobile ? screenHeight * 0.015 : screenHeight * 0.02,
+              left: horizontalPadding * 0.5,
+              right: horizontalPadding * 0.5,
+            ),
+            child: Center(
+              child: Image.asset(
+                "lib/images/PAWrtal_logo.png",
+                height: double.infinity,
+                width: double.infinity,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        );
+      }
+
+      Widget _buildDrawer(BuildContext context) {
+  return Drawer(
+    backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+    child: Column(
+      children: [
+        // Header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(81, 115, 153, 1),
+                Color.fromRGBO(81, 115, 153, 0.8),
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Developer',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Management Panel',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
+
+        // Menu Items
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              _buildDrawerItem(
+                context,
+                icon: Icons.people_rounded,
+                title: 'Pet Owner Management',
+                subtitle: 'Manage user accounts',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuperAdminUserManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.feedback_rounded,
+                title: 'System Reports',
+                subtitle: 'User feedback & reports',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminFeedbackManagement(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.delete_forever_rounded,
+                title: 'Vet Reports',
+                subtitle: 'Deletion requests',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VeterinaryReport(),
+                    ),
+                  );
+                },
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+            ],
+          ),
+        ),
+
+        // Logout Button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: _isLoggingOut
+                ? Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 0.7),
+                          Color.fromRGBO(81, 115, 153, 0.5),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Logging Out...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : InkWell(
+                    onTap: () async {
+                      setState(() => _isLoggingOut = true);
+                      try {
+                        await LogoutHelper.logout();
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() => _isLoggingOut = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Logout failed: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(220, 53, 69, 1),
+                            Color.fromRGBO(200, 35, 51, 1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Log Out',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+      Widget _buildDrawerItem(
+        BuildContext context, {
+        required IconData icon,
+        required String title,
+        required String subtitle,
+        required VoidCallback onTap,
+      }) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color.fromRGBO(81, 115, 153, 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 0.2),
+                          Color.fromRGBO(81, 115, 153, 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: const Color.fromRGBO(81, 115, 153, 1),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color.fromRGBO(81, 115, 153, 1),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: Color.fromRGBO(81, 115, 153, 0.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
 
   Widget _buildHeader(
     BuildContext context,

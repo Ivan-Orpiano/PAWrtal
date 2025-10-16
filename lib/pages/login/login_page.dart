@@ -65,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 40),
-                      
+
                       // Welcome Section
                       const Text(
                         "WELCOME TO",
@@ -76,7 +76,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Logo
                       Image.asset(
                         "lib/images/PAWrtal_logo.png",
@@ -84,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: 200,
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Sign In Text
                       const Align(
                         alignment: Alignment.centerLeft,
@@ -100,28 +100,78 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
-                      // Email Field
+
+                      // Error Message Display (unified for all errors)
+                      Obx(() => controller.errorMessage.value.isNotEmpty
+                          ? Container(
+                              width: 300,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.red.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red.shade700,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      controller.errorMessage.value,
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink()),
+
+                      // Email/Username Field (50 character limit, no format validation)
                       SizedBox(
                         width: 300,
                         child: TextFormField(
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.email_rounded),
-                            hintText: "Email",
+                            prefixIcon: const Icon(Icons.person_rounded),
+                            hintText: "Email or Username",
+                            helperStyle: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
+                            counterText: "", // Hide the character counter
                           ),
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType.text,
                           controller: controller.emailEditingController,
+                          maxLength: 50, // Hard limit: 50 characters
+                          textInputAction: TextInputAction.next,
+                          onChanged: (value) {
+                            // Clear error when user starts typing
+                            if (controller.errorMessage.value.isNotEmpty) {
+                              controller.errorMessage.value = '';
+                            }
+                          },
+                          // Use the username/email validator (no format validation)
                           validator: (value) {
-                            return controller.validateEmail(value!);
+                            return controller.validateEmailOrUsername(value!);
                           },
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
-                      // Password Field
+
+                      // Password Field (50 character limit)
                       SizedBox(
                         width: 300,
                         child: Obx(() => TextFormField(
@@ -134,21 +184,46 @@ class _LoginPageState extends State<LoginPage> {
                                         ? Icons.visibility
                                         : Icons.visibility_off,
                                   ),
-                                  onPressed: controller.togglePasswordVisibility,
+                                  onPressed:
+                                      controller.togglePasswordVisibility,
                                 ),
                                 hintText: "Password",
+                                helperStyle: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(20),
                                 ),
+                                counterText: "", // Hide the character counter
                               ),
                               keyboardType: TextInputType.visiblePassword,
                               controller: controller.passwordEditingController,
-                              validator: (value) {
-                                return controller.validatePassword(value!);
+                              maxLength: 50, // Hard limit: 50 characters
+                              textInputAction: TextInputAction.done,
+                              onChanged: (value) {
+                                // Clear error when user starts typing
+                                if (controller.errorMessage.value.isNotEmpty) {
+                                  controller.errorMessage.value = '';
+                                }
                               },
+                              onFieldSubmitted: (value) {
+                                // Allow pressing Enter/Done to submit
+                                controller.validateAndLogin(
+                                  emailOrUsername: controller
+                                      .emailEditingController.text
+                                      .trim(),
+                                  password: controller
+                                      .passwordEditingController.text
+                                      .trim(),
+                                );
+                              },
+                              // validator: (value) {
+                              //   return controller.validatePassword(value!);
+                              // },
                             )),
                       ),
-                      
+
                       // Forgot Password
                       SizedBox(
                         width: 300,
@@ -178,10 +253,11 @@ class _LoginPageState extends State<LoginPage> {
                                             child: TextFormField(
                                               controller: controller
                                                   .emailForPasswordResetController,
-                                              validator: (value) =>
-                                                  value == null || value.isEmpty
-                                                      ? "Please enter a valid email."
-                                                      : null,
+                                              validator: (value) => value ==
+                                                          null ||
+                                                      value.isEmpty
+                                                  ? "Please enter a valid email."
+                                                  : null,
                                               decoration: const InputDecoration(
                                                 border: OutlineInputBorder(),
                                                 labelText: "Email",
@@ -240,38 +316,46 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Sign In Button
                       SizedBox(
                         width: 300,
                         height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            elevation: 5,
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                        child: Obx(
+                          // WRAP WITH Obx
+                          () => ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              elevation: 5,
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
-                          ),
-                          onPressed: () {
-                            controller.validateAndLogin(
-                              email: controller.emailEditingController.text,
-                              password: controller.passwordEditingController.text,
-                            );
-                          },
-                          child: const Text(
-                            "Sign In",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Colors.white,
+                            onPressed: controller.isGoogleLoading.value
+                                ? null
+                                : () {
+                                    controller.validateAndLogin(
+                                      emailOrUsername: controller
+                                          .emailEditingController.text
+                                          .trim(),
+                                      password: controller
+                                          .passwordEditingController.text,
+                                    );
+                                  },
+                            child: const Text(
+                              "Sign In",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Divider
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 40),
@@ -287,57 +371,70 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Sign in with text
                       const Text(
                         "Sign in with",
                         style: TextStyle(fontSize: 14),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Google Button
-                      GestureDetector(
-                        onTap: () {
-                          appWriteProvider.signInWithGoogle().then((value) {
-                            if (value) {
-                              CustomSnackBar.showInfoSnackBar(
-                                context: Get.overlayContext,
-                                title: "Success",
-                                message: "Logged in with Google successfully",
-                              );
-                              Get.toNamed(Routes.userHome);
-                            } else {
-                              CustomSnackBar.showErrorSnackBar(
-                                context: Get.overlayContext,
-                                title: "Error",
-                                message: "Failed to login with Google",
-                              );
-                            }
-                          });
-                        },
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                color: Colors.grey.shade400,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                          child: Image.asset(
-                            "lib/images/google_logo.png",
-                            fit: BoxFit.cover,
+                      Obx(
+                        () => GestureDetector(
+                          onTap: controller.isGoogleLoading.value
+                              ? null
+                              : () async {
+                                  try {
+                                    controller.isGoogleLoading.value = true;
+                                    final value = await appWriteProvider
+                                        .signInWithGoogle();
+                                    if (value) {
+                                      CustomSnackBar.showInfoSnackBar(
+                                        context: Get.overlayContext,
+                                        title: "Success",
+                                        message:
+                                            "Logged in with Google successfully",
+                                      );
+                                      Get.toNamed(Routes.userHome);
+                                    } else {
+                                      CustomSnackBar.showErrorSnackBar(
+                                        context: Get.overlayContext,
+                                        title: "Error",
+                                        message: "Failed to login with Google",
+                                      );
+                                    }
+                                  } finally {
+                                    controller.isGoogleLoading.value = false;
+                                  }
+                                },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  color: Colors.grey.shade400,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: controller.isGoogleLoading.value
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : Image.asset(
+                                    "lib/images/google_logo.png",
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Don't have account text
                       RichText(
                         text: TextSpan(

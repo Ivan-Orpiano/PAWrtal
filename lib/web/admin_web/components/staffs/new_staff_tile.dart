@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
-import 'package:capstone_app/data/models/clinic_settings_model.dart';
 
 class NewStaffTile extends StatelessWidget {
-  final ClinicSettings clinicSettings;
   final void Function(
       String name,
+      String username,
       String email,
       String phone,
       List<String> authorities,
@@ -16,7 +15,6 @@ class NewStaffTile extends StatelessWidget {
 
   const NewStaffTile({
     super.key,
-    required this.clinicSettings,
     required this.onStaffCreated,
   });
 
@@ -146,16 +144,18 @@ class NewStaffTile extends StatelessWidget {
   void _showStaffForm(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final firstNameController = TextEditingController();
         final surnameController = TextEditingController();
         final phoneController = TextEditingController();
+        final emailController = TextEditingController(); // NEW
 
         return _StaffFormDialog(
-          clinicSettings: clinicSettings,
           firstNameController: firstNameController,
           surnameController: surnameController,
           phoneController: phoneController,
+          emailController: emailController, // NEW
           onStaffCreated: onStaffCreated,
         );
       },
@@ -164,12 +164,13 @@ class NewStaffTile extends StatelessWidget {
 }
 
 class _StaffFormDialog extends StatefulWidget {
-  final ClinicSettings clinicSettings;
   final TextEditingController firstNameController;
   final TextEditingController surnameController;
   final TextEditingController phoneController;
+  final TextEditingController emailController; // NEW
   final void Function(
       String name,
+      String username,
       String email,
       String phone,
       List<String> authorities,
@@ -177,10 +178,10 @@ class _StaffFormDialog extends StatefulWidget {
       String password) onStaffCreated;
 
   const _StaffFormDialog({
-    required this.clinicSettings,
     required this.firstNameController,
     required this.surnameController,
     required this.phoneController,
+    required this.emailController, // NEW
     required this.onStaffCreated,
   });
 
@@ -193,7 +194,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   bool appointmentAuth = false;
   bool messagesAuth = false;
   Uint8List? selectedImageBytes;
-  String generatedEmail = '';
+  bool hasChanges = false;
 
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
@@ -211,33 +212,31 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   @override
   void initState() {
     super.initState();
-    widget.firstNameController.addListener(_updateEmail);
-    widget.surnameController.addListener(_updateEmail);
-    _updateEmail();
+    widget.firstNameController.addListener(_checkForChanges);
+    widget.surnameController.addListener(_checkForChanges);
+    widget.phoneController.addListener(_checkForChanges);
+    widget.emailController.addListener(_checkForChanges); // NEW
   }
 
   @override
   void dispose() {
-    widget.firstNameController.removeListener(_updateEmail);
-    widget.surnameController.removeListener(_updateEmail);
+    widget.firstNameController.removeListener(_checkForChanges);
+    widget.surnameController.removeListener(_checkForChanges);
+    widget.phoneController.removeListener(_checkForChanges);
+    widget.emailController.removeListener(_checkForChanges); // NEW
     super.dispose();
   }
 
-  void _updateEmail() {
-    final firstName = widget.firstNameController.text.trim();
-    final surname = widget.surnameController.text.trim();
-
+  void _checkForChanges() {
     setState(() {
-      if (firstName.isNotEmpty || surname.isNotEmpty) {
-        final fullName = '$firstName $surname'.trim();
-        generatedEmail = widget.clinicSettings.generateStaffEmail(fullName);
-      } else {
-        generatedEmail =
-            widget.clinicSettings.staffEmailTemplate.startsWith('@')
-                ? 'staff${widget.clinicSettings.staffEmailTemplate}'
-                : widget.clinicSettings.staffEmailTemplate
-                    .replaceAll('{name}', 'staff');
-      }
+      hasChanges = widget.firstNameController.text.trim().isNotEmpty ||
+          widget.surnameController.text.trim().isNotEmpty ||
+          widget.phoneController.text.trim().isNotEmpty ||
+          widget.emailController.text.trim().isNotEmpty || // NEW
+          selectedImageBytes != null ||
+          clinicAuth ||
+          appointmentAuth ||
+          messagesAuth;
     });
   }
 
@@ -245,6 +244,75 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     final phoneDigits = widget.phoneController.text.trim();
     if (phoneDigits.isEmpty) return '';
     return '09$phoneDigits';
+  }
+
+  // NEW: Email validation
+  bool _isValidEmail(String email) {
+    if (email.isEmpty) return true; // Optional field
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  void _handleCancel() {
+    if (hasChanges) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: vetOrange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.warning_amber_rounded,
+                    color: vetOrange, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Unsaved Changes',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'You have unsaved changes. Are you sure you want to cancel? All entered data will be lost.',
+            style: TextStyle(fontSize: 15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Continue Editing',
+                style:
+                    TextStyle(color: primaryTeal, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close confirmation dialog
+                Navigator.pop(context); // Close staff form dialog
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: vetOrange,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Discard Changes'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -354,68 +422,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     const SizedBox(height: 20),
 
                     _buildPersonalInfoFields(isDesktop),
-                    const SizedBox(height: 16),
-
-                    // Generated Email Display
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            primaryTeal.withOpacity(0.1),
-                            lightVetGreen.withOpacity(0.3),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: primaryTeal.withOpacity(0.3), width: 2),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: primaryTeal.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(Icons.email,
-                                    color: primaryTeal, size: 16),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Generated Email Address',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: darkText,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            generatedEmail,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: primaryBlue,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Based on template: ${widget.clinicSettings.staffEmailTemplate}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: mediumGray,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     const SizedBox(height: 28),
 
                     // Authorities
@@ -452,7 +458,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _handleCancel,
                     child: const Text(
                       'Cancel',
                       style: TextStyle(
@@ -475,9 +481,9 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     ),
                     child: ElevatedButton.icon(
                       onPressed: _handleCreateStaff,
-                      icon: const Icon(Icons.check_circle_outline,
-                          color: Colors.white),
-                      label: const Text('Next: Set Password',
+                      icon:
+                          const Icon(Icons.arrow_forward, color: Colors.white),
+                      label: const Text('Continue',
                           style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
@@ -542,6 +548,21 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       return;
     }
 
+    // NEW: Validate email if provided
+    final email = widget.emailController.text.trim();
+    if (email.isNotEmpty && !_isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a valid email address'),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     final fullName =
         '${widget.firstNameController.text.trim()} ${widget.surnameController.text.trim()}';
     final phone = _getFullPhoneNumber();
@@ -551,320 +572,604 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     if (appointmentAuth) authorities.add('Appointments');
     if (messagesAuth) authorities.add('Messages');
 
-    // Show password dialog
-    _showPasswordDialog(fullName, generatedEmail, phone, authorities);
+    // Show credentials dialog
+    _showCredentialsDialog(fullName, email, phone, authorities);
   }
 
-  Future<void> _showPasswordDialog(
+  Future<void> _showCredentialsDialog(
     String fullName,
     String email,
     String phone,
     List<String> authorities,
   ) async {
+    final usernameController = TextEditingController();
     final passwordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
     bool obscurePassword = true;
     bool obscureConfirm = true;
     String? errorMessage;
 
+    // Password validation flags
+    bool hasUppercase = false;
+    bool hasSpecialChar = false;
+    bool hasDigit = false;
+    bool hasMinLength = false;
+
+    void validatePassword(String password) {
+      hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+      hasDigit = password.contains(RegExp(r'[0-9]'));
+      hasMinLength = password.length >= 8;
+    }
+
+    // Track if credentials dialog has any input
+    bool hasCredentialsInput = false;
+    void checkCredentialsInput() {
+      hasCredentialsInput = usernameController.text.trim().isNotEmpty ||
+          passwordController.text.isNotEmpty ||
+          confirmPasswordController.text.isNotEmpty;
+    }
+
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 480),
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white,
-                    lightVetGreen.withOpacity(0.2),
-                  ],
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [primaryTeal, primaryBlue],
+          return WillPopScope(
+            onWillPop: () async {
+              if (hasCredentialsInput) {
+                final shouldDiscard = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    title: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: vetOrange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          child: const Icon(Icons.warning_amber_rounded,
+                              color: vetOrange, size: 24),
                         ),
-                        child: const Icon(
-                          Icons.lock_outline,
-                          color: Colors.white,
-                          size: 28,
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text('Unsaved Progress',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
                         ),
+                      ],
+                    ),
+                    content: const Text(
+                      'You have unsaved credentials. Going back will discard your progress.',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Continue Editing',
+                            style: TextStyle(
+                                color: primaryTeal,
+                                fontWeight: FontWeight.w600)),
                       ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Set Staff Password',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: darkText,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Create a secure password',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: mediumGray,
-                              ),
-                            ),
-                          ],
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: vetOrange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
+                        child: const Text('Discard'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Info Box
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: primaryBlue.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [],
-                    ),
+                );
+                return shouldDiscard ?? false;
+              }
+              return true;
+            },
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white,
+                      lightVetGreen.withOpacity(0.2),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Password Field
-                  TextField(
-                    controller: passwordController,
-                    obscureText: obscurePassword,
-                    onChanged: (_) => setDialogState(() => errorMessage = null),
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      hintText: 'Minimum 8 characters',
-                      prefixIcon: Container(
-                        margin: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: primaryTeal.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.lock,
-                            color: primaryTeal, size: 20),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: mediumGray,
-                          size: 20,
-                        ),
-                        onPressed: () => setDialogState(
-                            () => obscurePassword = !obscurePassword),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: primaryTeal.withOpacity(0.3)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: primaryTeal.withOpacity(0.3)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: primaryTeal, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Confirm Password Field
-                  TextField(
-                    controller: confirmPasswordController,
-                    obscureText: obscureConfirm,
-                    onChanged: (_) => setDialogState(() => errorMessage = null),
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      hintText: 'Re-enter password',
-                      prefixIcon: Container(
-                        margin: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: vetGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.check_circle_outline,
-                            color: vetGreen, size: 20),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          obscureConfirm
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: mediumGray,
-                          size: 20,
-                        ),
-                        onPressed: () => setDialogState(
-                            () => obscureConfirm = !obscureConfirm),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: vetGreen.withOpacity(0.3)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: vetGreen.withOpacity(0.3)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: vetGreen, width: 2),
-                      ),
-                    ),
-                  ),
-
-                  if (errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Row(
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
                         children: [
-                          const Icon(Icons.error_outline,
-                              color: Colors.red, size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              errorMessage!,
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [primaryTeal, primaryBlue],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.lock_outline,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Account Credentials',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: darkText,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Create username and password',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: mediumGray,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Username Field
+                      TextField(
+                        controller: usernameController,
+                        maxLength: 50,
+                        onChanged: (_) {
+                          setDialogState(() {
+                            errorMessage = null;
+                            checkCredentialsInput();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          hintText: 'Enter username for login',
+                          hintStyle: TextStyle(
+                              color: mediumGray.withOpacity(0.5)), // MORE GREY
+                          counterText: '',
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: primaryTeal.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.person,
+                                color: primaryTeal, size: 20),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: primaryTeal.withOpacity(0.3)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: primaryTeal.withOpacity(0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: primaryTeal, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password Field
+                      TextField(
+                        controller: passwordController,
+                        obscureText: obscurePassword,
+                        maxLength: 50,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            errorMessage = null;
+                            validatePassword(value);
+                            checkCredentialsInput();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter secure password',
+                          hintStyle: TextStyle(
+                              color: mediumGray.withOpacity(0.5)), // MORE GREY
+                          counterText: '',
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: primaryTeal.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.lock,
+                                color: primaryTeal, size: 20),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: mediumGray,
+                              size: 20,
+                            ),
+                            onPressed: () => setDialogState(
+                                () => obscurePassword = !obscurePassword),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: primaryTeal.withOpacity(0.3)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: primaryTeal.withOpacity(0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: primaryTeal, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Password Requirements
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(10),
+                          border:
+                              Border.all(color: Colors.blue.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.info_outline,
+                                    size: 16, color: Colors.blue[700]),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Password Requirements',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildRequirement(
+                                'At least 8 characters', hasMinLength),
+                            _buildRequirement(
+                                'One uppercase letter', hasUppercase),
+                            _buildRequirement('One number', hasDigit),
+                            _buildRequirement(
+                                'One special character (!@#\$%^&*)',
+                                hasSpecialChar),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Confirm Password Field
+                      TextField(
+                        controller: confirmPasswordController,
+                        obscureText: obscureConfirm,
+                        maxLength: 50,
+                        onChanged: (_) {
+                          setDialogState(() {
+                            errorMessage = null;
+                            checkCredentialsInput();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          hintText: 'Re-enter password',
+                          hintStyle: TextStyle(
+                              color: mediumGray.withOpacity(0.5)), // MORE GREY
+                          counterText: '',
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: vetGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.check_circle_outline,
+                                color: vetGreen, size: 20),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirm
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: mediumGray,
+                              size: 20,
+                            ),
+                            onPressed: () => setDialogState(
+                                () => obscureConfirm = !obscureConfirm),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: vetGreen.withOpacity(0.3)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: vetGreen.withOpacity(0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: vetGreen, width: 2),
+                          ),
+                        ),
+                      ),
+
+                      if (errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border:
+                                Border.all(color: Colors.red.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: Colors.red, size: 18),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  errorMessage!,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
+
+                      // Actions
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              if (hasCredentialsInput) {
+                                final shouldDiscard = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(16)),
+                                    title: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: vetOrange.withOpacity(0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                              Icons.warning_amber_rounded,
+                                              color: vetOrange,
+                                              size: 24),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Expanded(
+                                          child: Text('Unsaved Progress',
+                                              style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                    content: const Text(
+                                      'Going back will discard your credentials.',
+                                      style: TextStyle(fontSize: 15),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: const Text('Continue Editing',
+                                            style: TextStyle(
+                                                color: primaryTeal,
+                                                fontWeight: FontWeight.w600)),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: vetOrange,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20, vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
+                                        ),
+                                        child: const Text('Discard'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (shouldDiscard == true) {
+                                  Navigator.pop(dialogContext);
+                                }
+                              } else {
+                                Navigator.pop(dialogContext);
+                              }
+                            },
+                            child: const Text(
+                              'Back',
+                              style: TextStyle(
+                                color: mediumGray,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [primaryTeal, primaryBlue],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryTeal.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final username = usernameController.text.trim();
+                                final password = passwordController.text;
+                                final confirmPassword =
+                                    confirmPasswordController.text;
+
+                                // Validate username
+                                if (username.isEmpty) {
+                                  setDialogState(() =>
+                                      errorMessage = 'Username is required');
+                                  return;
+                                }
+
+                                if (username.length < 3) {
+                                  setDialogState(() => errorMessage =
+                                      'Username must be at least 3 characters');
+                                  return;
+                                }
+
+                                // Validate password
+                                if (password.isEmpty) {
+                                  setDialogState(() =>
+                                      errorMessage = 'Password is required');
+                                  return;
+                                }
+
+                                validatePassword(password);
+
+                                if (!hasMinLength) {
+                                  setDialogState(() => errorMessage =
+                                      'Password must be at least 8 characters');
+                                  return;
+                                }
+
+                                if (!hasUppercase) {
+                                  setDialogState(() => errorMessage =
+                                      'Password must contain at least one uppercase letter');
+                                  return;
+                                }
+
+                                if (!hasDigit) {
+                                  setDialogState(() => errorMessage =
+                                      'Password must contain at least one number');
+                                  return;
+                                }
+
+                                if (!hasSpecialChar) {
+                                  setDialogState(() => errorMessage =
+                                      'Password must contain at least one special character');
+                                  return;
+                                }
+
+                                // Validate confirm password
+                                if (password != confirmPassword) {
+                                  setDialogState(() =>
+                                      errorMessage = 'Passwords do not match');
+                                  return;
+                                }
+
+                                // Show confirmation dialog
+                                Navigator.pop(dialogContext);
+                                _showConfirmationDialog(
+                                  fullName,
+                                  username,
+                                  password,
+                                  email,
+                                  phone,
+                                  authorities,
+                                );
+                              },
+                              icon: const Icon(Icons.arrow_forward,
+                                  color: Colors.white, size: 18),
+                              label: const Text(
+                                'Continue',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: mediumGray,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [primaryTeal, primaryBlue],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryTeal.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            final password = passwordController.text;
-                            final confirmPassword =
-                                confirmPasswordController.text;
-
-                            if (password.length < 8) {
-                              setDialogState(() => errorMessage =
-                                  'Password must be at least 8 characters');
-                              return;
-                            }
-
-                            if (password != confirmPassword) {
-                              setDialogState(() =>
-                                  errorMessage = 'Passwords do not match');
-                              return;
-                            }
-
-                            // Show confirmation dialog
-                            Navigator.pop(dialogContext);
-                            _showConfirmationDialog(
-                              fullName,
-                              email,
-                              password,
-                              phone,
-                              authorities,
-                            );
-                          },
-                          icon: const Icon(Icons.arrow_forward,
-                              color: Colors.white, size: 18),
-                          label: const Text(
-                            'Continue',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           );
@@ -873,10 +1178,35 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     );
   }
 
+  Widget _buildRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.cancel,
+            size: 14,
+            color: isMet ? vetGreen : Colors.grey,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: isMet ? vetGreen : Colors.grey[600],
+              fontWeight: isMet ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showConfirmationDialog(
     String fullName,
-    String email,
+    String username,
     String password,
+    String email,
     String phone,
     List<String> authorities,
   ) async {
@@ -887,218 +1217,180 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 500),
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white,
-                    vetGreen.withOpacity(0.1),
-                  ],
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
+          return WillPopScope(
+            onWillPop: () async {
+              final shouldDiscard = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  title: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [vetGreen, primaryTeal],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
+                          color: vetOrange.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
-                          Icons.check_circle_outline,
-                          color: Colors.white,
-                          size: 28,
-                        ),
+                        child: const Icon(Icons.warning_amber_rounded,
+                            color: vetOrange, size: 24),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Review & Confirm',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: darkText,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Verify account details',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: mediumGray,
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: Text('Unsaved Progress',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Account Details Box
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: lightVetGreen.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: vetGreen.withOpacity(0.3),
-                        width: 2,
-                      ),
+                  content: const Text(
+                    'Going back will discard your progress. The staff account will not be created.',
+                    style: TextStyle(fontSize: 15),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Continue Editing',
+                          style: TextStyle(
+                              color: primaryTeal, fontWeight: FontWeight.w600)),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: vetOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Discard'),
+                    ),
+                  ],
+                ),
+              );
+              return shouldDiscard ?? false;
+            },
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white,
+                      vetGreen.withOpacity(0.1),
+                    ],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
                       children: [
-                        // Name
-                        _buildDetailRow(
-                          Icons.person,
-                          'Staff Name',
-                          fullName,
-                          primaryBlue,
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [vetGreen, primaryTeal],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
-                        const SizedBox(height: 14),
-
-                        // Email
-                        _buildDetailRow(
-                          Icons.email,
-                          'Email / Username',
-                          email,
-                          primaryTeal,
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Review & Confirm',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: darkText,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Verify account details',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: mediumGray,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 14),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
-                        // Phone (if provided)
-                        if (phone.isNotEmpty) ...[
+                    // Account Details Box
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: lightVetGreen.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: vetGreen.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow(
+                            Icons.person,
+                            'Staff Name',
+                            fullName,
+                            primaryBlue,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildDetailRow(
+                            Icons.account_circle,
+                            'Username',
+                            username,
+                            primaryTeal,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildDetailRow(
+                            Icons.email,
+                            'Email',
+                            email.isNotEmpty ? email : 'Not provided',
+                            vetPurple,
+                          ),
+                          const SizedBox(height: 14),
                           _buildDetailRow(
                             Icons.phone,
                             'Phone Number',
-                            phone,
+                            phone.isNotEmpty ? phone : 'Not provided',
                             vetOrange,
                           ),
                           const SizedBox(height: 14),
-                        ],
-
-                        // Password
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: vetOrange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.lock,
-                                color: vetOrange,
-                                size: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Password',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: mediumGray,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          showPassword
-                                              ? password
-                                              : '•' * password.length,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: darkText,
-                                          ),
-                                        ),
-                                      ),
-                                      InkWell(
-                                        onTap: () => setDialogState(
-                                            () => showPassword = !showPassword),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: vetOrange.withOpacity(0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                showPassword
-                                                    ? Icons.visibility_off
-                                                    : Icons.visibility,
-                                                size: 14,
-                                                color: vetOrange,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                showPassword ? 'Hide' : 'Show',
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: vetOrange,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        if (authorities.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          // Permissions
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: vetGreen.withOpacity(0.2),
+                                  color: vetOrange.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
-                                  Icons.security,
-                                  color: vetGreen,
+                                  Icons.lock,
+                                  color: vetOrange,
                                   size: 16,
                                 ),
                               ),
@@ -1108,151 +1400,306 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Permissions',
+                                      'Password',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: mediumGray,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: authorities.map((auth) {
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: vetGreen.withOpacity(0.2),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: vetGreen.withOpacity(0.4),
-                                            ),
-                                          ),
+                                    const SizedBox(height: 3),
+                                    Row(
+                                      children: [
+                                        Expanded(
                                           child: Text(
-                                            auth,
+                                            showPassword
+                                                ? password
+                                                : '•' * password.length,
                                             style: const TextStyle(
-                                              fontSize: 12,
-                                              color: vetGreen,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.bold,
+                                              color: darkText,
                                             ),
                                           ),
-                                        );
-                                      }).toList(),
+                                        ),
+                                        InkWell(
+                                          onTap: () => setDialogState(
+                                            () => showPassword = !showPassword,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  vetOrange.withOpacity(0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  showPassword
+                                                      ? Icons.visibility_off
+                                                      : Icons.visibility,
+                                                  size: 14,
+                                                  color: vetOrange,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  showPassword
+                                                      ? 'Hide'
+                                                      : 'Show',
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: vetOrange,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Warning Box
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: vetOrange.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: vetOrange, size: 20),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Staff should change this password after first login',
-                            style: TextStyle(
-                              fontSize: 13,
-                              height: 1.3,
-                              fontWeight: FontWeight.w500,
+                          if (authorities.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: vetGreen.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.security,
+                                    color: vetGreen,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Permissions',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: mediumGray,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: authorities.map((auth) {
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: vetGreen.withOpacity(0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color:
+                                                    vetGreen.withOpacity(0.4),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              auth,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: vetGreen,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: mediumGray,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [vetGreen, primaryTeal],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: vetGreen.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
+                          ] else ...[
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.security,
+                                    color: Colors.grey,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'No permissions assigned',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: mediumGray,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(dialogContext);
-                            Navigator.of(this.context).pop();
-                            widget.onStaffCreated(
-                              fullName,
-                              email,
-                              phone,
-                              authorities,
-                              selectedImageBytes,
-                              password,
-                            );
-                          },
-                          icon: const Icon(Icons.check_circle,
-                              color: Colors.white, size: 20),
-                          label: const Text(
-                            'Confirm & Create',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Actions
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () async {
+                            final shouldDiscard = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                                title: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: vetOrange.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: vetOrange,
+                                          size: 24),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Text('Unsaved Progress',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                                content: const Text(
+                                  'Going back will discard your progress.',
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Continue Editing',
+                                        style: TextStyle(
+                                            color: primaryTeal,
+                                            fontWeight: FontWeight.w600)),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: vetOrange,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                    child: const Text('Discard'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (shouldDiscard == true) {
+                              Navigator.pop(dialogContext);
+                            }
+                          },
+                          child: const Text(
+                            'Back',
+                            style: TextStyle(
+                              color: mediumGray,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [vetGreen, primaryTeal],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: vetGreen.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(dialogContext); // close confirm
+                              Navigator.of(this.context).pop(); // close form
+
+                              widget.onStaffCreated(
+                                fullName,
+                                username,
+                                email,
+                                phone,
+                                authorities,
+                                selectedImageBytes,
+                                password,
+                              );
+                            },
+                            icon: const Icon(Icons.check_circle,
+                                color: Colors.white, size: 20),
+                            label: const Text(
+                              'Confirm & Create',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -1324,6 +1771,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     if (bytes.length > 5 * 1024 * 1024) return;
                     setState(() {
                       selectedImageBytes = bytes;
+                      _checkForChanges();
                     });
                   }
                 } catch (_) {}
@@ -1364,6 +1812,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                 child: InkWell(
                   onTap: () => setState(() {
                     selectedImageBytes = null;
+                    _checkForChanges();
                   }),
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -1499,6 +1948,8 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
             ],
           ),
         const SizedBox(height: 18),
+        _buildEmailTextField(), // NEW
+        const SizedBox(height: 18),
         _buildPhoneTextField(),
       ],
     );
@@ -1524,10 +1975,17 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        maxLength: 50,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+        ],
         decoration: InputDecoration(
           labelText: label,
           labelStyle:
               const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
+          hintText: 'Enter $label',
+          hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)), // MORE GREY
+          counterText: '',
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -1549,6 +2007,57 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: primaryTeal, width: 2.5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Email field
+  Widget _buildEmailTextField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: primaryTeal.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: widget.emailController,
+        keyboardType: TextInputType.emailAddress,
+        maxLength: 50,
+        decoration: InputDecoration(
+          labelText: 'Email (Optional)',
+          labelStyle:
+              const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
+          hintText: 'example@email.com',
+          hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)), // MORE GREY
+          counterText: '',
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: vetPurple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.email_outlined, color: vetPurple, size: 20),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: vetPurple.withOpacity(0.3)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: vetPurple.withOpacity(0.3)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: vetPurple, width: 2.5),
           ),
         ),
       ),
@@ -1579,8 +2088,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           labelStyle:
               const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
           hintText: '696934651',
-          // helperText: 'Format: 09XXXXXXXXX (9 digits after 09)',
-          // helperMaxLines: 2,
+          hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)), // MORE GREY
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -1668,7 +2176,10 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
               ),
             ),
             value: clinicAuth,
-            onChanged: (val) => setState(() => clinicAuth = val ?? false),
+            onChanged: (val) {
+              setState(() => clinicAuth = val ?? false);
+              _checkForChanges();
+            },
             activeColor: primaryTeal,
             checkColor: Colors.white,
             contentPadding:
@@ -1707,7 +2218,10 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
               ),
             ),
             value: appointmentAuth,
-            onChanged: (val) => setState(() => appointmentAuth = val ?? false),
+            onChanged: (val) {
+              setState(() => appointmentAuth = val ?? false);
+              _checkForChanges();
+            },
             activeColor: primaryBlue,
             checkColor: Colors.white,
             contentPadding:
@@ -1743,7 +2257,10 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
               ),
             ),
             value: messagesAuth,
-            onChanged: (val) => setState(() => messagesAuth = val ?? false),
+            onChanged: (val) {
+              setState(() => messagesAuth = val ?? false);
+              _checkForChanges();
+            },
             activeColor: vetOrange,
             checkColor: Colors.white,
             contentPadding:

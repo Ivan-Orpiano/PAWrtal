@@ -1,4 +1,3 @@
-
 class Clinic {
   String? documentId;
   late String clinicName;
@@ -13,6 +12,20 @@ class Clinic {
   late String description;
   late String image;
 
+  Clinic({
+    this.documentId,
+    required this.clinicName,
+    required this.address,
+    required this.contact,
+    required this.createdAt,
+    required this.adminId,
+    required this.createdBy,
+    required this.role,
+    required this.email,
+    required this.services,
+    required this.description,
+    required this.image,
+  });
 
   Clinic.fromMap(Map<String, dynamic> map) {
     documentId = map['\$id'] ?? '';
@@ -43,5 +56,35 @@ class Clinic {
       'description': description,
       'image': image,
     };
+  }
+
+  Clinic copyWith({
+    String? documentId,
+    String? clinicName,
+    String? address,
+    String? contact,
+    String? createdAt,
+    String? adminId,
+    String? createdBy,
+    String? role,
+    String? email,
+    String? services,
+    String? description,
+    String? image,
+  }) {
+    return Clinic(
+      documentId: documentId ?? this.documentId,
+      clinicName: clinicName ?? this.clinicName,
+      address: address ?? this.address,
+      contact: contact ?? this.contact,
+      createdAt: createdAt ?? this.createdAt,
+      adminId: adminId ?? this.adminId,
+      createdBy: createdBy ?? this.createdBy,
+      role: role ?? this.role,
+      email: email ?? this.email,
+      services: services ?? this.services,
+      description: description ?? this.description,
+      image: image ?? this.image,
+    );
   }
 }

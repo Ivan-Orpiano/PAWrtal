@@ -1,8 +1,12 @@
+import 'package:capstone_app/notifications/components/toast_notification_system.dart';
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
+import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -17,6 +21,8 @@ import 'appointment_view_mode.dart';
 class WebAppointmentController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
+
+  late final NotificationController _notificationController;
 
   WebAppointmentController({
     required this.authRepository,
@@ -49,6 +55,16 @@ class WebAppointmentController extends GetxController {
   void onInit() {
     super.onInit();
     fetchClinicData();
+
+    // Initialize notification controller
+    if (!Get.isRegistered<NotificationController>()) {
+      _notificationController = Get.put(NotificationController(
+        authRepository: authRepository,
+        session: session,
+      ));
+    } else {
+      _notificationController = Get.find<NotificationController>();
+    }
 
     // Listen to changes
     ever(selectedTab, (_) => updateFilteredAppointments());
@@ -216,14 +232,45 @@ class WebAppointmentController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
+    // This is for when USER books appointment - admin should get notified
+    final notification = NotificationModel.appointmentBooked(
+      clinicId: appointment.clinicId,
+      appointmentId: appointment.documentId!,
+      userId: appointment.userId,
+      petName: getPetName(appointment.petId),
+      ownerName: getOwnerName(appointment.userId),
+      service: appointment.service,
+      appointmentTime: appointment.dateTime,
     );
+
+    // Show toast notification to admin
+    ToastNotificationService.showToastNotification(notification);
+  }
+
+  Future<void> _createAppointmentNotification({
+    required String type,
+    required Appointment appointment,
+    String? notes,
+  }) async {
+    try {
+      // Get owner and pet names
+      final ownerName = getOwnerName(appointment.userId);
+      final petName = getPetName(appointment.petId);
+
+      await authRepository.createAppointmentNotification(
+        type: type,
+        appointmentId: appointment.documentId!,
+        clinicId: appointment.clinicId,
+        userId: appointment.userId,
+        petName: petName,
+        ownerName: ownerName,
+        service: appointment.service,
+        appointmentTime: appointment.dateTime,
+        notes: notes,
+      );
+    } catch (e) {
+      print('Error creating appointment notification: $e');
+    }
   }
 
   void _setupFallbackPolling({int interval = 30}) {
@@ -554,7 +601,6 @@ class WebAppointmentController extends GetxController {
 
   // Appointment actions
   Future<void> acceptAppointment(Appointment appointment) async {
-    // Check if time slot is available before accepting
     final isAvailable = await checkTimeSlotAvailability(
       appointment.clinicId,
       appointment.dateTime,
@@ -562,18 +608,27 @@ class WebAppointmentController extends GetxController {
     );
 
     if (!isAvailable) {
-      Get.snackbar(
-        "Time Slot Unavailable",
-        "This time slot is already booked. Please ask the client to choose a different time.",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
+      // Show error using toast instead of creating notification
+      ToastNotificationService.showErrorToast(
+        'Time Slot Unavailable',
+        'This time slot is already booked. Please ask the client to choose a different time.',
       );
       return;
     }
 
     await _updateAppointmentStatus(appointment, 'accepted');
-    Get.snackbar(
-        "Success", "Appointment accepted! Time slot has been reserved.");
+
+    // *** ONLY create notification for the USER, not the admin ***
+    // await _createAppointmentNotificationForUser(
+    //   type: 'accepted',
+    //   appointment: appointment,
+    // );
+
+    // *** Show success toast instead of notification ***
+    ToastNotificationService.showSuccessToast(
+      'Appointment Accepted',
+      'Successfully accepted appointment for ${getPetName(appointment.petId)}',
+    );
   }
 
   Future<void> declineAppointment(Appointment appointment, String notes) async {
@@ -587,12 +642,65 @@ class WebAppointmentController extends GetxController {
       );
 
       await updateFullAppointment(updatedAppointment);
-      Get.snackbar(
-          "Success", "Appointment declined. Patient will be notified.");
+
+      // *** ONLY create notification for the USER, not the admin ***
+      // await _createAppointmentNotificationForUser(
+      //   type: 'declined',
+      //   appointment: appointment,
+      //   notes: notes,
+      // );
+
+      // *** Show success toast instead of notification ***
+      ToastNotificationService.showSuccessToast(
+        'Appointment Declined',
+        'Appointment for ${getPetName(appointment.petId)} has been declined',
+      );
     } catch (e) {
-      Get.snackbar("Error", "Failed to decline appointment: $e");
+      ToastNotificationService.showErrorToast(
+        'Error',
+        'Failed to decline appointment: $e',
+      );
     }
   }
+
+  // Future<void> _createAppointmentNotificationForUser({
+  //   required String type,
+  //   required Appointment appointment,
+  //   String? notes,
+  // }) async {
+  //   try {
+  //     final ownerName = getOwnerName(appointment.userId);
+  //     final petName = getPetName(appointment.petId);
+
+  //     // Get clinic name for user notification
+  //     final clinicDoc =
+  //         await authRepository.getClinicById(appointment.clinicId);
+  //     final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
+
+  //     // Create notification for USER only
+  //     final userNotification = NotificationModel.appointmentStatusUpdate(
+  //       userId: appointment.userId,
+  //       appointmentId: appointment.documentId!,
+  //       petName: petName,
+  //       clinicName: clinicName,
+  //       status: type,
+  //       notes: notes,
+  //     );
+
+  //     await authRepository.createNotification(userNotification);
+
+  //     // Also create automated message in conversation
+  //     await _createAutomatedMessage(
+  //       clinicId: appointment.clinicId,
+  //       userId: appointment.userId,
+  //       type: type,
+  //       petName: petName,
+  //       notes: notes,
+  //     );
+  //   } catch (e) {
+  //     print('Error creating appointment notification for user: $e');
+  //   }
+  // }
 
   Future<void> checkInPatient(Appointment appointment) async {
     if (!appointment.isToday) {
@@ -632,30 +740,96 @@ class WebAppointmentController extends GetxController {
     String? followUpInstructions,
     DateTime? nextAppointmentDate,
   }) async {
-    final updatedAppointment = appointment.copyWith(
-      status: 'completed',
-      serviceCompletedAt: DateTime.now(),
-      diagnosis: diagnosis ?? 'N/A',
-      treatment: treatment ?? 'N/A',
-      prescription: prescription ?? 'N/A',
-      vetNotes: vetNotes ?? 'N/A',
-      vitals: vitals,
-      followUpInstructions: followUpInstructions,
-      nextAppointmentDate: nextAppointmentDate,
-      updatedAt: DateTime.now(),
-    );
+    try {
+      print('>>> Starting service completion...');
 
-    await updateFullAppointment(updatedAppointment);
+      // CRITICAL FIX: Ensure we have minimum required data
+      final finalDiagnosis = diagnosis?.trim().isNotEmpty == true
+          ? diagnosis!.trim()
+          : 'Service completed - ${appointment.service}';
 
-    // Create medical record
-    final user = await authRepository.getUser();
-    if (user != null) {
-      final medicalRecord =
-          MedicalRecord.fromAppointment(updatedAppointment, user.$id);
-      await authRepository.createMedicalRecord(medicalRecord);
+      final finalTreatment = treatment?.trim().isNotEmpty == true
+          ? treatment!.trim()
+          : appointment.service;
+
+      final updatedAppointment = appointment.copyWith(
+        status: 'completed',
+        serviceCompletedAt: DateTime.now(),
+        diagnosis: finalDiagnosis,
+        treatment: finalTreatment,
+        prescription:
+            prescription?.trim().isNotEmpty == true ? prescription : null,
+        vetNotes: vetNotes?.trim().isNotEmpty == true ? vetNotes : null,
+        vitals: vitals,
+        followUpInstructions: followUpInstructions,
+        nextAppointmentDate: nextAppointmentDate,
+        updatedAt: DateTime.now(),
+      );
+
+      await updateFullAppointment(updatedAppointment);
+      print('>>> Appointment updated to completed');
+
+      // Create medical record - ALWAYS create one for completed appointments
+      final user = await authRepository.getUser();
+      if (user != null) {
+        final medicalRecord =
+            MedicalRecord.fromAppointment(updatedAppointment, user.$id);
+
+        try {
+          await authRepository.createMedicalRecord(medicalRecord);
+          print('>>> Medical record created successfully');
+        } catch (e) {
+          print('>>> ERROR: Failed to create medical record: $e');
+          // Still show success for appointment but warn about medical record
+          Get.snackbar(
+            "Warning",
+            "Appointment completed but medical record creation failed. Please contact support.",
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 5),
+          );
+          return;
+        }
+      } else {
+        print('>>> ERROR: Cannot create medical record - user not found');
+        Get.snackbar(
+          "Warning",
+          "Appointment completed but medical record requires user authentication.",
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Get.snackbar(
+      //   "Success",
+      //   "Service completed and medical record created!",
+      //   backgroundColor: Colors.green,
+      //   colorText: Colors.white,
+      // );
+
+      await _createAppointmentNotification(
+        type: 'completed',
+        appointment: appointment,
+        notes: followUpInstructions,
+      );
+
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: appointment.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.appointmentCompleted,
+          title: 'Service Completed',
+          message:
+              'Service for ${getPetName(appointment.petId)} has been completed successfully',
+          appointmentId: appointment.documentId,
+        ),
+      );
+    } catch (e) {
+      print('>>> Error in completeServiceWithRecord: $e');
+      Get.snackbar("Error", "Failed to complete service: $e");
+      rethrow;
     }
-
-    Get.snackbar("Success", "Service completed and medical record created!");
   }
 
   Future<void> markNoShow(Appointment appointment) async {
@@ -768,4 +942,200 @@ class WebAppointmentController extends GetxController {
   }
 
   String get connectionStatus => isRealTimeConnected.value ? "Live" : "Polling";
+
+  // ============= VACCINATION-SPECIFIC METHODS =============
+
+  /// Check if a service is a vaccination service
+  bool isVaccinationService(String serviceName) {
+    final vaccinationKeywords = [
+      'vaccination',
+      'vaccine',
+      'immunization',
+      'rabies',
+      'dhpp',
+      'bordetella',
+      'lepto',
+      'lyme',
+      'influenza',
+      'shot',
+    ];
+
+    final lowerService = serviceName.toLowerCase();
+    return vaccinationKeywords.any((keyword) => lowerService.contains(keyword));
+  }
+
+  /// Get veterinarian name from current user
+  String getVeterinarianName() {
+    try {
+      final storage = GetStorage();
+      final userName = storage.read('userName') as String?;
+      return userName ?? 'Dr. Veterinarian';
+    } catch (e) {
+      print('Error getting vet name: $e');
+      return 'Dr. Veterinarian';
+    }
+  }
+
+  /// Complete a vaccination service with both vaccination and medical records
+  Future<void> completeVaccinationService({
+    required Appointment appointment,
+    required Map<String, dynamic> vaccinationData,
+    String? vetNotes,
+  }) async {
+    try {
+      print('>>> Starting vaccination service completion...');
+
+      // Step 1: Update appointment status
+      final updatedAppointment = appointment.copyWith(
+        status: 'completed',
+        serviceCompletedAt: DateTime.now(),
+        diagnosis: 'Vaccination: ${vaccinationData['vaccineType']}',
+        treatment: 'Administered ${vaccinationData['vaccineName']}',
+        prescription: vaccinationData['batchNumber'] != null
+            ? 'Batch: ${vaccinationData['batchNumber']}'
+            : null,
+        vetNotes: vetNotes ?? 'Vaccination completed successfully',
+        updatedAt: DateTime.now(),
+      );
+
+      await updateFullAppointment(updatedAppointment);
+      print('>>> Appointment updated to completed');
+
+      // Step 2: Create medical record
+      final user = await authRepository.getUser();
+      if (user != null) {
+        final medicalRecord =
+            MedicalRecord.fromAppointment(updatedAppointment, user.$id);
+        await authRepository.createMedicalRecord(medicalRecord);
+        print('>>> Medical record created');
+      }
+
+      // Step 3: Create vaccination record
+      final vaccination = Vaccination(
+        petId: appointment.petId,
+        clinicId: appointment.clinicId,
+        vaccineType: vaccinationData['vaccineType'],
+        vaccineName: vaccinationData['vaccineName'],
+        dateGiven: appointment.serviceCompletedAt ?? DateTime.now(),
+        nextDueDate: vaccinationData['nextDueDate'],
+        veterinarianName: vaccinationData['veterinarianName'],
+        veterinarianId: user?.$id,
+        batchNumber: vaccinationData['batchNumber'],
+        manufacturer: vaccinationData['manufacturer'],
+        notes: vaccinationData['notes'],
+        isBooster: vaccinationData['isBooster'] ?? false,
+      );
+
+      await authRepository.createVaccination(vaccination);
+      print('>>> Vaccination record created');
+
+      Get.snackbar(
+        "Success",
+        "Vaccination completed! Records created for ${getPetName(appointment.petId)}",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (e) {
+      print('>>> Error completing vaccination service: $e');
+      Get.snackbar(
+        "Error",
+        "Failed to complete vaccination: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      rethrow;
+    }
+  }
+
+  // ============= DIAGNOSTIC METHOD =============
+
+  /// Check for appointments with missing medical records
+  Future<void> diagnoseMissingMedicalRecords() async {
+    try {
+      print('>>> ============================================');
+      print('>>> DIAGNOSING MISSING MEDICAL RECORDS');
+      print('>>> ============================================');
+
+      final completedAppointments =
+          appointments.where((apt) => apt.status == 'completed').toList();
+
+      print(
+          '>>> Total completed appointments: ${completedAppointments.length}');
+
+      int missingRecords = 0;
+      int emptyDiagnosis = 0;
+      int emptyTreatment = 0;
+
+      for (var apt in completedAppointments) {
+        bool hasMissingData = false;
+
+        if (apt.diagnosis == null || apt.diagnosis!.isEmpty) {
+          emptyDiagnosis++;
+          hasMissingData = true;
+        }
+
+        if (apt.treatment == null || apt.treatment!.isEmpty) {
+          emptyTreatment++;
+          hasMissingData = true;
+        }
+
+        if (hasMissingData) {
+          missingRecords++;
+          print('>>> Missing data in appointment: ${apt.documentId}');
+          print('>>>   - Pet: ${getPetName(apt.petId)}');
+          print('>>>   - Service: ${apt.service}');
+          print('>>>   - Completed: ${apt.serviceCompletedAt}');
+          print('>>>   - Diagnosis: ${apt.diagnosis ?? "EMPTY"}');
+          print('>>>   - Treatment: ${apt.treatment ?? "EMPTY"}');
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> DIAGNOSIS COMPLETE');
+      print('>>> Appointments with missing data: $missingRecords');
+      print('>>> Missing diagnosis: $emptyDiagnosis');
+      print('>>> Missing treatment: $emptyTreatment');
+      print('>>> ============================================');
+
+      if (missingRecords > 0) {
+        Get.dialog(
+          AlertDialog(
+            title: const Text('Missing Medical Records Detected'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    'Found $missingRecords completed appointments with missing or incomplete medical data.'),
+                const SizedBox(height: 16),
+                Text('• $emptyDiagnosis appointments missing diagnosis'),
+                Text('• $emptyTreatment appointments missing treatment'),
+                const SizedBox(height: 16),
+                const Text(
+                  'These appointments were marked as completed but may not have proper medical records.',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        Get.snackbar(
+          "Diagnosis Complete",
+          "All completed appointments have proper medical data",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print('>>> Error diagnosing medical records: $e');
+    }
+  }
 }

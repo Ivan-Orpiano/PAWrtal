@@ -29,6 +29,7 @@ import 'package:capstone_app/web/admin_web/components/staffs/staff_main_wrapper.
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -64,8 +65,8 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.adminHome,
-      page: () => kIsWeb ? const WebAdminHomePage() : const AdminHomePage(),
-      binding: kIsWeb ? WebAdminHomeBinding() : AdminHomeBinding(),
+      page: () => kIsWeb ? const WebAdminHomePage() : const WebAdminHomePage(),
+      binding: kIsWeb ? WebAdminHomeBinding() : WebAdminHomeBinding(),
     ),
     GetPage(
       name: _Paths.superAdminHome,
@@ -91,9 +92,14 @@ class AppPages {
       }),
     ),
     GetPage(
-          name: '/super-admin/clinics',
-          page: () => const SuperAdminVetClinicDashboard(),
-          binding: SuperAdminHomeBinding(),
-        ),
+      name: '/super-admin/clinics',
+      page: () => const SuperAdminVetClinicDashboard(),
+      binding: SuperAdminHomeBinding(),
+    ),
+
+    GetPage(
+      name: '/super-admin/users',
+      page: () => const SuperAdminUserManagementScreen(),
+    ),
   ];
 }

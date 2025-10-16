@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart' as models;
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -13,6 +15,7 @@ import 'package:get/get.dart';
 class AdminMessagingController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final UserSessionService _userSession = Get.find<UserSessionService>();
+  late final NotificationController _notificationController;
 
   // Observable variables
   final conversations = <Conversation>[].obs;
@@ -51,6 +54,16 @@ class AdminMessagingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    if (!Get.isRegistered<NotificationController>()) {
+      _notificationController = Get.put(NotificationController(
+        authRepository: _authRepository,
+        session: _userSession,
+      ));
+    } else {
+      _notificationController = Get.find<NotificationController>();
+    }
+
     setUserOnline();
   }
 
@@ -196,12 +209,17 @@ class AdminMessagingController extends GetxController {
         return;
       }
 
+      // Load initial data
       await Future.wait([
         loadClinicConversations(clinicId),
         initializeConversationStarters(clinicId),
       ]);
 
+      // CRITICAL: Subscribe to real-time updates for the conversation list
+      // This ensures the list updates even when not in a specific conversation
+      print('>>> Setting up real-time subscriptions...');
       subscribeToClinicConversationUpdates(clinicId);
+      print('>>> Real-time subscriptions active');
 
       print('Admin messaging initialized successfully');
     } catch (e) {
@@ -364,6 +382,8 @@ class AdminMessagingController extends GetxController {
         attachmentUrl: attachmentUrl,
       );
 
+      await _createMessageNotificationForUser(sentMessage, messageText);
+
       // Update conversation in local list - admin sent message so their unread count stays 0
       // The user's unread count will be incremented by the server
       final updatedConversation = currentConversation.value!.copyWith(
@@ -387,6 +407,42 @@ class AdminMessagingController extends GetxController {
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isSendingMessage.value = false;
+    }
+  }
+
+  Future<void> _createMessageNotificationForUser(
+      Message message, String messageText) async {
+    try {
+      if (currentConversation.value == null) return;
+
+      // Get admin/clinic name for the notification
+      final adminName = _userSession.userName.isNotEmpty
+          ? _userSession.userName
+          : 'Clinic Staff';
+
+      // Create notification for the user
+      final notification = NotificationModel.newMessage(
+        clinicId: currentConversation.value!.userId, // User as recipient
+        conversationId: currentConversation.value!.documentId!,
+        messageId: message.documentId!,
+        userId: currentConversation.value!.userId,
+        senderName: adminName,
+        messagePreview: messageText.length > 50
+            ? '${messageText.substring(0, 50)}...'
+            : messageText,
+      );
+
+      // Update the notification to be for user instead of admin
+      final userNotification = notification.copyWith(
+        recipientId: currentConversation.value!.userId,
+        recipientType: 'user',
+      );
+
+      await _authRepository.createNotification(userNotification);
+      print(
+          'Created message notification for user: ${currentConversation.value!.userId}');
+    } catch (e) {
+      print('Error creating message notification for user: $e');
     }
   }
 
@@ -547,73 +603,217 @@ class AdminMessagingController extends GetxController {
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToClinicConversationUpdates(String clinicId) {
+    print('>>> ============================================');
+    print('>>> SUBSCRIBING TO CLINIC CONVERSATIONS');
+    print('>>> Clinic ID: $clinicId');
+    print('>>> ============================================');
+
+    // Cancel any existing subscription first
     _conversationSubscription?.cancel();
 
-    // Subscribe to conversation updates for this clinic
-    _conversationSubscription = _authRepository
-        .subscribeToConversations(
-            clinicId) // This should be modified to handle clinic conversations
-        .listen((realtimeMessage) {
-      print('Real-time clinic conversation event: ${realtimeMessage.events}');
+    // Subscribe to ALL conversation changes for this clinic
+    _conversationSubscription =
+        _authRepository.subscribeToConversations(clinicId).listen(
+      (realtimeMessage) {
+        print('>>> ============================================');
+        print('>>> REAL-TIME EVENT RECEIVED');
+        print('>>> Event: ${realtimeMessage.events}');
+        print('>>> ============================================');
 
-      try {
-        final conversationData = realtimeMessage.payload;
-        final updatedConversation = Conversation.fromMap(conversationData);
-        final conversationWithId =
-            updatedConversation.copyWith(documentId: conversationData['\$id']);
+        try {
+          final conversationData = realtimeMessage.payload;
+          print('>>> Conversation data: $conversationData');
 
-        // Only process conversations for this clinic
-        if (conversationWithId.clinicId == clinicId) {
-          if (realtimeMessage.events
-              .contains('databases.*.collections.*.documents.*.update')) {
-            _handleConversationUpdate(conversationWithId);
-          } else if (realtimeMessage.events
-              .contains('databases.*.collections.*.documents.*.create')) {
-            _handleNewConversation(conversationWithId);
+          final updatedConversation = Conversation.fromMap(conversationData);
+          final conversationWithId = updatedConversation.copyWith(
+            documentId: conversationData['\$id'],
+          );
+
+          print('>>> Conversation ID: ${conversationWithId.documentId}');
+          print('>>> Clinic ID: ${conversationWithId.clinicId}');
+          print('>>> User Unread: ${conversationWithId.userUnreadCount}');
+          print('>>> Clinic Unread: ${conversationWithId.clinicUnreadCount}');
+
+          // Only process conversations for this clinic
+          if (conversationWithId.clinicId == clinicId) {
+            print('>>> ✓ Conversation belongs to this clinic - processing...');
+
+            if (realtimeMessage.events
+                .contains('databases.*.collections.*.documents.*.update')) {
+              print('>>> Update event detected');
+              _handleConversationUpdate(conversationWithId);
+            } else if (realtimeMessage.events
+                .contains('databases.*.collections.*.documents.*.create')) {
+              print('>>> Create event detected');
+              _handleNewConversation(conversationWithId);
+            }
+
+            print('>>> ✓ Conversation list updated successfully');
+            print('>>> Total conversations: ${conversations.length}');
+          } else {
+            print(
+                '>>> ✗ Conversation does not belong to this clinic - skipping');
           }
+        } catch (e) {
+          print('>>> ============================================');
+          print('>>> ERROR processing conversation update: $e');
+          print('>>> ============================================');
         }
-      } catch (e) {
-        print('Error processing clinic conversation update: $e');
-      }
-    });
+
+        print('>>> ============================================');
+      },
+      onError: (error) {
+        print('>>> ============================================');
+        print('>>> SUBSCRIPTION ERROR: $error');
+        print('>>> ============================================');
+      },
+    );
+
+    print('>>> Real-time subscription established successfully');
+    print('>>> Listening for conversation updates...');
+    print('>>> ============================================');
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
-    final index = conversations
-        .indexWhere((c) => c.documentId == updatedConversation.documentId);
+    print('>>> _handleConversationUpdate called');
+    print('>>> Conversation: ${updatedConversation.documentId}');
+    print('>>> Last message: ${updatedConversation.lastMessageText}');
+
+    final index = conversations.indexWhere(
+      (c) => c.documentId == updatedConversation.documentId,
+    );
 
     if (index != -1) {
+      print('>>> Found existing conversation at index: $index');
+
       // Check if this is the current conversation the admin is viewing
       final isCurrentConversation = currentConversation.value?.documentId ==
           updatedConversation.documentId;
 
       if (isCurrentConversation) {
+        print(
+            '>>> This is the current conversation - keeping clinic unread at 0');
         // If admin is currently viewing this conversation, reset THEIR unread count to 0
-        // but keep the user's unread count as is
         final resetClinicUnread =
             updatedConversation.copyWith(clinicUnreadCount: 0);
         conversations[index] = resetClinicUnread;
         currentConversation.value = resetClinicUnread;
       } else {
+        print('>>> Not current conversation - using actual unread counts');
+        print(
+            '>>> Clinic unread count: ${updatedConversation.clinicUnreadCount}');
         // If admin is not viewing this conversation, use the actual unread counts from server
         conversations[index] = updatedConversation;
+
+        if (updatedConversation.clinicUnreadCount > 0 &&
+            updatedConversation.lastMessageText != null) {
+          _createMessageNotificationForAdmin(updatedConversation);
+        }
       }
 
-      // Move updated conversation to top if it has new messages for the clinic and it's not already at the top
+      // Move updated conversation to top if it has new messages and it's not already at the top
       if (updatedConversation.clinicUnreadCount > 0 && index != 0) {
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
       }
+    } else {
+      print('>>> Conversation not found in list - adding as new');
+      // If conversation doesn't exist, add it
+      _handleNewConversation(updatedConversation);
+    }
+  }
+
+  Future<void> _createMessageNotificationForAdmin(
+      Conversation conversation) async {
+    try {
+      // Only create notification if the message is FROM a user TO the admin
+      // Check the last message to see who sent it
+      final messages = await _authRepository.getConversationMessages(
+        conversation.documentId!,
+        limit: 1,
+      );
+
+      if (messages.isNotEmpty) {
+        final lastMessage = messages.first;
+
+        // Only notify admin if the message was sent by a user (not by admin)
+        if (lastMessage.senderType == 'user') {
+          final userData = await _getUserData(conversation.userId);
+
+          final notification = NotificationModel.newMessage(
+            clinicId: conversation.clinicId,
+            conversationId: conversation.documentId!,
+            messageId: lastMessage.documentId!,
+            userId: conversation.userId,
+            senderName: userData['name'],
+            messagePreview: conversation.lastMessageText!,
+          );
+
+          await _authRepository.createNotification(notification);
+          print(
+              'Created message notification for admin from user: ${userData['name']}');
+        }
+      }
+    } catch (e) {
+      print('Error creating message notification for admin: $e');
     }
   }
 
   void _handleNewConversation(Conversation newConversation) {
+    print('>>> _handleNewConversation called');
+    print('>>> New conversation ID: ${newConversation.documentId}');
+
     // Check if conversation already exists
     final exists =
         conversations.any((c) => c.documentId == newConversation.documentId);
+
     if (!exists) {
+      print('>>> Adding new conversation to list at position 0');
       conversations.insert(0, newConversation);
+      _createNewConversationNotification(newConversation);
+      print('>>> New conversation added successfully');
+      print('>>> Total conversations: ${conversations.length}');
+    } else {
+      print('>>> Conversation already exists - skipping');
     }
+  }
+
+  Future<void> _createNewConversationNotification(
+      Conversation conversation) async {
+    try {
+      // Get user data for notification
+      final userData = await _getUserData(conversation.userId);
+
+      await _notificationController.createNotification(
+        NotificationModel(
+          recipientId: conversation.clinicId,
+          recipientType: 'admin',
+          type: NotificationType.newMessage,
+          title: 'New Conversation Started',
+          message: '${userData['name']} started a new conversation',
+          conversationId: conversation.documentId,
+          userId: conversation.userId,
+          actionUrl: '/messages?conversation=${conversation.documentId}',
+        ),
+      );
+    } catch (e) {
+      print('Error creating new conversation notification: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> _getUserData(String userId) async {
+    try {
+      final userDoc = await _authRepository.getUserById(userId);
+      if (userDoc != null) {
+        return {
+          'name': userDoc.data['name'] ?? 'Unknown User',
+          'email': userDoc.data['email'] ?? '',
+        };
+      }
+    } catch (e) {
+      print('Error getting user data: $e');
+    }
+    return {'name': 'Unknown User', 'email': ''};
   }
 
   void subscribeToMessages(String conversationId) {

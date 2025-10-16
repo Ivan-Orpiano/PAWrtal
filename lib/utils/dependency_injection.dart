@@ -1,4 +1,6 @@
 // lib/init/dependency_injection.dart
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
+import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
 import 'package:get/get.dart';
@@ -15,5 +17,10 @@ Future<void> initializeDependencies() async {
   Get.put(AuthRepository(AppWriteProvider()));
   Get.put(DashboardController());
   Get.put(MessagingController());
+  Get.put(AdminMessagingController());
+  Get.put(NotificationController(
+     authRepository: Get.find<AuthRepository>(),
+     session: Get.find<UserSessionService>(),
+   ));
   // Admin messaging controller will be initialized when needed
 }

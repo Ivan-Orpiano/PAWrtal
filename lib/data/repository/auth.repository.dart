@@ -3,6 +3,7 @@ import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
@@ -18,6 +19,9 @@ import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 
 import 'package:capstone_app/data/models/id_verification_model.dart';
+import 'package:capstone_app/data/models/vaccination_model.dart';
+
+import '../models/feedback_and_report_model.dart';
 
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
@@ -44,7 +48,6 @@ class AuthRepository {
         final staffLoginResult =
             await appWriteProvider.staffLogin(email, password);
 
-        // Return the result directly - role is already included from database
         return staffLoginResult;
       }
 
@@ -52,7 +55,6 @@ class AuthRepository {
       print('Regular user login...');
       final result = await appWriteProvider.login(map);
 
-      // The result already has the role from the provider
       return result;
     } catch (e) {
       print('Repository login error: $e');
@@ -89,12 +91,17 @@ class AuthRepository {
       appWriteProvider.updateClinic(documentId, data);
 
   Future<List<Clinic>> getAllClinics() async {
-    final docs = await appWriteProvider.getAllClinics();
-    return docs.map((doc) {
-      final clinic = Clinic.fromMap(doc.data);
-      clinic.documentId = doc.$id;
-      return clinic;
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getAllClinics();
+      return docs.map((doc) {
+        final clinic = Clinic.fromMap(doc.data);
+        clinic.documentId = doc.$id;
+        return clinic;
+      }).toList();
+    } catch (e) {
+      print('Error getting all clinics: $e');
+      return [];
+    }
   }
 
   Future<List<Appointment>> getClinicAppointments(String clinicId) async {
@@ -179,26 +186,42 @@ class AuthRepository {
   }
 
   Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
-    final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
-    return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+    try {
+      final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
+      return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+    } catch (e) {
+      print('Error getting pet medical records: $e');
+      return [];
+    }
   }
 
   Future<List<MedicalRecord>> getClinicMedicalRecords(String clinicId) async {
-    final rawRecords = await appWriteProvider.getClinicMedicalRecords(clinicId);
-    return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+    try {
+      final rawRecords =
+          await appWriteProvider.getClinicMedicalRecords(clinicId);
+      return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+    } catch (e) {
+      print('Error getting clinic medical records: $e');
+      return [];
+    }
   }
 
   Future<models.Document> createClinicSettings(ClinicSettings clinicSettings) =>
       appWriteProvider.createClinicSettings(clinicSettings.toMap());
 
   Future<ClinicSettings?> getClinicSettingsByClinicId(String clinicId) async {
-    final doc = await appWriteProvider.getClinicSettingsByClinicId(clinicId);
-    if (doc != null) {
-      final settings = ClinicSettings.fromMap(doc.data);
-      settings.documentId = doc.$id;
-      return settings;
+    try {
+      final doc = await appWriteProvider.getClinicSettingsByClinicId(clinicId);
+      if (doc != null) {
+        final settings = ClinicSettings.fromMap(doc.data);
+        settings.documentId = doc.$id;
+        return settings;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting clinic settings: $e');
+      return null;
     }
-    return null;
   }
 
   Future<models.Document> updateClinicSettings(ClinicSettings clinicSettings) =>
@@ -220,10 +243,16 @@ class AuthRepository {
   String getImageUrl(String fileId) => appWriteProvider.getImageUrl(fileId);
 
   Future<ClinicSettings> initializeClinicSettings(String clinicId) async {
-    final defaultSettings = ClinicSettings(clinicId: clinicId);
-    final doc = await createClinicSettings(defaultSettings);
-    defaultSettings.documentId = doc.$id;
-    return defaultSettings;
+    try {
+      final defaultSettings = ClinicSettings(clinicId: clinicId);
+      final doc = await createClinicSettings(defaultSettings);
+      defaultSettings.documentId = doc.$id;
+      print('>>> Clinic settings initialized successfully');
+      return defaultSettings;
+    } catch (e) {
+      print('Error initializing clinic settings: $e');
+      rethrow;
+    }
   }
 
   Future<models.Document> createConversation(Conversation conversation) =>
@@ -231,30 +260,45 @@ class AuthRepository {
 
   Future<Conversation?> getOrCreateConversation(
       String userId, String clinicId) async {
-    final doc =
-        await appWriteProvider.getOrCreateConversation(userId, clinicId);
-    if (doc != null) {
-      var conversation = Conversation.fromMap(doc.data);
-      conversation = conversation.copyWith(documentId: doc.$id);
-      return conversation;
+    try {
+      final doc =
+          await appWriteProvider.getOrCreateConversation(userId, clinicId);
+      if (doc != null) {
+        var conversation = Conversation.fromMap(doc.data);
+        conversation = conversation.copyWith(documentId: doc.$id);
+        return conversation;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting or creating conversation: $e');
+      return null;
     }
-    return null;
   }
 
   Future<List<Conversation>> getUserConversations(String userId) async {
-    final docs = await appWriteProvider.getUserConversations(userId);
-    return docs.map((doc) {
-      final conversation = Conversation.fromMap(doc.data);
-      return conversation.copyWith(documentId: doc.$id);
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getUserConversations(userId);
+      return docs.map((doc) {
+        final conversation = Conversation.fromMap(doc.data);
+        return conversation.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting user conversations: $e');
+      return [];
+    }
   }
 
   Future<List<Conversation>> getClinicConversations(String clinicId) async {
-    final docs = await appWriteProvider.getClinicConversations(clinicId);
-    return docs.map((doc) {
-      final conversation = Conversation.fromMap(doc.data);
-      return conversation.copyWith(documentId: doc.$id);
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getClinicConversations(clinicId);
+      return docs.map((doc) {
+        final conversation = Conversation.fromMap(doc.data);
+        return conversation.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic conversations: $e');
+      return [];
+    }
   }
 
   Future<models.Document> updateConversation(Conversation conversation) =>
@@ -268,12 +312,19 @@ class AuthRepository {
 
   Future<List<Message>> getConversationMessages(String conversationId,
       {int limit = 50, String? lastMessageId}) async {
-    final docs = await appWriteProvider.getConversationMessages(conversationId,
-        limit: limit, lastMessageId: lastMessageId);
-    return docs.map((doc) {
-      final message = Message.fromMap(doc.data);
-      return message.copyWith(documentId: doc.$id);
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getConversationMessages(
+          conversationId,
+          limit: limit,
+          lastMessageId: lastMessageId);
+      return docs.map((doc) {
+        final message = Message.fromMap(doc.data);
+        return message.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting conversation messages: $e');
+      return [];
+    }
   }
 
   Future<models.Document> updateMessage(Message message) =>
@@ -320,11 +371,17 @@ class AuthRepository {
 
   Future<List<ConversationStarter>> getClinicConversationStarters(
       String clinicId) async {
-    final docs = await appWriteProvider.getClinicConversationStarters(clinicId);
-    return docs.map((doc) {
-      final starter = ConversationStarter.fromMap(doc.data);
-      return starter.copyWith(documentId: doc.$id);
-    }).toList();
+    try {
+      final docs =
+          await appWriteProvider.getClinicConversationStarters(clinicId);
+      return docs.map((doc) {
+        final starter = ConversationStarter.fromMap(doc.data);
+        return starter.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic conversation starters: $e');
+      return [];
+    }
   }
 
   Future<models.Document> updateConversationStarter(
@@ -344,12 +401,17 @@ class AuthRepository {
       appWriteProvider.createOrUpdateUserStatus(status.userId, status.toMap());
 
   Future<UserStatus?> getUserStatus(String userId) async {
-    final doc = await appWriteProvider.getUserStatus(userId);
-    if (doc != null) {
-      final status = UserStatus.fromMap(doc.data);
-      return status.copyWith(documentId: doc.$id);
+    try {
+      final doc = await appWriteProvider.getUserStatus(userId);
+      if (doc != null) {
+        final status = UserStatus.fromMap(doc.data);
+        return status.copyWith(documentId: doc.$id);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user status: $e');
+      return null;
     }
-    return null;
   }
 
   Future<void> setUserOnline(String userId) =>
@@ -403,82 +465,87 @@ class AuthRepository {
     return appWriteProvider.getOccupiedTimeSlots(clinicId, date);
   }
 
-  // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
-
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
-    required String email,
+    required String username,
     required String password,
     required String clinicId,
     required List<String> authorities,
     String? department,
     String? image,
     String? phone,
+    String? email,
     String? createdBy,
   }) {
     return appWriteProvider.createStaffAccount(
       name: name,
-      email: email,
+      username: username,
       password: password,
       clinicId: clinicId,
       authorities: authorities,
       department: department,
       image: image,
       phone: phone,
+      email: email,
       createdBy: createdBy,
     );
   }
 
   Future<List<Staff>> getClinicStaff(String clinicId) async {
-    final docs = await appWriteProvider.getClinicStaff(clinicId);
-    return docs.map((doc) {
-      final staff = Staff.fromMap(doc.data);
-      staff.documentId = doc.$id;
-      return staff;
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getClinicStaff(clinicId);
+      return docs.map((doc) {
+        final staff = Staff.fromMap(doc.data);
+        staff.documentId = doc.$id;
+        return staff;
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic staff: $e');
+      return [];
+    }
   }
 
   Future<Staff?> getStaffByUserId(String userId) async {
-    print('>>> AUTH REPO: Getting staff by user ID: $userId');
-
-    final doc = await appWriteProvider.getStaffByUserId(userId);
-    if (doc != null) {
-      final staff = Staff.fromMap(doc.data);
-      staff.documentId = doc.$id;
-
-      print('>>> AUTH REPO: Staff found');
-      print('>>> Staff Role: ${staff.role}');
-      print('>>> Staff Name: ${staff.name}');
-
-      return staff;
+    try {
+      print('>>> AUTH REPO: Getting staff by user ID: $userId');
+      final doc = await appWriteProvider.getStaffByUserId(userId);
+      if (doc != null) {
+        final staff = Staff.fromMap(doc.data);
+        staff.documentId = doc.$id;
+        print('>>> AUTH REPO: Staff found');
+        print('>>> Staff Role: ${staff.role}');
+        print('>>> Staff Name: ${staff.name}');
+        return staff;
+      }
+      print('>>> AUTH REPO: No staff found');
+      return null;
+    } catch (e) {
+      print('Error getting staff by user ID: $e');
+      return null;
     }
-
-    print('>>> AUTH REPO: No staff found');
-    return null;
   }
 
-  /// NEW: Get staff by email (fallback method)
-  Future<Staff?> getStaffByEmail(String email) async {
-    print('>>> AUTH REPO: Getting staff by email: $email');
-
-    final doc = await appWriteProvider.getStaffByEmail(email);
-    if (doc != null) {
-      final staff = Staff.fromMap(doc.data);
-      staff.documentId = doc.$id;
-
-      print('>>> AUTH REPO: Staff found by email');
-      print('>>> Staff Role: ${staff.role}');
-      print('>>> Staff Name: ${staff.name}');
-      print('>>> Staff UserId: ${staff.userId}');
-
-      return staff;
+  Future<Staff?> getStaffByUsername(String username) async {
+    try {
+      print('>>> AUTH REPO: Getting staff by username: $username');
+      final doc = await appWriteProvider.getStaffByUsername(username);
+      if (doc != null) {
+        final staff = Staff.fromMap(doc.data);
+        staff.documentId = doc.$id;
+        print('>>> AUTH REPO: Staff found by username');
+        print('>>> Staff Role: ${staff.role}');
+        print('>>> Staff Name: ${staff.name}');
+        print('>>> Staff Username: ${staff.username}');
+        return staff;
+      }
+      print('>>> AUTH REPO: No staff found by username');
+      return null;
+    } catch (e) {
+      print('Error getting staff by username: $e');
+      return null;
     }
-
-    print('>>> AUTH REPO: No staff found by email');
-    return null;
   }
 
-  /// NEW: Fix userId mismatch in staff record
   Future<void> fixStaffUserId(String staffDocId, String correctUserId) {
     return appWriteProvider.fixStaffUserId(staffDocId, correctUserId);
   }
@@ -491,7 +558,13 @@ class AuthRepository {
     String staffDocumentId,
     List<String> authorities,
   ) async {
-    await appWriteProvider.updateStaffAuthorities(staffDocumentId, authorities);
+    try {
+      await appWriteProvider.updateStaffAuthorities(
+          staffDocumentId, authorities);
+    } catch (e) {
+      print('Error updating staff authorities: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateStaffInfo({
@@ -499,17 +572,23 @@ class AuthRepository {
     String? name,
     String? department,
     String? image,
-    String? phone, // Add this
+    String? email,
+    String? phone,
     List<String>? authorities,
   }) async {
-    await appWriteProvider.updateStaffInfo(
-      staffDocumentId: staffDocumentId,
-      name: name,
-      department: department,
-      image: image,
-      phone: phone, // Add this
-      authorities: authorities,
-    );
+    try {
+      await appWriteProvider.updateStaffInfo(
+        staffDocumentId: staffDocumentId,
+        name: name,
+        department: department,
+        image: image,
+        phone: phone,
+        authorities: authorities,
+      );
+    } catch (e) {
+      print('Error updating staff info: $e');
+      rethrow;
+    }
   }
 
   Future<void> deactivateStaffAccount(String staffDocumentId, String userId) {
@@ -520,26 +599,8 @@ class AuthRepository {
     return appWriteProvider.deleteStaffAccount(staffDocumentId);
   }
 
-  Future<void> updateClinicSettingsEmailTemplate(
-    String clinicSettingsDocumentId,
-    String newTemplate,
-  ) async {
-    await appWriteProvider.updateClinicSettingsEmailTemplate(
-      clinicSettingsDocumentId,
-      newTemplate,
-    );
-  }
-
-  Future<void> updateAllStaffEmailsForClinic(
-    String clinicId,
-    String newTemplate,
-  ) {
-    return appWriteProvider.updateAllStaffEmailsForClinic(
-        clinicId, newTemplate);
-  }
-
-  Future<Map<String, dynamic>> staffLogin(String email, String password) {
-    return appWriteProvider.staffLogin(email, password);
+  Future<Map<String, dynamic>> staffLogin(String username, String password) {
+    return appWriteProvider.staffLogin(username, password);
   }
 
   Future<bool> checkStaffAuthority(String userId, String authority) {
@@ -549,54 +610,57 @@ class AuthRepository {
   Future<Map<String, int>> getClinicStaffStats(String clinicId) {
     return appWriteProvider.getClinicStaffStats(clinicId);
   }
-  // Add these methods to your AuthRepository class
 
-  /// Delete clinic completely with all associated data
   Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) {
     return appWriteProvider.deleteClinicCompletely(clinicId);
   }
 
-  /// Get clinic with settings
   Future<Map<String, dynamic>?> getClinicWithSettings(String clinicId) {
     return appWriteProvider.getClinicWithSettings(clinicId);
   }
 
-  /// Subscribe to clinic changes (real-time)
   Stream<RealtimeMessage> subscribeToClinicChanges() {
     return appWriteProvider.subscribeToClinicChanges();
   }
 
-  /// Subscribe to clinic settings changes (real-time)
   Stream<RealtimeMessage> subscribeToClinicSettingsChanges() {
     return appWriteProvider.subscribeToClinicSettingsChanges();
   }
-
-// ============= ID VERIFICATION METHODS =============
 
   Future<Document> createIdVerification(IdVerification idVerification) {
     return appWriteProvider.createIdVerification(idVerification.toMap());
   }
 
   Future<IdVerification?> getIdVerificationByUserId(String userId) async {
-    final doc = await appWriteProvider.getIdVerificationByUserId(userId);
-    if (doc != null) {
-      final verification = IdVerification.fromMap(doc.data);
-      verification.documentId = doc.$id;
-      return verification;
+    try {
+      final doc = await appWriteProvider.getIdVerificationByUserId(userId);
+      if (doc != null) {
+        final verification = IdVerification.fromMap(doc.data);
+        verification.documentId = doc.$id;
+        return verification;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting ID verification: $e');
+      return null;
     }
-    return null;
   }
 
   Future<IdVerification?> getIdVerificationBySubmissionId(
       String submissionId) async {
-    final doc =
-        await appWriteProvider.getIdVerificationBySubmissionId(submissionId);
-    if (doc != null) {
-      final verification = IdVerification.fromMap(doc.data);
-      verification.documentId = doc.$id;
-      return verification;
+    try {
+      final doc =
+          await appWriteProvider.getIdVerificationBySubmissionId(submissionId);
+      if (doc != null) {
+        final verification = IdVerification.fromMap(doc.data);
+        verification.documentId = doc.$id;
+        return verification;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting ID verification by submission: $e');
+      return null;
     }
-    return null;
   }
 
   Future<Document> updateIdVerification(IdVerification idVerification) {
@@ -628,149 +692,671 @@ class AuthRepository {
     return appWriteProvider.cleanupStuckVerifications(userId);
   }
 
-  /// Create a new rating and review
   Future<RatingAndReview> createRatingAndReview(RatingAndReview review) async {
-    final doc = await appWriteProvider.createRatingAndReview(review.toMap());
-    return review.copyWith(documentId: doc.$id);
+    try {
+      final doc = await appWriteProvider.createRatingAndReview(review.toMap());
+      return review.copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error creating rating and review: $e');
+      rethrow;
+    }
   }
 
-  /// Check if user has already reviewed an appointment
   Future<bool> hasUserReviewedAppointment(String appointmentId) {
     return appWriteProvider.hasUserReviewedAppointment(appointmentId);
   }
 
-  /// Get all reviews for a clinic
   Future<List<RatingAndReview>> getClinicReviews(
     String clinicId, {
     int limit = 50,
     String? lastDocumentId,
   }) async {
-    final docs = await appWriteProvider.getClinicReviews(
-      clinicId,
-      limit: limit,
-      lastDocumentId: lastDocumentId,
-    );
-
-    return docs.map((doc) {
-      final review = RatingAndReview.fromMap(doc.data);
-      return review.copyWith(documentId: doc.$id);
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getClinicReviews(
+        clinicId,
+        limit: limit,
+        lastDocumentId: lastDocumentId,
+      );
+      return docs.map((doc) {
+        final review = RatingAndReview.fromMap(doc.data);
+        return review.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic reviews: $e');
+      return [];
+    }
   }
 
-  /// Get reviews by a specific user
   Future<List<RatingAndReview>> getUserReviews(String userId) async {
-    final docs = await appWriteProvider.getUserReviews(userId);
-
-    return docs.map((doc) {
-      final review = RatingAndReview.fromMap(doc.data);
-      return review.copyWith(documentId: doc.$id);
-    }).toList();
+    try {
+      final docs = await appWriteProvider.getUserReviews(userId);
+      return docs.map((doc) {
+        final review = RatingAndReview.fromMap(doc.data);
+        return review.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting user reviews: $e');
+      return [];
+    }
   }
 
-  /// Get a specific review by appointment ID
   Future<RatingAndReview?> getReviewByAppointmentId(
       String appointmentId) async {
-    final doc = await appWriteProvider.getReviewByAppointmentId(appointmentId);
-
-    if (doc != null) {
-      final review = RatingAndReview.fromMap(doc.data);
-      return review.copyWith(documentId: doc.$id);
+    try {
+      final doc =
+          await appWriteProvider.getReviewByAppointmentId(appointmentId);
+      if (doc != null) {
+        final review = RatingAndReview.fromMap(doc.data);
+        return review.copyWith(documentId: doc.$id);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting review by appointment: $e');
+      return null;
     }
-
-    return null;
   }
 
-  /// Update an existing review
   Future<RatingAndReview> updateRatingAndReview(RatingAndReview review) async {
-    if (review.documentId == null) {
-      throw Exception('Cannot update review without documentId');
+    try {
+      if (review.documentId == null) {
+        throw Exception('Cannot update review without documentId');
+      }
+      final doc = await appWriteProvider.updateRatingAndReview(
+        review.documentId!,
+        review.toMap(),
+      );
+      return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error updating rating and review: $e');
+      rethrow;
     }
-
-    final doc = await appWriteProvider.updateRatingAndReview(
-      review.documentId!,
-      review.toMap(),
-    );
-
-    return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
   }
 
-  /// Delete a review
   Future<void> deleteRatingAndReview(
       String documentId, List<String> imageIds) async {
-    // Delete review images first
-    if (imageIds.isNotEmpty) {
-      await appWriteProvider.deleteReviewImages(imageIds);
+    try {
+      if (imageIds.isNotEmpty) {
+        await appWriteProvider.deleteReviewImages(imageIds);
+      }
+      await appWriteProvider.deleteRatingAndReview(documentId);
+    } catch (e) {
+      print('Error deleting rating and review: $e');
+      rethrow;
     }
-
-    // Then delete the review document
-    await appWriteProvider.deleteRatingAndReview(documentId);
   }
 
-  /// Add clinic response to a review
   Future<RatingAndReview> addClinicResponse(
     String documentId,
     String response,
   ) async {
-    final doc = await appWriteProvider.addClinicResponse(documentId, response);
-    return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+    try {
+      final doc =
+          await appWriteProvider.addClinicResponse(documentId, response);
+      return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error adding clinic response: $e');
+      rethrow;
+    }
   }
 
-  /// Get clinic rating statistics
   Future<ClinicRatingStats> getClinicRatingStats(String clinicId) async {
-    final stats = await appWriteProvider.getClinicRatingStats(clinicId);
-
-    return ClinicRatingStats(
-      averageRating: stats['averageRating'],
-      totalReviews: stats['totalReviews'],
-      ratingDistribution: Map<int, int>.from(stats['ratingDistribution']),
-      reviewsWithText: stats['reviewsWithText'],
-      reviewsWithImages: stats['reviewsWithImages'],
-    );
+    try {
+      final stats = await appWriteProvider.getClinicRatingStats(clinicId);
+      return ClinicRatingStats(
+        averageRating: stats['averageRating'],
+        totalReviews: stats['totalReviews'],
+        ratingDistribution: Map<int, int>.from(stats['ratingDistribution']),
+        reviewsWithText: stats['reviewsWithText'],
+        reviewsWithImages: stats['reviewsWithImages'],
+      );
+    } catch (e) {
+      print('Error getting clinic rating stats: $e');
+      return ClinicRatingStats(
+        averageRating: 0.0,
+        totalReviews: 0,
+        ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+        reviewsWithText: 0,
+        reviewsWithImages: 0,
+      );
+    }
   }
 
-  /// Upload review images
   Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) {
     return appWriteProvider.uploadReviewImages(files);
   }
 
-  /// Delete review images
   Future<void> deleteReviewImages(List<String> fileIds) {
     return appWriteProvider.deleteReviewImages(fileIds);
   }
 
-  /// Subscribe to clinic reviews (real-time)
   Stream<RealtimeMessage> subscribeToClinicReviews(String clinicId) {
     return appWriteProvider.subscribeToClinicReviews(clinicId);
   }
 
-  /// Helper method to create review from appointment
-  Future<RatingAndReview> createReviewFromAppointment({
-    required Appointment appointment,
-    required String userName,
-    required double rating,
-    String? reviewText,
-    List<String> images = const [],
-  }) async {
-    // Check if already reviewed
-    final alreadyReviewed =
-        await hasUserReviewedAppointment(appointment.documentId!);
-    if (alreadyReviewed) {
-      throw Exception('This appointment has already been reviewed');
+  Future<Vaccination> createVaccination(Vaccination vaccination) async {
+    try {
+      final doc = await appWriteProvider.createVaccination(vaccination.toMap());
+      return vaccination.copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error creating vaccination: $e');
+      rethrow;
     }
+  }
 
-    // Create the review
-    final review = RatingAndReview(
-      userId: appointment.userId,
-      clinicId: appointment.clinicId,
-      appointmentId: appointment.documentId!,
-      rating: rating,
-      reviewText: reviewText,
-      images: images,
-      userName: userName,
-      petName: appointment.petId, // You might want to get actual pet name
-      serviceName: appointment.service,
-    );
+  Future<List<Vaccination>> getPetVaccinations(String petId) async {
+    try {
+      final rawVaccinations = await appWriteProvider.getPetVaccinations(petId);
+      return rawVaccinations.map((data) => Vaccination.fromMap(data)).toList();
+    } catch (e) {
+      print('Error getting pet vaccinations: $e');
+      return [];
+    }
+  }
 
-    return await createRatingAndReview(review);
+  Future<List<Vaccination>> getClinicVaccinations(String clinicId) async {
+    try {
+      final rawVaccinations =
+          await appWriteProvider.getClinicVaccinations(clinicId);
+      return rawVaccinations.map((data) => Vaccination.fromMap(data)).toList();
+    } catch (e) {
+      print('Error getting clinic vaccinations: $e');
+      return [];
+    }
+  }
+
+  Future<Vaccination> updateVaccination(Vaccination vaccination) async {
+    try {
+      if (vaccination.documentId == null) {
+        throw Exception('Cannot update vaccination without documentId');
+      }
+      final doc = await appWriteProvider.updateVaccination(
+        vaccination.documentId!,
+        vaccination.toMap(),
+      );
+      return Vaccination.fromMap(doc.data).copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error updating vaccination: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteVaccination(String documentId) async {
+    try {
+      await appWriteProvider.deleteVaccination(documentId);
+    } catch (e) {
+      print('Error deleting vaccination: $e');
+      rethrow;
+    }
+  }
+
+  Future<FeedbackAndReport> createFeedbackAndReport(
+      FeedbackAndReport feedback) async {
+    try {
+      final doc =
+          await appWriteProvider.createFeedbackAndReport(feedback.toMap());
+      return feedback.copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error creating feedback and report: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<FeedbackAndReport>> getAllFeedback({
+    FeedbackStatus? status,
+    Priority? priority,
+    int limit = 100,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(
+        status: status,
+        priority: priority,
+        limit: limit,
+      );
+      return docs.map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting all feedback: $e');
+      return [];
+    }
+  }
+
+  Future<List<FeedbackAndReport>> getUserFeedback(String userId) async {
+    try {
+      final docs = await appWriteProvider.getUserFeedback(userId);
+      return docs.map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting user feedback: $e');
+      return [];
+    }
+  }
+
+  Future<void> updateFeedbackStatus(String documentId, FeedbackStatus status) {
+    return appWriteProvider.updateFeedbackStatus(documentId, status);
+  }
+
+  Future<void> updateFeedbackPriority(String documentId, Priority priority) {
+    return appWriteProvider.updateFeedbackPriority(documentId, priority);
+  }
+
+  Future<void> addFeedbackReply(
+    String documentId,
+    String reply,
+    String adminName,
+  ) {
+    return appWriteProvider.addFeedbackReply(documentId, reply, adminName);
+  }
+
+  Future<void> archiveFeedback(String documentId, String archivedBy) {
+    return appWriteProvider.archiveFeedback(documentId, archivedBy);
+  }
+
+  Future<void> deleteFeedback(String documentId, List<String> attachmentIds) {
+    return appWriteProvider.deleteFeedback(documentId, attachmentIds);
+  }
+
+  Future<List<models.File>> uploadFeedbackAttachments(
+      List<PlatformFile> files) {
+    return appWriteProvider.uploadFeedbackAttachments(files);
+  }
+
+  Future<void> deleteFeedbackAttachments(List<String> fileIds) {
+    return appWriteProvider.deleteFeedbackAttachments(fileIds);
+  }
+
+  String getFeedbackAttachmentUrl(String fileId) {
+    return appWriteProvider.getFeedbackAttachmentUrl(fileId);
+  }
+
+  Stream<RealtimeMessage> subscribeToFeedbackChanges() {
+    return appWriteProvider.subscribeToFeedbackChanges();
+  }
+
+  Future<Map<String, int>> getFeedbackStatistics() {
+    return appWriteProvider.getFeedbackStatistics();
+  }
+
+  // ============= NOTIFICATION REPOSITORY METHODS =============
+
+  /// Create a new notification
+  Future<NotificationModel> createNotification(
+      NotificationModel notification) async {
+    try {
+      final doc =
+          await appWriteProvider.createNotification(notification.toMap());
+      return notification.copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error creating notification in repository: $e');
+      rethrow;
+    }
+  }
+
+  /// Get notifications for a specific recipient
+  Future<List<NotificationModel>> getNotifications({
+    required String recipientId,
+    required String recipientType,
+    String filter = 'all',
+    bool showArchived = false,
+    int limit = 20,
+    String? lastDocumentId,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getNotifications(
+        recipientId: recipientId,
+        recipientType: recipientType,
+        filter: filter,
+        showArchived: showArchived,
+        limit: limit,
+        lastDocumentId: lastDocumentId,
+      );
+
+      return docs.map((doc) {
+        final notification = NotificationModel.fromMap(doc.data);
+        return notification.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting notifications: $e');
+      return [];
+    }
+  }
+
+  /// Mark notification as read
+  Future<NotificationModel> markNotificationAsRead(String documentId) async {
+    try {
+      final doc = await appWriteProvider.markNotificationAsRead(documentId);
+      return NotificationModel.fromMap(doc.data).copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error marking notification as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark all notifications as read for a recipient
+  Future<void> markAllNotificationsAsRead({
+    required String recipientId,
+    required String recipientType,
+  }) async {
+    try {
+      await appWriteProvider.markAllNotificationsAsRead(
+        recipientId: recipientId,
+        recipientType: recipientType,
+      );
+    } catch (e) {
+      print('Error marking all notifications as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Archive notification
+  Future<NotificationModel> archiveNotification(String documentId) async {
+    try {
+      final doc = await appWriteProvider.archiveNotification(documentId);
+      return NotificationModel.fromMap(doc.data).copyWith(documentId: doc.$id);
+    } catch (e) {
+      print('Error archiving notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete notification
+  Future<void> deleteNotification(String documentId) async {
+    try {
+      await appWriteProvider.deleteNotification(documentId);
+    } catch (e) {
+      print('Error deleting notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadNotificationCount({
+    required String recipientId,
+    required String recipientType,
+  }) async {
+    try {
+      return await appWriteProvider.getUnreadNotificationCount(
+        recipientId: recipientId,
+        recipientType: recipientType,
+      );
+    } catch (e) {
+      print('Error getting unread notification count: $e');
+      return 0;
+    }
+  }
+
+  /// Subscribe to notifications real-time
+  Stream<RealtimeMessage> subscribeToNotifications(String recipientId) {
+    return appWriteProvider.subscribeToNotifications(recipientId);
+  }
+
+// ============= NOTIFICATION CREATION HELPERS =============
+
+  /// Create appointment notification
+  Future<void> createAppointmentNotification({
+    required String type,
+    required String appointmentId,
+    required String clinicId,
+    required String userId,
+    required String petName,
+    required String ownerName,
+    String? service,
+    DateTime? appointmentTime,
+    String? notes,
+  }) async {
+    try {
+      await appWriteProvider.createAppointmentNotification(
+        type: type,
+        appointmentId: appointmentId,
+        clinicId: clinicId,
+        userId: userId,
+        petName: petName,
+        ownerName: ownerName,
+        service: service,
+        appointmentTime: appointmentTime,
+        notes: notes,
+      );
+    } catch (e) {
+      print('Error creating appointment notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Create message notification
+  Future<void> createMessageNotification({
+    required String conversationId,
+    required String messageId,
+    required String senderId,
+    required String receiverId,
+    required String senderName,
+    required String messageText,
+    required String recipientType,
+  }) async {
+    try {
+      await appWriteProvider.createMessageNotification(
+        conversationId: conversationId,
+        messageId: messageId,
+        senderId: senderId,
+        receiverId: receiverId,
+        senderName: senderName,
+        messageText: messageText,
+        recipientType: recipientType,
+      );
+    } catch (e) {
+      print('Error creating message notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Get notifications by appointment ID
+  Future<List<NotificationModel>> getNotificationsByAppointmentId(
+      String appointmentId) async {
+    try {
+      // This would require a custom method in AppWriteProvider
+      // For now, we can get all notifications and filter
+      final allNotifications = await getNotifications(
+        recipientId: '', // This needs to be implemented properly
+        recipientType: 'admin',
+        limit: 100,
+      );
+
+      return allNotifications
+          .where((n) => n.appointmentId == appointmentId)
+          .toList();
+    } catch (e) {
+      print('Error getting notifications by appointment ID: $e');
+      return [];
+    }
+  }
+
+  /// Get notifications by conversation ID
+  Future<List<NotificationModel>> getNotificationsByConversationId(
+      String conversationId) async {
+    try {
+      // Similar to above - filter by conversationId
+      final allNotifications = await getNotifications(
+        recipientId: '', // This needs to be implemented properly
+        recipientType: 'admin',
+        limit: 100,
+      );
+
+      return allNotifications
+          .where((n) => n.conversationId == conversationId)
+          .toList();
+    } catch (e) {
+      print('Error getting notifications by conversation ID: $e');
+      return [];
+    }
+  }
+
+  /// Bulk archive notifications
+  Future<void> bulkArchiveNotifications(List<String> notificationIds) async {
+    try {
+      for (String id in notificationIds) {
+        await archiveNotification(id);
+      }
+    } catch (e) {
+      print('Error bulk archiving notifications: $e');
+      rethrow;
+    }
+  }
+
+  /// Bulk delete notifications
+  Future<void> bulkDeleteNotifications(List<String> notificationIds) async {
+    try {
+      for (String id in notificationIds) {
+        await deleteNotification(id);
+      }
+    } catch (e) {
+      print('Error bulk deleting notifications: $e');
+      rethrow;
+    }
+  }
+
+  /// Get notification statistics
+  Future<Map<String, int>> getNotificationStatistics({
+    required String recipientId,
+    required String recipientType,
+  }) async {
+    try {
+      final notifications = await getNotifications(
+        recipientId: recipientId,
+        recipientType: recipientType,
+        limit: 1000, // Get a large sample
+      );
+
+      final stats = <String, int>{
+        'total': notifications.length,
+        'unread': notifications.where((n) => !n.isRead).length,
+        'archived': notifications.where((n) => n.isArchived).length,
+        'appointments': notifications
+            .where((n) => n.type.toString().contains('appointment'))
+            .length,
+        'messages': notifications
+            .where((n) => n.type == NotificationType.newMessage)
+            .length,
+        'urgent': notifications
+            .where((n) => n.priority == NotificationPriority.urgent)
+            .length,
+        'high': notifications
+            .where((n) => n.priority == NotificationPriority.high)
+            .length,
+      };
+
+      return stats;
+    } catch (e) {
+      print('Error getting notification statistics: $e');
+      return {
+        'total': 0,
+        'unread': 0,
+        'archived': 0,
+        'appointments': 0,
+        'messages': 0,
+        'urgent': 0,
+        'high': 0,
+      };
+    }
+  }
+
+  /// Create system notification (for admin alerts, maintenance, etc.)
+  Future<void> createSystemNotification({
+    required String recipientId,
+    required String recipientType,
+    required String title,
+    required String message,
+    NotificationPriority priority = NotificationPriority.normal,
+    String? actionUrl,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final notification = NotificationModel(
+        recipientId: recipientId,
+        recipientType: recipientType,
+        type: NotificationType.systemAlert,
+        priority: priority,
+        title: title,
+        message: message,
+        actionUrl: actionUrl,
+        data: data,
+      );
+
+      await createNotification(notification);
+    } catch (e) {
+      print('Error creating system notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Create bulk notifications (for announcements, updates, etc.)
+  Future<void> createBulkNotifications({
+    required List<String> recipientIds,
+    required String recipientType,
+    required NotificationType type,
+    required String title,
+    required String message,
+    NotificationPriority priority = NotificationPriority.normal,
+    String? actionUrl,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      for (String recipientId in recipientIds) {
+        final notification = NotificationModel(
+          recipientId: recipientId,
+          recipientType: recipientType,
+          type: type,
+          priority: priority,
+          title: title,
+          message: message,
+          actionUrl: actionUrl,
+          data: data,
+        );
+
+        await createNotification(notification);
+
+        // Add small delay to prevent overwhelming the database
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    } catch (e) {
+      print('Error creating bulk notifications: $e');
+      rethrow;
+    }
+  }
+
+  /// Clean up old notifications (maintenance function)
+  Future<int> cleanupOldNotifications({
+    required String recipientId,
+    required String recipientType,
+    int maxAgeInDays = 90,
+    bool onlyArchived = true,
+  }) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: maxAgeInDays));
+
+      final notifications = await getNotifications(
+        recipientId: recipientId,
+        recipientType: recipientType,
+        showArchived: true,
+        limit: 1000,
+      );
+
+      int deletedCount = 0;
+
+      for (var notification in notifications) {
+        if (notification.createdAt.isBefore(cutoffDate)) {
+          if (!onlyArchived || notification.isArchived) {
+            await deleteNotification(notification.documentId!);
+            deletedCount++;
+          }
+        }
+      }
+
+      return deletedCount;
+    } catch (e) {
+      print('Error cleaning up old notifications: $e');
+      return 0;
+    }
   }
 }

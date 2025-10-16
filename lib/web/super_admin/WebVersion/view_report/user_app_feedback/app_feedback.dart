@@ -1,656 +1,138 @@
-import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
-import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
-import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
-import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
+import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/utils/logout_helper.dart';
 
-class UserFeedback {
-  final String id;
-  final String userId;
-  final String userName;
-  final String userEmail;
-  final String subject;
-  final String description;
-  final FeedbackType type;
-  final Priority priority;
-  final FeedbackStatus status;
-  final DateTime submittedAt;
-  final String? adminReply;
-  final DateTime? repliedAt;
-  final List<String> attachments;
-  final String appVersion;
-  final String deviceInfo;
+class AdminFeedbackManagement extends StatefulWidget {
+  const AdminFeedbackManagement({super.key});
 
-  UserFeedback({
-    required this.id,
-    required this.userId,
-    required this.userName,
-    required this.userEmail,
-    required this.subject,
-    required this.description,
-    required this.type,
-    required this.priority,
-    required this.status,
-    required this.submittedAt,
-    this.adminReply,
-    this.repliedAt,
-    this.attachments = const [],
-    required this.appVersion,
-    required this.deviceInfo,
-  });
-}
-
-enum FeedbackType { bug, feature, complaint, question, compliment }
-
-enum Priority { low, medium, high, critical }
-
-enum FeedbackStatus { pending, inProgress, resolved, closed }
-
-class ApplicationReport extends StatefulWidget {
-  const ApplicationReport({super.key});
   @override
-  State<ApplicationReport> createState() => _ApplicationReportState();
+  State<AdminFeedbackManagement> createState() => _AdminFeedbackManagementState();
 }
 
-class _ApplicationReportState extends State<ApplicationReport> {
-  List<UserFeedback> feedbackList = [];
-  List<UserFeedback> filteredFeedbackList = [];
-  String searchQuery = '';
-  FeedbackStatus? selectedStatus;
-  FeedbackType? selectedType;
-  Priority? selectedPriority;
+class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
+  late WebFeedbackController controller;
+  final TextEditingController searchController = TextEditingController();
 
-  bool _isVetReportsHovered = false;
-  bool _isSystemReportsHovered = false;
-
-  final TextEditingController _searchController = TextEditingController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
     super.initState();
-    _loadMockData();
-    filteredFeedbackList = feedbackList;
-  }
-
-  void _loadMockData() {
-    feedbackList = [
-      UserFeedback(
-        id: 'FB001',
-        userId: 'U001',
-        userName: 'John Doe',
-        userEmail: 'john.doe@email.com',
-        subject: 'App crashes when uploading large files',
-        description:
-            'The application consistently crashes when I try to upload files larger than 50MB. This happens on both WiFi and cellular connection.',
-        type: FeedbackType.bug,
-        priority: Priority.high,
-        status: FeedbackStatus.pending,
-        submittedAt: DateTime.now().subtract(const Duration(hours: 2)),
-        attachments: ['crash_log.txt', 'screenshot.png'],
-        appVersion: '2.1.4',
-        deviceInfo: 'iPhone 14 Pro, iOS 16.5',
-      ),
-      UserFeedback(
-        id: 'FB002',
-        userId: 'U002',
-        userName: 'Sarah Wilson',
-        userEmail: 'sarah.wilson@email.com',
-        subject: 'Feature request: Dark mode support',
-        description:
-            'Would love to see a dark mode option in the app settings. Current bright theme strains eyes during night usage.',
-        type: FeedbackType.feature,
-        priority: Priority.medium,
-        status: FeedbackStatus.inProgress,
-        submittedAt: DateTime.now().subtract(const Duration(days: 1)),
-        attachments: [],
-        appVersion: '2.1.4',
-        deviceInfo: 'Samsung Galaxy S23, Android 13',
-        adminReply:
-            'Thank you for the suggestion! Dark mode is currently in development and will be available in version 2.2.0.',
-        repliedAt: DateTime.now().subtract(const Duration(hours: 12)),
-      ),
-      UserFeedback(
-        id: 'FB003',
-        userId: 'U003',
-        userName: 'Mike Johnson',
-        userEmail: 'mike.johnson@email.com',
-        subject: 'Login issues after recent update',
-        description:
-            'Unable to login after updating to version 2.1.4. App shows "Invalid credentials" even with correct password.',
-        type: FeedbackType.bug,
-        priority: Priority.critical,
-        status: FeedbackStatus.resolved,
-        submittedAt: DateTime.now().subtract(const Duration(days: 2)),
-        attachments: ['error_screenshot.jpg'],
-        appVersion: '2.1.4',
-        deviceInfo: 'Google Pixel 7, Android 13',
-        adminReply:
-            'This issue has been identified and fixed in version 2.1.5. Please update your app from the store.',
-        repliedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      UserFeedback(
-        id: 'FB004',
-        userId: 'U004',
-        userName: 'Emma Davis',
-        userEmail: 'emma.davis@email.com',
-        subject: 'Excellent customer service!',
-        description:
-            'I had an issue last week and the support team was incredibly helpful and responsive. Thank you!',
-        type: FeedbackType.compliment,
-        priority: Priority.low,
-        status: FeedbackStatus.closed,
-        submittedAt: DateTime.now().subtract(const Duration(days: 3)),
-        attachments: [],
-        appVersion: '2.1.3',
-        deviceInfo: 'iPad Air, iOS 16.4',
-        adminReply:
-            'Thank you so much for your kind words! We\'re delighted to hear about your positive experience.',
-        repliedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
-  }
-
-  void _filterFeedback() {
-    setState(() {
-      filteredFeedbackList = feedbackList.where((feedback) {
-        bool matchesSearch = searchQuery.isEmpty ||
-            feedback.subject
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase()) ||
-            feedback.userName
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase()) ||
-            feedback.description
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase());
-
-        bool matchesStatus =
-            selectedStatus == null || feedback.status == selectedStatus;
-        bool matchesType =
-            selectedType == null || feedback.type == selectedType;
-        bool matchesPriority =
-            selectedPriority == null || feedback.priority == selectedPriority;
-
-        return matchesSearch && matchesStatus && matchesType && matchesPriority;
-      }).toList();
-
-      // Sort by priority and date
-      filteredFeedbackList.sort((a, b) {
-        int priorityComparison = _getPriorityValue(b.priority)
-            .compareTo(_getPriorityValue(a.priority));
-        if (priorityComparison != 0) return priorityComparison;
-        return b.submittedAt.compareTo(a.submittedAt);
-      });
-    });
-  }
-
-  int _getPriorityValue(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return 4;
-      case Priority.high:
-        return 3;
-      case Priority.medium:
-        return 2;
-      case Priority.low:
-        return 1;
-    }
-  }
-
-  void _showFeedbackDetails(UserFeedback feedback) {
-    showDialog(
-      context: context,
-      builder: (context) => FeedbackDetailsDialog(
-        feedback: feedback,
-        onReply: (reply) => _handleReply(feedback.id, reply),
-        onStatusUpdate: (status) => _updateFeedbackStatus(feedback.id, status),
-        onPriorityUpdate: (priority) =>
-            _updateFeedbackPriority(feedback.id, priority),
-        onDelete: () => _deleteFeedback(feedback.id),
-      ),
-    );
-  }
-
-  void _handleReply(String feedbackId, String reply) {
-    setState(() {
-      final index = feedbackList.indexWhere((f) => f.id == feedbackId);
-      if (index != -1) {
-        feedbackList[index] = UserFeedback(
-          id: feedbackList[index].id,
-          userId: feedbackList[index].userId,
-          userName: feedbackList[index].userName,
-          userEmail: feedbackList[index].userEmail,
-          subject: feedbackList[index].subject,
-          description: feedbackList[index].description,
-          type: feedbackList[index].type,
-          priority: feedbackList[index].priority,
-          status: FeedbackStatus.resolved,
-          submittedAt: feedbackList[index].submittedAt,
-          adminReply: reply,
-          repliedAt: DateTime.now(),
-          attachments: feedbackList[index].attachments,
-          appVersion: feedbackList[index].appVersion,
-          deviceInfo: feedbackList[index].deviceInfo,
-        );
-      }
-    });
-    _filterFeedback();
-  }
-
-  void _updateFeedbackStatus(String feedbackId, FeedbackStatus status) {
-    setState(() {
-      final index = feedbackList.indexWhere((f) => f.id == feedbackId);
-      if (index != -1) {
-        feedbackList[index] = UserFeedback(
-          id: feedbackList[index].id,
-          userId: feedbackList[index].userId,
-          userName: feedbackList[index].userName,
-          userEmail: feedbackList[index].userEmail,
-          subject: feedbackList[index].subject,
-          description: feedbackList[index].description,
-          type: feedbackList[index].type,
-          priority: feedbackList[index].priority,
-          status: status,
-          submittedAt: feedbackList[index].submittedAt,
-          adminReply: feedbackList[index].adminReply,
-          repliedAt: feedbackList[index].repliedAt,
-          attachments: feedbackList[index].attachments,
-          appVersion: feedbackList[index].appVersion,
-          deviceInfo: feedbackList[index].deviceInfo,
-        );
-      }
-    });
-    _filterFeedback();
-  }
-
-  // New method to update feedback priority
-  void _updateFeedbackPriority(String feedbackId, Priority priority) {
-    setState(() {
-      final index = feedbackList.indexWhere((f) => f.id == feedbackId);
-      if (index != -1) {
-        feedbackList[index] = UserFeedback(
-          id: feedbackList[index].id,
-          userId: feedbackList[index].userId,
-          userName: feedbackList[index].userName,
-          userEmail: feedbackList[index].userEmail,
-          subject: feedbackList[index].subject,
-          description: feedbackList[index].description,
-          type: feedbackList[index].type,
-          priority: priority,
-          status: feedbackList[index].status,
-          submittedAt: feedbackList[index].submittedAt,
-          adminReply: feedbackList[index].adminReply,
-          repliedAt: feedbackList[index].repliedAt,
-          attachments: feedbackList[index].attachments,
-          appVersion: feedbackList[index].appVersion,
-          deviceInfo: feedbackList[index].deviceInfo,
-        );
-      }
-    });
-    _filterFeedback();
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Priority updated to ${_getPriorityText(priority)}'),
-        backgroundColor: Colors.green[600],
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // New method for quick priority update from card
-  void _showQuickPriorityUpdate(UserFeedback feedback) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: Text(
-          'Update Priority',
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Subject: ${feedback.subject}',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Current Priority: ${_getPriorityText(feedback.priority)}',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Select new priority:',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...Priority.values.map((priority) => InkWell(
-                  onTap: () {
-                    _updateFeedbackPriority(feedback.id, priority);
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 16),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: priority == feedback.priority
-                          ? _getPriorityColor(priority).withOpacity(0.2)
-                          : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: priority == feedback.priority
-                            ? _getPriorityColor(priority)
-                            : Colors.grey[300]!,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _getPriorityIcon(priority),
-                          color: _getPriorityColor(priority),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          _getPriorityText(priority),
-                          style: TextStyle(
-                            fontWeight: priority == feedback.priority
-                                ? FontWeight.bold
-                                : FontWeight.w500,
-                            color: priority == feedback.priority
-                                ? _getPriorityColor(priority)
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteFeedback(String feedbackId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: Text(
-          'Delete Feedback',
-          style: TextStyle(
-            color: Colors.red[700],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to permanently delete this feedback? This action cannot be undone.',
-          style: TextStyle(color: Colors.grey[700]),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                feedbackList.removeWhere((f) => f.id == feedbackId);
-              });
-              _filterFeedback();
-              Navigator.pop(context); // Close confirmation dialog
-              Navigator.pop(context); // Close details dialog
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Feedback deleted successfully'),
-                  backgroundColor: Colors.red[600],
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[600],
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSideNavigation() {
-    return Container(
-      width: 60,
-      decoration: const BoxDecoration(
-        color: Color.fromRGBO(248, 253, 255, 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 1,
-            offset: Offset(2, 0),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Tooltip(
-            message: 'Vet Reports',
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _isVetReportsHovered = true),
-              onExit: (_) => setState(() => _isVetReportsHovered = false),
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isVetReportsHovered = true;
-                    _isSystemReportsHovered = false;
-                  });
-                  Navigator.push(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          const VeterinaryReport(),
-                      transitionDuration: const Duration(milliseconds: 300),
-                      reverseTransitionDuration:
-                          const Duration(milliseconds: 250),
-                      transitionsBuilder:
-                          (context, animation, secondaryAnimation, child) {
-                        const begin = Offset(-1.0, 0.0);
-                        const end = Offset.zero;
-                        const curve = Curves.easeInOut;
-                        var tween = Tween(begin: begin, end: end).chain(
-                          CurveTween(curve: curve),
-                        );
-                        return SlideTransition(
-                          position: animation.drive(tween),
-                          child: child,
-                        );
-                      },
-                    ),
-                  );
-                },
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _isVetReportsHovered
-                        ? const Color.fromARGB(60, 81, 115, 153)
-                        : const Color.fromARGB(26, 239, 244, 249),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.pets,
-                    color: Color.fromRGBO(81, 115, 153, 1),
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Tooltip(
-            message: 'System Reports',
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _isSystemReportsHovered = true),
-              onExit: (_) => setState(() => _isSystemReportsHovered = false),
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isSystemReportsHovered = false;
-                    _isVetReportsHovered = false;
-                  });
-                  _loadMockData();
-                  _filterFeedback();
-                },
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: true
-                        ? const Color.fromARGB(255, 81, 115, 153)
-                        : const Color.fromARGB(26, 239, 244, 249),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.phone_android_rounded,
-                    color:
-                        true ? Colors.white : Color.fromRGBO(81, 115, 153, 1),
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    controller = Get.put(WebFeedbackController(
+      authRepository: Get.find<AuthRepository>(),
+      session: Get.find<UserSessionService>(),
+    ));
+    controller.loadAllFeedback();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        key: _scaffoldKey,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back,
-              color: Color.fromARGB(255, 81, 115, 153)),
-         onPressed: () {
-            final width = MediaQuery.of(context).size.width;
-            Widget destination;
-            if (width < 600) {
-              destination = const SuperAdminMobileHomePage();
-            } else if (width >= 480 && width < 1000)  {
-              destination = const SuperAdminTabletHomePage();
-            } else {
-              destination = const SuperAdminDesktopHomePage();
-            }
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => destination),
-            );
-          },
-          tooltip: 'Back',
-        ),
-        surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: false,
+              surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+        icon: const Icon(Icons.menu_rounded, color: Color(0xFF517399)),
+        onPressed: () {
+          _scaffoldKey.currentState?.openDrawer();
+        },
+        tooltip: 'Menu',
+      ),
         title: const Row(
           children: [
-            Icon(Icons.bug_report_sharp,
-                color: Color.fromARGB(255, 81, 115, 153)),
+            Icon(Icons.feedback, color: Color(0xFF517399)),
             SizedBox(width: 8),
             Text(
-              'System Reports',
+              'Feedback Management',
               style: TextStyle(
-                  color: Color.fromARGB(255, 81, 115, 153),
-                  fontWeight: FontWeight.bold),
+                color: Color(0xFF517399),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      ),
-      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      body: Row(
-        children: [
-          _buildSideNavigation(),
-          Expanded(
-            child: Column(
-              children: [
-                _buildStatsCards(),
-                _buildFiltersSection(),
-                Expanded(child: _buildFeedbackList()),
-              ],
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF517399)),
+            onPressed: () => controller.loadAllFeedback(),
+            tooltip: 'Refresh',
           ),
+          IconButton(
+            icon: const Icon(Icons.filter_list_off, color: Color(0xFF517399)),
+            onPressed: () => controller.clearFilters(),
+            tooltip: 'Clear Filters',
+          ),
+          const SizedBox(width: 16),
+        ],
+      ),
+      drawer: _buildDrawer(context),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      body: Column(
+        children: [
+          _buildStatsCards(),
+          _buildFiltersSection(),
+          Expanded(child: _buildFeedbackList()),
         ],
       ),
     );
   }
 
   Widget _buildStatsCards() {
-    final pending =
-        feedbackList.where((f) => f.status == FeedbackStatus.pending).length;
-    final inProgress =
-        feedbackList.where((f) => f.status == FeedbackStatus.inProgress).length;
-    final resolved =
-        feedbackList.where((f) => f.status == FeedbackStatus.resolved).length;
-    final critical =
-        feedbackList.where((f) => f.priority == Priority.critical).length;
-
-    return Container(
+    return Obx(() => Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           _buildStatCard(
-              'Pending', pending.toString(), Colors.orange, Icons.pending),
+            'Total',
+            controller.feedbackStats['total']?.toString() ?? '0',
+            Colors.blue,
+            Icons.feedback,
+          ),
           const SizedBox(width: 12),
           _buildStatCard(
-              'In Progress', inProgress.toString(), Colors.blue, Icons.work),
-          const SizedBox(width: 12),
-          _buildStatCard('Resolved', resolved.toString(), Colors.green,
-              Icons.check_circle),
+            'Pending',
+            controller.feedbackStats['pending']?.toString() ?? '0',
+            Colors.orange,
+            Icons.pending,
+          ),
           const SizedBox(width: 12),
           _buildStatCard(
-              'Critical', critical.toString(), Colors.red, Icons.warning),
+            'In Progress',
+            controller.feedbackStats['inProgress']?.toString() ?? '0',
+            Colors.blue,
+            Icons.work,
+          ),
+          const SizedBox(width: 12),
+          _buildStatCard(
+            'Resolved',
+            controller.feedbackStats['resolved']?.toString() ?? '0',
+            Colors.green,
+            Icons.check_circle,
+          ),
+          const SizedBox(width: 12),
+          _buildStatCard(
+            'Critical',
+            controller.feedbackStats['critical']?.toString() ?? '0',
+            Colors.red,
+            Icons.warning,
+          ),
         ],
       ),
-    );
+    ));
   }
 
-  Widget _buildStatCard(
-      String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -703,81 +185,77 @@ class _ApplicationReportState extends State<ApplicationReport> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          Focus(
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search feedback...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          searchQuery = '';
-                          _filterFeedback();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide:
-                      const BorderSide(color: Color.fromRGBO(81, 115, 153, 1)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                      color: Color.fromRGBO(81, 115, 153, 1), width: 2),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          // Search Bar
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Search feedback...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      searchController.clear();
+                      controller.updateSearchQuery('');
+                    },
+                  )
+                : const SizedBox()),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF517399)),
               ),
-              onChanged: (value) {
-                searchQuery = value;
-                _filterFeedback();
-              },
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
+            onChanged: (value) => controller.updateSearchQuery(value),
           ),
           const SizedBox(height: 12),
+          
+          // Filter Dropdowns
+         // Filter Dropdowns
           Row(
             children: [
               Expanded(
-                child: _buildFilterDropdown<FeedbackStatus>(
+                child: Obx(() => _buildFilterDropdown<FeedbackStatus>(
                   'Status',
-                  selectedStatus,
+                  controller.statusFilter.value,
                   FeedbackStatus.values,
-                  (value) => setState(() {
-                    selectedStatus = value;
-                    _filterFeedback();
-                  }),
-                  (status) => _getStatusText(status),
-                ),
+                  (value) => controller.updateFilters(status: value),
+                  (status) => status.displayName,
+                )),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildFilterDropdown<FeedbackType>(
+                child: Obx(() => _buildFilterDropdown<FeedbackType>(
                   'Type',
-                  selectedType,
+                  controller.typeFilter.value,
                   FeedbackType.values,
-                  (value) => setState(() {
-                    selectedType = value;
-                    _filterFeedback();
-                  }),
-                  (type) => _getTypeText(type),
-                ),
+                  (value) => controller.updateFilters(type: value),
+                  (type) => type.displayName,
+                )),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildFilterDropdown<Priority>(
+                child: Obx(() => _buildFilterDropdown<FeedbackCategory>(
+                  'Category',
+                  controller.categoryFilter.value,
+                  FeedbackCategory.values,
+                  (value) => controller.updateFilters(category: value),
+                  (category) => category.displayName,
+                )),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(() => _buildFilterDropdown<Priority>(
                   'Priority',
-                  selectedPriority,
+                  controller.priorityFilter.value,
                   Priority.values,
-                  (value) => setState(() {
-                    selectedPriority = value;
-                    _filterFeedback();
-                  }),
-                  (priority) => _getPriorityText(priority),
-                ),
+                  (value) => controller.updateFilters(priority: value),
+                  (priority) => priority.displayName,
+                )),
               ),
             ],
           ),
@@ -809,49 +287,55 @@ class _ApplicationReportState extends State<ApplicationReport> {
       items: [
         DropdownMenuItem<T>(
           value: null,
-          child: const Text('All'),
+          child: Text('All'),
         ),
         ...items.map((item) => DropdownMenuItem<T>(
-              value: item,
-              child: Text(getText(item)),
-            )),
+          value: item,
+          child: Text(getText(item)),
+        )),
       ],
       onChanged: onChanged,
     );
   }
 
   Widget _buildFeedbackList() {
-    if (filteredFeedbackList.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.feedback_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No feedback found',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    return Obx(() {
+      if (controller.isLoadingFeedback.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredFeedbackList.length,
-      itemBuilder: (context, index) {
-        final feedback = filteredFeedbackList[index];
-        return _buildFeedbackCard(feedback);
-      },
-    );
+      if (controller.filteredFeedback.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.feedback_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No feedback found',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: controller.filteredFeedback.length,
+        itemBuilder: (context, index) {
+          final feedback = controller.filteredFeedback[index];
+          return _buildFeedbackCard(feedback);
+        },
+      );
+    });
   }
 
-  Widget _buildFeedbackCard(UserFeedback feedback) {
+  Widget _buildFeedbackCard(FeedbackAndReport feedback) {
     return Card(
       color: const Color.fromRGBO(242, 250, 252, 1),
       margin: const EdgeInsets.only(bottom: 12),
@@ -865,31 +349,21 @@ class _ApplicationReportState extends State<ApplicationReport> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Badges Row
               Row(
                 children: [
-                  // Enhanced priority badge with quick edit functionality
-                  InkWell(
-                    onTap: () => _showQuickPriorityUpdate(feedback),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _getPriorityColor(feedback.priority)
-                              .withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: _buildPriorityBadge(feedback.priority),
-                    ),
-                  ),
+                  _buildPriorityBadge(feedback.priority),
                   const SizedBox(width: 8),
-                  _buildTypeBadge(feedback.type),
+                  _buildTypeBadge(feedback.feedbackType),
+                  const SizedBox(width: 8),
+                  _buildCategoryBadge(feedback.category),
                   const Spacer(),
                   _buildStatusBadge(feedback.status),
                 ],
               ),
               const SizedBox(height: 12),
+              
+              // Subject
               Text(
                 feedback.subject,
                 style: TextStyle(
@@ -899,6 +373,8 @@ class _ApplicationReportState extends State<ApplicationReport> {
                 ),
               ),
               const SizedBox(height: 8),
+              
+              // Description
               Text(
                 feedback.description,
                 style: TextStyle(
@@ -909,6 +385,8 @@ class _ApplicationReportState extends State<ApplicationReport> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
+              
+              // Meta Information
               Row(
                 children: [
                   Icon(Icons.person, size: 16, color: Colors.grey[500]),
@@ -935,71 +413,30 @@ class _ApplicationReportState extends State<ApplicationReport> {
                   ],
                 ],
               ),
-              if (feedback.adminReply != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue[200]!),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.admin_panel_settings,
-                              size: 16, color: Colors.blue[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Admin Reply',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue[600],
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            _formatDateTime(feedback.repliedAt!),
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        feedback.adminReply!,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              // Add delete button section for resolved and closed feedback
-              if (feedback.status == FeedbackStatus.resolved ||
-                  feedback.status == FeedbackStatus.closed) ...[
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
+              
+              // Quick Actions for Closed/Resolved
+              if (feedback.status == FeedbackStatus.closed ||
+                feedback.status == FeedbackStatus.resolved) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (feedback.status == FeedbackStatus.closed)
                     ElevatedButton.icon(
-                      onPressed: () => _deleteFeedback(feedback.id),
-                      icon: const Icon(
-                        Icons.delete_forever,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      label: const Text('Delete'),
+                      onPressed: () => _archiveFeedback(feedback), // Now with confirmation
+                      icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                      label: const Text('Archive'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE74C3C),
+                        backgroundColor: Colors.orange[600], // Changed color for better visibility
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                ],
+              ),
+            ],
             ],
           ),
         ),
@@ -1024,21 +461,76 @@ class _ApplicationReportState extends State<ApplicationReport> {
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
-            _getPriorityText(priority),
+            priority.displayName,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: color,
             ),
           ),
-          const SizedBox(width: 4),
-          Icon(Icons.edit, size: 10, color: color.withOpacity(0.7)),
         ],
       ),
     );
   }
 
-  // Helper methods for priority styling
+  Widget _buildTypeBadge(FeedbackType type) {
+    Color color = _getTypeColor(type);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        type.displayName,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryBadge(FeedbackCategory category) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        category.displayName,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey[700],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(FeedbackStatus status) {
+    Color color = _getStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        status.displayName,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
   Color _getPriorityColor(Priority priority) {
     switch (priority) {
       case Priority.critical:
@@ -1065,117 +557,35 @@ class _ApplicationReportState extends State<ApplicationReport> {
     }
   }
 
-  Widget _buildTypeBadge(FeedbackType type) {
-    Color color = Colors.blue;
+  Color _getTypeColor(FeedbackType type) {
     switch (type) {
       case FeedbackType.bug:
-        color = Colors.red;
-        break;
+        return Colors.red;
       case FeedbackType.feature:
-        color = Colors.green;
-        break;
+        return Colors.green;
       case FeedbackType.complaint:
-        color = Colors.orange;
-        break;
+        return Colors.orange;
       case FeedbackType.question:
-        color = Colors.purple;
-        break;
+        return Colors.purple;
       case FeedbackType.compliment:
-        color = Colors.teal;
-        break;
+        return Colors.teal;
+      case FeedbackType.systemIssue:
+        return Colors.deepOrange;
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        _getTypeText(type),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
   }
 
-  Widget _buildStatusBadge(FeedbackStatus status) {
-    Color color;
+  Color _getStatusColor(FeedbackStatus status) {
     switch (status) {
       case FeedbackStatus.pending:
-        color = Colors.orange;
-        break;
+        return Colors.orange;
       case FeedbackStatus.inProgress:
-        color = Colors.blue;
-        break;
+        return Colors.blue;
       case FeedbackStatus.resolved:
-        color = Colors.green;
-        break;
+        return Colors.green;
       case FeedbackStatus.closed:
-        color = Colors.grey;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        _getStatusText(status),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  String _getPriorityText(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return 'Critical';
-      case Priority.high:
-        return 'High';
-      case Priority.medium:
-        return 'Medium';
-      case Priority.low:
-        return 'Low';
-    }
-  }
-
-  String _getTypeText(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.bug:
-        return 'Bug';
-      case FeedbackType.feature:
-        return 'Feature';
-      case FeedbackType.complaint:
-        return 'Complaint';
-      case FeedbackType.question:
-        return 'Question';
-      case FeedbackType.compliment:
-        return 'Compliment';
-    }
-  }
-
-  String _getStatusText(FeedbackStatus status) {
-    switch (status) {
-      case FeedbackStatus.pending:
-        return 'Pending';
-      case FeedbackStatus.inProgress:
-        return 'In Progress';
-      case FeedbackStatus.resolved:
-        return 'Resolved';
-      case FeedbackStatus.closed:
-        return 'Closed';
+        return Colors.grey;
+      case FeedbackStatus.archived:
+        return Colors.blueGrey;
     }
   }
 
@@ -1194,22 +604,460 @@ class _ApplicationReportState extends State<ApplicationReport> {
     }
   }
 
+  void _archiveFeedback(FeedbackAndReport feedback) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      title: Row(
+        children: [
+          Icon(Icons.archive, color: Colors.orange[700], size: 24),
+          const SizedBox(width: 12),
+          const Text(
+            'Archive Feedback',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Are you sure you want to archive this feedback?',
+            style: TextStyle(
+              color: Colors.grey[800],
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.subject, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        feedback.subject,
+                        style: TextStyle(
+                          color: Colors.grey[800],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      feedback.userName,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Archived feedback can be permanently deleted later.',
+                    style: TextStyle(
+                      color: Colors.orange[900],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            controller.archiveFeedback(feedback.documentId!);
+            Navigator.pop(context);
+          },
+          icon: const Icon(Icons.archive, size: 18),
+          label: const Text('Archive'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange[600],
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  void _showFeedbackDetails(FeedbackAndReport feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => FeedbackDetailsDialog(
+        feedback: feedback,
+        controller: controller,
+      ),
+    );
+  }
+  Widget _buildDrawer(BuildContext context) {
+  return Drawer(
+    backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+    child: Column(
+      children: [
+        // Header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(81, 115, 153, 1),
+                Color.fromRGBO(81, 115, 153, 0.8),
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Developer',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Management Panel',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Menu Items
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              _buildDrawerItem(
+                context,
+                icon: Icons.local_hospital_rounded,
+                title: 'Veterinary Clinics',
+                subtitle: 'Manage vet clinics',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuperAdminVetClinicDashboard(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.people_rounded,
+                title: 'Pet Owner Management',
+                subtitle: 'Manage user accounts',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuperAdminUserManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.delete_forever_rounded,
+                title: 'Deletion Reports',
+                subtitle: 'Feedback deletion requests',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VeterinaryReport(),
+                    ),
+                  );
+                },
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+            ],
+          ),
+        ),
+
+        // Logout Button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: _isLoggingOut
+                ? Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 0.7),
+                          Color.fromRGBO(81, 115, 153, 0.5),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Logging Out...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : InkWell(
+                    onTap: () async {
+                      setState(() => _isLoggingOut = true);
+                      try {
+                        await LogoutHelper.logout();
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() => _isLoggingOut = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Logout failed: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(220, 53, 69, 1),
+                            Color.fromRGBO(200, 35, 51, 1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Log Out',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
+Widget _buildDrawerItem(
+  BuildContext context, {
+  required IconData icon,
+  required String title,
+  required String subtitle,
+  required VoidCallback onTap,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color.fromRGBO(81, 115, 153, 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromRGBO(81, 115, 153, 0.2),
+                    Color.fromRGBO(81, 115, 153, 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: const Color.fromRGBO(81, 115, 153, 1),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color.fromRGBO(81, 115, 153, 1),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Color.fromRGBO(81, 115, 153, 0.5),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+}
+
+// Feedback Details Dialog
 class FeedbackDetailsDialog extends StatefulWidget {
-  final UserFeedback feedback;
-  final Function(String) onReply;
-  final Function(FeedbackStatus) onStatusUpdate;
-  final Function(Priority) onPriorityUpdate;
-  final VoidCallback onDelete;
+  final FeedbackAndReport feedback;
+  final WebFeedbackController controller;
 
   const FeedbackDetailsDialog({
     super.key,
     required this.feedback,
-    required this.onReply,
-    required this.onStatusUpdate,
-    required this.onPriorityUpdate,
-    required this.onDelete,
+    required this.controller,
   });
 
   @override
@@ -1219,14 +1067,6 @@ class FeedbackDetailsDialog extends StatefulWidget {
 class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   final TextEditingController _replyController = TextEditingController();
   bool _isReplying = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.feedback.adminReply != null) {
-      _replyController.text = widget.feedback.adminReply!;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1239,8 +1079,8 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
+            // Header
             Row(
               children: [
                 const Expanded(
@@ -1252,15 +1092,15 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                     ),
                   ),
                 ),
-                if (widget.feedback.status == FeedbackStatus.resolved ||
-                    widget.feedback.status == FeedbackStatus.closed)
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
               ],
             ),
             const SizedBox(height: 16),
+            
+            // Content
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -1272,31 +1112,38 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       'User ID: ${widget.feedback.userId}',
                     ]),
                     const SizedBox(height: 16),
+                    
                     _buildDetailSection('Feedback Information', [
-                      'ID: ${widget.feedback.id}',
+                      'ID: ${widget.feedback.documentId}',
                       'Subject: ${widget.feedback.subject}',
-                      'Type: ${_getTypeText(widget.feedback.type)}',
-                      'Priority: ${_getPriorityText(widget.feedback.priority)}',
-                      'Status: ${_getStatusText(widget.feedback.status)}',
+                      'Type: ${widget.feedback.feedbackType.displayName}',
+                      'Category: ${widget.feedback.category.displayName}',
+                      'Priority: ${widget.feedback.priority.displayName}',
+                      'Status: ${widget.feedback.status.displayName}',
                       'Submitted: ${_formatFullDateTime(widget.feedback.submittedAt)}',
                     ]),
                     const SizedBox(height: 16),
+                    
                     _buildDetailSection('Technical Information', [
                       'App Version: ${widget.feedback.appVersion}',
                       'Device Info: ${widget.feedback.deviceInfo}',
+                      'Platform: ${widget.feedback.platform}',
                     ]),
                     const SizedBox(height: 16),
+                    
                     _buildDescriptionSection(),
+                    
                     if (widget.feedback.attachments.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _buildAttachmentsSection(),
                     ],
+                    
                     const SizedBox(height: 16),
-                    _buildReplySection(),
                   ],
                 ),
               ),
             ),
+            
             const SizedBox(height: 16),
             _buildActionButtons(),
           ],
@@ -1310,7 +1157,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 255, 255, 255),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey[200]!),
       ),
@@ -1376,14 +1223,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
   }
 
   Widget _buildAttachmentsSection() {
-    final imageAttachments = widget.feedback.attachments
-        .where((attachment) => _isImageFile(attachment))
-        .toList();
-
-    if (imageAttachments.isEmpty) {
-      return Container();
-    }
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -1396,7 +1235,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Photos (${imageAttachments.length})',
+            'Attachments (${widget.feedback.attachments.length})',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -1404,100 +1243,224 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: imageAttachments.map((attachment) {
-                return GestureDetector(
-                  onTap: () => _showImageInFullView(attachment),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!, width: 1),
-                      color: Colors.grey[100],
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(7),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Container(
-                            color: Colors.grey[200],
-                            child: Icon(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.feedback.attachments.map((attachmentId) {
+              return GestureDetector(
+                onTap: () => _viewAttachment(attachmentId),
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.grey[100],
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(7),
+                        child: Image.network(
+                          widget.controller.getAttachmentUrl(attachmentId),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
                               Icons.image,
                               size: 40,
                               color: Colors.grey[400],
-                            ),
-                          ),
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.0),
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.zoom_in,
-                                  color: Colors.white.withOpacity(0.8),
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.7),
-                                  ],
-                                ),
-                              ),
-                              child: Text(
-                                attachment,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        ],
+                            );
+                          },
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(
+                            Icons.zoom_in,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  void _showImageInFullView(String imageName) {
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        // Status Dropdown
+        Expanded(
+          child: DropdownButtonFormField<FeedbackStatus>(
+            dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
+            value: widget.feedback.status,
+            decoration: InputDecoration(
+              labelText: 'Update Status',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            items: FeedbackStatus.values
+                .map(
+                  (status) => DropdownMenuItem(
+                    value: status,
+                    child: Text(status.displayName),
+                  ),
+                )
+                .toList(),
+            onChanged: (status) {
+              if (status != null && status != widget.feedback.status) {
+                widget.controller.updateStatus(widget.feedback.documentId!, status);
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 16),
+        
+        // Priority Dropdown
+        Expanded(
+          child: DropdownButtonFormField<Priority>(
+            dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
+            value: widget.feedback.priority,
+            decoration: InputDecoration(
+              labelText: 'Update Priority',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            items: Priority.values
+                .map(
+                  (priority) => DropdownMenuItem(
+                    value: priority,
+                    child: Text(priority.displayName),
+                  ),
+                )
+                .toList(),
+            onChanged: (priority) {
+              if (priority != null && priority != widget.feedback.priority) {
+                widget.controller.updatePriority(widget.feedback.documentId!, priority);
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 16),
+        
+        // Archive Button (only for closed)
+        if (widget.feedback.status == FeedbackStatus.closed)
+          ElevatedButton.icon(
+            onPressed: () {
+              widget.controller.archiveFeedback(widget.feedback.documentId!);
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.archive, color: Colors.white),
+            label: const Text('Archive'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF517399),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        
+        // Delete Button (only for archived)
+        if (widget.feedback.status == FeedbackStatus.archived)
+          ElevatedButton.icon(
+            onPressed: () => _deleteFeedback(),
+            icon: const Icon(Icons.delete_forever, color: Colors.white),
+            label: const Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _sendReply() {
+    if (_replyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a reply message'),
+          backgroundColor: Colors.red[600],
+        ),
+      );
+      return;
+    }
+
+    widget.controller.addReply(
+      widget.feedback.documentId!,
+      _replyController.text.trim(),
+    );
+    
+    setState(() {
+      _isReplying = false;
+    });
+
+    Navigator.pop(context);
+  }
+
+  void _deleteFeedback() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: Text(
+          'Delete Feedback',
+          style: TextStyle(
+            color: Colors.red[700],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete this feedback? This action cannot be undone.',
+          style: TextStyle(color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              widget.controller.deleteFeedback(
+                widget.feedback.documentId!,
+                widget.feedback.attachments,
+              );
+              Navigator.pop(context); // Close confirmation
+              Navigator.pop(context); // Close details
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _viewAttachment(String attachmentId) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.9),
@@ -1516,81 +1479,17 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              imageName,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => _downloadImage(imageName),
-                            icon: const Icon(Icons.download,
-                                color: Color(0xFF517399)),
-                            tooltip: 'Download Image',
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(height: 1, color: Colors.grey[300]),
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.image,
-                                  size: 80,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Image Preview',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'In production, actual image would be displayed here',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    widget.controller.getAttachmentUrl(attachmentId),
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Text('Failed to load image'),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -1613,380 +1512,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         ),
       ),
     );
-  }
-
-  void _downloadImage(String imageName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloading $imageName...'),
-        backgroundColor: Colors.blue[600],
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  bool _isImageFile(String filename) {
-    final imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-    final extension = filename.split('.').last.toLowerCase();
-    return imageExtensions.contains(extension);
-  }
-
-  Widget _buildReplySection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: widget.feedback.adminReply != null
-            ? Colors.green[50]
-            : Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: widget.feedback.adminReply != null
-              ? Colors.green[200]!
-              : Colors.grey[200]!,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.admin_panel_settings,
-                size: 20,
-                color: widget.feedback.adminReply != null
-                    ? Colors.green[600]
-                    : Colors.grey[600],
-              ),
-              const SizedBox(width: 8),
-              Text(
-                widget.feedback.adminReply != null
-                    ? 'Admin Reply'
-                    : 'Compose Reply',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: widget.feedback.adminReply != null
-                      ? Colors.green[800]
-                      : Colors.grey[800],
-                ),
-              ),
-              if (widget.feedback.adminReply != null) ...[
-                const Spacer(),
-                Text(
-                  'Replied: ${_formatFullDateTime(widget.feedback.repliedAt!)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _replyController,
-            maxLines: 4,
-            enabled: _isReplying || widget.feedback.adminReply == null,
-            decoration: InputDecoration(
-              hintText: 'Type your reply to the customer...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              contentPadding: const EdgeInsets.all(12),
-            ),
-          ),
-          if (widget.feedback.adminReply == null || _isReplying) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _sendReply,
-                  icon: const Icon(
-                    Icons.send,
-                    color: Colors.white,
-                  ),
-                  label: Text(widget.feedback.adminReply == null
-                      ? 'Send Reply'
-                      : 'Update Reply'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                if (_isReplying) ...[
-                  const SizedBox(width: 12),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isReplying = false;
-                        _replyController.text =
-                            widget.feedback.adminReply ?? '';
-                      });
-                    },
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ] else ...[
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _isReplying = true;
-                });
-              },
-              icon: const Icon(
-                Icons.edit,
-                color: Colors.white,
-              ),
-              label: const Text('Edit Reply'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[600],
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: DropdownButtonFormField<FeedbackStatus>(
-            dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-            value: widget.feedback.status,
-            decoration: InputDecoration(
-              labelText: 'Update Status',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            items: FeedbackStatus.values
-                .map(
-                  (status) => DropdownMenuItem(
-                    value: status,
-                    child: Text(_getStatusText(status)),
-                  ),
-                )
-                .toList(),
-            onChanged: (status) {
-              if (status != null && status != widget.feedback.status) {
-                widget.onStatusUpdate(status);
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: DropdownButtonFormField<Priority>(
-            dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-            value: widget.feedback.priority,
-            decoration: InputDecoration(
-              labelText: 'Update Priority',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            items: Priority.values
-                .map(
-                  (priority) => DropdownMenuItem(
-                    value: priority,
-                    child: Row(
-                      children: [
-                        Icon(
-                          _getPriorityIcon(priority),
-                          size: 16,
-                          color: _getPriorityColor(priority),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(_getPriorityText(priority)),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (priority) {
-              if (priority != null && priority != widget.feedback.priority) {
-                widget.onPriorityUpdate(priority);
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 16),
-        if (widget.feedback.status == FeedbackStatus.resolved ||
-            widget.feedback.status == FeedbackStatus.closed)
-          ElevatedButton.icon(
-            onPressed: widget.onDelete,
-            icon: const Icon(
-              Icons.delete_outline,
-              color: Colors.white,
-            ),
-            label: const Text('Delete'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[600],
-              foregroundColor: Colors.white,
-            ),
-          ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          onPressed: () => _copyFeedbackInfo(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Copy Info'),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          onPressed: () => _exportFeedback(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Export'),
-        ),
-      ],
-    );
-  }
-
-  // Helper methods for priority styling in dialog
-  Color _getPriorityColor(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return Colors.red;
-      case Priority.high:
-        return Colors.orange;
-      case Priority.medium:
-        return Colors.yellow[700]!;
-      case Priority.low:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getPriorityIcon(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return Icons.error;
-      case Priority.high:
-        return Icons.warning;
-      case Priority.medium:
-        return Icons.info;
-      case Priority.low:
-        return Icons.low_priority;
-    }
-  }
-
-  void _sendReply() {
-    if (_replyController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter a reply message'),
-          backgroundColor: Colors.red[600],
-        ),
-      );
-      return;
-    }
-
-    widget.onReply(_replyController.text.trim());
-    setState(() {
-      _isReplying = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Reply sent successfully'),
-        backgroundColor: Colors.green[600],
-      ),
-    );
-
-    Navigator.pop(context);
-  }
-
-  void _copyFeedbackInfo() {
-    final info = '''
-Feedback ID: ${widget.feedback.id}
-User: ${widget.feedback.userName} (${widget.feedback.userEmail})
-Subject: ${widget.feedback.subject}
-Type: ${_getTypeText(widget.feedback.type)}
-Priority: ${_getPriorityText(widget.feedback.priority)}
-Status: ${_getStatusText(widget.feedback.status)}
-Submitted: ${_formatFullDateTime(widget.feedback.submittedAt)}
-App Version: ${widget.feedback.appVersion}
-Device: ${widget.feedback.deviceInfo}
-
-Description:
-${widget.feedback.description}
-
-${widget.feedback.adminReply != null ? 'Admin Reply:\n${widget.feedback.adminReply}' : ''}
-    ''';
-
-    Clipboard.setData(ClipboardData(text: info));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Feedback information copied to clipboard'),
-        backgroundColor: Colors.blue[600],
-      ),
-    );
-  }
-
-  void _exportFeedback() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Exporting feedback data...'),
-        backgroundColor: Colors.green[600],
-      ),
-    );
-  }
-
-  String _getTypeText(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.bug:
-        return 'Bug Report';
-      case FeedbackType.feature:
-        return 'Feature Request';
-      case FeedbackType.complaint:
-        return 'Complaint';
-      case FeedbackType.question:
-        return 'Question';
-      case FeedbackType.compliment:
-        return 'Compliment';
-    }
-  }
-
-  String _getPriorityText(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return 'Critical';
-      case Priority.high:
-        return 'High';
-      case Priority.medium:
-        return 'Medium';
-      case Priority.low:
-        return 'Low';
-    }
-  }
-
-  String _getStatusText(FeedbackStatus status) {
-    switch (status) {
-      case FeedbackStatus.pending:
-        return 'Pending';
-      case FeedbackStatus.inProgress:
-        return 'In Progress';
-      case FeedbackStatus.resolved:
-        return 'Resolved';
-      case FeedbackStatus.closed:
-        return 'Closed';
-    }
   }
 
   String _formatFullDateTime(DateTime dateTime) {

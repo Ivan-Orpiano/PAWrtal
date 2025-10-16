@@ -26,6 +26,12 @@ class LoginController extends GetxController {
   // Observable for password visibility
   final isPasswordVisible = false.obs;
 
+  // Observable for error message
+  final errorMessage = ''.obs;
+
+  // NEW: Observable for Google Sign-In loading
+  final isGoogleLoading = false.obs;
+
   @override
   void onClose() {
     super.onClose();
@@ -37,31 +43,49 @@ class LoginController extends GetxController {
   void clearTextEditingControllers() {
     emailEditingController.clear();
     passwordEditingController.clear();
+    errorMessage.value = '';
   }
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
 
-  String? validateEmail(String value) {
-    if (!GetUtils.isEmail(value)) {
-      return "Provide a valid Email";
+  // REMOVED: Old validateEmail method - no longer needed
+
+  /// Validator for username or email - accepts both formats
+  /// Just checks: not empty and max 50 characters
+  String? validateEmailOrUsername(String value) {
+    // Check length limit (50 characters)
+    if (value.length > 50) {
+      return "Maximum 50 characters allowed";
     }
+
+    // That's it! No format validation - let the database check handle it
     return null;
   }
 
+  /// Password validator with 50 character limit
   String? validatePassword(String value) {
     if (value.isEmpty) {
-      return "Provide valid password";
+      return "Please enter your password";
     }
+
     return null;
   }
 
-  /// AUTO-HEALING LOGIN - Fixes userId mismatches automatically
+  /// Login method - accepts username or email
+  /// Shows "Invalid username/email or password" for any login failure
   void validateAndLogin({
-    required String email,
+    required String emailOrUsername,
     required String password,
   }) async {
+    // Clear any previous error
+    errorMessage.value = '';
+
+    // Trim inputs
+    emailOrUsername = emailOrUsername.trim();
+    password = password.trim();
+
     isFormValid = formKey.currentState!.validate();
     if (!isFormValid) return;
 
@@ -73,11 +97,50 @@ class LoginController extends GetxController {
 
       print('>>> ==========================================');
       print('>>> LOGIN ATTEMPT');
-      print('>>> Email: $email');
+      print('>>> Input: $emailOrUsername');
+      print(
+          '>>> Input Type: ${emailOrUsername.contains('@') ? 'EMAIL' : 'USERNAME'}');
       print('>>> ==========================================');
 
+      // Check if input is username or email
+      final isEmail = emailOrUsername.contains('@');
+
+      if (!isEmail) {
+        // It's a username - check if staff account exists first in database
+        print(
+            '>>> Detected USERNAME format, checking staff account in database...');
+        final staffDoc =
+            await authRepository.getStaffByUsername(emailOrUsername);
+
+        if (staffDoc == null) {
+          print('>>> ✗ No staff account found with username: $emailOrUsername');
+          FullScreenDialogLoader.cancelDialog();
+          errorMessage.value =
+              'Invalid username/email or password. Please check your credentials.';
+          return;
+        }
+
+        if (!staffDoc.isActive) {
+          print('>>> ✗ Staff account is deactivated');
+          FullScreenDialogLoader.cancelDialog();
+          errorMessage.value =
+              'Your account has been deactivated. Please contact your administrator.';
+          return;
+        }
+
+        print('>>> ✓ Staff account found in database and active');
+        print('>>> Staff Name: ${staffDoc.name}');
+        print('>>> Staff Role: ${staffDoc.role}');
+        print('>>> Staff Clinic: ${staffDoc.clinicId}');
+      } else {
+        print(
+            '>>> Detected EMAIL format, will check roles after authentication');
+      }
+
+      // Attempt authentication
+      print('>>> Attempting authentication...');
       final value = await authRepository.login({
-        "email": email,
+        "email": emailOrUsername,
         "password": password,
       });
 
@@ -98,41 +161,48 @@ class LoginController extends GetxController {
       _getStorage.write("userId", userId);
       _getStorage.write("sessionId", session.$id);
 
+      print('>>> ✓ Authentication successful');
       print('>>> Auth User ID: $userId');
       print('>>> Email: $userEmail');
 
       String role = "";
       bool matched = false;
 
-      // Check if account is admin
-      print('>>> Step 1: Checking if ADMIN...');
+      // Step 1: Check if account is ADMIN
+      print('>>> ==========================================');
+      print('>>> STEP 1: Checking if ADMIN...');
       final clinicDoc = await authRepository.getClinicByAdminId(userId);
       if (clinicDoc != null) {
         role = clinicDoc.data["role"];
         _getStorage.write("clinicId", clinicDoc.$id);
         _getStorage.write("userName", clinicDoc.data["createdBy"] ?? user.name);
         matched = true;
-        print('>>> ✓ ADMIN FOUND - Role: $role');
+        print('>>> ✓ ADMIN FOUND');
+        print('>>> Role: $role');
+        print('>>> Clinic ID: ${clinicDoc.$id}');
+      } else {
+        print('>>> ✗ Not an admin account');
       }
 
-      // Check if account is staff
+      // Step 2: Check if account is STAFF
       if (!matched) {
-        print('>>> Step 2: Checking if STAFF...');
+        print('>>> ==========================================');
+        print('>>> STEP 2: Checking if STAFF...');
 
         // Try by userId first
         var staff = await authRepository.getStaffByUserId(userId);
 
-        // If not found, try by email (this catches userId mismatches)
-        if (staff == null) {
-          print('>>> Not found by userId, trying by EMAIL...');
-          staff = await authRepository.getStaffByEmail(userEmail);
+        // If not found, try by username (catches userId mismatches)
+        if (staff == null && !isEmail) {
+          print('>>> Not found by userId, trying by USERNAME...');
+          staff = await authRepository.getStaffByUsername(emailOrUsername);
 
-          // Auto-fix userId if found by email
+          // Auto-fix userId if found by username
           if (staff != null) {
-            print('>>> ✓ STAFF FOUND BY EMAIL');
+            print('>>> ✓ STAFF FOUND BY USERNAME (userId mismatch detected)');
             await _autoFixStaffUserId(staff, userId);
           }
-        } else {
+        } else if (staff != null) {
           print('>>> ✓ STAFF FOUND BY USERID');
         }
 
@@ -142,50 +212,71 @@ class LoginController extends GetxController {
           _getStorage.write("clinicId", staff.clinicId);
           _getStorage.write("authorities", staff.authorities);
           _getStorage.write("userName", staff.name);
+          _getStorage.write("username", staff.username);
           matched = true;
+          print('>>> ✓ STAFF VERIFIED');
           print('>>> Staff Role: $role');
           print('>>> Staff Name: ${staff.name}');
+          print('>>> Staff Username: ${staff.username}');
+          print('>>> Staff Department: ${staff.department}');
+          print('>>> Staff Authorities: ${staff.authorities}');
+        } else {
+          print('>>> ✗ Not a staff account');
         }
       }
 
-      // Check if user (customer)
+      // Step 3: Check if CUSTOMER
       if (!matched) {
-        print('>>> Step 3: Checking if CUSTOMER...');
+        print('>>> ==========================================');
+        print('>>> STEP 3: Checking if CUSTOMER...');
         final userDoc = await authRepository.getUserById(userId);
         if (userDoc != null) {
           role = userDoc.data["role"];
           _getStorage.write("customerId", userDoc.$id);
           _getStorage.write("userName", user.name);
           matched = true;
-          print('>>> ✓ CUSTOMER FOUND - Role: $role');
+          print('>>> ✓ CUSTOMER FOUND');
+          print('>>> Role: $role');
+          print('>>> Customer ID: ${userDoc.$id}');
+        } else {
+          print('>>> ✗ Not a customer account');
         }
       }
 
-      // Check if developer
+      // Step 4: Check if DEVELOPER
       if (!matched && userEmail == "test.developer@gmail.com") {
         role = "developer";
         _getStorage.write("userName", user.name);
         matched = true;
-        print('>>> ✓ DEVELOPER ACCOUNT');
+        print('>>> ==========================================');
+        print('>>> ✓ DEVELOPER ACCOUNT DETECTED');
       }
 
+      // If no role matched, deny access
       if (!matched) {
         print('>>> ==========================================');
-        print('>>> ✗ NO ROLE MATCHED');
+        print('>>> ✗ NO VALID ROLE FOUND');
+        print('>>> This account has no assigned role in the database');
         print('>>> ==========================================');
 
         if (sessionId != null) {
           await authRepository.logout(sessionId);
         }
-        throw Exception(
-            "No role found for this account. Please contact support.");
+
+        FullScreenDialogLoader.cancelDialog();
+        errorMessage.value =
+            'Invalid username/email or password. Please try again.';
+        return;
       }
 
       _getStorage.write("role", role);
       _getStorage.write("email", userEmail);
 
       print('>>> ==========================================');
-      print('>>> ✓ LOGIN SUCCESS - Role: $role');
+      print('>>> ✓✓✓ LOGIN SUCCESS ✓✓✓');
+      print('>>> Final Role: $role');
+      print('>>> User ID: $userId');
+      print('>>> Session ID: $sessionId');
       print('>>> ==========================================');
 
       FullScreenDialogLoader.cancelDialog();
@@ -208,26 +299,28 @@ class LoginController extends GetxController {
       }
     } catch (e) {
       print('>>> ==========================================');
-      print('>>> ✗ LOGIN ERROR: $e');
+      print('>>> ✗✗✗ LOGIN ERROR ✗✗✗');
+      print('>>> Error Type: ${e.runtimeType}');
+      print('>>> Error Details: $e');
       print('>>> ==========================================');
 
       if (sessionId != null) {
         try {
           await authRepository.logout(sessionId);
-        } catch (_) {}
+          print('>>> Session cleaned up');
+        } catch (logoutError) {
+          print('>>> Error during session cleanup: $logoutError');
+        }
       }
 
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
-          context: Get.overlayContext,
-          title: "Login Failed",
-          message: e is AppwriteException
-              ? e.response ?? "Appwrite error"
-              : e.toString());
+
+      // UNIFIED ERROR MESSAGE: Always show this for any login error
+      errorMessage.value =
+          'Invalid username/email or password. Please check your credentials.';
     }
   }
 
-  /// AUTO-FIX HELPER: Runs every login, only updates if mismatch detected
   Future<void> _autoFixStaffUserId(Staff staff, String correctUserId) async {
     if (staff.userId != correctUserId) {
       print('>>> Auto-fixing userId mismatch...');
@@ -240,7 +333,6 @@ class LoginController extends GetxController {
         print('>>> ✓ UserId fixed!');
       } catch (e) {
         print('>>> Warning: Could not auto-fix userId: $e');
-        // Continue anyway, the login should still work
       }
     }
   }

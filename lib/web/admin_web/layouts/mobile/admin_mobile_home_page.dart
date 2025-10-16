@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 class AdminMobileHomePage extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
-  final bool canAccessStaffs; // Kept for compatibility
+  final bool canAccessStaffs;
 
   const AdminMobileHomePage({
     super.key,
@@ -125,34 +125,9 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
             controller.navigationLabels.length,
             (index) {
               final label = controller.navigationLabels[index];
-              final hasPermission =
-                  index == 0 || controller.hasAuthority(label);
-              final isViewOnly = !hasPermission && controller.isStaff;
 
               return BottomNavigationBarItem(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(_getIconForLabel(label)),
-                    if (isViewOnly)
-                      Positioned(
-                        top: -4,
-                        right: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Colors.orange,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.lock,
-                            size: 8,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                icon: Icon(_getIconForLabel(label)),
                 label: label,
               );
             },

@@ -1,8 +1,12 @@
+import 'package:capstone_app/utils/logout_helper.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
 import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
 import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
+
 
 class VeterinaryReport extends StatefulWidget {
   const VeterinaryReport({super.key});
@@ -21,6 +25,10 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   final int _itemsPerPage = 10;
   bool _isVetReportsHovered = false;
   bool _isSystemReportsHovered = false;
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isLoggingOut = false;
+
   @override
   void initState() {
     super.initState();
@@ -219,108 +227,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     );
   }
 
-  Widget _buildSideNavigation() {
-    return Container(
-      width: 60,
-      decoration: const BoxDecoration(
-        color: Color.fromRGBO(248, 253, 255, 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 1,
-            offset: Offset(2, 0),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Tooltip(
-            message: 'Vet Reports',
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _isVetReportsHovered = true),
-              onExit: (_) => setState(() => _isVetReportsHovered = false),
-              child: InkWell(
-                onTap: () {
-                  // Already on Vet Reports, so just highlight
-                  setState(() {
-                    _isVetReportsHovered = false;
-                    _isSystemReportsHovered = false;
-                  });
-                },
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 81, 115, 153),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.pets,
-                    color:
-                        true ? Colors.white : Color.fromRGBO(81, 115, 153, 1),
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Tooltip(
-            message: 'System Reports',
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _isSystemReportsHovered = true),
-              onExit: (_) => setState(() => _isSystemReportsHovered = false),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          const ApplicationReport(),
-                      transitionDuration: const Duration(milliseconds: 300),
-                      reverseTransitionDuration:
-                          const Duration(milliseconds: 250),
-                      transitionsBuilder:
-                          (context, animation, secondaryAnimation, child) {
-                        const begin = Offset(1.0, 0.0);
-                        const end = Offset.zero;
-                        const curve = Curves.easeInOut;
-                        var tween = Tween(begin: begin, end: end).chain(
-                          CurveTween(curve: curve),
-                        );
-                        return SlideTransition(
-                          position: animation.drive(tween),
-                          child: child,
-                        );
-                      },
-                    ),
-                  );
-                },
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _isSystemReportsHovered
-                        ? const Color.fromARGB(60, 81, 115, 153)
-                        : const Color.fromARGB(26, 239, 244, 249),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.phone_android_rounded,
-                    color: Color.fromRGBO(81, 115, 153, 1),
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildDashboardStats() {
     int totalRequests = _allRequests.length;
@@ -819,26 +726,16 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildDrawer(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back,
-              color: Color.fromARGB(255, 81, 115, 153)),
+          icon: const Icon(Icons.menu_rounded,
+              color: Color.fromRGBO(81, 115, 153, 1)),
           onPressed: () {
-            final width = MediaQuery.of(context).size.width;
-            Widget destination;
-            if (width < 480) {
-              destination = const SuperAdminMobileHomePage();
-            } else if (width >= 480 && width < 1000) {
-              destination = const SuperAdminTabletHomePage();
-            } else {
-              destination = const SuperAdminDesktopHomePage();
-            }
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => destination),
-            );
+            _scaffoldKey.currentState?.openDrawer();
           },
-          tooltip: 'Back',
+          tooltip: 'Menu',
         ),
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
@@ -861,9 +758,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       body: Row(
         children: [
-          // Side Navigation Bar
-          _buildSideNavigation(),
-          // Main Content
+        
           Expanded(
             child: Column(
               children: [
@@ -877,6 +772,308 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       ),
     );
   }
+  Widget _buildDrawer(BuildContext context) {
+  return Drawer(
+    backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+    child: Column(
+      children: [
+        // Header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.fromRGBO(81, 115, 153, 1),
+                Color.fromRGBO(81, 115, 153, 0.8),
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Developer',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Management Panel',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Menu Items
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              _buildDrawerItem(
+                context,
+                icon: Icons.local_hospital_rounded,
+                title: 'Veterinary Clinics',
+                subtitle: 'Manage vet clinics',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuperAdminVetClinicDashboard(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.people_rounded,
+                title: 'Pet Owner Management',
+                subtitle: 'Manage user accounts',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuperAdminUserManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.feedback_rounded,
+                title: 'System Reports',
+                subtitle: 'User feedback & reports',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminFeedbackManagement(),
+                    ),
+                  );
+                },
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+            ],
+          ),
+        ),
+
+        // Logout Button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: _isLoggingOut
+                ? Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 0.7),
+                          Color.fromRGBO(81, 115, 153, 0.5),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Logging Out...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : InkWell(
+                    onTap: () async {
+                      setState(() => _isLoggingOut = true);
+                      try {
+                        await LogoutHelper.logout();
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() => _isLoggingOut = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Logout failed: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(220, 53, 69, 1),
+                            Color.fromRGBO(200, 35, 51, 1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Log Out',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildDrawerItem(
+  BuildContext context, {
+  required IconData icon,
+  required String title,
+  required String subtitle,
+  required VoidCallback onTap,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color.fromRGBO(81, 115, 153, 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromRGBO(81, 115, 153, 0.2),
+                    Color.fromRGBO(81, 115, 153, 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: const Color.fromRGBO(81, 115, 153, 1),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color.fromRGBO(81, 115, 153, 1),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Color.fromRGBO(81, 115, 153, 0.5),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 }
 
 class DeletionRequestItem {
@@ -1185,7 +1382,6 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
       ],
     );
   }
-
   @override
   void dispose() {
     _denialReasonController.dispose();
