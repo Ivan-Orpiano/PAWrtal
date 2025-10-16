@@ -219,33 +219,64 @@ class WebAdminHomeController extends GetxController {
     return navigationLabels[selectedIndex.value];
   }
 
-  // NEW: Check if staff can access a specific feature
+  /// NEW: Check if staff can access a specific dashboard feature/widget
   bool canAccessFeature(String featureName) {
     if (isAdmin) return true;
 
     // Map feature names to permissions
     final featurePermissions = {
-      'clinic_info': 'Clinic',
-      'clinic_settings': 'Clinic',
       'appointments': 'Appointments',
       'messages': 'Messages',
-      'staffs': 'admin_only', // Special case - admin only
+      'clinic_info': 'Clinic',
+      'clinic_settings': 'Clinic',
+      'staffs': 'admin_only', // Admin only - staff never see this
     };
 
     final requiredPermission = featurePermissions[featureName];
 
+    // Staff can never access admin-only features
     if (requiredPermission == 'admin_only') {
-      return false; // Staff can never access
+      return false;
     }
 
+    // If no permission mapping, allow by default
     if (requiredPermission == null) {
-      return true; // Unknown feature, allow by default
+      return true;
     }
 
+    // Check if staff has the required authority
     return hasAuthority(requiredPermission);
   }
 
-  // NEW: Show permission denied dialog
+  /// NEW: Get a list of accessible features for the current user
+  List<String> getAccessibleFeatures() {
+    final allFeatures = [
+      'appointments',
+      'messages',
+      'clinic_info',
+      'clinic_settings',
+    ];
+
+    if (isAdmin) {
+      return [...allFeatures, 'staffs'];
+    }
+
+    return allFeatures.where((feature) => canAccessFeature(feature)).toList();
+  }
+
+  /// NEW: Get dashboard widget visibility
+  Map<String, bool> getDashboardWidgetVisibility() {
+    return {
+      'todaySchedule': canAccessFeature('appointments'),
+      'recentMessages': canAccessFeature('messages'),
+      'upcomingAppointments': canAccessFeature('appointments'),
+      'appointmentCalendar': canAccessFeature('appointments'),
+      'quickStats': canAccessFeature('appointments'),
+      'clinicInfo': canAccessFeature('clinic_info'),
+    };
+  }
+
+  /// NEW: Enhanced permission denied dialog with suggestion
   void showPermissionDeniedDialog(String featureName) {
     Get.dialog(
       AlertDialog(
@@ -261,7 +292,7 @@ class WebAdminHomeController extends GetxController {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'You do not have permission to access this feature.',
+              'You do not have permission to access $featureName.',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[800],
@@ -280,11 +311,48 @@ class WebAdminHomeController extends GetxController {
                   Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
                   const SizedBox(width: 8),
                   Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Permission Required',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Contact your administrator to request access to $featureName.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb, color: Colors.blue[700], size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      'Please contact your administrator to request access.',
+                      'Your current permissions: ${userAuthorities.value.join(", ")}',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.orange[900],
+                        fontSize: 12,
+                        color: Colors.blue[900],
                       ),
                     ),
                   ),
@@ -307,6 +375,42 @@ class WebAdminHomeController extends GetxController {
     print('>>> Manual refresh of role data requested');
     _loadUserRole();
     _buildNavigationBasedOnPermissions();
+  }
+
+  /// NEW: Get permission summary for staff
+  String getPermissionSummary() {
+    if (isAdmin) {
+      return 'Admin - Full access to all features';
+    }
+
+    final features = getAccessibleFeatures();
+    if (features.isEmpty) {
+      return 'No features available';
+    }
+
+    if (features.length == 4) {
+      return 'Full staff access';
+    }
+
+    return 'Access: ${features.join(", ")}';
+  }
+
+  /// NEW: Log permission details for debugging
+  void debugPrintPermissions() {
+    print('>>> ============================================');
+    print('>>> PERMISSION DEBUG INFO');
+    print('>>> ============================================');
+    print('>>> Role: $userRole');
+    print('>>> Is Admin: $isAdmin');
+    print('>>> Is Staff: $isStaff');
+    print('>>> Authorities: ${userAuthorities.value}');
+    print('>>> Accessible Features: ${getAccessibleFeatures().join(", ")}');
+    print('>>> Dashboard Widget Visibility:');
+    getDashboardWidgetVisibility().forEach((widget, visible) {
+      print('>>>   - $widget: ${visible ? "VISIBLE" : "HIDDEN"}');
+    });
+    print('>>> Permission Summary: ${getPermissionSummary()}');
+    print('>>> ============================================');
   }
 
   void debugPrintState() {

@@ -776,4 +776,111 @@ class AdminDashboardController extends GetxController {
       isRealTimeConnected.value ? "Connected" : "Polling";
   String get lastUpdateDisplay =>
       "Last update: ${DateFormat('hh:mm:ss a').format(lastUpdateTime.value)}";
+
+  /// Check if user can view appointments widget
+  bool canViewAppointmentsWidget() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return homeController.canAccessFeature('appointments');
+    } catch (e) {
+      print('Error checking appointments permission: $e');
+      return false;
+    }
+  }
+
+  /// Check if user can view messages widget
+  bool canViewMessagesWidget() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return homeController.canAccessFeature('messages');
+    } catch (e) {
+      print('Error checking messages permission: $e');
+      return false;
+    }
+  }
+
+  /// Check if user can view clinic widget
+  bool canViewClinicWidget() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return homeController.canAccessFeature('clinic_info');
+    } catch (e) {
+      print('Error checking clinic permission: $e');
+      return false;
+    }
+  }
+
+  /// NEW: Get only visible stats based on permissions
+  List<Map<String, dynamic>> getVisibleStats() {
+    final allStats = [
+      {
+        'title': 'Today\'s Appointments',
+        'value': todayAppointments.length.toString(),
+        'subtitle': 'Scheduled today',
+        'icon': Icons.event_available,
+        'color': Colors.blue,
+        'permission': 'appointments',
+      },
+      {
+        'title': 'Pending Appointments',
+        'value': pendingCount.toString(),
+        'subtitle': 'Need approval',
+        'icon': Icons.pending_actions,
+        'color': Colors.orange,
+        'permission': 'appointments',
+      },
+      {
+        'title': 'Today\'s In Progress',
+        'value': todayAppointments
+            .where((a) => a.status == 'in_progress')
+            .length
+            .toString(),
+        'subtitle': 'Currently being treated',
+        'icon': Icons.medical_services,
+        'color': Colors.purple,
+        'permission': 'appointments',
+      },
+      {
+        'title': 'Today\'s Completed',
+        'value': todayAppointments
+            .where((a) => a.status == 'completed')
+            .length
+            .toString(),
+        'subtitle': 'Finished appointments today',
+        'icon': Icons.check_circle,
+        'color': Colors.green,
+        'permission': 'appointments',
+      },
+    ];
+
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return allStats
+          .where((stat) =>
+              homeController.canAccessFeature(stat['permission'] as String))
+          .toList();
+    } catch (e) {
+      print('Error filtering stats: $e');
+      return allStats;
+    }
+  }
+
+  /// NEW: Get count of visible widgets for layout purposes
+  Map<String, bool> getVisibleWidgets() {
+    try {
+      final homeController = Get.find<WebAdminHomeController>();
+      return {
+        'appointments': homeController.canAccessFeature('appointments'),
+        'messages': homeController.canAccessFeature('messages'),
+        'clinic': homeController.canAccessFeature('clinic_info'),
+      };
+    } catch (e) {
+      print('Error getting visible widgets: $e');
+      return {
+        'appointments': true,
+        'messages': true,
+        'clinic': true,
+      };
+    }
+  }
 }

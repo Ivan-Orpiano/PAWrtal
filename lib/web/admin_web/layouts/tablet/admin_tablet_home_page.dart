@@ -8,7 +8,7 @@ import 'package:get/get.dart';
 class AdminTabletHomePage extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
-  final bool canAccessStaffs; // Kept for compatibility
+  final bool canAccessStaffs;
 
   const AdminTabletHomePage({
     super.key,
@@ -22,15 +22,20 @@ class AdminTabletHomePage extends StatefulWidget {
 }
 
 class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
+  late final WebAdminHomeController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.find<WebAdminHomeController>();
+  }
+
   Widget _wrapWithPermissionGuard(
       Widget page, int index, WebAdminHomeController controller) {
-    // Home page (index 0) doesn't need permission check
     if (index == 0) return page;
 
-    // Admin has full access to everything
     if (controller.isAdmin) return page;
 
-    // Staff users - check if they have permission for this page
     final pageName = controller.navigationLabels[index];
     final hasPermission = controller.hasAuthority(pageName);
 
@@ -41,16 +46,34 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
     );
   }
 
+  Icon _getIconForLabel(String label) {
+    switch (label) {
+      case 'Home':
+        return const Icon(Icons.dashboard, size: 20);
+      case 'Clinic':
+        return const Icon(Icons.local_hospital, size: 20);
+      case 'Appointments':
+        return const Icon(Icons.calendar_today, size: 20);
+      case 'Messages':
+        return const Icon(Icons.message, size: 20);
+      case 'Staffs':
+        return const Icon(Icons.people, size: 20);
+      default:
+        return const Icon(Icons.circle, size: 20);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<WebAdminHomeController>();
+    final screenSize = MediaQuery.of(context).size;
+    final isPortrait = screenSize.height > screenSize.width;
 
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
-        toolbarHeight: 80,
+        toolbarHeight: isPortrait ? 70 : 65,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
@@ -62,148 +85,135 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
           onTap: () => widget.onItemSelected(0),
           child: Image.asset(
             'lib/images/PAWrtal_logo.png',
-            height: 40,
+            height: isPortrait ? 35 : 30,
           ),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 30),
-            child: Row(
+            padding: EdgeInsets.symmetric(
+              horizontal: isPortrait ? 20 : 15,
+            ),
+            child: const Row(
               children: [
                 AdminWebNotif(),
+                SizedBox(width: 12),
                 AdminWebProfile(),
               ],
             ),
           )
         ],
       ),
-      drawer: Obx(() => Drawer(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                DrawerHeader(
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(255, 81, 115, 153),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 30,
-                        child: Icon(
-                          Icons.admin_panel_settings,
-                          color: Color.fromARGB(255, 81, 115, 153),
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        controller.userName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        controller.userRole.value.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+      drawer: SafeArea(
+        child: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: const BoxDecoration(
+                  color: Color.fromARGB(255, 81, 115, 153),
                 ),
-                ...List.generate(
-                  controller.navigationLabels.length,
-                  (index) {
-                    final label = controller.navigationLabels[index];
-                    final hasPermission =
-                        index == 0 || controller.hasAuthority(label);
-                    final isViewOnly = !hasPermission && controller.isStaff;
-
-                    return ListTile(
-                      leading: Row(
-                        mainAxisSize: MainAxisSize.min,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Colors.white,
+                      radius: 28,
+                      child: Icon(
+                        Icons.admin_panel_settings,
+                        color: Color.fromARGB(255, 81, 115, 153),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Obx(() {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _getIconForIndex(index),
-                          if (isViewOnly) ...[
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.lock_outline,
-                              size: 14,
-                              color: Colors.orange,
+                          Text(
+                            _controller.userName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
-                          ],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            _controller.userRole.value.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
                         ],
-                      ),
-                      title: Text(label),
-                      selected: widget.selectedIndex == index,
-                      selectedTileColor: const Color.fromARGB(255, 81, 115, 153)
-                          .withOpacity(0.1),
-                      trailing: isViewOnly
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'View Only',
-                                style: TextStyle(
-                                    fontSize: 10, color: Colors.orange),
-                              ),
-                            )
-                          : null,
-                      onTap: () {
-                        widget.onItemSelected(index);
-                        Navigator.pop(context); // Close drawer
-                      },
-                    );
-                  },
+                      );
+                    }),
+                  ],
                 ),
-              ],
-            ),
-          )),
+              ),
+              Obx(() {
+                return Column(
+                  children: List.generate(
+                    _controller.navigationLabels.length,
+                    (index) {
+                      final label = _controller.navigationLabels[index];
+                      final hasPermission =
+                          index == 0 || _controller.hasAuthority(label);
+                      final isViewOnly =
+                          !hasPermission && _controller.isStaff;
+
+                      return ListTile(
+                        leading: _getIconForLabel(label),
+                        title: Text(
+                          label,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        selected: widget.selectedIndex == index,
+                        selectedTileColor: const Color.fromARGB(255, 81, 115, 153)
+                            .withOpacity(0.1),
+                        trailing: isViewOnly
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'View Only',
+                                  style: TextStyle(
+                                      fontSize: 9, color: Colors.orange),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Future.delayed(const Duration(milliseconds: 100), () {
+                            widget.onItemSelected(index);
+                          });
+                        },
+                      );
+                    },
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
       body: Obx(() {
-        if (widget.selectedIndex >= controller.pages.length) {
+        if (widget.selectedIndex >= _controller.pages.length) {
           return const Center(child: Text('Page not found'));
         }
 
-        // Wrap the current page with permission guard
         return _wrapWithPermissionGuard(
-          controller.pages[widget.selectedIndex],
+          _controller.pages[widget.selectedIndex],
           widget.selectedIndex,
-          controller,
+          _controller,
         );
       }),
     );
-  }
-
-  Icon _getIconForIndex(int index) {
-    // Use a flexible approach based on navigation label
-    final controller = Get.find<WebAdminHomeController>();
-    if (index >= controller.navigationLabels.length) {
-      return const Icon(Icons.circle);
-    }
-
-    final label = controller.navigationLabels[index];
-    switch (label) {
-      case 'Home':
-        return const Icon(Icons.dashboard);
-      case 'Clinic':
-        return const Icon(Icons.local_hospital);
-      case 'Appointments':
-        return const Icon(Icons.calendar_today);
-      case 'Messages':
-        return const Icon(Icons.message);
-      case 'Staffs':
-        return const Icon(Icons.people);
-      default:
-        return const Icon(Icons.circle);
-    }
   }
 }
