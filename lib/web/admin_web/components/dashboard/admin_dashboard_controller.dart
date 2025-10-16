@@ -1,4 +1,4 @@
-import 'package:capstone_app/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';

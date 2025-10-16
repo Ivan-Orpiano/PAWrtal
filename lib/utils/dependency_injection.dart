@@ -1,5 +1,5 @@
 // lib/init/dependency_injection.dart
-import 'package:capstone_app/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';

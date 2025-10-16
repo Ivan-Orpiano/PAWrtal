@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart' as models;
-import 'package:capstone_app/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
@@ -382,6 +382,8 @@ class AdminMessagingController extends GetxController {
         attachmentUrl: attachmentUrl,
       );
 
+      await _createMessageNotificationForUser(sentMessage, messageText);
+
       // Update conversation in local list - admin sent message so their unread count stays 0
       // The user's unread count will be incremented by the server
       final updatedConversation = currentConversation.value!.copyWith(
@@ -405,6 +407,42 @@ class AdminMessagingController extends GetxController {
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isSendingMessage.value = false;
+    }
+  }
+
+  Future<void> _createMessageNotificationForUser(
+      Message message, String messageText) async {
+    try {
+      if (currentConversation.value == null) return;
+
+      // Get admin/clinic name for the notification
+      final adminName = _userSession.userName.isNotEmpty
+          ? _userSession.userName
+          : 'Clinic Staff';
+
+      // Create notification for the user
+      final notification = NotificationModel.newMessage(
+        clinicId: currentConversation.value!.userId, // User as recipient
+        conversationId: currentConversation.value!.documentId!,
+        messageId: message.documentId!,
+        userId: currentConversation.value!.userId,
+        senderName: adminName,
+        messagePreview: messageText.length > 50
+            ? '${messageText.substring(0, 50)}...'
+            : messageText,
+      );
+
+      // Update the notification to be for user instead of admin
+      final userNotification = notification.copyWith(
+        recipientId: currentConversation.value!.userId,
+        recipientType: 'user',
+      );
+
+      await _authRepository.createNotification(userNotification);
+      print(
+          'Created message notification for user: ${currentConversation.value!.userId}');
+    } catch (e) {
+      print('Error creating message notification for user: $e');
     }
   }
 
@@ -669,18 +707,15 @@ class AdminMessagingController extends GetxController {
 
         if (updatedConversation.clinicUnreadCount > 0 &&
             updatedConversation.lastMessageText != null) {
-          _createMessageNotification(updatedConversation);
+          _createMessageNotificationForAdmin(updatedConversation);
         }
       }
 
       // Move updated conversation to top if it has new messages and it's not already at the top
       if (updatedConversation.clinicUnreadCount > 0 && index != 0) {
-        print('>>> Moving conversation to top (has unread messages)');
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
       }
-
-      print('>>> Conversation updated successfully');
     } else {
       print('>>> Conversation not found in list - adding as new');
       // If conversation doesn't exist, add it
@@ -688,24 +723,39 @@ class AdminMessagingController extends GetxController {
     }
   }
 
-  Future<void> _createMessageNotification(Conversation conversation) async {
+  Future<void> _createMessageNotificationForAdmin(
+      Conversation conversation) async {
     try {
-      final userData = await _getUserData(conversation.userId);
-
-      await _notificationController.createNotification(
-        NotificationModel(
-          recipientId: conversation.clinicId,
-          recipientType: 'admin',
-          type: NotificationType.newMessage,
-          title: 'New Message',
-          message: '${userData['name']}: ${conversation.lastMessageText}',
-          conversationId: conversation.documentId,
-          userId: conversation.userId,
-          actionUrl: '/messages?conversation=${conversation.documentId}',
-        ),
+      // Only create notification if the message is FROM a user TO the admin
+      // Check the last message to see who sent it
+      final messages = await _authRepository.getConversationMessages(
+        conversation.documentId!,
+        limit: 1,
       );
+
+      if (messages.isNotEmpty) {
+        final lastMessage = messages.first;
+
+        // Only notify admin if the message was sent by a user (not by admin)
+        if (lastMessage.senderType == 'user') {
+          final userData = await _getUserData(conversation.userId);
+
+          final notification = NotificationModel.newMessage(
+            clinicId: conversation.clinicId,
+            conversationId: conversation.documentId!,
+            messageId: lastMessage.documentId!,
+            userId: conversation.userId,
+            senderName: userData['name'],
+            messagePreview: conversation.lastMessageText!,
+          );
+
+          await _authRepository.createNotification(notification);
+          print(
+              'Created message notification for admin from user: ${userData['name']}');
+        }
+      }
     } catch (e) {
-      print('Error creating message notification: $e');
+      print('Error creating message notification for admin: $e');
     }
   }
 

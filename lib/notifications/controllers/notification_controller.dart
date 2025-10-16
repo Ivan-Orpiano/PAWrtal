@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/notifications/components/toast_notification_system.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,8 @@ import 'package:get_storage/get_storage.dart';
 class NotificationController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
+  final Set<String> _processedNotificationIds = <String>{};
+  Timer? _countUpdateDebouncer;
 
   NotificationController({
     required this.authRepository,
@@ -23,14 +26,14 @@ class NotificationController extends GetxController {
   var isLoading = false.obs;
   var isLoadingMore = false.obs;
   var hasMoreNotifications = true.obs;
-  
+
   // Filtering and sorting
   var selectedFilter = 'all'.obs; // all, unread, appointments, messages
   var showArchived = false.obs;
-  
+
   // Real-time subscription
   StreamSubscription<RealtimeMessage>? _notificationSubscription;
-  
+
   // Pagination
   int _currentPage = 0;
   final int _pageSize = 20;
@@ -44,6 +47,8 @@ class NotificationController extends GetxController {
 
   @override
   void onClose() {
+    _countUpdateDebouncer?.cancel();
+    ToastNotificationService.hideCurrentToast();
     _notificationSubscription?.cancel();
     super.onClose();
   }
@@ -61,6 +66,7 @@ class NotificationController extends GetxController {
   Future<void> loadNotifications({bool refresh = false}) async {
     if (refresh) {
       _resetPagination();
+      _processedNotificationIds.clear(); // Clear processed IDs on refresh
     }
 
     if (isLoading.value || (!hasMoreNotifications.value && !refresh)) return;
@@ -89,7 +95,12 @@ class NotificationController extends GetxController {
       if (refresh) {
         notifications.assignAll(result);
       } else {
-        notifications.addAll(result);
+        // Add only new notifications that don't already exist
+        final existingIds = notifications.map((n) => n.documentId).toSet();
+        final newNotifications =
+            result.where((n) => !existingIds.contains(n.documentId)).toList();
+
+        notifications.addAll(newNotifications);
       }
 
       // Update pagination state
@@ -100,7 +111,6 @@ class NotificationController extends GetxController {
       }
 
       _updateUnreadCount();
-
     } catch (e) {
       print('Error loading notifications: $e');
       _showErrorSnackbar('Failed to load notifications');
@@ -117,13 +127,17 @@ class NotificationController extends GetxController {
       if (recipientId == null) return;
 
       final realtime = Realtime(authRepository.client);
-      
-      _notificationSubscription = realtime.subscribe([
-        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.notificationsCollectionID}.documents'
-      ]).stream.listen(
-        (response) => _handleRealtimeNotification(response),
-        onError: (error) => print('Notification subscription error: $error'),
-      );
+
+      _notificationSubscription = realtime
+          .subscribe([
+            'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.notificationsCollectionID}.documents'
+          ])
+          .stream
+          .listen(
+            (response) => _handleRealtimeNotification(response),
+            onError: (error) =>
+                print('Notification subscription error: $error'),
+          );
 
       print('Notification real-time subscription established');
     } catch (e) {
@@ -136,9 +150,18 @@ class NotificationController extends GetxController {
     try {
       final payload = response.payload;
       final recipientId = _getRecipientId();
-      
+
       // Only process notifications for current user/clinic
       if (payload['recipientId'] != recipientId) return;
+
+      final notificationId = payload['\$id'] as String?;
+      if (notificationId == null) return;
+
+      // Check if we've already processed this notification recently
+      if (_processedNotificationIds.contains(notificationId)) {
+        print('Skipping duplicate notification: $notificationId');
+        return;
+      }
 
       final notification = NotificationModel.fromMap(payload);
 
@@ -151,33 +174,64 @@ class NotificationController extends GetxController {
           _handleDeletedNotification(notification);
         }
       }
+
+      // Mark as processed and clean up old IDs periodically
+      _processedNotificationIds.add(notificationId);
+      _cleanupProcessedIds();
     } catch (e) {
       print('Error handling real-time notification: $e');
     }
   }
 
   void _handleNewNotification(NotificationModel notification) {
+    // Check if notification already exists in list
+    final existingIndex = notifications
+        .indexWhere((n) => n.documentId == notification.documentId);
+
+    if (existingIndex != -1) {
+      print(
+          'Notification already exists, skipping: ${notification.documentId}');
+      return;
+    }
+
     // Add to beginning of list
     notifications.insert(0, notification);
-    _updateUnreadCount();
-    
-    // Show notification popup
-    _showNotificationPopup(notification);
-    
-    print('New notification received: ${notification.title}');
+
+    // Debounced count update to prevent rapid changes
+    _debouncedUpdateUnreadCount();
+
+    // Show notification popup only for new notifications
+    if (notification.isUnread) {
+      _showNotificationPopup(notification);
+    }
+
+    print('New notification added: ${notification.title}');
   }
 
   void _handleUpdatedNotification(NotificationModel notification) {
-    final index = notifications.indexWhere((n) => n.documentId == notification.documentId);
+    final index = notifications
+        .indexWhere((n) => n.documentId == notification.documentId);
     if (index != -1) {
       notifications[index] = notification;
-      _updateUnreadCount();
+      _debouncedUpdateUnreadCount();
+      print('Notification updated: ${notification.documentId}');
+    } else {
+      // If notification doesn't exist, treat as new
+      _handleNewNotification(notification);
     }
   }
 
   void _handleDeletedNotification(NotificationModel notification) {
     notifications.removeWhere((n) => n.documentId == notification.documentId);
-    _updateUnreadCount();
+    _debouncedUpdateUnreadCount();
+    print('Notification deleted: ${notification.documentId}');
+  }
+
+  void _debouncedUpdateUnreadCount() {
+    _countUpdateDebouncer?.cancel();
+    _countUpdateDebouncer = Timer(const Duration(milliseconds: 300), () {
+      _updateUnreadCount();
+    });
   }
 
   /// Mark notification as read
@@ -186,9 +240,10 @@ class NotificationController extends GetxController {
 
     try {
       await authRepository.markNotificationAsRead(notification.documentId!);
-      
+
       // Update locally
-      final index = notifications.indexWhere((n) => n.documentId == notification.documentId);
+      final index = notifications
+          .indexWhere((n) => n.documentId == notification.documentId);
       if (index != -1) {
         notifications[index] = notification.copyWith(
           isRead: true,
@@ -206,7 +261,7 @@ class NotificationController extends GetxController {
     try {
       final recipientId = _getRecipientId();
       final recipientType = _getRecipientType();
-      
+
       if (recipientId == null || recipientType == null) return;
 
       await authRepository.markAllNotificationsAsRead(
@@ -223,10 +278,10 @@ class NotificationController extends GetxController {
           );
         }
       }
-      
+
       notifications.refresh();
       _updateUnreadCount();
-      
+
       _showSuccessSnackbar('All notifications marked as read');
     } catch (e) {
       print('Error marking all as read: $e');
@@ -238,11 +293,13 @@ class NotificationController extends GetxController {
   Future<void> archiveNotification(NotificationModel notification) async {
     try {
       await authRepository.archiveNotification(notification.documentId!);
-      
+
       if (!showArchived.value) {
-        notifications.removeWhere((n) => n.documentId == notification.documentId);
+        notifications
+            .removeWhere((n) => n.documentId == notification.documentId);
       } else {
-        final index = notifications.indexWhere((n) => n.documentId == notification.documentId);
+        final index = notifications
+            .indexWhere((n) => n.documentId == notification.documentId);
         if (index != -1) {
           notifications[index] = notification.copyWith(
             isArchived: true,
@@ -250,7 +307,7 @@ class NotificationController extends GetxController {
           );
         }
       }
-      
+
       _updateUnreadCount();
       _showSuccessSnackbar('Notification archived');
     } catch (e) {
@@ -275,7 +332,7 @@ class NotificationController extends GetxController {
   /// Handle notification tap - navigate and mark as read
   Future<void> handleNotificationTap(NotificationModel notification) async {
     await markAsRead(notification);
-    
+
     if (notification.actionUrl != null) {
       _navigateToAction(notification.actionUrl!);
     }
@@ -308,7 +365,7 @@ class NotificationController extends GetxController {
     try {
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
-      
+
       if (userRole == 'admin' || userRole == 'staff') {
         return storage.read('clinicId') as String?;
       } else {
@@ -324,7 +381,7 @@ class NotificationController extends GetxController {
     try {
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
-      
+
       if (userRole == 'admin' || userRole == 'staff') {
         return 'admin';
       } else {
@@ -337,7 +394,39 @@ class NotificationController extends GetxController {
   }
 
   void _updateUnreadCount() {
-    unreadCount.value = notifications.where((n) => !n.isRead && !n.isArchived).length;
+    // Use Set to ensure unique notifications
+    final uniqueNotifications = <String, NotificationModel>{};
+
+    for (var notification in notifications) {
+      if (notification.documentId != null) {
+        uniqueNotifications[notification.documentId!] = notification;
+      }
+    }
+
+    // Update list with deduplicated notifications
+    if (uniqueNotifications.length != notifications.length) {
+      notifications.assignAll(uniqueNotifications.values.toList());
+      print(
+          'Removed ${notifications.length - uniqueNotifications.length} duplicate notifications');
+    }
+
+    // Calculate unread count
+    final newUnreadCount =
+        notifications.where((n) => !n.isRead && !n.isArchived).length;
+
+    if (unreadCount.value != newUnreadCount) {
+      unreadCount.value = newUnreadCount;
+      print('Updated unread count: ${unreadCount.value}');
+    }
+  }
+
+  void _cleanupProcessedIds() {
+    if (_processedNotificationIds.length > 100) {
+      // Keep only the most recent 50 IDs
+      final recentIds = _processedNotificationIds.skip(50).toSet();
+      _processedNotificationIds.clear();
+      _processedNotificationIds.addAll(recentIds);
+    }
   }
 
   void _resetPagination() {
@@ -353,18 +442,16 @@ class NotificationController extends GetxController {
         // Navigate to appointments with optional filter
         final uri = Uri.parse(actionUrl);
         final filter = uri.queryParameters['filter'];
-        
+
         // Use your existing navigation logic
         // Example: Get.toNamed('/appointments', parameters: {'filter': filter});
-        
       } else if (actionUrl.startsWith('/messages')) {
         // Navigate to messages with optional conversation
         final uri = Uri.parse(actionUrl);
         final conversationId = uri.queryParameters['conversation'];
-        
+
         // Navigate to messages
         // Example: Get.toNamed('/messages', parameters: {'conversation': conversationId});
-        
       }
       // Add more navigation cases as needed
     } catch (e) {
@@ -373,73 +460,8 @@ class NotificationController extends GetxController {
   }
 
   void _showNotificationPopup(NotificationModel notification) {
-    // Create elegant notification popup instead of snackbar
-    _showCustomNotificationPopup(notification);
-  }
-
-  void _showCustomNotificationPopup(NotificationModel notification) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    _getNotificationIcon(notification.type),
-                    color: _getNotificationColor(notification.type),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      notification.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Get.back(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                notification.message,
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Dismiss'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      Get.back();
-                      handleNotificationTap(notification);
-                    },
-                    child: const Text('View'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: true,
-    );
+    // Use toast notification instead of full-screen dialog
+    ToastNotificationService.showToastNotification(notification);
   }
 
   IconData _getNotificationIcon(NotificationType type) {
@@ -497,17 +519,20 @@ class NotificationController extends GetxController {
   }
 
   // Getters for filtered notifications
-  List<NotificationModel> get unreadNotifications => 
+  List<NotificationModel> get unreadNotifications =>
       notifications.where((n) => !n.isRead && !n.isArchived).toList();
 
-  List<NotificationModel> get appointmentNotifications =>
-      notifications.where((n) => n.type.toString().contains('appointment')).toList();
+  List<NotificationModel> get appointmentNotifications => notifications
+      .where((n) => n.type.toString().contains('appointment'))
+      .toList();
 
-  List<NotificationModel> get messageNotifications =>
-      notifications.where((n) => n.type == NotificationType.newMessage).toList();
+  List<NotificationModel> get messageNotifications => notifications
+      .where((n) => n.type == NotificationType.newMessage)
+      .toList();
 
-  List<NotificationModel> get urgentNotifications =>
-      notifications.where((n) => n.priority == NotificationPriority.urgent).toList();
+  List<NotificationModel> get urgentNotifications => notifications
+      .where((n) => n.priority == NotificationPriority.urgent)
+      .toList();
 
   bool get hasUnreadNotifications => unreadCount.value > 0;
 }

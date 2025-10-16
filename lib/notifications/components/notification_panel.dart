@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
-import 'package:capstone_app/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 
 class NotificationButton extends StatefulWidget {
   final double? right;

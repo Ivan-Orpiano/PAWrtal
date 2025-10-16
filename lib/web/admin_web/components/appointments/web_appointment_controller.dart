@@ -1,4 +1,5 @@
-import 'package:capstone_app/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/components/toast_notification_system.dart';
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -231,18 +232,19 @@ class WebAppointmentController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    // Get.snackbar(
-    //   "New Appointment",
-    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-    //   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-    //   colorText: Colors.white,
-    //   duration: const Duration(seconds: 5),
-    //   snackPosition: SnackPosition.TOP,
-    // );
-    _createAppointmentNotification(
-      type: 'booked',
-      appointment: appointment,
+    // This is for when USER books appointment - admin should get notified
+    final notification = NotificationModel.appointmentBooked(
+      clinicId: appointment.clinicId,
+      appointmentId: appointment.documentId!,
+      userId: appointment.userId,
+      petName: getPetName(appointment.petId),
+      ownerName: getOwnerName(appointment.userId),
+      service: appointment.service,
+      appointmentTime: appointment.dateTime,
     );
+
+    // Show toast notification to admin
+    ToastNotificationService.showToastNotification(notification);
   }
 
   Future<void> _createAppointmentNotification({
@@ -599,7 +601,6 @@ class WebAppointmentController extends GetxController {
 
   // Appointment actions
   Future<void> acceptAppointment(Appointment appointment) async {
-    // Check if time slot is available before accepting
     final isAvailable = await checkTimeSlotAvailability(
       appointment.clinicId,
       appointment.dateTime,
@@ -607,48 +608,26 @@ class WebAppointmentController extends GetxController {
     );
 
     if (!isAvailable) {
-      // Get.snackbar(
-      //   "Time Slot Unavailable",
-      //   "This time slot is already booked. Please ask the client to choose a different time.",
-      //   backgroundColor: Colors.orange,
-      //   colorText: Colors.white,
-      // );
-
-      _notificationController.createNotification(
-        NotificationModel(
-          recipientId: appointment.clinicId,
-          recipientType: 'admin',
-          type: NotificationType.systemAlert,
-          priority: NotificationPriority.high,
-          title: 'Time Slot Unavailable',
-          message:
-              'This time slot is already booked. Please ask the client to choose a different time.',
-          appointmentId: appointment.documentId,
-        ),
+      // Show error using toast instead of creating notification
+      ToastNotificationService.showErrorToast(
+        'Time Slot Unavailable',
+        'This time slot is already booked. Please ask the client to choose a different time.',
       );
       return;
     }
 
     await _updateAppointmentStatus(appointment, 'accepted');
 
-    await _createAppointmentNotification(
-      type: 'accepted',
-      appointment: appointment,
-    );
+    // *** ONLY create notification for the USER, not the admin ***
+    // await _createAppointmentNotificationForUser(
+    //   type: 'accepted',
+    //   appointment: appointment,
+    // );
 
-    // Get.snackbar(
-    //     "Success", "Appointment accepted! Time slot has been reserved.");
-
-    _notificationController.createNotification(
-      NotificationModel(
-        recipientId: appointment.clinicId,
-        recipientType: 'admin',
-        type: NotificationType.appointmentAccepted,
-        title: 'Appointment Accepted',
-        message:
-            'Appointment for ${getPetName(appointment.petId)} has been accepted',
-        appointmentId: appointment.documentId,
-      ),
+    // *** Show success toast instead of notification ***
+    ToastNotificationService.showSuccessToast(
+      'Appointment Accepted',
+      'Successfully accepted appointment for ${getPetName(appointment.petId)}',
     );
   }
 
@@ -664,42 +643,64 @@ class WebAppointmentController extends GetxController {
 
       await updateFullAppointment(updatedAppointment);
 
-      // Get.snackbar(
-      //     "Success", "Appointment declined. Patient will be notified.");
+      // *** ONLY create notification for the USER, not the admin ***
+      // await _createAppointmentNotificationForUser(
+      //   type: 'declined',
+      //   appointment: appointment,
+      //   notes: notes,
+      // );
 
-      // Create notification for user
-      await _createAppointmentNotification(
-        type: 'declined',
-        appointment: appointment,
-        notes: notes,
-      );
-
-      _notificationController.createNotification(
-        NotificationModel(
-          recipientId: appointment.clinicId,
-          recipientType: 'admin',
-          type: NotificationType.appointmentDeclined,
-          title: 'Appointment Declined',
-          message:
-              'Appointment for ${getPetName(appointment.petId)} has been declined',
-          appointmentId: appointment.documentId,
-        ),
+      // *** Show success toast instead of notification ***
+      ToastNotificationService.showSuccessToast(
+        'Appointment Declined',
+        'Appointment for ${getPetName(appointment.petId)} has been declined',
       );
     } catch (e) {
-      // Get.snackbar("Error", "Failed to decline appointment: $e");
-
-      _notificationController.createNotification(
-        NotificationModel(
-          recipientId: appointment.clinicId,
-          recipientType: 'admin',
-          type: NotificationType.systemAlert,
-          priority: NotificationPriority.high,
-          title: 'Error',
-          message: 'Failed to decline appointment: $e',
-        ),
+      ToastNotificationService.showErrorToast(
+        'Error',
+        'Failed to decline appointment: $e',
       );
     }
   }
+
+  // Future<void> _createAppointmentNotificationForUser({
+  //   required String type,
+  //   required Appointment appointment,
+  //   String? notes,
+  // }) async {
+  //   try {
+  //     final ownerName = getOwnerName(appointment.userId);
+  //     final petName = getPetName(appointment.petId);
+
+  //     // Get clinic name for user notification
+  //     final clinicDoc =
+  //         await authRepository.getClinicById(appointment.clinicId);
+  //     final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
+
+  //     // Create notification for USER only
+  //     final userNotification = NotificationModel.appointmentStatusUpdate(
+  //       userId: appointment.userId,
+  //       appointmentId: appointment.documentId!,
+  //       petName: petName,
+  //       clinicName: clinicName,
+  //       status: type,
+  //       notes: notes,
+  //     );
+
+  //     await authRepository.createNotification(userNotification);
+
+  //     // Also create automated message in conversation
+  //     await _createAutomatedMessage(
+  //       clinicId: appointment.clinicId,
+  //       userId: appointment.userId,
+  //       type: type,
+  //       petName: petName,
+  //       notes: notes,
+  //     );
+  //   } catch (e) {
+  //     print('Error creating appointment notification for user: $e');
+  //   }
+  // }
 
   Future<void> checkInPatient(Appointment appointment) async {
     if (!appointment.isToday) {
@@ -819,7 +820,8 @@ class WebAppointmentController extends GetxController {
           recipientType: 'admin',
           type: NotificationType.appointmentCompleted,
           title: 'Service Completed',
-          message: 'Service for ${getPetName(appointment.petId)} has been completed successfully',
+          message:
+              'Service for ${getPetName(appointment.petId)} has been completed successfully',
           appointmentId: appointment.documentId,
         ),
       );
