@@ -1,5 +1,7 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/mobile_rating_dialog.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_mobile_appointment_controller.dart';
 import 'package:flutter/material.dart';
@@ -543,71 +545,136 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, EnhancedUserAppointmentController controller) {
-    return Column(
-      children: [
-        // Cancel button for eligible appointments
-        if (controller.canCancelAppointment(appointment))
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showCancelDialog(context, controller),
-              icon: const Icon(Icons.cancel_outlined),
-              label: const Text('Cancel Appointment'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[50],
-                foregroundColor: Colors.red[700],
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.red[200]!),
+    return FutureBuilder<bool>(
+      future: Get.find<AuthRepository>().hasUserReviewedAppointment(appointment.documentId!),
+      builder: (context, snapshot) {
+        final hasReviewed = snapshot.data ?? false;
+        
+        return Column(
+          children: [
+            // Rating & Review button for completed appointments
+            if (appointment.status == 'completed')
+              SizedBox(
+                width: double.infinity,
+                child: hasReviewed
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green.shade600,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Review Submitted',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () => _showRatingDialog(context),
+                        icon: const Icon(Icons.rate_review),
+                        label: const Text('Rate & Review'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber.shade50,
+                          foregroundColor: Colors.amber.shade700,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.amber.shade200),
+                          ),
+                        ),
+                      ),
+              ),
+            
+            if (appointment.status == 'completed') const SizedBox(height: 12),
+            
+            // Cancel button for eligible appointments
+            if (controller.canCancelAppointment(appointment))
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showCancelDialog(context, controller),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(appointment.status == 'pending'
+                      ? 'Cancel Request'
+                      : 'Cancel Appointment'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: appointment.status == 'pending'
+                        ? Colors.orange.shade50
+                        : Colors.red.shade50,
+                    foregroundColor: appointment.status == 'pending'
+                        ? Colors.orange.shade700
+                        : Colors.red.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: appointment.status == 'pending'
+                            ? Colors.orange.shade200
+                            : Colors.red.shade200,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            
+            if (controller.canCancelAppointment(appointment))
+              const SizedBox(height: 12),
+            
+            // Contact clinic button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showContactOptions(context),
+                icon: const Icon(Icons.phone),
+                label: const Text('Contact Clinic'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
-        
-        if (controller.canCancelAppointment(appointment))
-          const SizedBox(height: 12),
-        
-        // Contact clinic button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => _showContactOptions(context),
-            icon: const Icon(Icons.phone),
-            label: const Text('Contact Clinic'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        
-        // Reschedule button for pending appointments
-        // if (appointment.status == 'pending') ...[
-        //   const SizedBox(height: 12),
-        //   SizedBox(
-        //     width: double.infinity,
-        //     child: OutlinedButton.icon(
-        //       onPressed: () => _showRescheduleDialog(context),
-        //       icon: const Icon(Icons.schedule),
-        //       label: const Text('Request Reschedule'),
-        //       style: OutlinedButton.styleFrom(
-        //         foregroundColor: const Color.fromARGB(255, 81, 115, 153),
-        //         side: const BorderSide(color: Color.fromARGB(255, 81, 115, 153)),
-        //         padding: const EdgeInsets.symmetric(vertical: 16),
-        //         shape: RoundedRectangleBorder(
-        //           borderRadius: BorderRadius.circular(12),
-        //         ),
-        //       ),
-        //     ),
-        //   ),
-        // ],
-      ],
+          ],
+        );
+      },
     );
+  }
+
+    void _showRatingDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => MobileRatingDialog(
+        appointment: appointment,
+        clinic: clinic,
+        pet: pet,
+      ),
+    );
+    
+    // If review was submitted, refresh the UI
+    if (result == true) {
+      // Close the appointment details bottom sheet
+      Navigator.pop(context);
+      // Refresh appointments
+      Get.find<EnhancedUserAppointmentController>().fetchAppointments();
+    }
   }
 
   void _showCancelDialog(BuildContext context, EnhancedUserAppointmentController controller) {
