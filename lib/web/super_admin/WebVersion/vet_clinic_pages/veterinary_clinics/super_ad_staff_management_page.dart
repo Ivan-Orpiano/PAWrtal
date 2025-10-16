@@ -20,7 +20,7 @@ class SuperAdminStaffManagementPage extends StatefulWidget {
   State<SuperAdminStaffManagementPage> createState() =>
       _SuperAdminStaffManagementPageState();
 }
-
+final AuthRepository authRepository = Get.find<AuthRepository>();
 class _SuperAdminStaffManagementPageState
     extends State<SuperAdminStaffManagementPage>
     with SingleTickerProviderStateMixin {
@@ -35,6 +35,7 @@ class _SuperAdminStaffManagementPageState
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+
   // Color Palette
   static const Color primaryColor = Color.fromRGBO(81, 115, 153, 1);
   static const Color backgroundColor = Color.fromARGB(255, 248, 253, 255);
@@ -43,6 +44,7 @@ class _SuperAdminStaffManagementPageState
   static const Color accentTeal = Color(0xFF5B9BD5);
   static const Color successGreen = Color(0xFF34D399);
   static const Color warningOrange = Color(0xFFF59E0B);
+
 
   @override
   void initState() {
@@ -86,6 +88,15 @@ class _SuperAdminStaffManagementPageState
 
       final staff =
           await authRepository.getClinicStaff(widget.clinic.documentId ?? '');
+
+
+      for (var s in staff) {
+      print('>>> Staff: ${s.name}');
+      print('>>> Image field: ${s.image}');
+      print('>>> Full URL: ${authRepository.getImageUrl(s.image)}');
+      print('>>> ---');
+    }
+
 
       if (mounted) {
         setState(() {
@@ -916,12 +927,16 @@ class _StaffCardState extends State<_StaffCard> with SingleTickerProviderStateMi
                               offset: const Offset(0, 4),
                             ),
                           ],
-                          image: widget.staff.image.isNotEmpty
-                              ? DecorationImage(
-                                  image: NetworkImage(getPetImageUrl(widget.staff.image)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
+                        image: widget.staff.image.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(
+                                widget.staff.image.startsWith('http')
+                                    ? widget.staff.image
+                                    : authRepository.getImageUrl(widget.staff.image),
+                              ),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                         ),
                         child: widget.staff.image.isEmpty
                             ? const Icon(Icons.person, size: 40, color: primaryColor)
@@ -1250,12 +1265,16 @@ class _StaffDetailsDialog extends StatelessWidget {
                           offset: const Offset(0, 5),
                         ),
                       ],
-                      image: staff.image.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(getPetImageUrl(staff.image)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                    image: staff.image.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(
+                            staff.image.startsWith('http')
+                                ? staff.image
+                                : authRepository.getImageUrl(staff.image),
+                          ),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                     ),
                     child: staff.image.isEmpty
                         ? Container(

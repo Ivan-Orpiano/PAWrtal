@@ -781,7 +781,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Super Admin',
+                'Developer',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -838,8 +838,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               _buildDrawerItem(
                 context,
                 icon: Icons.delete_forever_rounded,
-                title: 'Vet Reports',
-                subtitle: 'Deletion requests',
+                title: 'Deletion Reports',
+                subtitle: 'Feedback deletion requests',
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushReplacement(
