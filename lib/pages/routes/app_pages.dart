@@ -65,8 +65,8 @@ class AppPages {
     ),
     GetPage(
       name: _Paths.adminHome,
-      page: () => kIsWeb ? const WebAdminHomePage() : const AdminHomePage(),
-      binding: kIsWeb ? WebAdminHomeBinding() : AdminHomeBinding(),
+      page: () => kIsWeb ? const WebAdminHomePage() : const WebAdminHomePage(),
+      binding: kIsWeb ? WebAdminHomeBinding() : WebAdminHomeBinding(),
     ),
     GetPage(
       name: _Paths.superAdminHome,
