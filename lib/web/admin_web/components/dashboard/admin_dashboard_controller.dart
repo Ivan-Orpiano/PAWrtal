@@ -1,5 +1,7 @@
+import 'package:capstone_app/notifications/controllers/notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -17,6 +19,7 @@ import 'package:get_storage/get_storage.dart';
 class AdminDashboardController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
+  late final NotificationController _notificationController;
 
   AdminDashboardController({
     required this.authRepository,
@@ -45,6 +48,16 @@ class AdminDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    if (!Get.isRegistered<NotificationController>()) {
+      _notificationController = Get.put(NotificationController(
+        authRepository: authRepository,
+        session: session,
+      ));
+    } else {
+      _notificationController = Get.find<NotificationController>();
+    }
+
     print('>>> ============================================');
     print('>>> DASHBOARD CONTROLLER: onInit()');
     print('>>> ============================================');
@@ -293,18 +306,32 @@ class AdminDashboardController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
-      mainButton: TextButton(
-        onPressed: () {
-          navigateToAppointments('pending');
-        },
-        child: const Text("View", style: TextStyle(color: Colors.white)),
+    // Get.snackbar(
+    //   "New Appointment",
+    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
+    //   backgroundColor: Colors.green,
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 5),
+    //   snackPosition: SnackPosition.TOP,
+    //   mainButton: TextButton(
+    //     onPressed: () {
+    //       navigateToAppointments('pending');
+    //     },
+    //     child: const Text("View", style: TextStyle(color: Colors.white)),
+    //   ),
+    // );
+
+    _notificationController.createNotification(
+      NotificationModel(
+        recipientId: clinicData.value!.documentId!,
+        recipientType: 'admin',
+        type: NotificationType.appointmentBooked,
+        priority: NotificationPriority.high,
+        title: 'New Appointment Booked',
+        message: '${getOwnerName(appointment.userId)} booked an appointment for ${getPetName(appointment.petId)}',
+        appointmentId: appointment.documentId,
+        userId: appointment.userId,
+        actionUrl: '/appointments?filter=pending',
       ),
     );
   }
@@ -692,9 +719,39 @@ class AdminDashboardController extends GetxController {
     try {
       await authRepository.updateAppointmentStatus(
           appointment.documentId!, 'accepted');
-      Get.snackbar("Success", "Appointment accepted!");
+      
+      // Create success notification
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: clinicData.value!.documentId!,
+          recipientType: 'admin',
+          type: NotificationType.appointmentAccepted,
+          title: 'Appointment Accepted',
+          message: 'Successfully accepted appointment for ${getPetName(appointment.petId)}',
+          appointmentId: appointment.documentId,
+        ),
+      );
+
+      // Also create notification for user
+      authRepository.createAppointmentNotification(
+        type: 'accepted',
+        appointmentId: appointment.documentId!,
+        clinicId: appointment.clinicId,
+        userId: appointment.userId,
+        petName: getPetName(appointment.petId),
+        ownerName: getOwnerName(appointment.userId),
+      );
     } catch (e) {
-      Get.snackbar("Error", "Failed to accept appointment: $e");
+      _notificationController.createNotification(
+        NotificationModel(
+          recipientId: clinicData.value!.documentId!,
+          recipientType: 'admin',
+          type: NotificationType.systemAlert,
+          priority: NotificationPriority.high,
+          title: 'Error',
+          message: 'Failed to accept appointment: $e',
+        ),
+      );
     }
   }
 
