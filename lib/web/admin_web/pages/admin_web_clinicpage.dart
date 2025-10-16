@@ -5,6 +5,7 @@ import 'package:capstone_app/web/admin_web/components/clinic/admin_pin_maps_page
 import 'package:capstone_app/web/admin_web/components/clinic/admin_clinic_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class AdminWebClinicpage extends StatefulWidget {
   const AdminWebClinicpage({super.key});
@@ -14,28 +15,53 @@ class AdminWebClinicpage extends StatefulWidget {
 }
 
 class _AdminWebClinicpageState extends State<AdminWebClinicpage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   late ClinicSettingsController controller;
-  bool _showEditingPage = false; // Toggle between preview and editing
+  bool _showEditingPage = false;
+  bool _initialized = false;
+  DateTime? _selectedDate;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _tabController =
-        TabController(length: 3, vsync: this); // Gallery, Schedule, Settings
+    _initializeTabController();
+  }
 
-    // Initialize controller
-    controller = Get.put(ClinicSettingsController(
-      authRepository: Get.find<AuthRepository>(),
-      session: Get.find<UserSessionService>(),
-    ));
+  void _initializeTabController() {
+    try {
+      if (!Get.isRegistered<ClinicSettingsController>()) {
+        controller = Get.put(
+          ClinicSettingsController(
+            authRepository: Get.find<AuthRepository>(),
+            session: Get.find<UserSessionService>(),
+          ),
+          permanent: true,
+        );
+      } else {
+        controller = Get.find<ClinicSettingsController>();
+      }
+
+      _tabController = TabController(length: 3, vsync: this);
+      setState(() {
+        _initialized = true;
+      });
+    } catch (e) {
+      print('Error initializing: $e');
+      setState(() {
+        _initialized = false;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
-    Get.delete<ClinicSettingsController>();
+    if (_initialized) {
+      _tabController.dispose();
+    }
     super.dispose();
   }
 
@@ -45,8 +71,230 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     });
   }
 
+  bool _isMobileLayout(double screenWidth) {
+    return screenWidth <= 785;
+  }
+
+  bool _isTabletLayout(double screenWidth) {
+    return screenWidth > 785 && screenWidth < 1100;
+  }
+
+  void _showAppointmentPopup() {
+    final settings = controller.clinicSettings.value;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: EdgeInsets.all(
+              MediaQuery.of(context).size.width <= 785 ? 16 : 24),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: _buildAppointmentPanel(settings),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.close, color: Colors.grey[600], size: 28),
+                    tooltip: 'Close',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppointmentPanel(settings) {
+    final isMobile = MediaQuery.of(context).size.width <= 785;
+
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: const BoxDecoration(
+            color: Color(0xFF5173B8),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today,
+                  color: Colors.white, size: isMobile ? 20 : 24),
+              SizedBox(width: isMobile ? 8 : 12),
+              Expanded(
+                child: Text('Book Appointment',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 16 : 20,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Select Date',
+                  style: TextStyle(
+                      fontSize: isMobile ? 14 : 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800])),
+              SizedBox(height: isMobile ? 8 : 12),
+              Container(
+                decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12)),
+                child: TableCalendar(
+                  focusedDay: _selectedDate ?? DateTime.now(),
+                  firstDay: DateTime.now(),
+                  lastDay: DateTime.now()
+                      .add(Duration(days: settings?.maxAdvanceBooking ?? 30)),
+                  selectedDayPredicate: (day) => isSameDay(day, _selectedDate),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() => _selectedDate = selectedDay);
+                  },
+                  calendarStyle: CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                        color: const Color(0xFF5173B8).withOpacity(0.3),
+                        shape: BoxShape.circle),
+                    selectedDecoration: const BoxDecoration(
+                        color: Color(0xFF5173B8), shape: BoxShape.circle),
+                    outsideDaysVisible: false,
+                  ),
+                  headerStyle: HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isMobile ? 14 : 16),
+                  ),
+                  daysOfWeekStyle: DaysOfWeekStyle(
+                    weekdayStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+                    weekendStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+                  ),
+                  calendarFormat: CalendarFormat.month,
+                  enabledDayPredicate: (day) => !day.isBefore(
+                      DateTime.now().subtract(const Duration(days: 1))),
+                ),
+              ),
+              SizedBox(height: isMobile ? 16 : 20),
+              Text('Time',
+                  style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700])),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 10 : 12,
+                    vertical: isMobile ? 10 : 12),
+                child: Text('Select time',
+                    style: TextStyle(
+                        color: Colors.grey, fontSize: isMobile ? 12 : 14)),
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+              Text('Service',
+                  style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700])),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 10 : 12,
+                    vertical: isMobile ? 10 : 12),
+                child: Text('Choose service',
+                    style: TextStyle(
+                        color: Colors.grey, fontSize: isMobile ? 12 : 14)),
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+              Text('Select Pet',
+                  style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700])),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 10 : 12,
+                    vertical: isMobile ? 10 : 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.pets,
+                        size: isMobile ? 16 : 20, color: Colors.grey),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    Text('Choose your pet',
+                        style: TextStyle(
+                            color: Colors.grey, fontSize: isMobile ? 12 : 14)),
+                  ],
+                ),
+              ),
+              SizedBox(height: isMobile ? 20 : 24),
+              SizedBox(
+                width: double.infinity,
+                height: isMobile ? 44 : 48,
+                child: ElevatedButton(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Book Appointment',
+                      style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
+    if (!_initialized) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = _isMobileLayout(screenWidth);
+    final isTablet = _isTabletLayout(screenWidth);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Obx(() {
@@ -56,14 +304,14 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
 
         return Stack(
           children: [
-            // Main content - either preview or editing page
-            if (!_showEditingPage) _buildPreviewPage() else _buildEditingPage(),
-
-            // Floating action button (only show on preview)
             if (!_showEditingPage)
+              _buildPreviewPage()
+            else
+              _buildEditingPage(isMobile),
+            if (!_showEditingPage) ...[
               Positioned(
-                bottom: 32,
-                right: 32,
+                bottom: isMobile ? 16 : 32,
+                right: isMobile ? 16 : 32,
                 child: FloatingActionButton.extended(
                   onPressed: _toggleView,
                   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
@@ -77,6 +325,18 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   ),
                 ),
               ),
+              if (isMobile || isTablet)
+                Positioned(
+                  bottom: isMobile ? 76 : 92,
+                  right: isMobile ? 16 : 32,
+                  child: FloatingActionButton(
+                    onPressed: _showAppointmentPopup,
+                    backgroundColor: Colors.green.shade600,
+                    child:
+                        const Icon(Icons.calendar_today, color: Colors.white),
+                  ),
+                ),
+            ]
           ],
         );
       }),
@@ -87,12 +347,11 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     return AdminClinicPreview(controller: controller);
   }
 
-  Widget _buildEditingPage() {
+  Widget _buildEditingPage(bool isMobile) {
     return Column(
       children: [
-        // Header with back button and clinic status
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -104,84 +363,158 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
               ),
             ],
           ),
-          child: Row(
-            children: [
-              // Back button
-              IconButton(
-                onPressed: _toggleView,
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back to Preview',
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
+          child: isMobile
+              ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      controller.clinic.value?.clinicName ?? "Clinic Settings",
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Manage gallery, schedule, and advanced settings",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Clinic status toggle
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: controller.clinicStatusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: controller.clinicStatusColor.withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
-                  children: [
                     Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          controller.isClinicOpen.value
-                              ? Icons.check_circle
-                              : Icons.cancel,
-                          color: controller.clinicStatusColor,
-                          size: 20,
+                        IconButton(
+                          onPressed: _toggleView,
+                          icon: const Icon(Icons.arrow_back),
+                          tooltip: 'Back to Preview',
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          "Clinic Status: ${controller.clinicStatusText}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: controller.clinicStatusColor,
+                        Expanded(
+                          child: Text(
+                            controller.clinic.value?.clinicName ??
+                                "Clinic Settings",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Switch(
-                      value: controller.isClinicOpen.value,
-                      onChanged: (value) => controller.toggleClinicStatus(),
-                      activeColor: Colors.green,
+                    Text(
+                      "Manage gallery, schedule, and advanced settings",
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: controller.clinicStatusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: controller.clinicStatusColor.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            controller.isClinicOpen.value
+                                ? Icons.check_circle
+                                : Icons.cancel,
+                            color: controller.clinicStatusColor,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Clinic Status: ${controller.clinicStatusText}",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: controller.clinicStatusColor,
+                              ),
+                            ),
+                          ),
+                          Transform.scale(
+                            scale: 0.8,
+                            child: Switch(
+                              value: controller.isClinicOpen.value,
+                              onChanged: (value) =>
+                                  controller.toggleClinicStatus(),
+                              activeColor: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    IconButton(
+                      onPressed: _toggleView,
+                      icon: const Icon(Icons.arrow_back),
+                      tooltip: 'Back to Preview',
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            controller.clinic.value?.clinicName ??
+                                "Clinic Settings",
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Manage gallery, schedule, and advanced settings",
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: controller.clinicStatusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: controller.clinicStatusColor.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                controller.isClinicOpen.value
+                                    ? Icons.check_circle
+                                    : Icons.cancel,
+                                color: controller.clinicStatusColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Clinic Status: ${controller.clinicStatusText}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: controller.clinicStatusColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Switch(
+                            value: controller.isClinicOpen.value,
+                            onChanged: (value) =>
+                                controller.toggleClinicStatus(),
+                            activeColor: Colors.green,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
-
-        // Tab bar
         Container(
           color: Colors.white,
           child: TabBar(
@@ -189,6 +522,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             labelColor: const Color.fromARGB(255, 81, 115, 153),
             unselectedLabelColor: Colors.grey,
             indicatorColor: const Color.fromARGB(255, 81, 115, 153),
+            labelStyle: TextStyle(fontSize: isMobile ? 12 : 13),
             tabs: const [
               Tab(text: "Gallery"),
               Tab(text: "Schedule"),
@@ -196,15 +530,13 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             ],
           ),
         ),
-
-        // Tab content
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildGalleryTab(),
-              _buildScheduleTab(),
-              _buildSettingsTab(),
+              _buildGalleryTab(isMobile),
+              _buildScheduleTab(isMobile),
+              _buildSettingsTab(isMobile),
             ],
           ),
         ),
@@ -212,40 +544,66 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     );
   }
 
-  Widget _buildGalleryTab() {
+  Widget _buildGalleryTab(bool isMobile) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: Column(
         children: [
           _buildSectionCard(
             title: "Clinic Gallery",
+            isMobile: isMobile,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      "Upload images of your clinic to show customers",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[700],
+                isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Upload images of your clinic to show customers",
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[700]),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: controller.isSaving.value
+                                  ? null
+                                  : controller.addGalleryImages,
+                              icon: const Icon(Icons.add_photo_alternate),
+                              label: const Text("Add Images"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    const Color.fromARGB(255, 81, 115, 153),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Text(
+                            "Upload images of your clinic to show customers",
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[700]),
+                          ),
+                          const Spacer(),
+                          ElevatedButton.icon(
+                            onPressed: controller.isSaving.value
+                                ? null
+                                : controller.addGalleryImages,
+                            icon: const Icon(Icons.add_photo_alternate),
+                            label: const Text("Add Images"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: controller.isSaving.value
-                          ? null
-                          : controller.addGalleryImages,
-                      icon: const Icon(Icons.add_photo_alternate),
-                      label: const Text("Add Images"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 81, 115, 153),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 16),
                 Obx(() {
                   if (controller.galleryImages.isEmpty) {
@@ -255,15 +613,17 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                         border: Border.all(color: Colors.grey[300]!),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.photo_library,
-                                size: 48, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text("No images uploaded yet"),
-                            Text("Click 'Add Images' to get started"),
+                                size: isMobile ? 36 : 48, color: Colors.grey),
+                            const SizedBox(height: 8),
+                            Text("No images uploaded yet",
+                                style: TextStyle(fontSize: isMobile ? 12 : 14)),
+                            Text("Click 'Add Images' to get started",
+                                style: TextStyle(fontSize: isMobile ? 11 : 12)),
                           ],
                         ),
                       ),
@@ -273,9 +633,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: isMobile ? 2 : 4,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
                       childAspectRatio: 1,
@@ -325,13 +684,11 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                         const Icon(Icons.error,
                                             color: Colors.red),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          "Failed to load",
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.red[700],
-                                          ),
-                                        ),
+                                        Text("Failed to load",
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.red[700],
+                                            )),
                                       ],
                                     ),
                                   );
@@ -350,11 +707,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                   color: Colors.red,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
+                                child: const Icon(Icons.close,
+                                    color: Colors.white, size: 16),
                               ),
                             ),
                           ),
@@ -371,20 +725,21 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     );
   }
 
-  Widget _buildScheduleTab() {
+  Widget _buildScheduleTab(bool isMobile) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: Column(
         children: [
           _buildSectionCard(
             title: "Operating Hours",
+            isMobile: isMobile,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "Set your clinic's operating hours for each day",
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: isMobile ? 13 : 14,
                     color: Colors.grey[700],
                   ),
                 ),
@@ -409,87 +764,177 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                           };
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(isMobile ? 10 : 12),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey[300]!),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 100,
-                              child: Text(
-                                day.capitalize!,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            Switch(
-                              value: dayData['isOpen'] ?? false,
-                              onChanged: (value) {
-                                final newData =
-                                    Map<String, dynamic>.from(dayData);
-                                newData['isOpen'] = value;
-                                controller.updateOperatingHours(day, newData);
-                              },
-                            ),
-                            const SizedBox(width: 16),
-                            if (dayData['isOpen'] == true) ...[
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildTimeField(
-                                        value: dayData['openTime'] ?? '09:00',
-                                        label: "Open",
-                                        onChanged: (time) {
-                                          final newData =
-                                              Map<String, dynamic>.from(
-                                                  dayData);
-                                          newData['openTime'] = time;
-                                          controller.updateOperatingHours(
-                                              day, newData);
-                                        },
+                        child: isMobile
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 70,
+                                        child: Text(
+                                          day.capitalize!,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                       ),
+                                      const Spacer(),
+                                      Transform.scale(
+                                        scale: 0.8,
+                                        child: Switch(
+                                          value: dayData['isOpen'] ?? false,
+                                          onChanged: (value) {
+                                            final newData =
+                                                Map<String, dynamic>.from(
+                                                    dayData);
+                                            newData['isOpen'] = value;
+                                            controller.updateOperatingHours(
+                                                day, newData);
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (dayData['isOpen'] == true) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildTimeField(
+                                            value:
+                                                dayData['openTime'] ?? '09:00',
+                                            label: "Open",
+                                            onChanged: (time) {
+                                              final newData =
+                                                  Map<String, dynamic>.from(
+                                                      dayData);
+                                              newData['openTime'] = time;
+                                              controller.updateOperatingHours(
+                                                  day, newData);
+                                            },
+                                            isMobile: isMobile,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: _buildTimeField(
+                                            value:
+                                                dayData['closeTime'] ?? '17:00',
+                                            label: "Close",
+                                            onChanged: (time) {
+                                              final newData =
+                                                  Map<String, dynamic>.from(
+                                                      dayData);
+                                              newData['closeTime'] = time;
+                                              controller.updateOperatingHours(
+                                                  day, newData);
+                                            },
+                                            isMobile: isMobile,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildTimeField(
-                                        value: dayData['closeTime'] ?? '17:00',
-                                        label: "Close",
-                                        onChanged: (time) {
-                                          final newData =
-                                              Map<String, dynamic>.from(
-                                                  dayData);
-                                          newData['closeTime'] = time;
-                                          controller.updateOperatingHours(
-                                              day, newData);
-                                        },
+                                  ] else ...[
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      "Closed",
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                            ] else ...[
-                              const Expanded(
-                                child: Text(
-                                  "Closed",
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontStyle: FontStyle.italic,
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  SizedBox(
+                                    width: 90,
+                                    child: Text(
+                                      day.capitalize!,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  Switch(
+                                    value: dayData['isOpen'] ?? false,
+                                    onChanged: (value) {
+                                      final newData =
+                                          Map<String, dynamic>.from(dayData);
+                                      newData['isOpen'] = value;
+                                      controller.updateOperatingHours(
+                                          day, newData);
+                                    },
+                                  ),
+                                  const SizedBox(width: 12),
+                                  if (dayData['isOpen'] == true) ...[
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildTimeField(
+                                              value: dayData['openTime'] ??
+                                                  '09:00',
+                                              label: "Open",
+                                              onChanged: (time) {
+                                                final newData =
+                                                    Map<String, dynamic>.from(
+                                                        dayData);
+                                                newData['openTime'] = time;
+                                                controller.updateOperatingHours(
+                                                    day, newData);
+                                              },
+                                              isMobile: isMobile,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _buildTimeField(
+                                              value: dayData['closeTime'] ??
+                                                  '17:00',
+                                              label: "Close",
+                                              onChanged: (time) {
+                                                final newData =
+                                                    Map<String, dynamic>.from(
+                                                        dayData);
+                                                newData['closeTime'] = time;
+                                                controller.updateOperatingHours(
+                                                    day, newData);
+                                              },
+                                              isMobile: isMobile,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    const Expanded(
+                                      child: Text(
+                                        "Closed",
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
-                          ],
-                        ),
                       );
                     }).toList(),
                   );
                 }),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     const Spacer(),
@@ -498,21 +943,25 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                           ? null
                           : controller.saveClinicSettings,
                       icon: controller.isSaving.value
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? SizedBox(
+                              width: isMobile ? 13 : 16,
+                              height: isMobile ? 13 : 16,
+                              child: const CircularProgressIndicator(
+                                  strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value
-                          ? "Saving..."
-                          : "Save Schedule"),
+                      label: Text(
+                          controller.isSaving.value
+                              ? "Saving..."
+                              : "Save Schedule",
+                          style: TextStyle(fontSize: isMobile ? 12 : 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 12 : 20,
+                            vertical: isMobile ? 8 : 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -528,88 +977,169 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     );
   }
 
-  Widget _buildSettingsTab() {
+  Widget _buildSettingsTab(bool isMobile) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: Column(
         children: [
           _buildSectionCard(
             title: "Appointment Settings",
+            isMobile: isMobile,
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                isMobile
+                    ? Column(
                         children: [
-                          const Text(
-                            "Default Appointment Duration",
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Default Appointment Duration",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              const SizedBox(height: 8),
+                              Obx(() => DropdownButtonFormField<int>(
+                                    value: controller.appointmentDuration.value,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      suffixText: "minutes",
+                                      contentPadding:
+                                          EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                    isExpanded: true,
+                                    items: [15, 30, 45, 60, 90].map((duration) {
+                                      return DropdownMenuItem(
+                                        value: duration,
+                                        child: Text("$duration minutes",
+                                            style:
+                                                const TextStyle(fontSize: 12)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        controller.appointmentDuration.value =
+                                            value;
+                                      }
+                                    },
+                                  )),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Obx(() => DropdownButtonFormField<int>(
-                                value: controller.appointmentDuration.value,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  suffixText: "minutes",
+                          const SizedBox(height: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Maximum Advance Booking",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              const SizedBox(height: 8),
+                              Obx(() => DropdownButtonFormField<int>(
+                                    value: controller.maxAdvanceBooking.value,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      suffixText: "days",
+                                      contentPadding:
+                                          EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                    isExpanded: true,
+                                    items: [7, 14, 30, 60, 90].map((days) {
+                                      return DropdownMenuItem(
+                                        value: days,
+                                        child: Text("$days days",
+                                            style:
+                                                const TextStyle(fontSize: 12)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        controller.maxAdvanceBooking.value =
+                                            value;
+                                      }
+                                    },
+                                  )),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Default Appointment Duration",
+                                  style: TextStyle(fontWeight: FontWeight.w600),
                                 ),
-                                items: [15, 30, 45, 60, 90].map((duration) {
-                                  return DropdownMenuItem(
-                                    value: duration,
-                                    child: Text("$duration minutes"),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    controller.appointmentDuration.value =
-                                        value;
-                                  }
-                                },
-                              )),
+                                const SizedBox(height: 8),
+                                Obx(() => DropdownButtonFormField<int>(
+                                      value:
+                                          controller.appointmentDuration.value,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        suffixText: "minutes",
+                                      ),
+                                      items:
+                                          [15, 30, 45, 60, 90].map((duration) {
+                                        return DropdownMenuItem(
+                                          value: duration,
+                                          child: Text("$duration minutes"),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          controller.appointmentDuration.value =
+                                              value;
+                                        }
+                                      },
+                                    )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Maximum Advance Booking",
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 8),
+                                Obx(() => DropdownButtonFormField<int>(
+                                      value: controller.maxAdvanceBooking.value,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        suffixText: "days",
+                                      ),
+                                      items: [7, 14, 30, 60, 90].map((days) {
+                                        return DropdownMenuItem(
+                                          value: days,
+                                          child: Text("$days days"),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          controller.maxAdvanceBooking.value =
+                                              value;
+                                        }
+                                      },
+                                    )),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Maximum Advance Booking",
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 8),
-                          Obx(() => DropdownButtonFormField<int>(
-                                value: controller.maxAdvanceBooking.value,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  suffixText: "days",
-                                ),
-                                items: [7, 14, 30, 60, 90].map((days) {
-                                  return DropdownMenuItem(
-                                    value: days,
-                                    child: Text("$days days"),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    controller.maxAdvanceBooking.value = value;
-                                  }
-                                },
-                              )),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: controller.emergencyContactController,
                         keyboardType: TextInputType.phone,
+                        style: TextStyle(fontSize: isMobile ? 12 : 13),
                         decoration: const InputDecoration(
                           labelText: "Emergency Contact",
                           prefixIcon: Icon(Icons.emergency),
@@ -619,10 +1149,11 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextField(
                   controller: controller.specialInstructionsController,
                   maxLines: 3,
+                  style: TextStyle(fontSize: isMobile ? 12 : 13),
                   decoration: const InputDecoration(
                     labelText: "Special Instructions for Customers",
                     prefixIcon: Icon(Icons.info),
@@ -631,9 +1162,9 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isMobile ? 10 : 12),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: BorderRadius.circular(8),
@@ -642,10 +1173,13 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   child: Column(
                     children: [
                       Obx(() => SwitchListTile(
-                            title: const Text("Auto-accept Appointments"),
-                            subtitle: const Text(
-                                "Automatically approve new appointment requests"),
+                            title: Text("Auto-accept Appointments",
+                                style: TextStyle(fontSize: isMobile ? 13 : 14)),
+                            subtitle: Text(
+                                "Automatically approve new appointment requests",
+                                style: TextStyle(fontSize: isMobile ? 11 : 12)),
                             value: controller.autoAcceptAppointments.value,
+                            contentPadding: EdgeInsets.zero,
                             onChanged: (value) {
                               controller.autoAcceptAppointments.value = value;
                             },
@@ -655,7 +1189,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     const Spacer(),
@@ -664,21 +1198,25 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                           ? null
                           : controller.saveClinicSettings,
                       icon: controller.isSaving.value
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? SizedBox(
+                              width: isMobile ? 13 : 16,
+                              height: isMobile ? 13 : 16,
+                              child: const CircularProgressIndicator(
+                                  strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value
-                          ? "Saving..."
-                          : "Save Settings"),
+                      label: Text(
+                          controller.isSaving.value
+                              ? "Saving..."
+                              : "Save Settings",
+                          style: TextStyle(fontSize: isMobile ? 12 : 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 12 : 20,
+                            vertical: isMobile ? 8 : 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -689,16 +1227,17 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           _buildSectionCard(
             title: "Clinic Location",
+            isMobile: isMobile,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "Pin your clinic's location on the map so customers can find you easily",
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: isMobile ? 13 : 14,
                     color: Colors.grey[700],
                   ),
                 ),
@@ -718,21 +1257,25 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                           ? null
                           : controller.saveClinicSettings,
                       icon: controller.isSaving.value
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? SizedBox(
+                              width: isMobile ? 13 : 16,
+                              height: isMobile ? 13 : 16,
+                              child: const CircularProgressIndicator(
+                                  strokeWidth: 2),
                             )
                           : const Icon(Icons.save),
-                      label: Text(controller.isSaving.value
-                          ? "Saving..."
-                          : "Save Location"),
+                      label: Text(
+                          controller.isSaving.value
+                              ? "Saving..."
+                              : "Save Location",
+                          style: TextStyle(fontSize: isMobile ? 12 : 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             const Color.fromARGB(255, 81, 115, 153),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 12 : 20,
+                            vertical: isMobile ? 8 : 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -748,11 +1291,12 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     );
   }
 
-  Widget _buildSectionCard({required String title, required Widget child}) {
+  Widget _buildSectionCard(
+      {required String title, required Widget child, required bool isMobile}) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -770,13 +1314,13 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 20,
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 18,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -787,13 +1331,18 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     required String value,
     required String label,
     required Function(String) onChanged,
+    bool isMobile = false,
   }) {
     return TextField(
       readOnly: true,
+      style: TextStyle(fontSize: isMobile ? 12 : 13),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(fontSize: isMobile ? 12 : 13),
         border: const OutlineInputBorder(),
-        suffixIcon: const Icon(Icons.access_time),
+        suffixIcon: const Icon(Icons.access_time, size: 18),
+        contentPadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 8 : 10, vertical: isMobile ? 10 : 12),
       ),
       controller: TextEditingController(text: value),
       onTap: () async {

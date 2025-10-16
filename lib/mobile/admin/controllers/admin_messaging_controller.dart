@@ -196,12 +196,17 @@ class AdminMessagingController extends GetxController {
         return;
       }
 
+      // Load initial data
       await Future.wait([
         loadClinicConversations(clinicId),
         initializeConversationStarters(clinicId),
       ]);
 
+      // CRITICAL: Subscribe to real-time updates for the conversation list
+      // This ensures the list updates even when not in a specific conversation
+      print('>>> Setting up real-time subscriptions...');
       subscribeToClinicConversationUpdates(clinicId);
+      print('>>> Real-time subscriptions active');
 
       print('Admin messaging initialized successfully');
     } catch (e) {
@@ -547,72 +552,139 @@ class AdminMessagingController extends GetxController {
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToClinicConversationUpdates(String clinicId) {
+    print('>>> ============================================');
+    print('>>> SUBSCRIBING TO CLINIC CONVERSATIONS');
+    print('>>> Clinic ID: $clinicId');
+    print('>>> ============================================');
+
+    // Cancel any existing subscription first
     _conversationSubscription?.cancel();
 
-    // Subscribe to conversation updates for this clinic
-    _conversationSubscription = _authRepository
-        .subscribeToConversations(
-            clinicId) // This should be modified to handle clinic conversations
-        .listen((realtimeMessage) {
-      print('Real-time clinic conversation event: ${realtimeMessage.events}');
+    // Subscribe to ALL conversation changes for this clinic
+    _conversationSubscription =
+        _authRepository.subscribeToConversations(clinicId).listen(
+      (realtimeMessage) {
+        print('>>> ============================================');
+        print('>>> REAL-TIME EVENT RECEIVED');
+        print('>>> Event: ${realtimeMessage.events}');
+        print('>>> ============================================');
 
-      try {
-        final conversationData = realtimeMessage.payload;
-        final updatedConversation = Conversation.fromMap(conversationData);
-        final conversationWithId =
-            updatedConversation.copyWith(documentId: conversationData['\$id']);
+        try {
+          final conversationData = realtimeMessage.payload;
+          print('>>> Conversation data: $conversationData');
 
-        // Only process conversations for this clinic
-        if (conversationWithId.clinicId == clinicId) {
-          if (realtimeMessage.events
-              .contains('databases.*.collections.*.documents.*.update')) {
-            _handleConversationUpdate(conversationWithId);
-          } else if (realtimeMessage.events
-              .contains('databases.*.collections.*.documents.*.create')) {
-            _handleNewConversation(conversationWithId);
+          final updatedConversation = Conversation.fromMap(conversationData);
+          final conversationWithId = updatedConversation.copyWith(
+            documentId: conversationData['\$id'],
+          );
+
+          print('>>> Conversation ID: ${conversationWithId.documentId}');
+          print('>>> Clinic ID: ${conversationWithId.clinicId}');
+          print('>>> User Unread: ${conversationWithId.userUnreadCount}');
+          print('>>> Clinic Unread: ${conversationWithId.clinicUnreadCount}');
+
+          // Only process conversations for this clinic
+          if (conversationWithId.clinicId == clinicId) {
+            print('>>> ✓ Conversation belongs to this clinic - processing...');
+
+            if (realtimeMessage.events
+                .contains('databases.*.collections.*.documents.*.update')) {
+              print('>>> Update event detected');
+              _handleConversationUpdate(conversationWithId);
+            } else if (realtimeMessage.events
+                .contains('databases.*.collections.*.documents.*.create')) {
+              print('>>> Create event detected');
+              _handleNewConversation(conversationWithId);
+            }
+
+            print('>>> ✓ Conversation list updated successfully');
+            print('>>> Total conversations: ${conversations.length}');
+          } else {
+            print(
+                '>>> ✗ Conversation does not belong to this clinic - skipping');
           }
+        } catch (e) {
+          print('>>> ============================================');
+          print('>>> ERROR processing conversation update: $e');
+          print('>>> ============================================');
         }
-      } catch (e) {
-        print('Error processing clinic conversation update: $e');
-      }
-    });
+
+        print('>>> ============================================');
+      },
+      onError: (error) {
+        print('>>> ============================================');
+        print('>>> SUBSCRIPTION ERROR: $error');
+        print('>>> ============================================');
+      },
+    );
+
+    print('>>> Real-time subscription established successfully');
+    print('>>> Listening for conversation updates...');
+    print('>>> ============================================');
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
-    final index = conversations
-        .indexWhere((c) => c.documentId == updatedConversation.documentId);
+    print('>>> _handleConversationUpdate called');
+    print('>>> Conversation: ${updatedConversation.documentId}');
+    print('>>> Last message: ${updatedConversation.lastMessageText}');
+
+    final index = conversations.indexWhere(
+      (c) => c.documentId == updatedConversation.documentId,
+    );
 
     if (index != -1) {
+      print('>>> Found existing conversation at index: $index');
+
       // Check if this is the current conversation the admin is viewing
       final isCurrentConversation = currentConversation.value?.documentId ==
           updatedConversation.documentId;
 
       if (isCurrentConversation) {
+        print(
+            '>>> This is the current conversation - keeping clinic unread at 0');
         // If admin is currently viewing this conversation, reset THEIR unread count to 0
-        // but keep the user's unread count as is
         final resetClinicUnread =
             updatedConversation.copyWith(clinicUnreadCount: 0);
         conversations[index] = resetClinicUnread;
         currentConversation.value = resetClinicUnread;
       } else {
+        print('>>> Not current conversation - using actual unread counts');
+        print(
+            '>>> Clinic unread count: ${updatedConversation.clinicUnreadCount}');
         // If admin is not viewing this conversation, use the actual unread counts from server
         conversations[index] = updatedConversation;
       }
 
-      // Move updated conversation to top if it has new messages for the clinic and it's not already at the top
+      // Move updated conversation to top if it has new messages and it's not already at the top
       if (updatedConversation.clinicUnreadCount > 0 && index != 0) {
+        print('>>> Moving conversation to top (has unread messages)');
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
       }
+
+      print('>>> Conversation updated successfully');
+    } else {
+      print('>>> Conversation not found in list - adding as new');
+      // If conversation doesn't exist, add it
+      _handleNewConversation(updatedConversation);
     }
   }
 
   void _handleNewConversation(Conversation newConversation) {
+    print('>>> _handleNewConversation called');
+    print('>>> New conversation ID: ${newConversation.documentId}');
+
     // Check if conversation already exists
     final exists =
         conversations.any((c) => c.documentId == newConversation.documentId);
+
     if (!exists) {
+      print('>>> Adding new conversation to list at position 0');
       conversations.insert(0, newConversation);
+      print('>>> New conversation added successfully');
+      print('>>> Total conversations: ${conversations.length}');
+    } else {
+      print('>>> Conversation already exists - skipping');
     }
   }
 
