@@ -80,6 +80,8 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
   int selectedIndex = 0;
   final GetStorage storage = GetStorage();
   late MobileFeedbackController feedbackController;
+  final TextEditingController subjectController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
 
   static const List<String> menuItems = [
     'Profile',
@@ -97,6 +99,13 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       authRepository: Get.find<AuthRepository>(),
       session: Get.find<UserSessionService>(),
     ));
+  }
+
+  @override
+  void dispose() {
+    subjectController.dispose();
+    descriptionController.dispose();
+    super.dispose();
   }
 
   void _showSnackbar(String title, String message, Color backgroundColor) {
@@ -343,70 +352,56 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.blue[100]!, Colors.blue[50]!]),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.blue[200]!, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.workspace_premium, size: 12, color: Colors.blue[700]),
-                            const SizedBox(width: 4),
-                            Text(
-                              userRole.toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.blue[700],
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
+                    runSpacing: 8,
+                    children: FeedbackType.values.map((type) {
+                      // ✅ WRAP IN OBX
+                      return Obx(() {
+                        final isSelected = feedbackController.selectedType.value == type;
+                        return InkWell(
+                          onTap: () {
+                            feedbackController.selectedType.value = type;
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                ? _getFeedbackTypeColor(type).withOpacity(0.15) 
+                                : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected 
+                                  ? _getFeedbackTypeColor(type) 
+                                  : Colors.transparent,
+                                width: 1.5,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.green[100]!, Colors.green[50]!]),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.green[200]!, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: Colors.green[600],
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.green.withOpacity(0.5),
-                                    blurRadius: 3,
-                                    spreadRadius: 1,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _getFeedbackTypeIcon(type),
+                                  color: isSelected 
+                                    ? _getFeedbackTypeColor(type) 
+                                    : Colors.grey[600],
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  type.displayName,
+                                  style: TextStyle(
+                                    color: isSelected 
+                                      ? _getFeedbackTypeColor(type) 
+                                      : Colors.grey[700],
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Active',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                          ),
+                        );
+                      });
+                    }).toList(),
                   ),
                 ],
               ),
@@ -747,7 +742,8 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<FeedbackCategory>(
+                Obx(() => DropdownButtonFormField<FeedbackCategory>(
+                  value: feedbackController.selectedCategory.value,
                   decoration: InputDecoration(
                     hintText: 'Select a category',
                     prefixIcon: const Icon(Icons.category, size: 20),
@@ -768,9 +764,11 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                     );
                   }).toList(),
                   onChanged: (category) {
-                    feedbackController.selectedCategory.value = category!;
+                    if (category != null) {
+                      feedbackController.selectedCategory.value = category;
+                    }
                   },
-                ),
+                )),
                 
                 const SizedBox(height: 24),
                 
@@ -790,6 +788,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
+                  controller: subjectController,
                   maxLength: 100,
                   onChanged: (value) {
                     feedbackController.subject.value = value;
@@ -829,10 +828,11 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
+                  controller: descriptionController,
                   maxLines: 5,
                   maxLength: 1000,
                   onChanged: (value) {
-                    Uncomment: feedbackController.description.value = value;
+                    feedbackController.description.value = value;
                   },
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
@@ -987,30 +987,89 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 // Submit Button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      
-                      final success = await feedbackController.submitFeedback();
-                      //add snackbar for feedback?
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.send, size: 16),
-                        SizedBox(width: 8),
-                        Text(
-                          'Submit Feedback',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
+                  child: Obx(() => ElevatedButton(
+                    onPressed: feedbackController.isSubmitting.value 
+                      ? null 
+                      : () async {
+                          final success = await feedbackController.submitFeedback();
+                          
+                          if (success) {
+                            // ✅ Clear the TextField controllers
+                            subjectController.clear();
+                            descriptionController.clear();
+                            
+                            // ✅ Show success message
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, color: Colors.white),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Text(
+                                              'Feedback Submitted!',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Thank you for helping us improve',
+                                              style: TextStyle(fontSize: 12, color: Colors.white70),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.green[600],
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 3),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  margin: const EdgeInsets.all(16),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                        disabledBackgroundColor: Colors.grey[400],
+                      ),
+                        child: feedbackController.isSubmitting.value
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.send, size: 16),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Submit Feedback',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
                   ),
                 ),
               ],

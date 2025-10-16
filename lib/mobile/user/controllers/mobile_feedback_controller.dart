@@ -267,17 +267,29 @@ void removeFile(PlatformFile file) {
 
   /// Clear the feedback form completely
   void clearForm() {
+    print('=== CLEARING FORM ===');
+    
+    // Clear text values
     subject.value = '';
     description.value = '';
+    
+    // Clear file selections
     selectedFiles.clear();
-    selectedType.value = FeedbackType.bug;
-    selectedCategory.value = FeedbackCategory.other;
-
-    // Force refresh
+    
+    // Reset to DEFAULT selections
+    selectedType.value = FeedbackType.bug; // ← First option
+    selectedCategory.value = FeedbackCategory.other; // ← Default
+    
+    // Force refresh (this tells Obx to update)
     subject.refresh();
     description.refresh();
     selectedFiles.refresh();
-    selectedType.refresh();
-    selectedCategory.refresh();
+    selectedType.refresh(); // ← Important for chips
+    selectedCategory.refresh(); // ← Important for dropdown
+    
+    print('Form cleared successfully');
+    print('Type: ${selectedType.value.displayName}');
+    print('Category: ${selectedCategory.value.displayName}');
+    print('====================');
   }
 }
