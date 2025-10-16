@@ -1,4 +1,4 @@
-import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_controller.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_mobile_appointment_controller.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/appointment_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

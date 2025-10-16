@@ -11,7 +11,7 @@ import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_com
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
-import 'package:capstone_app/web/user_web/controllers/web_appointment_controller.dart';
+import 'package:capstone_app/web/user_web/controllers/user_web_appointment_controller.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
