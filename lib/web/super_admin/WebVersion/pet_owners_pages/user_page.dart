@@ -5,6 +5,10 @@ import 'package:capstone_app/data/models/user_model.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:intl/intl.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/utils/logout_helper.dart';
 
 /// ============================================
 /// SUPER ADMIN USER MANAGEMENT SCREEN
@@ -22,6 +26,10 @@ class _SuperAdminUserManagementScreenState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final AuthRepository _authRepository = Get.find<AuthRepository>();
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isLoggingOut = false;
+
 
   // Real-time subscription
   RealtimeSubscription? _userSubscription;
@@ -185,15 +193,19 @@ class _SuperAdminUserManagementScreenState
     final isTablet = screenWidth > 600 && screenWidth <= 1024;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      key: _scaffoldKey,  // ADD THIS LINE
+    backgroundColor: backgroundColor,
+      drawer: _buildDrawer(context),  
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Back',
+          icon: const Icon(Icons.menu_rounded, color: primaryBlue),
+          onPressed: () {
+            _scaffoldKey.currentState?.openDrawer();
+          },
+          tooltip: 'Menu',
         ),
         title: Row(
           children: [
@@ -221,7 +233,6 @@ class _SuperAdminUserManagementScreenState
           ],
         ),
         actions: [
-          // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh, color: primaryBlue),
             onPressed: _loadUsers,
@@ -233,7 +244,7 @@ class _SuperAdminUserManagementScreenState
           preferredSize: const Size.fromHeight(120),
           child: Column(
             children: [
-              // Search bar
+              // Search bar section remains the same
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: isDesktop ? 32 : 16,
@@ -273,8 +284,7 @@ class _SuperAdminUserManagementScreenState
                   ),
                 ),
               ),
-
-              // Tabs
+              // Tabs section remains the same
               TabBar(
                 controller: _tabController,
                 indicatorColor: primaryBlue,
@@ -345,6 +355,311 @@ class _SuperAdminUserManagementScreenState
             ),
     );
   }
+    Widget _buildDrawer(BuildContext context) {
+  return Drawer(
+    backgroundColor: backgroundColor,
+    child: Column(
+      children: [
+        // Header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                primaryBlue,
+                Color.fromRGBO(81, 115, 153, 0.8),
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Super Admin',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Management Panel',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Menu Items
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              _buildDrawerItem(
+                context,
+                icon: Icons.local_hospital_rounded,
+                title: 'Veterinary Clinics',
+                subtitle: 'Manage vet clinics',
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to SuperAdminVetClinicDashboard
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SuperAdminVetClinicDashboard(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.feedback_rounded,
+                title: 'System Reports',
+                subtitle: 'User feedback & reports',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminFeedbackManagement(),
+                    ),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.delete_forever_rounded,
+                title: 'Vet Reports',
+                subtitle: 'Deletion requests',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VeterinaryReport(),
+                    ),
+                  );
+                },
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+            ],
+          ),
+        ),
+
+        // Logout Button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: _isLoggingOut
+                ? Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 0.7),
+                          Color.fromRGBO(81, 115, 153, 0.5),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Logging Out...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : InkWell(
+                    onTap: () async {
+                      setState(() => _isLoggingOut = true);
+                      try {
+                        await LogoutHelper.logout();
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() => _isLoggingOut = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Logout failed: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(220, 53, 69, 1),
+                            Color.fromRGBO(200, 35, 51, 1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Log Out',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+        Widget _buildDrawerItem(
+          BuildContext context, {
+          required IconData icon,
+          required String title,
+          required String subtitle,
+          required VoidCallback onTap,
+        }) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: primaryBlue.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryBlue.withOpacity(0.2),
+                            primaryBlue.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: primaryBlue,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: primaryBlue.withOpacity(0.5),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+
 }
 
 /// ============================================
