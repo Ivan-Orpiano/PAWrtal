@@ -82,43 +82,55 @@ class MobileFeedbackController extends GetxController {
   }
 
   /// Pick files (images/videos)
-  Future<void> pickFiles() async {
-    if (selectedFiles.length >= 5) {
-      _showError("You can only attach up to 5 files");
-      return;
-    }
+Future<void> pickFiles() async {
+  if (selectedFiles.length >= 5) {
+    _showError("You can only attach up to 5 files");
+    return;
+  }
 
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: [
-          'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
-          'mp4', 'mov', 'avi', 'mkv', 'webm'
-        ],
-        allowMultiple: true,
-      );
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
+        'mp4', 'mov', 'avi', 'mkv', 'webm'
+      ],
+      allowMultiple: true,
+    );
 
-      if (result != null) {
-        for (var file in result.files) {
-          if (selectedFiles.length >= 5) {
-            _showWarning("Maximum 5 files allowed");
-            break;
-          }
+    if (result != null) {
+      for (var file in result.files) {
+        if (selectedFiles.length >= 5) {
+          _showWarning("Maximum 5 files allowed");
+          break;
+        }
 
-          if (_validateFile(file)) {
-            selectedFiles.add(file);
-          }
+        if (_validateFile(file)) {
+          selectedFiles.add(file);
+          print('Added file: ${file.name}'); // Debug
         }
       }
-    } catch (e) {
-      _showError("Failed to pick files: $e");
+      
+      // FORCE REFRESH TO ENSURE UI UPDATES
+      selectedFiles.refresh();
+      
+      print('Total files: ${selectedFiles.length}'); // Debug
     }
+  } catch (e) {
+    print('Error picking files: $e'); // Debug
+    _showError("Failed to pick files: $e");
   }
+}
 
-  /// Remove a file from selection
-  void removeFile(PlatformFile file) {
-    selectedFiles.remove(file);
-  }
+/// Remove a file from selection - UPDATED VERSION
+void removeFile(PlatformFile file) {
+  selectedFiles.remove(file);
+  
+  // FORCE REFRESH TO ENSURE UI UPDATES
+  selectedFiles.refresh();
+  
+  print('Removed file. Total files: ${selectedFiles.length}'); // Debug
+}
 
   /// Clear all selected files
   void clearFiles() {

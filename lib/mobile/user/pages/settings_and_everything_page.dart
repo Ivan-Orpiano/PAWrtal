@@ -877,23 +877,29 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                             ),
                           ),
                           const Spacer(),
-                          Container(
+                          // WRAP THIS IN OBX
+                          Obx(() => Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.orange[100],
+                              color: feedbackController.selectedFiles.isEmpty 
+                                ? Colors.orange[100] 
+                                : Colors.green[100],
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               '${feedbackController.selectedFiles.length}/5',
                               style: TextStyle(
-                                color: Colors.orange[800],
+                                color: feedbackController.selectedFiles.isEmpty 
+                                  ? Colors.orange[800] 
+                                  : Colors.green[800],
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          )
+                        ),
+                      ],
+                    ),
                       const SizedBox(height: 8),
                       Text(
                         'At least one image/video required. Max 5 files.',
@@ -906,48 +912,72 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                       ),
                       const SizedBox(height: 12),
                       
-                      // Upload Button
-                      InkWell(
-                        onTap: () {
-                          feedbackController.pickFiles();
-                          Text('${feedbackController.selectedFiles.length}/5');
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey[300]!, width: 2, style: BorderStyle.solid),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.cloud_upload_outlined, color: Colors.grey[400], size: 32),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Tap to upload files',
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
+                      // Upload Button - WRAP IN OBX TO CONDITIONALLY SHOW
+                      Obx(() => feedbackController.selectedFiles.isEmpty
+                        ? InkWell(
+                            onTap: () => feedbackController.pickFiles(),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.grey[300]!, 
+                                  width: 2, 
+                                  style: BorderStyle.solid
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Images or Videos',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.cloud_upload_outlined, color: Colors.grey[400], size: 32),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tap to upload files',
+                                    style: TextStyle(
+                                      color: Colors.grey[700],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Images or Videos',
+                                    style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                       ),
-                      if (feedbackController.selectedFiles.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Obx(() => Column(
-                          children: feedbackController.selectedFiles
-                            .map((file) => _buildFileItem(file))
-                            .toList(),
-                        )),
-                      ],
+                      
+                      // Display selected files - WRAP IN OBX
+                      Obx(() => feedbackController.selectedFiles.isNotEmpty
+                        ? Column(
+                            children: [
+                              if (feedbackController.selectedFiles.isEmpty == false)
+                                const SizedBox(height: 8),
+                              ...feedbackController.selectedFiles.map((file) => _buildFileItem(file)).toList(),
+                              const SizedBox(height: 8),
+                              // Add more files button
+                              if (feedbackController.selectedFiles.length < 5)
+                                OutlinedButton.icon(
+                                  onPressed: () => feedbackController.pickFiles(),
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text('Add more files', style: TextStyle(fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue[700],
+                                    side: BorderSide(color: Colors.blue.withOpacity(0.3)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                      ),
                     ],
                   ),
                 ),
@@ -986,65 +1016,84 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
               ],
             ),
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Info Cards
-          _buildInfoCard('Response Time', '24-48 hours', Icons.access_time, Colors.blue),
-          const SizedBox(height: 12),
-          _buildInfoCard('Privacy', 'Your data is secure', Icons.lock_outline, Colors.green),
         ],
       ),
     );
   }
 
-  Widget _buildFileItem(PlatformFile file) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Row(
-        children: [
-          Text(
-            feedbackController.getFileIcon(file.extension),
-            style: const TextStyle(fontSize: 18),
+Widget _buildFileItem(PlatformFile file) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.grey[300]!),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  file.name,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          child: Text(
+            feedbackController.getFileIcon(file.extension),
+            style: const TextStyle(fontSize: 20),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                file.name,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
                 ),
-                Text(
-                  feedbackController.getFileSize(file.size),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 10),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                feedbackController.getFileSize(file.size),
+                style: TextStyle(
+                  color: Colors.grey[600], 
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              feedbackController.removeFile(file);
+              // Force update - though Obx should handle it
+              feedbackController.selectedFiles.refresh();
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              child: Icon(
+                Icons.close, 
+                size: 18, 
+                color: Colors.red[400],
+              ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 16),
-            color: Colors.grey[600],
-            onPressed: () => feedbackController.removeFile(file),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // Helper methods for feedback types
   Color _getFeedbackTypeColor(FeedbackType type) {
