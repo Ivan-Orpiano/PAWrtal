@@ -1,5 +1,5 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
-import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_mobile_appointment_controller.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_appointment_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';

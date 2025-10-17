@@ -1,5 +1,5 @@
 import 'package:capstone_app/notifications/components/toast_notification_system.dart';
-import 'package:capstone_app/notifications/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/admin_notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -608,7 +608,6 @@ class WebAppointmentController extends GetxController {
     );
 
     if (!isAvailable) {
-      // Show error using toast instead of creating notification
       ToastNotificationService.showErrorToast(
         'Time Slot Unavailable',
         'This time slot is already booked. Please ask the client to choose a different time.',
@@ -618,13 +617,12 @@ class WebAppointmentController extends GetxController {
 
     await _updateAppointmentStatus(appointment, 'accepted');
 
-    // *** ONLY create notification for the USER, not the admin ***
-    // await _createAppointmentNotificationForUser(
-    //   type: 'accepted',
-    //   appointment: appointment,
-    // );
+    // Create notification for USER about acceptance
+    await _createAppointmentNotification(
+      type: 'accepted',
+      appointment: appointment,
+    );
 
-    // *** Show success toast instead of notification ***
     ToastNotificationService.showSuccessToast(
       'Appointment Accepted',
       'Successfully accepted appointment for ${getPetName(appointment.petId)}',
@@ -643,14 +641,13 @@ class WebAppointmentController extends GetxController {
 
       await updateFullAppointment(updatedAppointment);
 
-      // *** ONLY create notification for the USER, not the admin ***
-      // await _createAppointmentNotificationForUser(
-      //   type: 'declined',
-      //   appointment: appointment,
-      //   notes: notes,
-      // );
+      // Create notification for USER about decline
+      await _createAppointmentNotification(
+        type: 'declined',
+        appointment: appointment,
+        notes: notes,
+      );
 
-      // *** Show success toast instead of notification ***
       ToastNotificationService.showSuccessToast(
         'Appointment Declined',
         'Appointment for ${getPetName(appointment.petId)} has been declined',

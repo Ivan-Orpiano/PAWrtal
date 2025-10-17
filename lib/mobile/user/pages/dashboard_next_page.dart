@@ -6,7 +6,7 @@ import 'package:capstone_app/mobile/user/pages/schedule_appointment.dart';
 import 'package:capstone_app/mobile/user/pages/clinic_reviews_page.dart';
 import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
+import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';

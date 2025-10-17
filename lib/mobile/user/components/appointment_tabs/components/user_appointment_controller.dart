@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone_app/notifications/controllers/user_notification_controller.dart';
 
 class EnhancedUserAppointmentController extends GetxController {
   final AuthRepository authRepository;
@@ -21,7 +24,8 @@ class EnhancedUserAppointmentController extends GetxController {
   var appointments = <Appointment>[].obs;
   var clinics = <String, Clinic>{}.obs;
   var pets = <String, Pet>{}.obs;
-  
+  var ownersCache = <String, Map<String, dynamic>>{}.obs;
+
   var appointmentReviews = <String, bool>{}.obs;
 
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
@@ -61,9 +65,8 @@ class EnhancedUserAppointmentController extends GetxController {
       final userId = session.userId;
       if (userId.isEmpty) return;
 
-      _reviewSubscription = authRepository
-          .subscribeToClinicReviews('')
-          .listen((message) {
+      _reviewSubscription =
+          authRepository.subscribeToClinicReviews('').listen((message) {
         _handleReviewUpdate(message);
       });
     } catch (e) {
@@ -130,7 +133,8 @@ class EnhancedUserAppointmentController extends GetxController {
 
   Future<void> _checkAppointmentReview(String appointmentId) async {
     try {
-      final hasReview = await authRepository.hasUserReviewedAppointment(appointmentId);
+      final hasReview =
+          await authRepository.hasUserReviewedAppointment(appointmentId);
       appointmentReviews[appointmentId] = hasReview;
     } catch (e) {
       print('Error checking appointment review: $e');
@@ -149,7 +153,7 @@ class EnhancedUserAppointmentController extends GetxController {
 
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
-      
+
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
     } catch (e) {
@@ -248,7 +252,7 @@ class EnhancedUserAppointmentController extends GetxController {
   List<Appointment> get completed {
     return appointments.where((a) {
       if (a.status != 'completed') return false;
-      
+
       final hasReview = appointmentReviews[a.documentId] ?? false;
       return !hasReview;
     }).toList()
@@ -257,17 +261,17 @@ class EnhancedUserAppointmentController extends GetxController {
 
   List<Appointment> get history {
     return appointments.where((a) {
-      if (a.status == 'cancelled' || 
-          a.status == 'declined' || 
+      if (a.status == 'cancelled' ||
+          a.status == 'declined' ||
           a.status == 'no_show') {
         return true;
       }
-      
+
       if (a.status == 'completed') {
         final hasReview = appointmentReviews[a.documentId] ?? false;
         return hasReview;
       }
-      
+
       return false;
     }).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -291,7 +295,7 @@ class EnhancedUserAppointmentController extends GetxController {
   Future<void> cancelPendingAppointment(String appointmentId) async {
     try {
       isLoading.value = true;
-      
+
       await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
 
       // Remove from local list immediately for better UX
@@ -319,6 +323,37 @@ class EnhancedUserAppointmentController extends GetxController {
     }
   }
 
+  Future<void> _createUserNotificationForAppointmentUpdate({
+    required String type,
+    required Appointment appointment,
+    String? notes,
+  }) async {
+    try {
+      // Get clinic name for notification
+      final clinicDoc =
+          await authRepository.getClinicById(appointment.clinicId);
+      final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
+
+      // Get pet name
+      final petName = getPetName(appointment);
+
+      // Create notification for USER
+      final userNotification = NotificationModel.appointmentStatusUpdate(
+        userId: appointment.userId,
+        appointmentId: appointment.documentId!,
+        petName: petName,
+        clinicName: clinicName,
+        status: type,
+        notes: notes,
+      );
+
+      await authRepository.createNotification(userNotification);
+      print('Created appointment notification for user: $type');
+    } catch (e) {
+      print('Error creating appointment notification for user: $e');
+    }
+  }
+
   // NEW: Cancel accepted appointment (with reason)
   Future<void> cancelAcceptedAppointment(
     String appointmentId,
@@ -326,6 +361,9 @@ class EnhancedUserAppointmentController extends GetxController {
   ) async {
     try {
       isLoading.value = true;
+
+      final appointment =
+          appointments.firstWhere((a) => a.documentId == appointmentId);
 
       // Update appointment with cancellation details
       await authRepository.updateFullAppointment(appointmentId, {
@@ -335,6 +373,10 @@ class EnhancedUserAppointmentController extends GetxController {
         'cancelledAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
       });
+
+      // Create notification for admin about user cancellation
+      await _createAdminNotificationForUserCancellation(
+          appointment, cancellationReason);
 
       Get.snackbar(
         "Appointment Cancelled",
@@ -358,6 +400,38 @@ class EnhancedUserAppointmentController extends GetxController {
     }
   }
 
+  Future<void> _createAdminNotificationForUserCancellation(
+    Appointment appointment,
+    String cancellationReason,
+  ) async {
+    try {
+      final ownerName = getOwnerName(appointment.userId);
+      final petName = getPetName(appointment);
+
+      final adminNotification = NotificationModel(
+        recipientId: appointment.clinicId,
+        recipientType: 'admin',
+        type: NotificationType.appointmentCancelled,
+        title: 'Appointment Cancelled by User',
+        message: '$ownerName cancelled appointment for $petName',
+        appointmentId: appointment.documentId,
+        userId: appointment.userId,
+        data: {
+          'cancellationReason': cancellationReason,
+          'petName': petName,
+          'ownerName': ownerName,
+          'service': appointment.service,
+          'appointmentTime': appointment.dateTime.toIso8601String(),
+        },
+      );
+
+      await authRepository.createNotification(adminNotification);
+      print('Created admin notification for user cancellation');
+    } catch (e) {
+      print('Error creating admin notification for user cancellation: $e');
+    }
+  }
+
   // Helper methods
   Clinic? getClinicForAppointment(Appointment appointment) {
     return clinics[appointment.clinicId];
@@ -370,6 +444,52 @@ class EnhancedUserAppointmentController extends GetxController {
   String getPetNameForAppointment(Appointment appointment) {
     final pet = pets[appointment.petId];
     return pet?.name ?? appointment.petId;
+  }
+
+  String getPetName(Appointment appointment) {
+    final pet = pets[appointment.petId];
+    return pet?.name ?? appointment.petId;
+  }
+
+  String getOwnerName(String userId) {
+    if (!ownersCache.containsKey(userId)) {
+      // Trigger a fetch if we don't have the data
+      _fetchOwnerData(userId);
+      return 'Loading...';
+    }
+    return ownersCache[userId]?['name'] ?? 'User #${userId.substring(0, 6)}';
+  }
+
+  Future<void> _fetchOwnerData(String userId) async {
+    if (!ownersCache.containsKey(userId)) {
+      try {
+        final ownerDoc = await authRepository.getUserById(userId);
+        if (ownerDoc != null) {
+          // Create a proper User object
+          final user = User.fromMap(ownerDoc.data);
+          ownersCache[userId] = {
+            'name': user.name,
+            'email': user.email,
+            'phone': user.phone,
+          };
+        } else {
+          // Add fallback data to prevent repeated fetching
+          ownersCache[userId] = {
+            'name': 'User #${userId.substring(0, 6)}',
+            'email': 'N/A',
+            'phone': 'N/A',
+          };
+        }
+      } catch (e) {
+        print("Error fetching owner $userId: $e");
+        // Add fallback data
+        ownersCache[userId] = {
+          'name': 'User #${userId.substring(0, 6)}',
+          'email': 'N/A',
+          'phone': 'N/A',
+        };
+      }
+    }
   }
 
   String getClinicNameForAppointment(Appointment appointment) {
@@ -399,8 +519,8 @@ class EnhancedUserAppointmentController extends GetxController {
       case 'declined':
         return 'Not approved by clinic';
       case 'cancelled':
-        return appointment.cancelledBy == 'user' 
-            ? 'Cancelled by you' 
+        return appointment.cancelledBy == 'user'
+            ? 'Cancelled by you'
             : 'Cancelled by clinic';
       default:
         return appointment.status;
@@ -434,13 +554,13 @@ class EnhancedUserAppointmentController extends GetxController {
     if (appointment.status == 'pending') {
       return true;
     }
-    
+
     // Can cancel accepted appointments if at least 2 hours before appointment time
     if (appointment.status == 'accepted') {
       return appointment.dateTime
           .isAfter(DateTime.now().add(const Duration(hours: 2)));
     }
-    
+
     return false;
   }
 
@@ -475,11 +595,11 @@ class EnhancedUserAppointmentController extends GetxController {
       'history': history.length,
     };
   }
-  
+
   bool hasReview(String appointmentId) {
     return appointmentReviews[appointmentId] ?? false;
   }
-  
+
   Future<void> refreshAfterReview(String appointmentId) async {
     await _checkAppointmentReview(appointmentId);
     appointments.refresh();

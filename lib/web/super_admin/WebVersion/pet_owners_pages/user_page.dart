@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/archived_user_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -14,8 +15,7 @@ import 'package:capstone_app/utils/logout_helper.dart';
 /// SUPER ADMIN USER MANAGEMENT SCREEN
 /// ============================================
 class SuperAdminUserManagementScreen extends StatefulWidget {
-  const SuperAdminUserManagementScreen({Key? key}) : super(key: key);
-
+  const SuperAdminUserManagementScreen({super.key});
   @override
   State<SuperAdminUserManagementScreen> createState() =>
       _SuperAdminUserManagementScreenState();
@@ -464,7 +464,26 @@ class _SuperAdminUserManagementScreenState
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Divider(),
+              ),   const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
               ),
+                _buildDrawerItem(
+                context,
+                icon: Icons.archive_rounded,
+                title: 'Archived Users',
+                subtitle: 'View & manage archives',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ArchivedUsersDashboard(),
+                    ),
+                  );
+                },
+              ),
+            
             ],
           ),
         ),
@@ -1059,37 +1078,45 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     }
   }
 
-  Future<void> _handleDelete() async {
+ Future<void> _handleArchive() async {
     setState(() => _isDeleting = true);
 
     try {
-      print('>>> Deleting user: ${widget.user.userId}');
+      print('>>> Archiving user: ${widget.user.userId}');
 
-      // Delete user document from database
-      if (widget.user.documentId != null) {
-        await widget.authRepository.appWriteProvider.databases!.deleteDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.usersCollectionID,
-          documentId: widget.user.documentId!,
-        );
-      }
+      // Get current admin info
+      final currentUser = await widget.authRepository.getUser();
+      final adminName = currentUser?.name ?? 'Super Admin';
 
-      Get.snackbar(
-        'Success',
-        '${widget.user.name} has been deleted successfully',
-        backgroundColor: vetGreen,
-        colorText: Colors.white,
-        icon: const Icon(Icons.check_circle, color: Colors.white),
+      // Archive the user instead of deleting
+      final result = await widget.authRepository.archiveUser(
+        userId: widget.user.userId,
+        userDocumentId: widget.user.documentId!,
+        archivedBy: adminName,
+        archiveReason: 'Archived by super admin from user management',
       );
 
-      widget.onUserUpdated();
-      Navigator.of(context).pop();
+      if (result['success'] == true) {
+        Get.snackbar(
+          'Success',
+          '${widget.user.name} has been archived successfully. Will be permanently deleted in 30 days.',
+          backgroundColor: vetGreen,
+          colorText: Colors.white,
+          icon: const Icon(Icons.archive, color: Colors.white),
+          duration: const Duration(seconds: 4),
+        );
+
+        widget.onUserUpdated();
+        Navigator.of(context).pop();
+      } else {
+        throw Exception(result['error'] ?? 'Failed to archive user');
+      }
     } catch (e) {
-      print('>>> Error deleting user: $e');
+      print('>>> Error archiving user: $e');
 
       Get.snackbar(
         'Error',
-        'Failed to delete user: $e',
+        'Failed to archive user: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -1570,12 +1597,12 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        color: Colors.orange[50], // Changed from red to orange
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red[300]!, width: 2),
+        border: Border.all(color: Colors.orange[300]!, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.orange.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -1586,21 +1613,21 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.2),
+              color: Colors.orange.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red[700],
+              Icons.archive_outlined, // Changed icon
+              color: Colors.orange[700],
               size: 24,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Are you sure you want to delete ${widget.user.name}? This action cannot be undone and will permanently remove all user data.',
+              'Are you sure you want to archive ${widget.user.name}? The account will be disabled and permanently deleted after 30 days. You can recover it within this period.',
               style: TextStyle(
-                color: Colors.red[700],
+                color: Colors.orange[700],
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1611,7 +1638,7 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     );
   }
 
-  Widget _buildActionButtons(bool isWide) {
+   Widget _buildActionButtons(bool isWide) {
     if (_isDeleting) {
       return const Center(
         child: CircularProgressIndicator(color: primaryBlue),
@@ -1638,11 +1665,11 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: _handleDelete,
-              icon: const Icon(Icons.delete_forever, size: 20),
-              label: const Text('Confirm Delete'),
+              onPressed: _handleArchive, // Changed from _handleDelete
+              icon: const Icon(Icons.archive, size: 20),
+              label: const Text('Confirm Archive'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.orange, // Changed from red
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -1662,10 +1689,10 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
         children: [
           ElevatedButton.icon(
             onPressed: () => setState(() => _showDeleteConfirm = true),
-            icon: const Icon(Icons.delete_outline, size: 20),
-            label: const Text('Delete User'),
+            icon: const Icon(Icons.archive_outlined, size: 20),
+            label: const Text('Archive User'), // Changed text
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.orange, // Changed from red
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(
                 horizontal: 24,
@@ -1703,10 +1730,10 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () => setState(() => _showDeleteConfirm = true),
-              icon: const Icon(Icons.delete_outline, size: 20),
-              label: const Text('Delete User'),
+              icon: const Icon(Icons.archive_outlined, size: 20),
+              label: const Text('Archive User'), // Changed text
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.orange, // Changed from red
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

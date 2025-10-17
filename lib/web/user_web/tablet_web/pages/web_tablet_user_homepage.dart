@@ -1,5 +1,6 @@
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_notification_icon.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/notifications/components/user_notification_panel.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_profile_icon.dart';
 import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_appointments_page.dart';
 import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_dashboard_page.dart';
 import 'package:capstone_app/web/user_web/tablet_web/pages/web_tablet_messages_page.dart';
@@ -71,7 +72,7 @@ class _WebTabletUserHomepageState extends State<WebTabletUserHomepage> {
             padding: EdgeInsets.only(right: 60),
             child: Row(
               children: [
-                WebNotificationIcon(),
+                UserNotificationButton(),
                 WebProfileIcon(),
               ],
             ),
