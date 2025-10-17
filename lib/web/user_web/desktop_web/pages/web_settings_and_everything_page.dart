@@ -153,11 +153,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                               ),
                             ),
                             const Spacer(flex: 1),
-                            WebNotificationIcon(
-                              right: _getNotifRight(),
-                              top: 70,
-                              width: 500,
-                            )
                           ],
                         ),
                       ),
@@ -199,7 +194,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
   }
 
   double _getResponsivePadding() => MediaQuery.of(context).size.width * 0.02;
-  double _getNotifRight() => 50;
 
   Widget _buildSidebarItem(String title, IconData icon, int index, {bool isDestructive = false}) {
     final isSelected = selectedIndex == index;
