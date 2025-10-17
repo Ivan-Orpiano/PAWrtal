@@ -296,9 +296,20 @@ class EnhancedUserAppointmentController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Get the appointment details before cancelling
+      final appointment =
+          appointments.firstWhere((a) => a.documentId == appointmentId);
+
+      // Update appointment status to cancelled
       await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
 
-      // Remove from local list immediately for better UX
+      // CRITICAL FIX: Create notification for admin about cancellation
+      await _createAdminNotificationForUserCancellation(
+        appointment,
+        'User cancelled pending appointment request',
+      );
+
+      // Remove from local list
       appointments.removeWhere((a) => a.documentId == appointmentId);
 
       Get.snackbar(
@@ -412,23 +423,26 @@ class EnhancedUserAppointmentController extends GetxController {
         recipientId: appointment.clinicId,
         recipientType: 'admin',
         type: NotificationType.appointmentCancelled,
+        priority: NotificationPriority.high,
         title: 'Appointment Cancelled by User',
         message: '$ownerName cancelled appointment for $petName',
         appointmentId: appointment.documentId,
         userId: appointment.userId,
+        actionUrl: '/appointments',
         data: {
           'cancellationReason': cancellationReason,
           'petName': petName,
           'ownerName': ownerName,
           'service': appointment.service,
           'appointmentTime': appointment.dateTime.toIso8601String(),
+          'cancelledBy': 'user',
         },
       );
 
       await authRepository.createNotification(adminNotification);
-      print('Created admin notification for user cancellation');
+      print('>>> Created admin notification for user cancellation');
     } catch (e) {
-      print('Error creating admin notification for user cancellation: $e');
+      print('>>> Error creating admin notification for user cancellation: $e');
     }
   }
 
