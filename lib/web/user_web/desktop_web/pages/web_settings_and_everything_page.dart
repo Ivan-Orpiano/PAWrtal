@@ -153,20 +153,10 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                               ),
                             ),
                             const Spacer(flex: 1),
-                            const Expanded(
-                              flex: 2,
-                              child: WebSearchBar(width: 380),
-                            ),
-                            const Spacer(flex: 1),
                             WebNotificationIcon(
                               right: _getNotifRight(),
                               top: 70,
                               width: 500,
-                            ),
-                            WebProfileIcon(
-                              right: _getIconRight(),
-                              top: 70,
-                              width: 250,
                             )
                           ],
                         ),
@@ -209,8 +199,7 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
   }
 
   double _getResponsivePadding() => MediaQuery.of(context).size.width * 0.02;
-  double _getNotifRight() => 75.0;
-  double _getIconRight() => 75.0;
+  double _getNotifRight() => 50;
 
   Widget _buildSidebarItem(String title, IconData icon, int index, {bool isDestructive = false}) {
     final isSelected = selectedIndex == index;
@@ -837,66 +826,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
               ),
             ],
           ),
-          
-          const SizedBox(height: 20),
-          
-          _buildModernCard(
-            title: 'Privacy & Security',
-            icon: Icons.shield_outlined,
-            iconColor: Colors.green,
-            children: [
-              _buildModernSettingTile(
-                icon: Icons.analytics_outlined,
-                title: 'Analytics & Data Collection',
-                subtitle: 'Help us improve by sharing usage data',
-                iconColor: Colors.blue,
-                value: false,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.cookie_outlined,
-                title: 'Cookies',
-                subtitle: 'Allow cookies for better experience',
-                iconColor: Colors.brown,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.visibility_off_outlined,
-                title: 'Activity Status',
-                subtitle: 'Show when you\'re active',
-                iconColor: Colors.teal,
-                value: true,
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 20),
-          
-          _buildModernCard(
-            title: 'Advanced',
-            icon: Icons.tune_outlined,
-            iconColor: Colors.deepPurple,
-            children: [
-              _buildModernSettingTile(
-                icon: Icons.storage_outlined,
-                title: 'Clear Cache',
-                subtitle: 'Free up space by clearing cached data',
-                iconColor: Colors.amber,
-                isSwitch: false,
-                onTap: () => _showSnackbar('Success', 'Cache cleared successfully', Colors.green),
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.download_outlined,
-                title: 'Download Data',
-                subtitle: 'Export your account information',
-                iconColor: Colors.lightBlue,
-                isSwitch: false,
-                onTap: () => _showSnackbar('Info', 'Data export initiated', Colors.blue),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -907,6 +836,7 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -1170,34 +1100,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                 }),
               ],
             ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          Row(
-            children: [
-              Expanded(
-                child: _buildContactCard(
-                  icon: Icons.email_outlined,
-                  title: 'Email Support',
-                  subtitle: 'support@example.com',
-                  description: 'Get help via email',
-                  color: Colors.blue,
-                  onTap: () => _showSnackbar('Info', 'Opening email client...', Colors.blue),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildContactCard(
-                  icon: Icons.chat_bubble_outline,
-                  title: 'Live Chat',
-                  subtitle: 'Available 9AM-5PM',
-                  description: 'Chat with our team',
-                  color: Colors.green,
-                  onTap: () => _showSnackbar('Info', 'Starting live chat...', Colors.blue),
-                ),
-              ),
-            ],
           ),
         ],
       ),

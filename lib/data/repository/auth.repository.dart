@@ -935,6 +935,135 @@ class AuthRepository {
     }
   }
 
+  // Add these methods to AuthRepository class in auth.repository.dart
+
+  /// Get all feedback reported by admins
+  Future<List<FeedbackAndReport>> getAdminFeedback({
+    int limit = 100,
+    String? clinicId,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(
+        limit: limit,
+      );
+
+      return docs.where((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        // Filter for admin feedback
+        if (feedback.reportedBy != 'admin') return false;
+        // If clinicId is specified, filter by that clinic
+        if (clinicId != null && feedback.clinicId != clinicId) return false;
+        return true;
+      }).map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting admin feedback: $e');
+      return [];
+    }
+  }
+
+  /// Get all feedback reported by staff
+  Future<List<FeedbackAndReport>> getStaffFeedback({
+    int limit = 100,
+    String? clinicId,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(
+        limit: limit,
+      );
+
+      return docs.where((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        // Filter for staff feedback
+        if (feedback.reportedBy != 'staff') return false;
+        // If clinicId is specified, filter by that clinic
+        if (clinicId != null && feedback.clinicId != clinicId) return false;
+        return true;
+      }).map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting staff feedback: $e');
+      return [];
+    }
+  }
+
+  /// Get feedback for a specific admin
+  Future<List<FeedbackAndReport>> getFeedbackByAdminId(String adminId) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(limit: 1000);
+
+      return docs.where((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.adminId == adminId;
+      }).map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting feedback by admin ID: $e');
+      return [];
+    }
+  }
+
+  /// Get feedback for a specific staff member
+  Future<List<FeedbackAndReport>> getFeedbackByStaffId(String staffId) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(limit: 1000);
+
+      return docs.where((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.staffId == staffId;
+      }).map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting feedback by staff ID: $e');
+      return [];
+    }
+  }
+
+  /// Get all feedback for a specific clinic (from both admin and staff)
+  Future<List<FeedbackAndReport>> getClinicFeedback(String clinicId) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(limit: 1000);
+
+      return docs.where((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.clinicId == clinicId;
+      }).map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic feedback: $e');
+      return [];
+    }
+  }
+
+  /// Get feedback by report type (admin, staff, user)
+  Future<List<FeedbackAndReport>> getFeedbackByReportedBy(
+      String reportedBy) async {
+    try {
+      final docs = await appWriteProvider.getAllFeedback(limit: 1000);
+
+      return docs.where((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.reportedBy == reportedBy;
+      }).map((doc) {
+        final feedback = FeedbackAndReport.fromMap(doc.data);
+        return feedback.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting feedback by reported by: $e');
+      return [];
+    }
+  }
+
   Future<void> updateFeedbackStatus(String documentId, FeedbackStatus status) {
     return appWriteProvider.updateFeedbackStatus(documentId, status);
   }
