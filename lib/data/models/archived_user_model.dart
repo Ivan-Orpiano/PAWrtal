@@ -49,24 +49,24 @@ class ArchivedUser {
 
   // Convert from Appwrite document
   factory ArchivedUser.fromMap(Map<String, dynamic> map) {
-    // Parse originalUserData from JSON string
-    Map<String, dynamic>? parsedUserData;
-    if (map['originalUserData'] != null && map['originalUserData'] is String) {
-      try {
-        final jsonString = map['originalUserData'] as String;
-        if (jsonString.isNotEmpty && jsonString != '{}') {
-          parsedUserData = Map<String, dynamic>.from(
-            jsonDecode(jsonString)
-          );
+   // Parse originalUserData from JSON string
+Map<String, dynamic>? parsedUserData;
+if (map['originalUserData'] != null && map['originalUserData'] is String) {
+        try {
+          final jsonString = map['originalUserData'] as String;
+          if (jsonString.isNotEmpty && jsonString != '{}') {
+            parsedUserData = Map<String, dynamic>.from(
+              jsonDecode(jsonString)
+            );
+          }
+        } catch (e) {
+          print('>>> Error parsing originalUserData JSON: $e');
+          parsedUserData = null;
         }
-      } catch (e) {
-        print('>>> Error parsing originalUserData JSON: $e');
-        parsedUserData = null;
+      } else if (map['originalUserData'] is Map) {
+        // Fallback: if somehow it's stored as Map (shouldn't happen)
+        parsedUserData = Map<String, dynamic>.from(map['originalUserData']);
       }
-    } else if (map['originalUserData'] is Map) {
-      // Fallback: if it's already a Map (shouldn't happen, but handle it)
-      parsedUserData = Map<String, dynamic>.from(map['originalUserData']);
-    }
 
     return ArchivedUser(
       documentId: map['\$id'],
@@ -91,26 +91,36 @@ class ArchivedUser {
   }
 
   // Convert to Appwrite document
-  Map<String, dynamic> toMap() {
-    return {
-      'userId': userId,
-      'name': name,
-      'email': email,
-      'role': role,
-      'phone': phone ?? '',
-      'originalDocumentId': originalDocumentId,
-      'archivedBy': archivedBy,
-      'archivedAt': archivedAt.toIso8601String(),
-      'scheduledDeletionAt': scheduledDeletionAt.toIso8601String(),
-      'archiveReason': archiveReason,
-      'isPermanentlyDeleted': isPermanentlyDeleted,
-      'originalUserData': originalUserData,
-      'isRecovered': isRecovered,
-      'recoveredAt': recoveredAt?.toIso8601String(),
-      'recoveredBy': recoveredBy,
-    };
+Map<String, dynamic> toMap() {
+  // Convert originalUserData to JSON string if it's a Map
+  String? originalUserDataString;
+  if (originalUserData != null) {
+    try {
+      originalUserDataString = jsonEncode(originalUserData);
+    } catch (e) {
+      print('>>> Error encoding originalUserData: $e');
+      originalUserDataString = '{}';
+    }
   }
 
+  return {
+    'userId': userId,
+    'name': name,
+    'email': email,
+    'role': role,
+    'phone': phone ?? '',
+    'originalDocumentId': originalDocumentId,
+    'archivedBy': archivedBy,
+    'archivedAt': archivedAt.toIso8601String(),
+    'scheduledDeletionAt': scheduledDeletionAt.toIso8601String(),
+    'archiveReason': archiveReason,
+    'isPermanentlyDeleted': isPermanentlyDeleted,
+    'originalUserData': originalUserDataString, // STRING, not Map
+    'isRecovered': isRecovered,
+    'recoveredAt': recoveredAt?.toIso8601String(),
+    'recoveredBy': recoveredBy,
+  };
+}
   // Helper getters
   int get daysUntilDeletion {
     final now = DateTime.now();
