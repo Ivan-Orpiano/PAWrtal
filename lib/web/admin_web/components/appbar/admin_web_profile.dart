@@ -1,5 +1,7 @@
 import 'package:capstone_app/utils/logout_helper.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_settings_page.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -19,9 +21,55 @@ class AdminWebProfile extends StatefulWidget {
 class _AdminWebProfileState extends State<AdminWebProfile> {
   OverlayEntry? _overlayEntry;
   final GetStorage storage = GetStorage();
+  late AuthRepository _authRepository;
+
+  // Cached clinic data
+  String _cachedClinicName = 'Clinic';
+  String _cachedProfilePictureId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _authRepository = Get.find<AuthRepository>();
+    _loadClinicDataFromStorage();
+  }
+
+  /// Load clinic data from storage (instant)
+  void _loadClinicDataFromStorage() {
+    _cachedClinicName = storage.read("clinicName") as String? ?? 'Clinic';
+    _cachedProfilePictureId =
+        storage.read("clinicProfilePictureId") as String? ?? '';
+  }
+
+  /// Fetch fresh clinic data in background (without blocking UI)
+  Future<void> _refreshClinicDataInBackground() async {
+    try {
+      final clinicId = storage.read("clinicId") as String?;
+      if (clinicId == null || clinicId.isEmpty) return;
+
+      final clinicDoc = await _authRepository.getClinicById(clinicId);
+      if (clinicDoc != null) {
+        final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
+        final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+
+        // Update cache and storage
+        setState(() {
+          _cachedClinicName = newClinicName;
+          _cachedProfilePictureId = newProfilePictureId;
+        });
+        storage.write('clinicName', newClinicName);
+        storage.write('clinicProfilePictureId', newProfilePictureId);
+      }
+    } catch (e) {
+      print('Error refreshing clinic data: $e');
+    }
+  }
 
   void _togglePopup(BuildContext context) {
     if (_overlayEntry == null) {
+      // Refresh data in background when opening popup (non-blocking)
+      _refreshClinicDataInBackground();
+
       _overlayEntry = _createOverlayEntry(context);
       Overlay.of(context).insert(_overlayEntry!);
     } else {
@@ -36,7 +84,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
 
   void _navigateToAdminSettings(int index) {
     _closePopup();
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => AdminSettingsPage(initialIndex: index),
       ),
@@ -60,7 +108,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                _closePopup();
                 await LogoutHelper.logout();
               },
               child: const Text(
@@ -75,10 +122,9 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   OverlayEntry _createOverlayEntry(BuildContext context) {
-    final userEmail = storage.read("email") ?? "admin@example.com";
-    final userName = storage.read("name") ?? "Admin User";
-    final userRole = storage.read("role") ?? "admin";
-    final clinicName = storage.read("clinicName") ?? "Clinic";
+    final userEmail = storage.read("email") as String? ?? "user@example.com";
+    final userName = storage.read("name") as String? ?? "User";
+    final userRole = storage.read("role") as String? ?? "user";
 
     return OverlayEntry(
       builder: (context) => Stack(
@@ -105,16 +151,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.purple.withOpacity(0.7),
-                        child: Text(
-                          userName.isNotEmpty ? userName[0].toUpperCase() : 'A',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      leading: _buildProfileAvatar(_cachedProfilePictureId),
                       title: Text(
                         userName,
                         style: const TextStyle(
@@ -124,13 +161,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            userEmail,
-                            style: const TextStyle(
-                                color: Colors.black87, fontSize: 12),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${userRole.toUpperCase()} • $clinicName',
+                            '${userRole.toUpperCase()} • $_cachedClinicName',
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 11,
@@ -187,7 +218,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                         "Sign out",
                         Icons.logout_outlined,
                         () {
-                          Navigator.pop(context);
+                          _closePopup();
                           _showLogoutDialog(context);
                         },
                         isDestructive: true,
@@ -201,6 +232,35 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         ],
       ),
     );
+  }
+
+  Widget _buildProfileAvatar(String? profilePictureId) {
+    if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: Colors.grey[200],
+        backgroundImage: NetworkImage(
+          _getProfilePictureUrl(profilePictureId),
+        ),
+        onBackgroundImageError: (exception, stackTrace) {
+          print('Error loading profile picture: $exception');
+        },
+      );
+    }
+
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: Colors.purple.withOpacity(0.7),
+      child: const Icon(
+        Icons.local_hospital,
+        color: Colors.white,
+        size: 18,
+      ),
+    );
+  }
+
+  String _getProfilePictureUrl(String profilePictureId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
   }
 
   Widget _popupItem(
@@ -239,28 +299,16 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
 
   @override
   Widget build(BuildContext context) {
-    final userEmail = storage.read("email") ?? "admin@example.com";
-    final userName = storage.read("name") ?? "Admin User";
+    final userName = storage.read("name") as String? ?? "User";
 
     return Padding(
       padding: const EdgeInsets.only(right: 16),
       child: Tooltip(
-        message: '$userName ($userEmail)',
+        message: userName,
         child: InkWell(
           onTap: () => _togglePopup(context),
           borderRadius: BorderRadius.circular(50),
-          child: CircleAvatar(
-            backgroundColor: Colors.purple.withOpacity(0.7),
-            radius: 17.5,
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : 'A',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-          ),
+          child: _buildProfileAvatar(_cachedProfilePictureId),
         ),
       ),
     );
