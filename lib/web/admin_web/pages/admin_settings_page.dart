@@ -174,16 +174,16 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                             child: WebSearchBar(width: 380),
                           ),
                           const Spacer(flex: 1),
-                          WebNotificationIcon(
-                            right: _getNotifRight(),
-                            top: 70,
-                            width: 500,
-                          ),
-                          AdminWebProfile(
-                            right: _getIconRight(),
-                            top: 70,
-                            width: 250,
-                          )
+                          // WebNotificationIcon(
+                          //   right: _getNotifRight(),
+                          //   top: 70,
+                          //   width: 500,
+                          // ),
+                          // AdminWebProfile(
+                          //   right: _getIconRight(),
+                          //   top: 70,
+                          //   width: 250,
+                          // )
                         ],
                       ),
                     ),

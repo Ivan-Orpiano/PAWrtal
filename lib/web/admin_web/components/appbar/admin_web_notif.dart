@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:capstone_app/notifications/components/notification_panel.dart';
+import 'package:capstone_app/notifications/components/admin_notification_panel.dart';
 
 class AdminWebNotif extends StatefulWidget {
   final double? right;

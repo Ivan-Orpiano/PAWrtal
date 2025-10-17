@@ -55,10 +55,19 @@ class NotificationController extends GetxController {
 
   Future<void> _initializeNotifications() async {
     try {
-      await loadNotifications();
+      await loadNotifications(refresh: true);
       _subscribeToNotifications();
     } catch (e) {
       print('Error initializing notifications: $e');
+    }
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    // Ensure notifications load after controller is fully ready
+    if (notifications.isEmpty) {
+      loadNotifications(refresh: true);
     }
   }
 
