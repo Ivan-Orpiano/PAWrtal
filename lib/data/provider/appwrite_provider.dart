@@ -9,6 +9,7 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:appwrite/enums.dart';
+import 'package:get_storage/get_storage.dart';
 
 enum AuthStatus {
   uninitialized,
@@ -17,6 +18,7 @@ enum AuthStatus {
 }
 
 class AppWriteProvider {
+  final GetStorage _storage = GetStorage();
   Client client = Client();
   Client get appwriteClient => client;
 
@@ -57,7 +59,6 @@ class AppWriteProvider {
     );
   }
 
-  /// Enhanced regular login - CHECK ADMIN FIRST, THEN STAFF
   Future<Map<String, dynamic>> login(Map map) async {
     try {
       final email = map["email"];
@@ -87,11 +88,27 @@ class AppWriteProvider {
         print('>>> ADMIN FOUND! User is admin of clinic: ${clinicDoc.$id}');
         print('>>> Clinic name: ${clinicDoc.data['clinicName']}');
 
+        // Store admin data in GetStorage
+        _storage.write('userId', user.$id);
+        _storage.write('email', user.email);
+        _storage.write('name', user.name);
+        _storage.write('role', 'admin');
+        _storage.write('clinicId', clinicDoc.$id);
+        _storage.write(
+            'clinicName', clinicDoc.data['clinicName'] ?? 'Unknown Clinic');
+        _storage.write('adminId', user.$id);
+
+        print('>>> Stored in GetStorage:');
+        print('>>> - userId: ${user.$id}');
+        print('>>> - email: ${user.email}');
+        print('>>> - role: admin');
+        print('>>> - clinicId: ${clinicDoc.$id}');
+
         return {
           'success': true,
           'session': session,
           'user': user,
-          'role': 'admin', // Force admin role
+          'role': 'admin',
           'clinicId': clinicDoc.$id,
           'message': 'Admin login successful',
         };
@@ -121,6 +138,22 @@ class AppWriteProvider {
         print('>>> Staff role: $role');
         print('>>> Staff clinic: $clinicId');
         print('>>> Staff authorities: $authorities');
+
+        // Store staff data in GetStorage
+        _storage.write('userId', user.$id);
+        _storage.write('email', user.email);
+        _storage.write('name', user.name);
+        _storage.write('role', role);
+        _storage.write('clinicId', clinicId);
+        _storage.write('staffId', staffDoc.$id);
+        _storage.write('authorities', authorities);
+
+        print('>>> Stored in GetStorage:');
+        print('>>> - userId: ${user.$id}');
+        print('>>> - email: ${user.email}');
+        print('>>> - role: $role');
+        print('>>> - clinicId: $clinicId');
+        print('>>> - staffId: ${staffDoc.$id}');
 
         return {
           'success': true,
@@ -159,6 +192,20 @@ class AppWriteProvider {
       }
 
       print('>>> Final role: $role');
+
+      // Store regular user data in GetStorage
+      _storage.write('userId', user.$id);
+      _storage.write('email', user.email);
+      _storage.write('userName', user.name);
+      _storage.write('role', role);
+      // clinicId is not stored for regular users, or set to empty string
+      _storage.write('clinicId', '');
+
+      print('>>> Stored in GetStorage:');
+      print('>>> - userId: ${user.$id}');
+      print('>>> - email: ${user.email}');
+      print('>>> - userName: ${user.name}');
+      print('>>> - role: $role');
       print('>>> ============================================');
 
       return {
