@@ -240,10 +240,8 @@ final RxString searchQuery = ''.obs;
       return false;
     }
 
-    if (selectedFiles.isEmpty) {
-      _showError("Please attach at least one image or video");
-      return false;
-    }
+    // REMOVED: Attachment requirement check
+    // Attachments are now OPTIONAL
 
     return true;
   }
@@ -260,7 +258,6 @@ final RxString searchQuery = ''.obs;
       final userName = session.userName;
       final userEmail = session.userEmail;
 
-      // DEBUG: Print to verify data
       print('=== SUBMITTING FEEDBACK ===');
       print('User ID: $userId');
       print('User Name: $userName');
@@ -271,21 +268,26 @@ final RxString searchQuery = ''.obs;
       print('Category: ${selectedCategory.value}');
       print('Files: ${selectedFiles.length}');
 
-      // Validate user data exists
       if (userId.isEmpty) {
         _showError("User session data is missing. Please log in again.");
         isSubmitting.value = false;
         return false;
       }
 
-      // Upload attachments first
-      _showInfo("Uploading ${selectedFiles.length} file(s)...");
+      List<String> attachmentIds = [];
 
-      final uploadedFiles =
-          await authRepository.uploadFeedbackAttachments(selectedFiles);
-      final attachmentIds = uploadedFiles.map((f) => f.$id).toList();
+      // Upload attachments ONLY if files are selected (optional)
+      if (selectedFiles.isNotEmpty) {
+        _showInfo("Uploading ${selectedFiles.length} file(s)...");
 
-      print('Uploaded ${attachmentIds.length} attachments: $attachmentIds');
+        final uploadedFiles =
+            await authRepository.uploadFeedbackAttachments(selectedFiles);
+        attachmentIds = uploadedFiles.map((f) => f.$id).toList();
+
+        print('Uploaded ${attachmentIds.length} attachments: $attachmentIds');
+      } else {
+        print('No attachments provided (optional)');
+      }
 
       // Get device/platform info
       final platform = 'web';
@@ -343,18 +345,30 @@ final RxString searchQuery = ''.obs;
 
   /// Clear the feedback form completely
   void clearForm() {
+    print('=== CLEARING FORM ===');
+    
+    // Clear text values
     subject.value = '';
     description.value = '';
+    
+    // Clear file selections
     selectedFiles.clear();
+    
+    // Reset to DEFAULT selections
     selectedType.value = FeedbackType.bug;
     selectedCategory.value = FeedbackCategory.other;
-
-    // Force refresh to ensure UI updates
+    
+    // Force refresh
     subject.refresh();
     description.refresh();
     selectedFiles.refresh();
     selectedType.refresh();
     selectedCategory.refresh();
+    
+    print('Form cleared successfully');
+    print('Type: ${selectedType.value.displayName}');
+    print('Category: ${selectedCategory.value.displayName}');
+    print('====================');
   }
 
   /// Debug helper method
