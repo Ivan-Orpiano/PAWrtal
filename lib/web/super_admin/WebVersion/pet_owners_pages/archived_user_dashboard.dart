@@ -8,7 +8,7 @@ import 'package:appwrite/appwrite.dart';
 
 /// Super Admin Dashboard for Archived Users
 class ArchivedUsersDashboard extends StatefulWidget {
-  const ArchivedUsersDashboard({Key? key}) : super(key: key);
+   const ArchivedUsersDashboard({super.key});
 
   @override
   State<ArchivedUsersDashboard> createState() => _ArchivedUsersDashboardState();

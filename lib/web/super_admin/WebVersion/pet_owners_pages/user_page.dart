@@ -15,8 +15,7 @@ import 'package:capstone_app/utils/logout_helper.dart';
 /// SUPER ADMIN USER MANAGEMENT SCREEN
 /// ============================================
 class SuperAdminUserManagementScreen extends StatefulWidget {
-  const SuperAdminUserManagementScreen({Key? key}) : super(key: key);
-
+  const SuperAdminUserManagementScreen({super.key});
   @override
   State<SuperAdminUserManagementScreen> createState() =>
       _SuperAdminUserManagementScreenState();
