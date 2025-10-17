@@ -2,7 +2,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
-import 'package:capstone_app/mobile/user/controllers/messaging_controller.dart';
+import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
