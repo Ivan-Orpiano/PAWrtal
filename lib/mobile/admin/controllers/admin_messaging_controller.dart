@@ -382,16 +382,15 @@ class AdminMessagingController extends GetxController {
         attachmentUrl: attachmentUrl,
       );
 
+      // CRITICAL: Create notification for USER about new message from admin
       await _createMessageNotificationForUser(sentMessage, messageText);
 
-      // Update conversation in local list - admin sent message so their unread count stays 0
-      // The user's unread count will be incremented by the server
+      // Update conversation
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.timestamp,
-        clinicUnreadCount:
-            0, // Admin's unread count stays 0 since they sent the message
+        clinicUnreadCount: 0, // Admin's unread count stays 0
       );
       currentConversation.value = updatedConversation;
 
@@ -420,29 +419,46 @@ class AdminMessagingController extends GetxController {
           ? _userSession.userName
           : 'Clinic Staff';
 
+      // Get clinic name
+      String clinicName = 'Veterinary Clinic';
+      try {
+        final clinicDoc = await _authRepository
+            .getClinicById(currentConversation.value!.clinicId);
+        if (clinicDoc != null) {
+          clinicName = clinicDoc.data['clinicName'] ?? 'Veterinary Clinic';
+        }
+      } catch (e) {
+        print('Error getting clinic name: $e');
+      }
+
       // Create notification for the user
-      final notification = NotificationModel.newMessage(
-        clinicId: currentConversation.value!.userId, // User as recipient
-        conversationId: currentConversation.value!.documentId!,
-        messageId: message.documentId!,
-        userId: currentConversation.value!.userId,
-        senderName: adminName,
-        messagePreview: messageText.length > 50
-            ? '${messageText.substring(0, 50)}...'
-            : messageText,
-      );
-
-      // Update the notification to be for user instead of admin
-      final userNotification = notification.copyWith(
-        recipientId: currentConversation.value!.userId,
+      final notification = NotificationModel(
+        recipientId: currentConversation.value!.userId, // User as recipient
         recipientType: 'user',
+        type: NotificationType.newMessage,
+        priority: NotificationPriority.normal,
+        title: 'New Message from $clinicName',
+        message:
+            '$adminName: ${messageText.length > 50 ? "${messageText.substring(0, 50)}..." : messageText}',
+        conversationId: currentConversation.value!.documentId,
+        messageId: message.documentId,
+        userId: currentConversation.value!.userId,
+        actionUrl:
+            '/messages?conversation=${currentConversation.value!.documentId}',
+        data: {
+          'senderName': adminName,
+          'clinicName': clinicName,
+          'messagePreview': messageText.length > 50
+              ? '${messageText.substring(0, 50)}...'
+              : messageText,
+        },
       );
 
-      await _authRepository.createNotification(userNotification);
+      await _authRepository.createNotification(notification);
       print(
-          'Created message notification for user: ${currentConversation.value!.userId}');
+          '>>> Created message notification for user: ${currentConversation.value!.userId}');
     } catch (e) {
-      print('Error creating message notification for user: $e');
+      print('>>> Error creating message notification for user: $e');
     }
   }
 
