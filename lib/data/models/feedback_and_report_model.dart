@@ -17,6 +17,12 @@ class FeedbackAndReport {
   final DateTime? archivedAt;
   final String? archivedBy;
 
+  // Admin/Staff Feedback Fields
+  final String? reportedBy; // 'admin', 'staff', 'user'
+  final String? adminId; // If reportedBy == 'admin'
+  final String? staffId; // If reportedBy == 'staff'
+  final String? clinicId; // Required for admin/staff, optional for users
+
   FeedbackAndReport({
     this.documentId,
     required this.userId,
@@ -33,10 +39,13 @@ class FeedbackAndReport {
     required this.deviceInfo,
     required this.platform,
     DateTime? submittedAt,
-    DateTime? updatedAt,
     this.archivedAt,
     this.archivedBy,
-  })  : submittedAt = submittedAt ?? DateTime.now();
+    this.reportedBy,
+    this.adminId,
+    this.staffId,
+    this.clinicId,
+  }) : submittedAt = submittedAt ?? DateTime.now();
 
   factory FeedbackAndReport.fromMap(Map<String, dynamic> map) {
     return FeedbackAndReport(
@@ -66,35 +75,45 @@ class FeedbackAndReport {
       appVersion: map['appVersion'] ?? '',
       deviceInfo: map['deviceInfo'] ?? '',
       platform: map['platform'] ?? 'web',
-      submittedAt: DateTime.parse(map['submittedAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
-      archivedAt: map['archivedAt'] != null ? DateTime.parse(map['archivedAt']) : null,
+      submittedAt: map['submittedAt'] != null
+          ? DateTime.parse(map['submittedAt'])
+          : DateTime.now(),
+      archivedAt:
+          map['archivedAt'] != null ? DateTime.parse(map['archivedAt']) : null,
       archivedBy: map['archivedBy'],
+      reportedBy: map['reportedBy'],
+      adminId: map['adminId'],
+      staffId: map['staffId'],
+      clinicId: map['clinicId'],
     );
   }
 
-Map<String, dynamic> toMap() {
-  final now = DateTime.now().toIso8601String();
-  return {
-    'userId': userId,
-    'userName': userName,
-    'userEmail': userEmail,
-    'feedbackType': feedbackType.toString().split('.').last,
-    'category': category.toString().split('.').last,
-    'subject': subject,
-    'description': description,
-    'attachments': attachments,
-    'priority': priority.toString().split('.').last,
-    'status': status.toString().split('.').last,
-    'appVersion': appVersion,
-    'deviceInfo': deviceInfo,
-    'platform': platform,
-    'submittedAt': submittedAt.toIso8601String(),
-    'updatedAt': now, 
-    'archivedAt': archivedAt?.toIso8601String(),
-    'archivedBy': archivedBy,
-  };
-}
+  Map<String, dynamic> toMap() {
+    final now = DateTime.now().toIso8601String();
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userEmail': userEmail,
+      'feedbackType': feedbackType.toString().split('.').last,
+      'category': category.toString().split('.').last,
+      'subject': subject,
+      'description': description,
+      'attachments': attachments,
+      'priority': priority.toString().split('.').last,
+      'status': status.toString().split('.').last,
+      'appVersion': appVersion,
+      'deviceInfo': deviceInfo,
+      'platform': platform,
+      'submittedAt': submittedAt.toIso8601String(),
+      'updatedAt': now,
+      'archivedAt': archivedAt?.toIso8601String(),
+      'archivedBy': archivedBy,
+      'reportedBy': reportedBy,
+      'adminId': adminId,
+      'staffId': staffId,
+      'clinicId': clinicId,
+    };
+  }
 
   FeedbackAndReport copyWith({
     String? documentId,
@@ -108,16 +127,16 @@ Map<String, dynamic> toMap() {
     List<String>? attachments,
     Priority? priority,
     FeedbackStatus? status,
-    String? adminReply,
-    DateTime? repliedAt,
-    String? repliedBy,
     String? appVersion,
     String? deviceInfo,
     String? platform,
     DateTime? submittedAt,
-    DateTime? updatedAt,
     DateTime? archivedAt,
     String? archivedBy,
+    String? reportedBy,
+    String? adminId,
+    String? staffId,
+    String? clinicId,
   }) {
     return FeedbackAndReport(
       documentId: documentId ?? this.documentId,
@@ -137,6 +156,10 @@ Map<String, dynamic> toMap() {
       submittedAt: submittedAt ?? this.submittedAt,
       archivedAt: archivedAt ?? this.archivedAt,
       archivedBy: archivedBy ?? this.archivedBy,
+      reportedBy: reportedBy ?? this.reportedBy,
+      adminId: adminId ?? this.adminId,
+      staffId: staffId ?? this.staffId,
+      clinicId: clinicId ?? this.clinicId,
     );
   }
 }
@@ -152,6 +175,9 @@ enum FeedbackCategory {
   uiUx,
   performance,
   security,
+  staffManagement,
+  clinicSettings,
+  systemIssue,
   other
 }
 
@@ -198,6 +224,12 @@ extension FeedbackCategoryExtension on FeedbackCategory {
         return 'Performance';
       case FeedbackCategory.security:
         return 'Security';
+      case FeedbackCategory.staffManagement:
+        return 'Staff Management';
+      case FeedbackCategory.clinicSettings:
+        return 'Clinic Settings';
+      case FeedbackCategory.systemIssue:
+        return 'System Issue';
       case FeedbackCategory.other:
         return 'Other';
     }
