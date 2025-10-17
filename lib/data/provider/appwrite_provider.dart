@@ -3632,36 +3632,48 @@ class AppWriteProvider {
       );
 
       print('>>> Step 1: Original user retrieved');
-
-      // Step 2: Prepare archived user data with JSON conversion
+    // Step 2: Prepare archived user data with compressed original data
       final now = DateTime.now();
       final scheduledDeletion = now.add(const Duration(days: 30));
 
-      // CRITICAL FIX: Convert originalUserData Map to JSON String
+      // Store ONLY essential data to avoid size limits
+      final Map<String, dynamic> essentialUserData = {
+        'userId': userDoc.data['userId'] ?? userId,
+        'name': userDoc.data['name'] ?? '',
+        'email': userDoc.data['email'] ?? '',
+        'role': userDoc.data['role'] ?? 'user',
+        'phone': userDoc.data['phone'] ?? '',
+        'idVerified': userDoc.data['idVerified'] ?? false,
+        'idVerifiedAt': userDoc.data['idVerifiedAt'],
+      };
+
+      // Convert to JSON string (Appwrite requires string for 65535 char limit)
       String originalUserDataJson;
       try {
-        originalUserDataJson = jsonEncode(userDoc.data);
-        print('>>> Original user data converted to JSON (${originalUserDataJson.length} chars)');
+        originalUserDataJson = jsonEncode(essentialUserData);
+        print('>>> Original user data JSON size: ${originalUserDataJson.length} chars');
         
         // Validate size (must be <= 65535 chars)
         if (originalUserDataJson.length > 65535) {
-          print('>>> WARNING: User data too large (${originalUserDataJson.length} chars), truncating...');
-          // Store essential data only if too large
-          final essentialData = {
-            'userId': userDoc.data['userId'],
-            'name': userDoc.data['name'],
-            'email': userDoc.data['email'],
-            'role': userDoc.data['role'],
-            'phone': userDoc.data['phone'],
-            'idVerified': userDoc.data['idVerified'],
-            'createdAt': userDoc.data['\$createdAt'],
+          print('>>> WARNING: User data too large, storing minimal data only');
+          // Fallback to absolute minimum
+          final minimalData = {
+            'userId': userId,
+            'name': userDoc.data['name'] ?? '',
+            'email': userDoc.data['email'] ?? '',
+            'role': userDoc.data['role'] ?? 'user',
           };
-          originalUserDataJson = jsonEncode(essentialData);
-          print('>>> Truncated to essential data (${originalUserDataJson.length} chars)');
+          originalUserDataJson = jsonEncode(minimalData);
         }
+        
+        print('>>> Final JSON size: ${originalUserDataJson.length} chars');
       } catch (e) {
         print('>>> ERROR encoding user data to JSON: $e');
-        originalUserDataJson = '{}'; // Empty JSON as fallback
+        // Absolute fallback
+        originalUserDataJson = jsonEncode({
+          'userId': userId,
+          'email': userDoc.data['email'] ?? '',
+        });
       }
 
       final archivedUserData = {
@@ -3676,13 +3688,10 @@ class AppWriteProvider {
         'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
         'archiveReason': archiveReason,
         'isPermanentlyDeleted': false,
-        'originalUserData': originalUserDataJson, // NOW A STRING
+        'originalUserData': originalUserDataJson, // STRING, not Map
         'isRecovered': false,
-        'recoveredAt': null,
-        'recoveredBy': null,
       };
 
-      print('>>> Step 2: Creating archived record...');
       final archivedDoc = await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.archivedUsersCollectionID,
@@ -3690,23 +3699,15 @@ class AppWriteProvider {
         data: archivedUserData,
       );
 
-      print('>>> Step 2: Archived record created: ${archivedDoc.$id}');
+  
+    // Step 3: DELETE the original user document completely from Users collection
 
-      // Step 3: Update original user document to mark as archived (soft delete)
-      await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.usersCollectionID,
-        documentId: userDocumentId,
-        data: {
-          'isArchived': true,
-          'archivedAt': now.toIso8601String(),
-          'archivedBy': archivedBy,
-          'archiveReason': archiveReason,
-          'archivedDocumentId': archivedDoc.$id, // Link to archive record
-        },
-      );
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.usersCollectionID,
+      documentId: userDocumentId,
+    );
 
-      print('>>> Step 3: User marked as archived in main collection');
 
       // Step 4: Deactivate user account (prevent login)
       try {
@@ -3996,51 +3997,132 @@ class AppWriteProvider {
     }
   }
 
-  /// Recover archived user (restore within 30 days)
-  Future<Map<String, dynamic>> recoverArchivedUser({
-    required String userId,
-    required String recoveredBy,
-  }) async {
+ /// Recover archived user (restore within 30 days)
+Future<Map<String, dynamic>> recoverArchivedUser({
+  required String userId,
+  required String recoveredBy,
+}) async {
+  try {
+    print('>>> ============================================');
+    print('>>> RECOVERING ARCHIVED USER');
+    print('>>> User ID: $userId');
+    print('>>> ============================================');
+
+    // Get archived record
+    final archivedDoc = await getArchivedUserByUserId(userId);
+    if (archivedDoc == null) {
+      return {
+        'success': false,
+        'error': 'Archived user not found',
+      };
+    }
+
+    // Check if already permanently deleted
+    if (archivedDoc.data['isPermanentlyDeleted'] == true) {
+      return {
+        'success': false,
+        'error': 'User has been permanently deleted and cannot be recovered',
+      };
+    }
+
+    final originalDocId = archivedDoc.data['originalDocumentId'];
+    
+    // Parse the original user data from JSON string
+    final originalUserDataString = archivedDoc.data['originalUserData'] as String?;
+    
+    if (originalUserDataString == null || originalUserDataString.isEmpty) {
+      return {
+        'success': false,
+        'error': 'Original user data not found in archive',
+      };
+    }
+
+    print('>>> Step 1: Parsing original user data...');
+    
+    Map<String, dynamic> originalUserData;
     try {
-      print('>>> ============================================');
-      print('>>> RECOVERING ARCHIVED USER');
-      print('>>> User ID: $userId');
-      print('>>> ============================================');
+      originalUserData = Map<String, dynamic>.from(jsonDecode(originalUserDataString));
+      print('>>> Original user data parsed successfully');
+    } catch (e) {
+      print('>>> ERROR parsing original user data: $e');
+      return {
+        'success': false,
+        'error': 'Failed to parse original user data',
+      };
+    }
 
-      // Get archived record
-      final archivedDoc = await getArchivedUserByUserId(userId);
-      if (archivedDoc == null) {
-        return {
-          'success': false,
-          'error': 'Archived user not found',
-        };
-      }
+    print('>>> Step 2: Recreating user document in Users collection...');
+    
+    // Recreate the user document with original data
+    final restoredUserData = {
+      'userId': originalUserData['userId'] ?? userId,
+      'name': originalUserData['name'] ?? '',
+      'email': originalUserData['email'] ?? '',
+      'role': originalUserData['role'] ?? 'user',
+      'phone': originalUserData['phone'] ?? '',
+      'idVerified': originalUserData['idVerified'] ?? false,
+      'idVerifiedAt': originalUserData['idVerifiedAt'],
+      // Ensure no archive flags
+      'isArchived': false,
+    };
 
-      // Check if already permanently deleted
-      if (archivedDoc.data['isPermanentlyDeleted'] == true) {
-        return {
-          'success': false,
-          'error': 'User has been permanently deleted and cannot be recovered',
-        };
-      }
-
-      final originalDocId = archivedDoc.data['originalDocumentId'];
-
-      // Update user in main collection - remove archive flags
-      await databases!.updateDocument(
+    // Try to create new user document with same ID
+    Document restoredDoc;
+    try {
+      restoredDoc = await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.usersCollectionID,
-        documentId: originalDocId,
-        data: {
-          'isArchived': false,
-          'archivedAt': null,
-          'archivedBy': null,
-          'archiveReason': null,
-          'archivedDocumentId': null,
-        },
+        documentId: originalDocId, // Use original document ID
+        data: restoredUserData,
       );
+      print('>>> Step 2: User document recreated: ${restoredDoc.$id}');
+    } catch (e) {
+      // If document already exists, it might have been recovered already
+      if (e.toString().contains('already exists') || 
+          e.toString().contains('unique')) {
+        print('>>> Document already exists, checking if it was recovered...');
+        
+        // Try to get the existing document
+        try {
+          final existingDoc = await databases!.getDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.usersCollectionID,
+            documentId: originalDocId,
+          );
+          
+          // Document exists, just mark archive as recovered
+          print('>>> User document already exists, updating archive record...');
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.archivedUsersCollectionID,
+            documentId: archivedDoc.$id,
+            data: {
+              'isRecovered': true,
+              'recoveredAt': DateTime.now().toIso8601String(),
+              'recoveredBy': recoveredBy,
+            },
+          );
+          
+          return {
+            'success': true,
+            'message': 'User was already recovered, archive record updated',
+            'restoredDocumentId': existingDoc.$id,
+          };
+        } catch (getError) {
+          print('>>> Error checking existing document: $getError');
+        }
+      }
+      
+      print('>>> ERROR creating user document: $e');
+      return {
+        'success': false,
+        'error': 'Failed to recreate user document: ${e.toString()}',
+      };
+    }
 
-      // Update archived record
+    // Step 3: Update archived record to mark as recovered
+    print('>>> Step 3: Updating archived record...');
+    try {
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.archivedUsersCollectionID,
@@ -4051,23 +4133,34 @@ class AppWriteProvider {
           'recoveredBy': recoveredBy,
         },
       );
-
-      print('>>> ============================================');
-      print('>>> USER RECOVERED SUCCESSFULLY');
-      print('>>> ============================================');
-
-      return {
-        'success': true,
-        'message': 'User recovered successfully',
-      };
+      print('>>> Step 3: Archive record updated');
     } catch (e) {
-      print('>>> ERROR RECOVERING USER: $e');
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
+      print('>>> WARNING: Failed to update archive record: $e');
+      // Don't fail the recovery if this fails
     }
+
+    print('>>> ============================================');
+    print('>>> USER RECOVERED SUCCESSFULLY');
+    print('>>> Restored document ID: ${restoredDoc.$id}');
+    print('>>> ============================================');
+
+    return {
+      'success': true,
+      'message': 'User recovered successfully',
+      'restoredDocumentId': restoredDoc.$id,
+    };
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> ERROR RECOVERING USER: $e');
+    print('>>> Stack trace: ${StackTrace.current}');
+    print('>>> ============================================');
+    
+    return {
+      'success': false,
+      'error': e.toString(),
+    };
   }
+}
 
   /// Background job to check and permanently delete users (should be called periodically)
   Future<Map<String, dynamic>> processScheduledDeletions() async {

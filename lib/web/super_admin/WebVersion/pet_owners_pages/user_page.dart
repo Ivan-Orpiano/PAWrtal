@@ -461,7 +461,14 @@ class _SuperAdminUserManagementScreenState
                   );
                 },
               ),
-               _buildDrawerItem(
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),   const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+                _buildDrawerItem(
                 context,
                 icon: Icons.archive_rounded,
                 title: 'Archived Users',
@@ -476,14 +483,7 @@ class _SuperAdminUserManagementScreenState
                   );
                 },
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Divider(),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Divider(),
-              ),
+            
             ],
           ),
         ),
