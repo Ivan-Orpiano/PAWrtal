@@ -153,11 +153,11 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                               ),
                             ),
                             const Spacer(flex: 1),
-                            WebNotificationIcon(
-                              right: _getNotifRight(),
-                              top: 70,
-                              width: 500,
-                            )
+                            // WebNotificationIcon(
+                            //   right: _getNotifRight(),
+                            //   top: 70,
+                            //   width: 500,
+                            // )
                           ],
                         ),
                       ),

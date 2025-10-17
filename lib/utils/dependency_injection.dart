@@ -1,8 +1,9 @@
 // lib/init/dependency_injection.dart
-import 'package:capstone_app/notifications/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/admin_notification_controller.dart';
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
+import 'package:capstone_app/notifications/controllers/user_notification_controller.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -19,7 +20,7 @@ Future<void> initializeDependencies() async {
 
   Get.put(AppWriteProvider());
   Get.put(AuthRepository(Get.find<AppWriteProvider>()));
-    Get.put(
+  Get.put(
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
@@ -28,9 +29,19 @@ Future<void> initializeDependencies() async {
   Get.put(DashboardController());
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
-  Get.put(NotificationController(
+
+  final adminNotificationController = Get.put(NotificationController(
     authRepository: Get.find<AuthRepository>(),
     session: Get.find<UserSessionService>(),
   ));
- 
+
+  final userNotificationController = Get.put(UserNotificationController(
+    authRepository: Get.find<AuthRepository>(),
+    session: Get.find<UserSessionService>(),
+  ), tag: 'user');
+
+  Future.delayed(const Duration(milliseconds: 500), () {
+    adminNotificationController.loadNotifications(refresh: true);
+    userNotificationController.loadNotifications(refresh: true);
+  });
 }

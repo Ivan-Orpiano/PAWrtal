@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart' as models;
-import 'package:capstone_app/notifications/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/admin_notification_controller.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';

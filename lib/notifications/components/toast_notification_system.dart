@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:capstone_app/notifications/controllers/notification_controller.dart';
+import 'package:capstone_app/notifications/controllers/admin_notification_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
