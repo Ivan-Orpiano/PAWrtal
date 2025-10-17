@@ -23,36 +23,74 @@ class MobileFeedbackController extends GetxController {
   RxString subject = ''.obs;
   RxString description = ''.obs;
 
-  /// Show compact snackbar notification
-  void _showNotification(String message, Color bgColor, IconData icon) {
-    Get.snackbar(
-      '',
-      message,
-      snackPosition: SnackPosition.TOP,
+  // ============= NOTIFICATION HELPER =============
+
+  /// Show compact toast notification
+  void _showCompactNotification(String message,
+      {required Color bgColor,
+      required IconData icon,
+      required Color iconColor}) {
+    Get.rawSnackbar(
+      messageText: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: iconColor, size: 16),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
       backgroundColor: bgColor,
-      colorText: Colors.white,
-      icon: Icon(icon, color: Colors.white),
+      snackPosition: SnackPosition.TOP,
+      borderRadius: 4,
+      margin: const EdgeInsets.only(top: 16, right: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       duration: const Duration(seconds: 2),
-      margin: const EdgeInsets.all(8),
-      borderRadius: 8,
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+      maxWidth: 300,
     );
   }
 
   void _showSuccess(String message) {
-    _showNotification(message, Colors.green[600]!, Icons.check_circle_outline);
+    _showCompactNotification(message,
+        bgColor: Colors.green[600]!,
+        icon: Icons.check_circle_outline,
+        iconColor: Colors.white);
   }
 
   void _showError(String message) {
-    _showNotification(message, Colors.red[600]!, Icons.error_outline);
+    _showCompactNotification(message,
+        bgColor: Colors.red[600]!,
+        icon: Icons.error_outline,
+        iconColor: Colors.white);
   }
 
   void _showInfo(String message) {
-    _showNotification(message, Colors.blue[600]!, Icons.info_outline);
+    _showCompactNotification(message,
+        bgColor: Colors.blue[600]!,
+        icon: Icons.info_outline,
+        iconColor: Colors.white);
   }
 
   void _showWarning(String message) {
-    _showNotification(message, Colors.amber[700]!, Icons.warning_amber);
+    _showCompactNotification(message,
+        bgColor: Colors.amber[700]!,
+        icon: Icons.warning_amber,
+        iconColor: Colors.white);
   }
+
+  // ============= USER-SIDE METHODS =============
 
   /// Validate file before adding
   bool _validateFile(PlatformFile file) {
@@ -69,12 +107,12 @@ class MobileFeedbackController extends GetxController {
 
     // Check file size limits
     if (isImage && file.size > 5 * 1024 * 1024) {
-      _showError("Image files must be under 5MB");
+      _showError("Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
       return false;
     }
 
     if (isVideo && file.size > 25 * 1024 * 1024) {
-      _showError("Video files must be under 25MB");
+      _showError("Video files must be under 25MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
       return false;
     }
 
@@ -82,55 +120,44 @@ class MobileFeedbackController extends GetxController {
   }
 
   /// Pick files (images/videos)
-Future<void> pickFiles() async {
-  if (selectedFiles.length >= 5) {
-    _showError("You can only attach up to 5 files");
-    return;
-  }
+  Future<void> pickFiles() async {
+    if (selectedFiles.length >= 5) {
+      _showError("You can only attach up to 5 files");
+      return;
+    }
 
-  try {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: [
-        'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
-        'mp4', 'mov', 'avi', 'mkv', 'webm'
-      ],
-      allowMultiple: true,
-    );
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
+          'mp4', 'mov', 'avi', 'mkv', 'webm'
+        ],
+        allowMultiple: true,
+      );
 
-    if (result != null) {
-      for (var file in result.files) {
-        if (selectedFiles.length >= 5) {
-          _showWarning("Maximum 5 files allowed");
-          break;
-        }
+      if (result != null) {
+        for (var file in result.files) {
+          if (selectedFiles.length >= 5) {
+            _showWarning("Maximum 5 files allowed. Remaining files not added.");
+            break;
+          }
 
-        if (_validateFile(file)) {
-          selectedFiles.add(file);
-          print('Added file: ${file.name}'); // Debug
+          if (_validateFile(file)) {
+            selectedFiles.add(file);
+          }
         }
       }
-      
-      // FORCE REFRESH TO ENSURE UI UPDATES
-      selectedFiles.refresh();
-      
-      print('Total files: ${selectedFiles.length}'); // Debug
+    } catch (e) {
+      _showError("Failed to pick files: $e");
     }
-  } catch (e) {
-    print('Error picking files: $e'); // Debug
-    _showError("Failed to pick files: $e");
   }
-}
 
-/// Remove a file from selection - UPDATED VERSION
-void removeFile(PlatformFile file) {
-  selectedFiles.remove(file);
-  
-  // FORCE REFRESH TO ENSURE UI UPDATES
-  selectedFiles.refresh();
-  
-  print('Removed file. Total files: ${selectedFiles.length}'); // Debug
-}
+  /// Remove a file from selection
+  void removeFile(PlatformFile file) {
+    selectedFiles.remove(file);
+    selectedFiles.refresh();
+  }
 
   /// Clear all selected files
   void clearFiles() {
@@ -177,10 +204,7 @@ void removeFile(PlatformFile file) {
       return false;
     }
 
-    if (selectedFiles.isEmpty) {
-      _showError("Please attach at least one image or video");
-      return false;
-    }
+    // Attachments are now OPTIONAL
 
     return true;
   }
@@ -208,13 +232,19 @@ void removeFile(PlatformFile file) {
         return false;
       }
 
-      // Upload attachments
-      _showInfo("Uploading ${selectedFiles.length} file(s)...");
+      List<String> attachmentIds = [];
 
-      final uploadedFiles = await authRepository.uploadFeedbackAttachments(selectedFiles);
-      final attachmentIds = uploadedFiles.map((f) => f.$id).toList();
+      // Upload attachments ONLY if files are selected (optional)
+      if (selectedFiles.isNotEmpty) {
+        _showInfo("Uploading ${selectedFiles.length} file(s)...");
 
-      print('Uploaded ${attachmentIds.length} attachments');
+        final uploadedFiles = await authRepository.uploadFeedbackAttachments(selectedFiles);
+        attachmentIds = uploadedFiles.map((f) => f.$id).toList();
+
+        print('Uploaded ${attachmentIds.length} attachments');
+      } else {
+        print('No attachments provided (optional)');
+      }
 
       // Get device/platform info
       final platform = 'mobile';
@@ -277,15 +307,15 @@ void removeFile(PlatformFile file) {
     selectedFiles.clear();
     
     // Reset to DEFAULT selections
-    selectedType.value = FeedbackType.bug; // ← First option
-    selectedCategory.value = FeedbackCategory.other; // ← Default
+    selectedType.value = FeedbackType.bug;
+    selectedCategory.value = FeedbackCategory.other;
     
-    // Force refresh (this tells Obx to update)
+    // Force refresh
     subject.refresh();
     description.refresh();
     selectedFiles.refresh();
-    selectedType.refresh(); // ← Important for chips
-    selectedCategory.refresh(); // ← Important for dropdown
+    selectedType.refresh();
+    selectedCategory.refresh();
     
     print('Form cleared successfully');
     print('Type: ${selectedType.value.displayName}');

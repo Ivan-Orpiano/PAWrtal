@@ -2,9 +2,6 @@ import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_profile_icon.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -79,13 +76,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
   int selectedIndex = 0;
   final GetStorage storage = GetStorage();
 
-  static const List<String> menuItems = [
-    'Profile',
-    'Settings',
-    'Help',
-    'Send feedback',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -153,11 +143,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
                               ),
                             ),
                             const Spacer(flex: 1),
-                            // WebNotificationIcon(
-                            //   right: _getNotifRight(),
-                            //   top: 70,
-                            //   width: 500,
-                            // )
                           ],
                         ),
                       ),
@@ -199,7 +184,6 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
   }
 
   double _getResponsivePadding() => MediaQuery.of(context).size.width * 0.02;
-  double _getNotifRight() => 50;
 
   Widget _buildSidebarItem(String title, IconData icon, int index, {bool isDestructive = false}) {
     final isSelected = selectedIndex == index;
@@ -1291,7 +1275,7 @@ Widget _buildFeedbackContent() {
               ),
               const SizedBox(height: 4),
               Text(
-                'Brief summary of your feedback',
+                'Brief summary (min 5 characters)',
                 style: TextStyle(color: Colors.grey[600], fontSize: 13),
               ),
               const SizedBox(height: 16),
@@ -1369,7 +1353,7 @@ Widget _buildFeedbackContent() {
                         Icon(Icons.attachment, color: Colors.blue[700], size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Attachments (Required)',
+                          'Attachments (Optional)',
                           style: TextStyle(
                             color: Colors.grey[800],
                             fontSize: 14,
@@ -1871,327 +1855,6 @@ IconData _getFeedbackTypeIcon(FeedbackType type) {
         ),
       ),
     );
-  }
-
-  Widget _buildContactCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String description,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.2)),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color.withOpacity(0.2), color.withOpacity(0.1)]),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(description, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Text(
-                    'Contact Now',
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward, size: 16, color: color),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip(
-    String label,
-    IconData icon,
-    Color color,
-    String selectedCategory,
-    Function(String) onSelect,
-  ) {
-    final isSelected = selectedCategory == label;
-    
-    return InkWell(
-      onTap: () => onSelect(label),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: isSelected ? color : Colors.grey[600], size: 18),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? color : Colors.grey[700],
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSuccessState(VoidCallback onNewFeedback) {
-    return Container(
-      padding: const EdgeInsets.all(48),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.check_circle, color: Colors.green[600], size: 64),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Feedback Submitted!',
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Thank you for taking the time to share your feedback.\nWe\'ll review it and get back to you soon.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
-          ),
-          const SizedBox(height: 32),
-          OutlinedButton.icon(
-            onPressed: onNewFeedback,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Submit Another Feedback'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.blue[700],
-              side: BorderSide(color: Colors.blue[300]!),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(String title, String subtitle, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getRatingText(int rating) {
-    switch (rating) {
-      case 1: return 'Poor - We\'ll do better';
-      case 2: return 'Fair - Needs improvement';
-      case 3: return 'Good - Meeting expectations';
-      case 4: return 'Very Good - Exceeding expectations';
-      case 5: return 'Excellent - Outstanding experience!';
-      default: return '';
-    }
-  }
-
-  String _getFileSize(String fileName) {
-    final random = fileName.length % 3;
-    switch (random) {
-      case 0: return '2.4 MB';
-      case 1: return '856 KB';
-      default: return '1.2 MB';
-    }
-  }
-
-  bool _validateFeedback(String message, String category, int rating) {
-    if (rating == 0) {
-      _showSnackbar('Required', 'Please rate your experience', Colors.orange);
-      return false;
-    }
-    if (category.isEmpty) {
-      _showSnackbar('Required', 'Please select a category', Colors.orange);
-      return false;
-    }
-    if (message.trim().isEmpty) {
-      _showSnackbar('Required', 'Please enter your feedback message', Colors.orange);
-      return false;
-    }
-    if (message.trim().length < 10) {
-      _showSnackbar('Too Short', 'Please provide more details (at least 10 characters)', Colors.orange);
-      return false;
-    }
-    return true;
-  }
-
-  void _selectFiles(StateSetter setState, List<String> attachedFiles) {
-    List<String> sampleFiles = [
-      'screenshot.png',
-      'error_log.txt',
-      'bug_report.pdf',
-      'feature_request.doc'
-    ];
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('Select Files', style: TextStyle(color: Colors.black87)),
-          content: SizedBox(
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: sampleFiles.map((fileName) => ListTile(
-                leading: Icon(_getFileIcon(fileName), color: Colors.blue),
-                title: Text(fileName, style: const TextStyle(color: Colors.black87)),
-                onTap: () {
-                  if (!attachedFiles.contains(fileName)) {
-                    setState(() => attachedFiles.add(fileName));
-                  }
-                  Navigator.of(context).pop();
-                  _showSnackbar('Success', 'File "$fileName" attached', Colors.green);
-                },
-              )).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  IconData _getFileIcon(String fileName) {
-    String extension = fileName.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'gif':
-        return Icons.image;
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'doc':
-      case 'docx':
-        return Icons.description;
-      case 'txt':
-        return Icons.text_snippet;
-      default:
-        return Icons.insert_drive_file;
-    }
   }
 
   void _showEditProfileDialog() {

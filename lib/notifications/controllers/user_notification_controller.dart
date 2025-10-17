@@ -41,14 +41,16 @@ class UserNotificationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('>>> UserNotificationController onInit - Starting initialization');
     _initializeNotifications();
   }
 
   @override
   void onReady() {
     super.onReady();
-    // Ensure notifications load after controller is fully ready
-    if (notifications.isEmpty) {
+    print('>>> UserNotificationController onReady');
+    if (notifications.isEmpty && !isLoading.value) {
+      print('>>> No notifications loaded yet, loading now...');
       loadNotifications(refresh: true);
     }
   }
@@ -63,10 +65,14 @@ class UserNotificationController extends GetxController {
 
   Future<void> _initializeNotifications() async {
     try {
+      print('>>> Initializing user notifications...');
       await loadNotifications(refresh: true);
+      print('>>> Initial notifications loaded: ${notifications.length}');
+      
       _subscribeToNotifications();
+      print('>>> Real-time subscription established');
     } catch (e) {
-      print('Error initializing user notifications: $e');
+      print('>>> Error initializing user notifications: $e');
     }
   }
 
@@ -85,9 +91,11 @@ class UserNotificationController extends GetxController {
 
       final userId = session.userId;
       if (userId.isEmpty) {
-        print('Cannot load user notifications: invalid user ID');
+        print('>>> Cannot load user notifications: invalid user ID');
         return;
       }
+
+      print('>>> Loading notifications for user: $userId');
 
       final result = await authRepository.getNotifications(
         recipientId: userId,
@@ -98,13 +106,17 @@ class UserNotificationController extends GetxController {
         lastDocumentId: _lastDocumentId,
       );
 
+      print('>>> Loaded ${result.length} notifications from database');
+
       if (refresh) {
         notifications.assignAll(result);
+        print('>>> Replaced notification list (refresh)');
       } else {
         final existingIds = notifications.map((n) => n.documentId).toSet();
         final newNotifications =
             result.where((n) => !existingIds.contains(n.documentId)).toList();
         notifications.addAll(newNotifications);
+        print('>>> Added ${newNotifications.length} new notifications');
       }
 
       hasMoreNotifications.value = result.length == _pageSize;
@@ -114,8 +126,9 @@ class UserNotificationController extends GetxController {
       }
 
       _updateUnreadCount();
+      print('>>> Notification loading complete. Total: ${notifications.length}, Unread: ${unreadCount.value}');
     } catch (e) {
-      print('Error loading user notifications: $e');
+      print('>>> Error loading user notifications: $e');
       _showErrorSnackbar('Failed to load notifications');
     } finally {
       isLoading.value = false;
@@ -142,9 +155,9 @@ class UserNotificationController extends GetxController {
                 print('User notification subscription error: $error'),
           );
 
-      print('User notification real-time subscription established');
+      print('>>> User notification real-time subscription established');
     } catch (e) {
-      print('Error setting up user notification subscription: $e');
+      print('>>> Error setting up user notification subscription: $e');
     }
   }
 
@@ -154,17 +167,19 @@ class UserNotificationController extends GetxController {
       final payload = response.payload;
       final userId = session.userId;
 
-      // Only process notifications for current user
       if (payload['recipientId'] != userId || payload['recipientType'] != 'user') return;
 
       final notificationId = payload['\$id'] as String?;
       if (notificationId == null) return;
 
-      // Check if we've already processed this notification
+      // CRITICAL FIX: Check if already processed BEFORE any processing
       if (_processedNotificationIds.contains(notificationId)) {
-        print('Skipping duplicate user notification: $notificationId');
+        print('>>> Already processed notification: $notificationId - SKIPPING');
         return;
       }
+
+      // Mark as processed IMMEDIATELY
+      _processedNotificationIds.add(notificationId);
 
       final notification = NotificationModel.fromMap(payload);
 
@@ -178,10 +193,9 @@ class UserNotificationController extends GetxController {
         }
       }
 
-      _processedNotificationIds.add(notificationId);
       _cleanupProcessedIds();
     } catch (e) {
-      print('Error handling real-time user notification: $e');
+      print('>>> Error handling real-time user notification: $e');
     }
   }
 
@@ -190,18 +204,19 @@ class UserNotificationController extends GetxController {
         .indexWhere((n) => n.documentId == notification.documentId);
 
     if (existingIndex != -1) {
-      print('User notification already exists, skipping: ${notification.documentId}');
+      print('>>> User notification already exists: ${notification.documentId} - SKIPPING');
       return;
     }
+
+    print('>>> NEW user notification received: ${notification.title}');
 
     notifications.insert(0, notification);
     _debouncedUpdateUnreadCount();
 
     if (notification.isUnread) {
+      print('>>> Showing toast for notification: ${notification.documentId}');
       _showNotificationPopup(notification);
     }
-
-    print('New user notification added: ${notification.title}');
   }
 
   void _handleUpdatedNotification(NotificationModel notification) {
@@ -210,8 +225,6 @@ class UserNotificationController extends GetxController {
     if (index != -1) {
       notifications[index] = notification;
       _debouncedUpdateUnreadCount();
-    } else {
-      _handleNewNotification(notification);
     }
   }
 
@@ -244,7 +257,7 @@ class UserNotificationController extends GetxController {
         _updateUnreadCount();
       }
     } catch (e) {
-      print('Error marking user notification as read: $e');
+      print('>>> Error marking user notification as read: $e');
     }
   }
 
@@ -270,7 +283,7 @@ class UserNotificationController extends GetxController {
 
       _showSuccessSnackbar('All notifications marked as read');
     } catch (e) {
-      print('Error marking all user notifications as read: $e');
+      print('>>> Error marking all user notifications as read: $e');
       _showErrorSnackbar('Failed to mark all as read');
     }
   }
@@ -296,7 +309,7 @@ class UserNotificationController extends GetxController {
       _updateUnreadCount();
       _showSuccessSnackbar('Notification archived');
     } catch (e) {
-      print('Error archiving user notification: $e');
+      print('>>> Error archiving user notification: $e');
       _showErrorSnackbar('Failed to archive notification');
     }
   }
@@ -309,12 +322,12 @@ class UserNotificationController extends GetxController {
       _updateUnreadCount();
       _showSuccessSnackbar('Notification deleted');
     } catch (e) {
-      print('Error deleting user notification: $e');
+      print('>>> Error deleting user notification: $e');
       _showErrorSnackbar('Failed to delete notification');
     }
   }
 
-  /// Handle notification tap - navigate and mark as read
+  /// Handle notification tap
   Future<void> handleNotificationTap(NotificationModel notification) async {
     await markAsRead(notification);
 
@@ -323,13 +336,13 @@ class UserNotificationController extends GetxController {
     }
   }
 
-  /// Set filter for notifications
+  /// Set filter
   void setFilter(String filter) {
     selectedFilter.value = filter;
     loadNotifications(refresh: true);
   }
 
-  /// Toggle archived notifications visibility
+  /// Toggle archived
   void toggleArchived() {
     showArchived.value = !showArchived.value;
     loadNotifications(refresh: true);
@@ -354,7 +367,7 @@ class UserNotificationController extends GetxController {
 
     if (unreadCount.value != newUnreadCount) {
       unreadCount.value = newUnreadCount;
-      print('Updated user unread count: ${unreadCount.value}');
+      print('>>> Updated user unread count: ${unreadCount.value}');
     }
   }
 
@@ -375,14 +388,12 @@ class UserNotificationController extends GetxController {
   void _navigateToAction(String actionUrl) {
     try {
       if (actionUrl.startsWith('/appointments')) {
-        // Navigate to user appointments
         Get.toNamed('/appointments');
       } else if (actionUrl.startsWith('/messages')) {
-        // Navigate to user messages
         Get.toNamed('/messages');
       }
     } catch (e) {
-      print('Error navigating to action: $e');
+      print('>>> Error navigating to action: $e');
     }
   }
 

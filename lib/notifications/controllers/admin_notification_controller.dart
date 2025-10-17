@@ -28,7 +28,7 @@ class NotificationController extends GetxController {
   var hasMoreNotifications = true.obs;
 
   // Filtering and sorting
-  var selectedFilter = 'all'.obs; // all, unread, appointments, messages
+  var selectedFilter = 'all'.obs;
   var showArchived = false.obs;
 
   // Real-time subscription
@@ -42,7 +42,20 @@ class NotificationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('>>> NotificationController onInit - Starting initialization');
+    // Load notifications immediately on init
     _initializeNotifications();
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    print('>>> NotificationController onReady');
+    // Ensure notifications are loaded if they weren't in onInit
+    if (notifications.isEmpty && !isLoading.value) {
+      print('>>> No notifications loaded yet, loading now...');
+      loadNotifications(refresh: true);
+    }
   }
 
   @override
@@ -55,19 +68,16 @@ class NotificationController extends GetxController {
 
   Future<void> _initializeNotifications() async {
     try {
+      print('>>> Initializing admin notifications...');
+      // CRITICAL: Load notifications FIRST before subscribing
       await loadNotifications(refresh: true);
+      print('>>> Initial notifications loaded: ${notifications.length}');
+      
+      // Then subscribe to real-time updates
       _subscribeToNotifications();
+      print('>>> Real-time subscription established');
     } catch (e) {
-      print('Error initializing notifications: $e');
-    }
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
-    // Ensure notifications load after controller is fully ready
-    if (notifications.isEmpty) {
-      loadNotifications(refresh: true);
+      print('>>> Error initializing notifications: $e');
     }
   }
 
@@ -75,7 +85,7 @@ class NotificationController extends GetxController {
   Future<void> loadNotifications({bool refresh = false}) async {
     if (refresh) {
       _resetPagination();
-      _processedNotificationIds.clear(); // Clear processed IDs on refresh
+      _processedNotificationIds.clear();
     }
 
     if (isLoading.value || (!hasMoreNotifications.value && !refresh)) return;
@@ -88,9 +98,12 @@ class NotificationController extends GetxController {
       final recipientType = _getRecipientType();
 
       if (recipientId == null || recipientType == null) {
-        print('Cannot load notifications: invalid recipient data');
+        print('>>> Cannot load notifications: invalid recipient data');
+        print('>>> Recipient ID: $recipientId, Type: $recipientType');
         return;
       }
+
+      print('>>> Loading notifications for: $recipientId ($recipientType)');
 
       final result = await authRepository.getNotifications(
         recipientId: recipientId,
@@ -101,15 +114,17 @@ class NotificationController extends GetxController {
         lastDocumentId: _lastDocumentId,
       );
 
+      print('>>> Loaded ${result.length} notifications from database');
+
       if (refresh) {
         notifications.assignAll(result);
+        print('>>> Replaced notification list (refresh)');
       } else {
-        // Add only new notifications that don't already exist
         final existingIds = notifications.map((n) => n.documentId).toSet();
         final newNotifications =
             result.where((n) => !existingIds.contains(n.documentId)).toList();
-
         notifications.addAll(newNotifications);
+        print('>>> Added ${newNotifications.length} new notifications');
       }
 
       // Update pagination state
@@ -120,8 +135,9 @@ class NotificationController extends GetxController {
       }
 
       _updateUnreadCount();
+      print('>>> Notification loading complete. Total: ${notifications.length}, Unread: ${unreadCount.value}');
     } catch (e) {
-      print('Error loading notifications: $e');
+      print('>>> Error loading notifications: $e');
       _showErrorSnackbar('Failed to load notifications');
     } finally {
       isLoading.value = false;
@@ -148,9 +164,9 @@ class NotificationController extends GetxController {
                 print('Notification subscription error: $error'),
           );
 
-      print('Notification real-time subscription established');
+      print('>>> Notification real-time subscription established');
     } catch (e) {
-      print('Error setting up notification subscription: $e');
+      print('>>> Error setting up notification subscription: $e');
     }
   }
 
@@ -166,11 +182,14 @@ class NotificationController extends GetxController {
       final notificationId = payload['\$id'] as String?;
       if (notificationId == null) return;
 
-      // Check if we've already processed this notification recently
+      // CRITICAL FIX: Check if already processed BEFORE any processing
       if (_processedNotificationIds.contains(notificationId)) {
-        print('Skipping duplicate notification: $notificationId');
+        print('>>> Already processed notification: $notificationId - SKIPPING');
         return;
       }
+
+      // Mark as processed IMMEDIATELY to prevent duplicates
+      _processedNotificationIds.add(notificationId);
 
       final notification = NotificationModel.fromMap(payload);
 
@@ -184,11 +203,9 @@ class NotificationController extends GetxController {
         }
       }
 
-      // Mark as processed and clean up old IDs periodically
-      _processedNotificationIds.add(notificationId);
       _cleanupProcessedIds();
     } catch (e) {
-      print('Error handling real-time notification: $e');
+      print('>>> Error handling real-time notification: $e');
     }
   }
 
@@ -198,23 +215,23 @@ class NotificationController extends GetxController {
         .indexWhere((n) => n.documentId == notification.documentId);
 
     if (existingIndex != -1) {
-      print(
-          'Notification already exists, skipping: ${notification.documentId}');
+      print('>>> Notification already exists in list: ${notification.documentId} - SKIPPING');
       return;
     }
+
+    print('>>> NEW notification received: ${notification.title}');
 
     // Add to beginning of list
     notifications.insert(0, notification);
 
-    // Debounced count update to prevent rapid changes
+    // Debounced count update
     _debouncedUpdateUnreadCount();
 
-    // Show notification popup only for new notifications
+    // Show toast ONLY ONCE for new unread notifications
     if (notification.isUnread) {
+      print('>>> Showing toast for notification: ${notification.documentId}');
       _showNotificationPopup(notification);
     }
-
-    print('New notification added: ${notification.title}');
   }
 
   void _handleUpdatedNotification(NotificationModel notification) {
@@ -223,17 +240,14 @@ class NotificationController extends GetxController {
     if (index != -1) {
       notifications[index] = notification;
       _debouncedUpdateUnreadCount();
-      print('Notification updated: ${notification.documentId}');
-    } else {
-      // If notification doesn't exist, treat as new
-      _handleNewNotification(notification);
+      print('>>> Notification updated: ${notification.documentId}');
     }
   }
 
   void _handleDeletedNotification(NotificationModel notification) {
     notifications.removeWhere((n) => n.documentId == notification.documentId);
     _debouncedUpdateUnreadCount();
-    print('Notification deleted: ${notification.documentId}');
+    print('>>> Notification deleted: ${notification.documentId}');
   }
 
   void _debouncedUpdateUnreadCount() {
@@ -250,7 +264,6 @@ class NotificationController extends GetxController {
     try {
       await authRepository.markNotificationAsRead(notification.documentId!);
 
-      // Update locally
       final index = notifications
           .indexWhere((n) => n.documentId == notification.documentId);
       if (index != -1) {
@@ -261,7 +274,7 @@ class NotificationController extends GetxController {
         _updateUnreadCount();
       }
     } catch (e) {
-      print('Error marking notification as read: $e');
+      print('>>> Error marking notification as read: $e');
     }
   }
 
@@ -278,7 +291,6 @@ class NotificationController extends GetxController {
         recipientType: recipientType,
       );
 
-      // Update locally
       for (int i = 0; i < notifications.length; i++) {
         if (!notifications[i].isRead) {
           notifications[i] = notifications[i].copyWith(
@@ -293,7 +305,7 @@ class NotificationController extends GetxController {
 
       _showSuccessSnackbar('All notifications marked as read');
     } catch (e) {
-      print('Error marking all as read: $e');
+      print('>>> Error marking all as read: $e');
       _showErrorSnackbar('Failed to mark all as read');
     }
   }
@@ -320,7 +332,7 @@ class NotificationController extends GetxController {
       _updateUnreadCount();
       _showSuccessSnackbar('Notification archived');
     } catch (e) {
-      print('Error archiving notification: $e');
+      print('>>> Error archiving notification: $e');
       _showErrorSnackbar('Failed to archive notification');
     }
   }
@@ -333,7 +345,7 @@ class NotificationController extends GetxController {
       _updateUnreadCount();
       _showSuccessSnackbar('Notification deleted');
     } catch (e) {
-      print('Error deleting notification: $e');
+      print('>>> Error deleting notification: $e');
       _showErrorSnackbar('Failed to delete notification');
     }
   }
@@ -363,9 +375,9 @@ class NotificationController extends GetxController {
   Future<void> createNotification(NotificationModel notification) async {
     try {
       await authRepository.createNotification(notification);
-      print('Notification created: ${notification.title}');
+      print('>>> Notification created: ${notification.title}');
     } catch (e) {
-      print('Error creating notification: $e');
+      print('>>> Error creating notification: $e');
     }
   }
 
@@ -381,7 +393,7 @@ class NotificationController extends GetxController {
         return session.userId;
       }
     } catch (e) {
-      print('Error getting recipient ID: $e');
+      print('>>> Error getting recipient ID: $e');
       return null;
     }
   }
@@ -397,13 +409,12 @@ class NotificationController extends GetxController {
         return 'user';
       }
     } catch (e) {
-      print('Error getting recipient type: $e');
+      print('>>> Error getting recipient type: $e');
       return null;
     }
   }
 
   void _updateUnreadCount() {
-    // Use Set to ensure unique notifications
     final uniqueNotifications = <String, NotificationModel>{};
 
     for (var notification in notifications) {
@@ -412,26 +423,22 @@ class NotificationController extends GetxController {
       }
     }
 
-    // Update list with deduplicated notifications
     if (uniqueNotifications.length != notifications.length) {
       notifications.assignAll(uniqueNotifications.values.toList());
-      print(
-          'Removed ${notifications.length - uniqueNotifications.length} duplicate notifications');
+      print('>>> Removed ${notifications.length - uniqueNotifications.length} duplicate notifications');
     }
 
-    // Calculate unread count
     final newUnreadCount =
         notifications.where((n) => !n.isRead && !n.isArchived).length;
 
     if (unreadCount.value != newUnreadCount) {
       unreadCount.value = newUnreadCount;
-      print('Updated unread count: ${unreadCount.value}');
+      print('>>> Updated unread count: ${unreadCount.value}');
     }
   }
 
   void _cleanupProcessedIds() {
     if (_processedNotificationIds.length > 100) {
-      // Keep only the most recent 50 IDs
       final recentIds = _processedNotificationIds.skip(50).toSet();
       _processedNotificationIds.clear();
       _processedNotificationIds.addAll(recentIds);
@@ -446,65 +453,22 @@ class NotificationController extends GetxController {
 
   void _navigateToAction(String actionUrl) {
     try {
-      // Handle different action URLs
       if (actionUrl.startsWith('/appointments')) {
-        // Navigate to appointments with optional filter
         final uri = Uri.parse(actionUrl);
         final filter = uri.queryParameters['filter'];
-
-        // Use your existing navigation logic
-        // Example: Get.toNamed('/appointments', parameters: {'filter': filter});
+        // Navigate to appointments
       } else if (actionUrl.startsWith('/messages')) {
-        // Navigate to messages with optional conversation
         final uri = Uri.parse(actionUrl);
         final conversationId = uri.queryParameters['conversation'];
-
         // Navigate to messages
-        // Example: Get.toNamed('/messages', parameters: {'conversation': conversationId});
       }
-      // Add more navigation cases as needed
     } catch (e) {
-      print('Error navigating to action: $e');
+      print('>>> Error navigating to action: $e');
     }
   }
 
   void _showNotificationPopup(NotificationModel notification) {
-    // Use toast notification instead of full-screen dialog
     ToastNotificationService.showToastNotification(notification);
-  }
-
-  IconData _getNotificationIcon(NotificationType type) {
-    switch (type) {
-      case NotificationType.appointmentBooked:
-        return Icons.calendar_today;
-      case NotificationType.appointmentAccepted:
-        return Icons.check_circle;
-      case NotificationType.appointmentDeclined:
-        return Icons.cancel;
-      case NotificationType.newMessage:
-        return Icons.message;
-      case NotificationType.paymentReceived:
-        return Icons.payment;
-      default:
-        return Icons.notifications;
-    }
-  }
-
-  Color _getNotificationColor(NotificationType type) {
-    switch (type) {
-      case NotificationType.appointmentBooked:
-        return Colors.blue;
-      case NotificationType.appointmentAccepted:
-        return Colors.green;
-      case NotificationType.appointmentDeclined:
-        return Colors.red;
-      case NotificationType.newMessage:
-        return Colors.purple;
-      case NotificationType.paymentReceived:
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
   }
 
   void _showSuccessSnackbar(String message) {
@@ -527,21 +491,6 @@ class NotificationController extends GetxController {
     );
   }
 
-  // Getters for filtered notifications
-  List<NotificationModel> get unreadNotifications =>
-      notifications.where((n) => !n.isRead && !n.isArchived).toList();
-
-  List<NotificationModel> get appointmentNotifications => notifications
-      .where((n) => n.type.toString().contains('appointment'))
-      .toList();
-
-  List<NotificationModel> get messageNotifications => notifications
-      .where((n) => n.type == NotificationType.newMessage)
-      .toList();
-
-  List<NotificationModel> get urgentNotifications => notifications
-      .where((n) => n.priority == NotificationPriority.urgent)
-      .toList();
-
+  // Getters
   bool get hasUnreadNotifications => unreadCount.value > 0;
 }

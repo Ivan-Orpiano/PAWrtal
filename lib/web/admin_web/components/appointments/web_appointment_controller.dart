@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/notifications/components/toast_notification_system.dart';
 import 'package:capstone_app/notifications/controllers/admin_notification_controller.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
@@ -253,23 +254,115 @@ class WebAppointmentController extends GetxController {
     String? notes,
   }) async {
     try {
-      // Get owner and pet names
       final ownerName = getOwnerName(appointment.userId);
       final petName = getPetName(appointment.petId);
 
-      await authRepository.createAppointmentNotification(
-        type: type,
-        appointmentId: appointment.documentId!,
-        clinicId: appointment.clinicId,
-        userId: appointment.userId,
-        petName: petName,
-        ownerName: ownerName,
-        service: appointment.service,
-        appointmentTime: appointment.dateTime,
-        notes: notes,
-      );
+      // Get clinic name for user notification
+      final clinicDoc =
+          await authRepository.getClinicById(appointment.clinicId);
+      final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
+
+      // Create notification for USER
+      NotificationModel userNotification;
+
+      switch (type) {
+        case 'accepted':
+          userNotification = NotificationModel(
+            recipientId: appointment.userId,
+            recipientType: 'user',
+            type: NotificationType.appointmentAccepted,
+            priority: NotificationPriority.high,
+            title: 'Appointment Accepted',
+            message:
+                'Your appointment for $petName has been accepted by $clinicName',
+            appointmentId: appointment.documentId,
+            actionUrl: '/appointments',
+            data: {
+              'status': 'accepted',
+              'clinicName': clinicName,
+              'petName': petName,
+              'appointmentTime': appointment.dateTime.toIso8601String(),
+            },
+          );
+          break;
+
+        case 'declined':
+          userNotification = NotificationModel(
+            recipientId: appointment.userId,
+            recipientType: 'user',
+            type: NotificationType.appointmentDeclined,
+            priority: NotificationPriority.high,
+            title: 'Appointment Declined',
+            message:
+                'Your appointment for $petName has been declined by $clinicName',
+            appointmentId: appointment.documentId,
+            actionUrl: '/appointments',
+            data: {
+              'status': 'declined',
+              'clinicName': clinicName,
+              'petName': petName,
+              'notes': notes,
+            },
+          );
+          break;
+
+        case 'completed':
+          userNotification = NotificationModel(
+            recipientId: appointment.userId,
+            recipientType: 'user',
+            type: NotificationType.appointmentCompleted,
+            priority: NotificationPriority.normal,
+            title: 'Appointment Completed',
+            message: 'Your appointment for $petName has been completed',
+            appointmentId: appointment.documentId,
+            actionUrl: '/appointments',
+            data: {
+              'status': 'completed',
+              'clinicName': clinicName,
+              'petName': petName,
+              'followUpInstructions': notes,
+            },
+          );
+          break;
+
+        case 'no_show':
+          userNotification = NotificationModel(
+            recipientId: appointment.userId,
+            recipientType: 'user',
+            type: NotificationType.appointmentCancelled,
+            priority: NotificationPriority.high,
+            title: 'Missed Appointment',
+            message:
+                'You did not attend your appointment for $petName at $clinicName',
+            appointmentId: appointment.documentId,
+            actionUrl: '/appointments',
+            data: {
+              'status': 'no_show',
+              'clinicName': clinicName,
+              'petName': petName,
+            },
+          );
+          break;
+
+        default:
+          return;
+      }
+
+      await authRepository.createNotification(userNotification);
+      print('>>> Created user notification for appointment $type');
+
+      // Also create automated message in conversation for major updates
+      if (type == 'accepted' || type == 'declined' || type == 'completed') {
+        await _createAutomatedMessage(
+          clinicId: appointment.clinicId,
+          userId: appointment.userId,
+          type: type,
+          petName: petName,
+          notes: notes,
+        );
+      }
     } catch (e) {
-      print('Error creating appointment notification: $e');
+      print('>>> Error creating appointment notification: $e');
     }
   }
 
@@ -281,6 +374,59 @@ class WebAppointmentController extends GetxController {
         fetchClinicAppointments();
       }
     });
+  }
+
+  Future<void> _createAutomatedMessage({
+    required String clinicId,
+    required String userId,
+    required String type,
+    required String petName,
+    String? notes,
+  }) async {
+    try {
+      final conversation =
+          await authRepository.getOrCreateConversation(userId, clinicId);
+      if (conversation == null) return;
+
+      String messageText;
+      switch (type) {
+        case 'accepted':
+          messageText =
+              'Great news! Your appointment for $petName has been accepted. We look forward to seeing you!';
+          if (notes != null && notes.isNotEmpty) {
+            messageText += '\n\nNote from clinic: $notes';
+          }
+          break;
+        case 'declined':
+          messageText =
+              'We regret to inform you that your appointment for $petName has been declined.';
+          if (notes != null && notes.isNotEmpty) {
+            messageText += '\n\nReason: $notes';
+          }
+          messageText += '\n\nPlease contact us to reschedule.';
+          break;
+        case 'completed':
+          messageText =
+              'Your appointment for $petName has been completed. Thank you for visiting our clinic!';
+          if (notes != null && notes.isNotEmpty) {
+            messageText += '\n\nFollow-up notes: $notes';
+          }
+          break;
+        default:
+          return;
+      }
+
+      await authRepository.createMessage(Message(
+        conversationId: conversation.documentId!,
+        senderId: clinicId,
+        senderType: 'admin',
+        receiverId: userId,
+        messageText: messageText,
+        messageType: 'automated',
+      ));
+    } catch (e) {
+      print('>>> Error creating automated message: $e');
+    }
   }
 
   Future<void> fetchClinicAppointments() async {
@@ -617,7 +763,7 @@ class WebAppointmentController extends GetxController {
 
     await _updateAppointmentStatus(appointment, 'accepted');
 
-    // Create notification for USER about acceptance
+    // CRITICAL FIX: Create notification for USER about acceptance
     await _createAppointmentNotification(
       type: 'accepted',
       appointment: appointment,
@@ -636,12 +782,15 @@ class WebAppointmentController extends GetxController {
       final updatedAppointment = appointment.copyWith(
         status: 'declined',
         notes: notes,
+        cancelledBy: 'clinic',
+        cancelledAt: DateTime.now(),
+        cancellationReason: notes,
         updatedAt: DateTime.now(),
       );
 
       await updateFullAppointment(updatedAppointment);
 
-      // Create notification for USER about decline
+      // CRITICAL FIX: Create notification for USER about decline
       await _createAppointmentNotification(
         type: 'declined',
         appointment: appointment,
@@ -740,7 +889,6 @@ class WebAppointmentController extends GetxController {
     try {
       print('>>> Starting service completion...');
 
-      // CRITICAL FIX: Ensure we have minimum required data
       final finalDiagnosis = diagnosis?.trim().isNotEmpty == true
           ? diagnosis!.trim()
           : 'Service completed - ${appointment.service}';
@@ -766,7 +914,6 @@ class WebAppointmentController extends GetxController {
       await updateFullAppointment(updatedAppointment);
       print('>>> Appointment updated to completed');
 
-      // Create medical record - ALWAYS create one for completed appointments
       final user = await authRepository.getUser();
       if (user != null) {
         final medicalRecord =
@@ -777,40 +924,25 @@ class WebAppointmentController extends GetxController {
           print('>>> Medical record created successfully');
         } catch (e) {
           print('>>> ERROR: Failed to create medical record: $e');
-          // Still show success for appointment but warn about medical record
           Get.snackbar(
             "Warning",
-            "Appointment completed but medical record creation failed. Please contact support.",
+            "Appointment completed but medical record creation failed.",
             backgroundColor: Colors.orange,
             colorText: Colors.white,
             duration: const Duration(seconds: 5),
           );
           return;
         }
-      } else {
-        print('>>> ERROR: Cannot create medical record - user not found');
-        Get.snackbar(
-          "Warning",
-          "Appointment completed but medical record requires user authentication.",
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-        );
-        return;
       }
 
-      // Get.snackbar(
-      //   "Success",
-      //   "Service completed and medical record created!",
-      //   backgroundColor: Colors.green,
-      //   colorText: Colors.white,
-      // );
-
+      // CRITICAL FIX: Create notification for USER about completion
       await _createAppointmentNotification(
         type: 'completed',
         appointment: appointment,
         notes: followUpInstructions,
       );
 
+      // Admin notification
       _notificationController.createNotification(
         NotificationModel(
           recipientId: appointment.clinicId,
@@ -830,13 +962,20 @@ class WebAppointmentController extends GetxController {
   }
 
   Future<void> markNoShow(Appointment appointment) async {
-    // Check if appointment is in the past
     if (appointment.dateTime.isAfter(DateTime.now())) {
       Get.snackbar("Error", "Cannot mark as no-show for future appointments");
       return;
     }
 
     await _updateAppointmentStatus(appointment, 'no_show');
+
+    // CRITICAL FIX: Create notification for USER about no-show
+    await _createAppointmentNotification(
+      type: 'no_show',
+      appointment: appointment,
+      notes: 'You did not attend your scheduled appointment',
+    );
+
     Get.snackbar("Info", "Appointment marked as No Show");
   }
 
