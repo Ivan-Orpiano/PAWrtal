@@ -39,9 +39,9 @@ class _UserHomePageState extends State<UserHomePage> {
       drawer: const MyDrawer(),
       body: Stack(
         children: [
-          Scaffold(
-            body: _pages[_currentIndex],
-          ),
+          // Page content
+          _pages[_currentIndex],
+          // Bottom navigation overlay
           Stack(
             alignment: Alignment.bottomCenter,
             children: [

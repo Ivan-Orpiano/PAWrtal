@@ -20,6 +20,9 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   final Map<String, dynamic> _clinicCache = {};
   
   bool _showStarters = false;
+  bool _hasAutoSelectedConversation = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -27,14 +30,59 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     _initializeMessaging();
   }
 
-  void _initializeMessaging() {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _initializeMessaging() async {
     if (Get.isRegistered<MessagingController>()) {
       _controller = Get.find<MessagingController>();
     } else {
       _controller = Get.put(MessagingController());
     }
     
-    _controller.loadUserConversations();
+    await _controller.loadUserConversations();
+    
+    // Auto-select the first (latest) conversation after loading
+    _autoSelectLatestConversation();
+  }
+
+  void _autoSelectLatestConversation() async {
+    // Only auto-select once and if there are conversations
+    if (!_hasAutoSelectedConversation && _controller.conversations.isNotEmpty) {
+      _hasAutoSelectedConversation = true;
+      
+      final latestConversation = _controller.conversations.first;
+      final clinicData = await _getClinicData(latestConversation.clinicId);
+      
+      // Use a post-frame callback to ensure the widget is fully built
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _selectConversation(
+          latestConversation,
+          latestConversation.clinicId,
+          clinicData['name'],
+          clinicData['image'],
+        );
+      });
+    }
+  }
+
+  List<Conversation> get _filteredConversations {
+    if (_searchQuery.isEmpty) {
+      return _controller.conversations;
+    }
+
+    final query = _searchQuery.toLowerCase();
+    return _controller.conversations.where((conversation) {
+      // Get clinic data from cache if available
+      final clinicData = _clinicCache[conversation.clinicId];
+      final clinicName = clinicData?['name']?.toString().toLowerCase() ?? '';
+      final lastMessage = conversation.lastMessageText?.toLowerCase() ?? '';
+      
+      return clinicName.contains(query) || lastMessage.contains(query);
+    }).toList();
   }
 
   Future<Map<String, dynamic>> _getClinicData(String clinicId) async {
@@ -129,9 +177,26 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Search conversations...',
                 prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -169,10 +234,33 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                 );
               }
 
+              final filteredConversations = _filteredConversations;
+
+              if (filteredConversations.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No conversations found',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try a different search term',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               return ListView.builder(
-                itemCount: _controller.conversations.length,
+                itemCount: filteredConversations.length,
                 itemBuilder: (context, index) {
-                  final conversation = _controller.conversations[index];
+                  final conversation = filteredConversations[index];
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getClinicData(conversation.clinicId),
                     builder: (context, snapshot) {
