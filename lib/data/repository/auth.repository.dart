@@ -1531,7 +1531,7 @@ class AuthRepository {
         includePermanentlyDeleted: includePermanentlyDeleted,
         limit: limit,
       );
-      
+
       return docs.map((doc) {
         final archivedUser = ArchivedUser.fromMap(doc.data);
         return archivedUser.copyWith(documentId: doc.$id);
@@ -1546,7 +1546,7 @@ class AuthRepository {
   Future<List<ArchivedUser>> getUsersDueForDeletion() async {
     try {
       final docs = await appWriteProvider.getUsersDueForDeletion();
-      
+
       return docs.map((doc) {
         final archivedUser = ArchivedUser.fromMap(doc.data);
         return archivedUser.copyWith(documentId: doc.$id);
@@ -1586,5 +1586,40 @@ class AuthRepository {
   /// Get archive statistics
   Future<Map<String, int>> getArchiveStatistics() {
     return appWriteProvider.getArchiveStatistics();
+  }
+
+  // ============= CLINIC PROFILE PICTURE REPOSITORY METHODS =============
+
+  /// Upload clinic profile picture
+  Future<models.File> uploadClinicProfilePicture(dynamic image) {
+    return appWriteProvider.uploadClinicProfilePicture(image);
+  }
+
+  /// Delete clinic profile picture
+  Future<void> deleteClinicProfilePicture(String fileId) {
+    return appWriteProvider.deleteClinicProfilePicture(fileId);
+  }
+
+  /// Get clinic profile picture URL
+  String getClinicProfilePictureUrl(String profilePictureId) {
+    return appWriteProvider.getClinicProfilePictureUrl(profilePictureId);
+  }
+
+  /// Update clinic profile picture (with automatic old picture deletion)
+  Future<String> updateClinicProfilePicture(
+    String clinicId,
+    String? oldProfilePictureId,
+    dynamic newImage,
+  ) {
+    return appWriteProvider.updateClinicProfilePicture(
+      clinicId,
+      oldProfilePictureId,
+      newImage,
+    );
+  }
+
+  /// Get clinic with profile picture URL
+  Future<Map<String, dynamic>?> getClinicWithProfilePicture(String clinicId) {
+    return appWriteProvider.getClinicWithProfilePicture(clinicId);
   }
 }

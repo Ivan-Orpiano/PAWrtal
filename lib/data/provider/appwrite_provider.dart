@@ -98,11 +98,22 @@ class AppWriteProvider {
             'clinicName', clinicDoc.data['clinicName'] ?? 'Unknown Clinic');
         _storage.write('adminId', user.$id);
 
+        // Store profile picture ID from clinic document
+        final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
+        if (profilePictureId != null && profilePictureId.isNotEmpty) {
+          _storage.write('clinicProfilePictureId', profilePictureId);
+          print('>>> Clinic profile picture ID stored: $profilePictureId');
+        } else {
+          _storage.write('clinicProfilePictureId', '');
+          print('>>> No profile picture for this clinic');
+        }
+
         print('>>> Stored in GetStorage:');
         print('>>> - userId: ${user.$id}');
         print('>>> - email: ${user.email}');
         print('>>> - role: admin');
         print('>>> - clinicId: ${clinicDoc.$id}');
+        print('>>> - clinicProfilePictureId: $profilePictureId');
 
         return {
           'success': true,
@@ -804,6 +815,154 @@ class AppWriteProvider {
     );
 
     return response;
+  }
+
+  // ============= CLINIC PROFILE PICTURE METHODS =============
+
+  /// Upload clinic profile picture
+  /// Returns the uploaded file object with $id
+  Future<models.File> uploadClinicProfilePicture(dynamic image) async {
+    try {
+      print('>>> Uploading clinic profile picture...');
+
+      String fileName =
+          "clinic_profile_${DateTime.now().millisecondsSinceEpoch}.jpg";
+      InputFile inputFile;
+
+      if (image is String) {
+        // Mobile path-based upload
+        inputFile = InputFile.fromPath(
+          path: image,
+          filename: fileName,
+        );
+      } else if (image is InputFile) {
+        // Web bytes-based upload or pre-constructed InputFile
+        inputFile = image;
+      } else {
+        throw Exception('Invalid profile picture format');
+      }
+
+      final response = await storage!.createFile(
+        bucketId: AppwriteConstants.imageBucketID,
+        fileId: ID.unique(),
+        file: inputFile,
+      );
+
+      print('>>> Profile picture uploaded successfully: ${response.$id}');
+      return response;
+    } catch (e) {
+      print('>>> Error uploading clinic profile picture: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete clinic profile picture by file ID
+  Future<void> deleteClinicProfilePicture(String fileId) async {
+    try {
+      print('>>> Deleting clinic profile picture: $fileId');
+
+      await storage!.deleteFile(
+        bucketId: AppwriteConstants.imageBucketID,
+        fileId: fileId,
+      );
+
+      print('>>> Profile picture deleted successfully');
+    } catch (e) {
+      print('>>> Error deleting clinic profile picture: $e');
+      rethrow;
+    }
+  }
+
+  /// Get clinic profile picture URL
+  /// Pass the profilePictureId stored in Clinic model
+  String getClinicProfilePictureUrl(String profilePictureId) {
+    if (profilePictureId.isEmpty) {
+      return ''; // Return empty if no profile picture
+    }
+
+    final url =
+        '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
+    print('>>> Generated clinic profile picture URL: $url');
+    return url;
+  }
+
+  /// Update clinic profile picture
+  /// Handles deletion of old picture and update of clinic record
+  Future<String> updateClinicProfilePicture(
+    String clinicId,
+    String? oldProfilePictureId,
+    dynamic newImage,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> UPDATING CLINIC PROFILE PICTURE');
+      print('>>> Clinic ID: $clinicId');
+      print('>>> Old picture ID: $oldProfilePictureId');
+      print('>>> ============================================');
+
+      // Upload new profile picture
+      print('>>> Step 1: Uploading new profile picture...');
+      final uploadedFile = await uploadClinicProfilePicture(newImage);
+      final newFileId = uploadedFile.$id;
+      print('>>> New file uploaded with ID: $newFileId');
+
+      // Delete old profile picture if it exists
+      if (oldProfilePictureId != null && oldProfilePictureId.isNotEmpty) {
+        print('>>> Step 2: Deleting old profile picture...');
+        try {
+          await deleteClinicProfilePicture(oldProfilePictureId);
+          print('>>> Old profile picture deleted');
+        } catch (e) {
+          print('>>> Warning: Failed to delete old picture: $e');
+          // Don't fail the entire operation if old deletion fails
+        }
+      }
+
+      // Update clinic record
+      print('>>> Step 3: Updating clinic record...');
+      await updateClinic(clinicId, {
+        'profilePictureId': newFileId,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      print('>>> Clinic record updated successfully');
+
+      print('>>> ============================================');
+      print('>>> PROFILE PICTURE UPDATE COMPLETE');
+      print('>>> ============================================');
+
+      return newFileId;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR UPDATING PROFILE PICTURE: $e');
+      print('>>> ============================================');
+      rethrow;
+    }
+  }
+
+  /// Get clinic with profile picture URL included
+  Future<Map<String, dynamic>?> getClinicWithProfilePicture(
+      String clinicId) async {
+    try {
+      final clinicDoc = await getClinicById(clinicId);
+      if (clinicDoc == null) return null;
+
+      final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
+      String profilePictureUrl = '';
+
+      if (profilePictureId != null && profilePictureId.isNotEmpty) {
+        profilePictureUrl = getClinicProfilePictureUrl(profilePictureId);
+      }
+
+      return {
+        'clinic': clinicDoc.data,
+        'clinicDocId': clinicDoc.$id,
+        'profilePictureId': profilePictureId,
+        'profilePictureUrl': profilePictureUrl,
+      };
+    } catch (e) {
+      print('Error getting clinic with profile picture: $e');
+      return null;
+    }
   }
 
   // ============= CONVERSATION METHODS =============
@@ -1820,7 +1979,6 @@ class AppWriteProvider {
     }
   }
 
-  // REPLACE staffLogin METHOD:
   Future<Map<String, dynamic>> staffLogin(
       String username, String password) async {
     try {
@@ -1884,6 +2042,45 @@ class AppWriteProvider {
       print('>>> Staff Doc ID: ${staffDoc.$id}');
       print('>>> ============================================');
 
+      // IMPORTANT: Get clinic info for correct display in UI
+      print('>>> Step 4: Fetching clinic information...');
+      String clinicName = 'Unknown Clinic';
+      String clinicProfilePictureId = '';
+
+      try {
+        final clinicDoc = await getClinicById(clinicId);
+        if (clinicDoc != null) {
+          clinicName = clinicDoc.data['clinicName'] ?? 'Unknown Clinic';
+          clinicProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+          print('>>> Clinic fetched: $clinicName');
+          print('>>> Clinic profile picture ID: $clinicProfilePictureId');
+        }
+      } catch (e) {
+        print('>>> Warning: Could not fetch clinic info: $e');
+      }
+
+      // CRITICAL: Store staff data in GetStorage with CORRECT clinic info
+      print('>>> Step 5: Storing staff data in GetStorage...');
+      _storage.write('userId', user.$id);
+      _storage.write('email', user.email);
+      _storage.write('name', user.name);
+      _storage.write('role', role);
+      _storage.write('clinicId', clinicId);
+      _storage.write('staffId', staffDoc.$id);
+      _storage.write('authorities', authorities);
+      // IMPORTANT: Store clinic info from the staff's clinic, not from previous login
+      _storage.write('clinicName', clinicName);
+      _storage.write('clinicProfilePictureId', clinicProfilePictureId);
+
+      print('>>> Stored in GetStorage:');
+      print('>>> - userId: ${user.$id}');
+      print('>>> - email: ${user.email}');
+      print('>>> - role: $role');
+      print('>>> - clinicId: $clinicId');
+      print('>>> - clinicName: $clinicName');
+      print('>>> - clinicProfilePictureId: $clinicProfilePictureId');
+      print('>>> - staffId: ${staffDoc.$id}');
+
       return {
         'success': true,
         'isStaff': true,
@@ -1891,6 +2088,7 @@ class AppWriteProvider {
         'user': user,
         'role': role,
         'clinicId': clinicId,
+        'clinicName': clinicName,
         'staffDoc': staffDoc,
         'authorities': authorities,
         'staffDocumentId': staffDoc.$id,
@@ -3632,7 +3830,7 @@ class AppWriteProvider {
       );
 
       print('>>> Step 1: Original user retrieved');
-    // Step 2: Prepare archived user data with compressed original data
+      // Step 2: Prepare archived user data with compressed original data
       final now = DateTime.now();
       final scheduledDeletion = now.add(const Duration(days: 30));
 
@@ -3651,8 +3849,9 @@ class AppWriteProvider {
       String originalUserDataJson;
       try {
         originalUserDataJson = jsonEncode(essentialUserData);
-        print('>>> Original user data JSON size: ${originalUserDataJson.length} chars');
-        
+        print(
+            '>>> Original user data JSON size: ${originalUserDataJson.length} chars');
+
         // Validate size (must be <= 65535 chars)
         if (originalUserDataJson.length > 65535) {
           print('>>> WARNING: User data too large, storing minimal data only');
@@ -3665,7 +3864,7 @@ class AppWriteProvider {
           };
           originalUserDataJson = jsonEncode(minimalData);
         }
-        
+
         print('>>> Final JSON size: ${originalUserDataJson.length} chars');
       } catch (e) {
         print('>>> ERROR encoding user data to JSON: $e');
@@ -3699,15 +3898,13 @@ class AppWriteProvider {
         data: archivedUserData,
       );
 
-  
-    // Step 3: DELETE the original user document completely from Users collection
+      // Step 3: DELETE the original user document completely from Users collection
 
-    await databases!.deleteDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.usersCollectionID,
-      documentId: userDocumentId,
-    );
-
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        documentId: userDocumentId,
+      );
 
       // Step 4: Deactivate user account (prevent login)
       try {
@@ -3726,7 +3923,8 @@ class AppWriteProvider {
         'success': true,
         'archivedDocumentId': archivedDoc.$id,
         'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
-        'message': 'User archived successfully. Will be permanently deleted in 30 days.',
+        'message':
+            'User archived successfully. Will be permanently deleted in 30 days.',
       };
     } catch (e) {
       print('>>> ============================================');
@@ -3877,7 +4075,7 @@ class AppWriteProvider {
             collectionId: AppwriteConstants.appointmentCollectionID,
             documentId: appointment.$id,
           );
-          results['appointmentsDeleted'] = 
+          results['appointmentsDeleted'] =
               (results['appointmentsDeleted'] as int) + 1;
         }
         print('>>> ${results['appointmentsDeleted']} appointments deleted');
@@ -3907,7 +4105,7 @@ class AppWriteProvider {
               collectionId: AppwriteConstants.messagesCollectionID,
               documentId: message.$id,
             );
-            results['messagesDeleted'] = 
+            results['messagesDeleted'] =
                 (results['messagesDeleted'] as int) + 1;
           }
 
@@ -3917,7 +4115,7 @@ class AppWriteProvider {
             collectionId: AppwriteConstants.conversationsCollectionID,
             documentId: conversation.$id,
           );
-          results['conversationsDeleted'] = 
+          results['conversationsDeleted'] =
               (results['conversationsDeleted'] as int) + 1;
         }
         print('>>> ${results['conversationsDeleted']} conversations deleted');
@@ -3940,7 +4138,7 @@ class AppWriteProvider {
             collectionId: AppwriteConstants.notificationsCollectionID,
             documentId: notification.$id,
           );
-          results['notificationsDeleted'] = 
+          results['notificationsDeleted'] =
               (results['notificationsDeleted'] as int) + 1;
         }
         print('>>> ${results['notificationsDeleted']} notifications deleted');
@@ -3997,170 +4195,173 @@ class AppWriteProvider {
     }
   }
 
- /// Recover archived user (restore within 30 days)
-Future<Map<String, dynamic>> recoverArchivedUser({
-  required String userId,
-  required String recoveredBy,
-}) async {
-  try {
-    print('>>> ============================================');
-    print('>>> RECOVERING ARCHIVED USER');
-    print('>>> User ID: $userId');
-    print('>>> ============================================');
-
-    // Get archived record
-    final archivedDoc = await getArchivedUserByUserId(userId);
-    if (archivedDoc == null) {
-      return {
-        'success': false,
-        'error': 'Archived user not found',
-      };
-    }
-
-    // Check if already permanently deleted
-    if (archivedDoc.data['isPermanentlyDeleted'] == true) {
-      return {
-        'success': false,
-        'error': 'User has been permanently deleted and cannot be recovered',
-      };
-    }
-
-    final originalDocId = archivedDoc.data['originalDocumentId'];
-    
-    // Parse the original user data from JSON string
-    final originalUserDataString = archivedDoc.data['originalUserData'] as String?;
-    
-    if (originalUserDataString == null || originalUserDataString.isEmpty) {
-      return {
-        'success': false,
-        'error': 'Original user data not found in archive',
-      };
-    }
-
-    print('>>> Step 1: Parsing original user data...');
-    
-    Map<String, dynamic> originalUserData;
+  /// Recover archived user (restore within 30 days)
+  Future<Map<String, dynamic>> recoverArchivedUser({
+    required String userId,
+    required String recoveredBy,
+  }) async {
     try {
-      originalUserData = Map<String, dynamic>.from(jsonDecode(originalUserDataString));
-      print('>>> Original user data parsed successfully');
-    } catch (e) {
-      print('>>> ERROR parsing original user data: $e');
-      return {
-        'success': false,
-        'error': 'Failed to parse original user data',
-      };
-    }
+      print('>>> ============================================');
+      print('>>> RECOVERING ARCHIVED USER');
+      print('>>> User ID: $userId');
+      print('>>> ============================================');
 
-    print('>>> Step 2: Recreating user document in Users collection...');
-    
-    // Recreate the user document with original data
-    final restoredUserData = {
-      'userId': originalUserData['userId'] ?? userId,
-      'name': originalUserData['name'] ?? '',
-      'email': originalUserData['email'] ?? '',
-      'role': originalUserData['role'] ?? 'user',
-      'phone': originalUserData['phone'] ?? '',
-      'idVerified': originalUserData['idVerified'] ?? false,
-      'idVerifiedAt': originalUserData['idVerifiedAt'],
-      // Ensure no archive flags
-      'isArchived': false,
-    };
-
-    // Try to create new user document with same ID
-    Document restoredDoc;
-    try {
-      restoredDoc = await databases!.createDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.usersCollectionID,
-        documentId: originalDocId, // Use original document ID
-        data: restoredUserData,
-      );
-      print('>>> Step 2: User document recreated: ${restoredDoc.$id}');
-    } catch (e) {
-      // If document already exists, it might have been recovered already
-      if (e.toString().contains('already exists') || 
-          e.toString().contains('unique')) {
-        print('>>> Document already exists, checking if it was recovered...');
-        
-        // Try to get the existing document
-        try {
-          final existingDoc = await databases!.getDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.usersCollectionID,
-            documentId: originalDocId,
-          );
-          
-          // Document exists, just mark archive as recovered
-          print('>>> User document already exists, updating archive record...');
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.archivedUsersCollectionID,
-            documentId: archivedDoc.$id,
-            data: {
-              'isRecovered': true,
-              'recoveredAt': DateTime.now().toIso8601String(),
-              'recoveredBy': recoveredBy,
-            },
-          );
-          
-          return {
-            'success': true,
-            'message': 'User was already recovered, archive record updated',
-            'restoredDocumentId': existingDoc.$id,
-          };
-        } catch (getError) {
-          print('>>> Error checking existing document: $getError');
-        }
+      // Get archived record
+      final archivedDoc = await getArchivedUserByUserId(userId);
+      if (archivedDoc == null) {
+        return {
+          'success': false,
+          'error': 'Archived user not found',
+        };
       }
-      
-      print('>>> ERROR creating user document: $e');
+
+      // Check if already permanently deleted
+      if (archivedDoc.data['isPermanentlyDeleted'] == true) {
+        return {
+          'success': false,
+          'error': 'User has been permanently deleted and cannot be recovered',
+        };
+      }
+
+      final originalDocId = archivedDoc.data['originalDocumentId'];
+
+      // Parse the original user data from JSON string
+      final originalUserDataString =
+          archivedDoc.data['originalUserData'] as String?;
+
+      if (originalUserDataString == null || originalUserDataString.isEmpty) {
+        return {
+          'success': false,
+          'error': 'Original user data not found in archive',
+        };
+      }
+
+      print('>>> Step 1: Parsing original user data...');
+
+      Map<String, dynamic> originalUserData;
+      try {
+        originalUserData =
+            Map<String, dynamic>.from(jsonDecode(originalUserDataString));
+        print('>>> Original user data parsed successfully');
+      } catch (e) {
+        print('>>> ERROR parsing original user data: $e');
+        return {
+          'success': false,
+          'error': 'Failed to parse original user data',
+        };
+      }
+
+      print('>>> Step 2: Recreating user document in Users collection...');
+
+      // Recreate the user document with original data
+      final restoredUserData = {
+        'userId': originalUserData['userId'] ?? userId,
+        'name': originalUserData['name'] ?? '',
+        'email': originalUserData['email'] ?? '',
+        'role': originalUserData['role'] ?? 'user',
+        'phone': originalUserData['phone'] ?? '',
+        'idVerified': originalUserData['idVerified'] ?? false,
+        'idVerifiedAt': originalUserData['idVerifiedAt'],
+        // Ensure no archive flags
+        'isArchived': false,
+      };
+
+      // Try to create new user document with same ID
+      Document restoredDoc;
+      try {
+        restoredDoc = await databases!.createDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.usersCollectionID,
+          documentId: originalDocId, // Use original document ID
+          data: restoredUserData,
+        );
+        print('>>> Step 2: User document recreated: ${restoredDoc.$id}');
+      } catch (e) {
+        // If document already exists, it might have been recovered already
+        if (e.toString().contains('already exists') ||
+            e.toString().contains('unique')) {
+          print('>>> Document already exists, checking if it was recovered...');
+
+          // Try to get the existing document
+          try {
+            final existingDoc = await databases!.getDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.usersCollectionID,
+              documentId: originalDocId,
+            );
+
+            // Document exists, just mark archive as recovered
+            print(
+                '>>> User document already exists, updating archive record...');
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.archivedUsersCollectionID,
+              documentId: archivedDoc.$id,
+              data: {
+                'isRecovered': true,
+                'recoveredAt': DateTime.now().toIso8601String(),
+                'recoveredBy': recoveredBy,
+              },
+            );
+
+            return {
+              'success': true,
+              'message': 'User was already recovered, archive record updated',
+              'restoredDocumentId': existingDoc.$id,
+            };
+          } catch (getError) {
+            print('>>> Error checking existing document: $getError');
+          }
+        }
+
+        print('>>> ERROR creating user document: $e');
+        return {
+          'success': false,
+          'error': 'Failed to recreate user document: ${e.toString()}',
+        };
+      }
+
+      // Step 3: Update archived record to mark as recovered
+      print('>>> Step 3: Updating archived record...');
+      try {
+        await databases!.updateDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.archivedUsersCollectionID,
+          documentId: archivedDoc.$id,
+          data: {
+            'isRecovered': true,
+            'recoveredAt': DateTime.now().toIso8601String(),
+            'recoveredBy': recoveredBy,
+          },
+        );
+        print('>>> Step 3: Archive record updated');
+      } catch (e) {
+        print('>>> WARNING: Failed to update archive record: $e');
+        // Don't fail the recovery if this fails
+      }
+
+      print('>>> ============================================');
+      print('>>> USER RECOVERED SUCCESSFULLY');
+      print('>>> Restored document ID: ${restoredDoc.$id}');
+      print('>>> ============================================');
+
+      return {
+        'success': true,
+        'message': 'User recovered successfully',
+        'restoredDocumentId': restoredDoc.$id,
+      };
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR RECOVERING USER: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+
       return {
         'success': false,
-        'error': 'Failed to recreate user document: ${e.toString()}',
+        'error': e.toString(),
       };
     }
-
-    // Step 3: Update archived record to mark as recovered
-    print('>>> Step 3: Updating archived record...');
-    try {
-      await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.archivedUsersCollectionID,
-        documentId: archivedDoc.$id,
-        data: {
-          'isRecovered': true,
-          'recoveredAt': DateTime.now().toIso8601String(),
-          'recoveredBy': recoveredBy,
-        },
-      );
-      print('>>> Step 3: Archive record updated');
-    } catch (e) {
-      print('>>> WARNING: Failed to update archive record: $e');
-      // Don't fail the recovery if this fails
-    }
-
-    print('>>> ============================================');
-    print('>>> USER RECOVERED SUCCESSFULLY');
-    print('>>> Restored document ID: ${restoredDoc.$id}');
-    print('>>> ============================================');
-
-    return {
-      'success': true,
-      'message': 'User recovered successfully',
-      'restoredDocumentId': restoredDoc.$id,
-    };
-  } catch (e) {
-    print('>>> ============================================');
-    print('>>> ERROR RECOVERING USER: $e');
-    print('>>> Stack trace: ${StackTrace.current}');
-    print('>>> ============================================');
-    
-    return {
-      'success': false,
-      'error': e.toString(),
-    };
   }
-}
 
   /// Background job to check and permanently delete users (should be called periodically)
   Future<Map<String, dynamic>> processScheduledDeletions() async {
@@ -4188,11 +4389,11 @@ Future<Map<String, dynamic>> recoverArchivedUser({
           final deleteResult = await permanentlyDeleteUser(userId);
 
           if (deleteResult['userDeleted'] == true) {
-            results['successfulDeletions'] = 
+            results['successfulDeletions'] =
                 (results['successfulDeletions'] as int) + 1;
             print('>>> âœ" User $userId deleted successfully');
           } else {
-            results['failedDeletions'] = 
+            results['failedDeletions'] =
                 (results['failedDeletions'] as int) + 1;
             results['errors'].add('$userId: Deletion incomplete');
             print('>>> âœ— User $userId deletion failed');
@@ -4201,9 +4402,9 @@ Future<Map<String, dynamic>> recoverArchivedUser({
           // Add delay to prevent overwhelming the database
           await Future.delayed(const Duration(milliseconds: 500));
         } catch (e) {
-          results['failedDeletions'] = 
-              (results['failedDeletions'] as int) + 1;
-          results['errors'].add('${archivedUser.data['userId']}: ${e.toString()}');
+          results['failedDeletions'] = (results['failedDeletions'] as int) + 1;
+          results['errors']
+              .add('${archivedUser.data['userId']}: ${e.toString()}');
           print('>>> Error deleting user: $e');
         }
       }
@@ -4255,8 +4456,8 @@ Future<Map<String, dynamic>> recoverArchivedUser({
           recovered++;
         } else {
           activeArchives++;
-          
-          final scheduledDeletion = 
+
+          final scheduledDeletion =
               DateTime.parse(doc.data['scheduledDeletionAt']);
           if (scheduledDeletion.isBefore(sevenDaysFromNow)) {
             dueSoon++;
