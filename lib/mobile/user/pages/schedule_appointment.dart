@@ -7,7 +7,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
-import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_mobile_appointment_controller.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_appointment_controller.dart';
 import 'dart:async';
 import 'package:appwrite/appwrite.dart';
 

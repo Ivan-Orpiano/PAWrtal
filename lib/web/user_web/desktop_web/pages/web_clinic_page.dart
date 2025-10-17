@@ -1,5 +1,5 @@
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_notification_icon.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/web_profile_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_profile_icon.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_appointment_panel.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_description.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_location.dart';

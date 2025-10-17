@@ -3,7 +3,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_mobile_appointment_controller.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_appointment_controller.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/appointment_components/user_web_appointment_tile.dart';
 import 'package:flutter/material.dart';

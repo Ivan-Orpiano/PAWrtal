@@ -3,7 +3,7 @@ import 'package:capstone_app/mobile/user/components/appointment_tabs/appointment
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_2nd_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_3rd_tab.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/appointments_4th_tab.dart';
-import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_mobile_appointment_controller.dart';
+import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_appointment_controller.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
