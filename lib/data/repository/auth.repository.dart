@@ -17,7 +17,7 @@ import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
-
+import 'package:capstone_app/data/models/archived_user_model.dart';
 import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 
@@ -1487,5 +1487,104 @@ class AuthRepository {
       print('Error cleaning up old notifications: $e');
       return 0;
     }
+  }
+
+  // ============= ARCHIVE USER METHODS (REPOSITORY LAYER) =============
+
+  /// Archive user (soft delete)
+  Future<Map<String, dynamic>> archiveUser({
+    required String userId,
+    required String userDocumentId,
+    required String archivedBy,
+    String archiveReason = 'No reason provided',
+  }) {
+    return appWriteProvider.archiveUser(
+      userId: userId,
+      userDocumentId: userDocumentId,
+      archivedBy: archivedBy,
+      archiveReason: archiveReason,
+    );
+  }
+
+  /// Get archived user by userId
+  Future<ArchivedUser?> getArchivedUserByUserId(String userId) async {
+    try {
+      final doc = await appWriteProvider.getArchivedUserByUserId(userId);
+      if (doc != null) {
+        final archivedUser = ArchivedUser.fromMap(doc.data);
+        return archivedUser.copyWith(documentId: doc.$id);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting archived user in repository: $e');
+      return null;
+    }
+  }
+
+  /// Get all archived users
+  Future<List<ArchivedUser>> getAllArchivedUsers({
+    bool includePermanentlyDeleted = false,
+    int limit = 100,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getAllArchivedUsers(
+        includePermanentlyDeleted: includePermanentlyDeleted,
+        limit: limit,
+      );
+      
+      return docs.map((doc) {
+        final archivedUser = ArchivedUser.fromMap(doc.data);
+        return archivedUser.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting all archived users in repository: $e');
+      return [];
+    }
+  }
+
+  /// Get users due for permanent deletion
+  Future<List<ArchivedUser>> getUsersDueForDeletion() async {
+    try {
+      final docs = await appWriteProvider.getUsersDueForDeletion();
+      
+      return docs.map((doc) {
+        final archivedUser = ArchivedUser.fromMap(doc.data);
+        return archivedUser.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting users due for deletion in repository: $e');
+      return [];
+    }
+  }
+
+  /// Permanently delete user
+  Future<Map<String, dynamic>> permanentlyDeleteUser(String userId) {
+    return appWriteProvider.permanentlyDeleteUser(userId);
+  }
+
+  /// Recover archived user
+  Future<Map<String, dynamic>> recoverArchivedUser({
+    required String userId,
+    required String recoveredBy,
+  }) {
+    return appWriteProvider.recoverArchivedUser(
+      userId: userId,
+      recoveredBy: recoveredBy,
+    );
+  }
+
+  /// Process scheduled deletions (background job)
+  Future<Map<String, dynamic>> processScheduledDeletions() {
+    return appWriteProvider.processScheduledDeletions();
+  }
+
+  /// Subscribe to archived users changes
+  Stream<RealtimeMessage> subscribeToArchivedUsers() {
+    return appWriteProvider.subscribeToArchivedUsers();
+  }
+
+  /// Get archive statistics
+  Future<Map<String, int>> getArchiveStatistics() {
+    return appWriteProvider.getArchiveStatistics();
   }
 }

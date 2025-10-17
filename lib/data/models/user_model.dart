@@ -6,13 +6,25 @@ class User {
   String? phone;
   String? documentId;
 
-  // New fields for ID verification
+  // ID verification fields
   bool idVerified;
   String? idVerifiedAt;
 
+  // Archive/Soft Delete fields (ADD THESE AFTER LINE 13)
+  bool isArchived;
+  String? archivedAt;
+  String? archivedBy;
+  String? archiveReason;
+  String? archivedDocumentId;
+
   User.fromMap(Map<String, dynamic> map)
       : idVerified = map["idVerified"] as bool? ?? false,
-        idVerifiedAt = map["idVerifiedAt"] as String? {
+        idVerifiedAt = map["idVerifiedAt"] as String?,
+        isArchived = map["isArchived"] as bool? ?? false,
+        archivedAt = map["archivedAt"] as String?,
+        archivedBy = map["archivedBy"] as String?,
+        archiveReason = map["archiveReason"] as String?,
+        archivedDocumentId = map["archivedDocumentId"] as String? {
     documentId = map["\$id"] ?? '';
     userId = map["userId"] ?? '';
     name = map["name"] ?? '';
@@ -30,12 +42,16 @@ class User {
       'role': role,
       'idVerified': idVerified,
       'idVerifiedAt': idVerifiedAt,
+      'isArchived': isArchived,
+      'archivedAt': archivedAt,
+      'archivedBy': archivedBy,
+      'archiveReason': archiveReason,
+      'archivedDocumentId': archivedDocumentId,
     };
   }
 
-// Helper getter to check if user needs ID verification
+  // Helper getter to check if user needs ID verification
   bool get requiresIdVerification {
-    // Only regular users need verification
     return (role == 'customer' || role == 'user') && !idVerified;
   }
 
@@ -47,6 +63,42 @@ class User {
       return 'Verification Not Required';
     } else {
       return 'ID Not Verified';
+    }
+  }
+
+  // Helper getter for archive status (ADD THIS)
+  String get archiveStatusText {
+    if (!isArchived) return 'Active';
+    
+    if (archivedAt != null) {
+      try {
+        final archived = DateTime.parse(archivedAt!);
+        final deletionDate = archived.add(const Duration(days: 30));
+        final now = DateTime.now();
+        final daysLeft = deletionDate.difference(now).inDays;
+        
+        if (daysLeft <= 0) {
+          return 'Pending Permanent Deletion';
+        }
+        return 'Archived ($daysLeft days left)';
+      } catch (e) {
+        return 'Archived';
+      }
+    }
+    
+    return 'Archived';
+  }
+
+  // Helper getter to check if user can be recovered (ADD THIS)
+  bool get canBeRecovered {
+    if (!isArchived || archivedAt == null) return false;
+    
+    try {
+      final archived = DateTime.parse(archivedAt!);
+      final deletionDate = archived.add(const Duration(days: 30));
+      return DateTime.now().isBefore(deletionDate);
+    } catch (e) {
+      return false;
     }
   }
 }
