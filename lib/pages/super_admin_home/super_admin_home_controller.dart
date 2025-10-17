@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get/get.dart';
+
 import 'dart:async';
 
 class SuperAdminHomeController extends GetxController {
@@ -168,10 +169,10 @@ class SuperAdminHomeController extends GetxController {
         sortedList.sort((a, b) {
           final clinicA = a['clinic'] as Clinic;
           final clinicB = b['clinic'] as Clinic;
-          
+
           final nameA = clinicA.clinicName.trim().toLowerCase();
           final nameB = clinicB.clinicName.trim().toLowerCase();
-          
+
           return nameA.compareTo(nameB);
         });
         break;
@@ -181,11 +182,11 @@ class SuperAdminHomeController extends GetxController {
         sortedList.sort((a, b) {
           final clinicA = a['clinic'] as Clinic;
           final clinicB = b['clinic'] as Clinic;
-          
+
           try {
             final dateA = DateTime.parse(clinicA.createdAt);
             final dateB = DateTime.parse(clinicB.createdAt);
-            
+
             // Newest first (descending order)
             return dateB.compareTo(dateA);
           } catch (e) {
@@ -201,21 +202,21 @@ class SuperAdminHomeController extends GetxController {
         sortedList.sort((a, b) {
           final settingsA = a['settings'] as ClinicSettings?;
           final settingsB = b['settings'] as ClinicSettings?;
-          
+
           final isOpenA = settingsA?.isOpenNow() ?? false;
           final isOpenB = settingsB?.isOpenNow() ?? false;
 
           // Primary sort: Open clinics first
           if (isOpenA && !isOpenB) return -1;
           if (!isOpenA && isOpenB) return 1;
-          
+
           // Secondary sort: Within same status, sort alphabetically
           final clinicA = a['clinic'] as Clinic;
           final clinicB = b['clinic'] as Clinic;
-          
+
           final nameA = clinicA.clinicName.trim().toLowerCase();
           final nameB = clinicB.clinicName.trim().toLowerCase();
-          
+
           return nameA.compareTo(nameB);
         });
         break;
