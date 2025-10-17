@@ -11,7 +11,6 @@ class WebAppointmentStats extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<WebAppointmentController>();
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 768;
     final isTablet = screenWidth < 1200 && screenWidth >= 768;
 
     return Container(
@@ -21,9 +20,7 @@ class WebAppointmentStats extends StatelessWidget {
         children: [
           _buildHeader(controller),
           const SizedBox(height: 20),
-          if (isMobile)
-            _buildMobileStatsGrid(controller)
-          else if (isTablet)
+          if (isTablet)
             _buildTabletStatsGrid(controller)
           else
             _buildDesktopStatsGrid(controller),
@@ -34,7 +31,8 @@ class WebAppointmentStats extends StatelessWidget {
 
   Widget _buildHeader(WebAppointmentController controller) {
     return Obx(() => Container(
-          padding: const EdgeInsets.all(20),
+          padding:
+              const EdgeInsets.only(left: 24, right: 24, top: 10, bottom: 10),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -44,13 +42,13 @@ class WebAppointmentStats extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+                color: Colors.grey.withOpacity(0.15),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -67,64 +65,63 @@ class WebAppointmentStats extends StatelessWidget {
                               .format(DateTime.now()),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         const Text(
                           "Appointment Management",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 28,
+                            fontSize: 26,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           controller.selectedCalendarDate.value != null
-                              ? "Showing appointments for ${DateFormat('MMMM dd, yyyy').format(controller.selectedCalendarDate.value!)}"
-                              : "${controller.appointmentStats['today']} appointments today",
+                              ? "Showing: ${DateFormat('MMM dd, yyyy').format(controller.selectedCalendarDate.value!)}"
+                              : "${controller.appointmentStats['today']} today",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
+                            fontSize: 16,
                           ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.calendar_today,
                           color: Colors.white,
-                          size: 24,
+                          size: 20,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         Text(
                           '${controller.appointmentStats['total']}',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          controller.selectedCalendarDate.value != null
-                              ? "Selected Day"
-                              : controller.viewMode.value.label,
+                          controller.viewMode.value.label,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
+                            fontSize: 10,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -143,7 +140,7 @@ class WebAppointmentStats extends StatelessWidget {
                               controller.connectionStatus,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.9),
-                                fontSize: 10,
+                                fontSize: 9,
                               ),
                             ),
                           ],
@@ -153,30 +150,29 @@ class WebAppointmentStats extends StatelessWidget {
                   ),
                 ],
               ),
-              // NEW: View mode selector
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: AppointmentViewMode.values.map((mode) {
                     final isSelected = controller.viewMode.value == mode;
                     return Padding(
-                      padding: const EdgeInsets.only(right: 4),
+                      padding: const EdgeInsets.only(right: 2),
                       child: InkWell(
                         onTap: () => controller.setViewMode(mode),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(4),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color:
                                 isSelected ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             mode.label,
@@ -184,7 +180,7 @@ class WebAppointmentStats extends StatelessWidget {
                               color: isSelected
                                   ? const Color.fromARGB(255, 81, 115, 153)
                                   : Colors.white,
-                              fontSize: 13,
+                              fontSize: 11,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -197,64 +193,19 @@ class WebAppointmentStats extends StatelessWidget {
                 ),
               ),
               if (controller.selectedCalendarDate.value != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 TextButton.icon(
                   onPressed: () => controller.setCalendarDate(null),
-                  icon: const Icon(Icons.clear, color: Colors.white, size: 16),
+                  icon: const Icon(Icons.clear, color: Colors.white, size: 14),
                   label: const Text(
                     'Clear date filter',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(color: Colors.white, fontSize: 10),
                   ),
                 ),
               ],
             ],
           ),
         ));
-  }
-
-  Widget _buildMobileStatsGrid(WebAppointmentController controller) {
-    return Obx(() {
-      final stats = controller.appointmentStats;
-      return Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard('Total', stats['total']!,
-                      Icons.calendar_today, Colors.blue)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildStatCard('Pending', stats['pending']!,
-                      Icons.pending, Colors.orange)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard('Scheduled', stats['scheduled']!,
-                      Icons.schedule, Colors.green)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildStatCard('In Progress', stats['in_progress']!,
-                      Icons.medical_services, Colors.purple)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard('Completed', stats['completed']!,
-                      Icons.check_circle, Colors.teal)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildStatCard('Cancelled', stats['cancelled']!,
-                      Icons.cancel, Colors.grey)),
-            ],
-          ),
-        ],
-      );
-    });
   }
 
   Widget _buildTabletStatsGrid(WebAppointmentController controller) {
@@ -301,38 +252,102 @@ class WebAppointmentStats extends StatelessWidget {
   Widget _buildDesktopStatsGrid(WebAppointmentController controller) {
     return Obx(() {
       final stats = controller.appointmentStats;
-      return Row(
-        children: [
-          Expanded(
-              child: _buildStatCard('Total Appointments', stats['total']!,
-                  Icons.calendar_today, Colors.blue,
-                  isDesktop: true)),
-          const SizedBox(width: 20),
-          Expanded(
-              child: _buildStatCard('Pending Review', stats['pending']!,
-                  Icons.pending, Colors.orange,
-                  isDesktop: true)),
-          const SizedBox(width: 20),
-          Expanded(
-              child: _buildStatCard('Scheduled', stats['scheduled']!,
-                  Icons.schedule, Colors.green,
-                  isDesktop: true)),
-          const SizedBox(width: 20),
-          Expanded(
-              child: _buildStatCard('In Progress', stats['in_progress']!,
-                  Icons.medical_services, Colors.purple,
-                  isDesktop: true)),
-          const SizedBox(width: 20),
-          Expanded(
-              child: _buildStatCard('Completed', stats['completed']!,
-                  Icons.check_circle, Colors.teal,
-                  isDesktop: true)),
-          const SizedBox(width: 20),
-          Expanded(
-              child: _buildStatCard(
-                  'Cancelled', stats['cancelled']!, Icons.cancel, Colors.grey,
-                  isDesktop: true)),
-        ],
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = constraints.maxWidth;
+          // If space gets tight before tablet breakpoint, use scrollable view
+          if (screenWidth < 1400) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('Total', stats['total']!,
+                        Icons.calendar_today, Colors.blue,
+                        isDesktop: true),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('Pending', stats['pending']!,
+                        Icons.pending, Colors.orange,
+                        isDesktop: true),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('Scheduled', stats['scheduled']!,
+                        Icons.schedule, Colors.green,
+                        isDesktop: true),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('In Progress', stats['in_progress']!,
+                        Icons.medical_services, Colors.purple,
+                        isDesktop: true),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('Completed', stats['completed']!,
+                        Icons.check_circle, Colors.teal,
+                        isDesktop: true),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('Cancelled', stats['cancelled']!,
+                        Icons.cancel, Colors.grey,
+                        isDesktop: true),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Normal layout for larger screens
+          return Row(
+            children: [
+              Expanded(
+                child: _buildStatCard('Total Appointments', stats['total']!,
+                    Icons.calendar_today, Colors.blue,
+                    isDesktop: true),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard('Pending Review', stats['pending']!,
+                    Icons.pending, Colors.orange,
+                    isDesktop: true),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard('Scheduled', stats['scheduled']!,
+                    Icons.schedule, Colors.green,
+                    isDesktop: true),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard('In Progress', stats['in_progress']!,
+                    Icons.medical_services, Colors.purple,
+                    isDesktop: true),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard('Completed', stats['completed']!,
+                    Icons.check_circle, Colors.teal,
+                    isDesktop: true),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                    'Cancelled', stats['cancelled']!, Icons.cancel, Colors.grey,
+                    isDesktop: true),
+              ),
+            ],
+          );
+        },
       );
     });
   }
@@ -341,7 +356,7 @@ class WebAppointmentStats extends StatelessWidget {
       {bool isDesktop = false}) {
     final controller = Get.find<WebAppointmentController>();
     return Container(
-      padding: EdgeInsets.all(isDesktop ? 20 : 16),
+      padding: EdgeInsets.all(isDesktop ? 12 : 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -356,35 +371,67 @@ class WebAppointmentStats extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: isDesktop ? 24 : 20,
+              Flexible(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: color,
+                        size: isDesktop ? 18 : 16,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            value.toString(),
+                            style: TextStyle(
+                              fontSize: isDesktop ? 24 : 20,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: isDesktop ? 12 : 11,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (value > 0)
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Active',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: color,
                     ),
@@ -392,26 +439,8 @@ class WebAppointmentStats extends StatelessWidget {
                 ),
             ],
           ),
-          SizedBox(height: isDesktop ? 16 : 12),
-          Text(
-            value.toString(),
-            style: TextStyle(
-              fontSize: isDesktop ? 32 : 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: isDesktop ? 14 : 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
           if (isDesktop && value > 0) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             LinearProgressIndicator(
               value: value /
                   (controller.appointmentStats['total']! > 0
@@ -419,7 +448,7 @@ class WebAppointmentStats extends StatelessWidget {
                       : 1),
               backgroundColor: color.withOpacity(0.2),
               color: color,
-              minHeight: 3,
+              minHeight: 2,
             ),
           ],
         ],

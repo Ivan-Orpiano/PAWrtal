@@ -20,7 +20,6 @@ class WebAppointmentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<WebAppointmentController>();
     final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth < 1200 && screenWidth >= 768;
     final isMobile = screenWidth < 768;
 
     return Container(
@@ -54,7 +53,7 @@ class WebAppointmentTile extends StatelessWidget {
           ),
           child: isMobile
               ? _buildMobileLayout(controller)
-              : _buildDesktopLayout(controller, isTablet),
+              : _buildDesktopLayout(controller),
         ),
       ),
     );
@@ -105,7 +104,6 @@ class WebAppointmentTile extends StatelessWidget {
             const SizedBox(width: 12),
             Icon(Icons.medical_services, size: 14, color: Colors.grey[600]),
             const SizedBox(width: 4),
-            _buildServiceTypeIndicator(),
             Expanded(
               child: Text(
                 appointment.service,
@@ -123,8 +121,7 @@ class WebAppointmentTile extends StatelessWidget {
     );
   }
 
-  Widget _buildDesktopLayout(
-      WebAppointmentController controller, bool isTablet) {
+  Widget _buildDesktopLayout(WebAppointmentController controller) {
     return Row(
       children: [
         _buildPetAvatar(),
@@ -221,15 +218,13 @@ class WebAppointmentTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  _buildServiceTypeIndicator(),
-                  const SizedBox(width: 64),
                 ],
               ),
             ],
           ),
         ),
         Expanded(
-          flex: isTablet ? 2 : 3,
+          flex: 3,
           child: Column(
             children: [
               _buildProgressIndicator(),
@@ -254,11 +249,7 @@ class WebAppointmentTile extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: const Icon(
-        Icons.pets,
-        color: Colors.white,
-        size: 24,
-      ),
+      child: const Icon(Icons.pets, color: Colors.white, size: 24),
     );
   }
 
@@ -287,30 +278,24 @@ class WebAppointmentTile extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildProgressDot(
-            'Scheduled', appointment.status != 'pending', Colors.blue),
+        _buildProgressDot(appointment.status != 'pending', Colors.blue),
         _buildProgressLine(appointment.hasArrived),
-        _buildProgressDot('Arrived', appointment.hasArrived, Colors.orange),
+        _buildProgressDot(appointment.hasArrived, Colors.orange),
         _buildProgressLine(appointment.hasServiceStarted),
-        _buildProgressDot(
-            'Treatment', appointment.hasServiceStarted, Colors.purple),
+        _buildProgressDot(appointment.hasServiceStarted, Colors.purple),
         _buildProgressLine(appointment.hasServiceCompleted),
-        _buildProgressDot(
-            'Complete', appointment.hasServiceCompleted, Colors.green),
+        _buildProgressDot(appointment.hasServiceCompleted, Colors.green),
       ],
     );
   }
 
-  Widget _buildProgressDot(String label, bool isActive, Color color) {
-    return Tooltip(
-      message: label,
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: isActive ? color : Colors.grey[300],
-          borderRadius: BorderRadius.circular(4),
-        ),
+  Widget _buildProgressDot(bool isActive, Color color) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: isActive ? color : Colors.grey[300],
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
@@ -328,12 +313,10 @@ class WebAppointmentTile extends StatelessWidget {
     final buttonHeight = isMobile ? 32.0 : 36.0;
     final fontSize = isMobile ? 11.0 : 12.0;
 
-    // Check if appointment is past and still in accepted status
     final isPastAccepted =
         appointment.isPast && appointment.status == 'accepted';
 
     if (isPastAccepted) {
-      // Past accepted appointments that weren't marked
       return Row(
         children: [
           Expanded(
@@ -357,14 +340,13 @@ class WebAppointmentTile extends StatelessWidget {
             child: SizedBox(
               height: buttonHeight,
               child: ElevatedButton(
-                onPressed: () => _showPastAppointmentCompleteDialog(controller),
+                onPressed: () => _showCompleteServiceDialog(controller),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
-                child:
-                    Text('Mark Complete', style: TextStyle(fontSize: fontSize)),
+                child: Text('Complete', style: TextStyle(fontSize: fontSize)),
               ),
             ),
           ),
@@ -380,7 +362,7 @@ class WebAppointmentTile extends StatelessWidget {
               child: SizedBox(
                 height: buttonHeight,
                 child: OutlinedButton(
-                  onPressed: () => _showDeclineDialog(controller, appointment),
+                  onPressed: () => _showDeclineDialog(controller),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
@@ -514,22 +496,6 @@ class WebAppointmentTile extends StatelessWidget {
           ],
         );
 
-      case 'completed':
-      case 'cancelled':
-      case 'declined':
-        return SizedBox(
-          height: buttonHeight,
-          child: OutlinedButton(
-            onPressed: () => _showAppointmentDetails(Get.context!),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey,
-              side: const BorderSide(color: Colors.grey),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
-            child: Text('View Details', style: TextStyle(fontSize: fontSize)),
-          ),
-        );
-
       default:
         return SizedBox(
           height: buttonHeight,
@@ -553,35 +519,7 @@ class WebAppointmentTile extends StatelessWidget {
     );
   }
 
-  void _showConfirmDialog(
-      String title, String content, VoidCallback onConfirm) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(content),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              onConfirm();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-            ),
-            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeclineDialog(
-      WebAppointmentController controller, Appointment appointment) {
+  void _showDeclineDialog(WebAppointmentController controller) {
     String selectedReason = '';
     final customReasonController = TextEditingController();
 
@@ -632,12 +570,10 @@ class WebAppointmentTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Please select or provide a reason for declining this appointment:',
+                    'Please select or provide a reason for declining:',
                     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 16),
-
-                  // Predefined reasons
                   ...predefinedReasons.map((reason) {
                     return RadioListTile<String>(
                       title: Text(reason, style: const TextStyle(fontSize: 14)),
@@ -653,29 +589,26 @@ class WebAppointmentTile extends StatelessWidget {
                       dense: true,
                     );
                   }),
-
                   const SizedBox(height: 16),
-
-                  // Custom reason text field
                   TextField(
                     controller: customReasonController,
                     decoration: InputDecoration(
                       labelText: 'Custom reason (optional)',
                       hintText: 'Enter additional details...',
                       border: const OutlineInputBorder(),
-                      enabled: selectedReason == 'Other (specify below)' ||
-                          selectedReason.isNotEmpty,
                     ),
                     maxLines: 3,
                     maxLength: 200,
                   ),
-
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: () => Get.back(),
+                        onPressed: () {
+                          customReasonController.dispose();
+                          Get.back();
+                        },
                         child: const Text('Cancel'),
                       ),
                       const SizedBox(width: 16),
@@ -691,6 +624,7 @@ class WebAppointmentTile extends StatelessWidget {
                                       : '$selectedReason - ${customReasonController.text}';
                                 }
 
+                                customReasonController.dispose();
                                 Get.back();
                                 controller.declineAppointment(
                                     appointment, finalReason);
@@ -725,125 +659,143 @@ class WebAppointmentTile extends StatelessWidget {
         child: Container(
           width: 500,
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Record Vital Signs',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 81, 115, 153),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Record Vital Signs',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(255, 81, 115, 153),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: tempController,
-                      decoration: const InputDecoration(
-                        labelText: 'Temperature (°C)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: weightController,
-                      decoration: const InputDecoration(
-                        labelText: 'Weight (kg)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: bpController,
-                      decoration: const InputDecoration(
-                        labelText: 'Blood Pressure',
-                        border: OutlineInputBorder(),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: tempController,
+                        decoration: const InputDecoration(
+                          labelText: 'Temperature (°C)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: hrController,
-                      decoration: const InputDecoration(
-                        labelText: 'Heart Rate (bpm)',
-                        border: OutlineInputBorder(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: weightController,
+                        decoration: const InputDecoration(
+                          labelText: 'Weight (kg)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
                       ),
-                      keyboardType: TextInputType.number,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Additional Notes',
-                  border: OutlineInputBorder(),
+                  ],
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Cancel'),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: bpController,
+                        decoration: const InputDecoration(
+                          labelText: 'Blood Pressure',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: hrController,
+                        decoration: const InputDecoration(
+                          labelText: 'Heart Rate (bpm)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Additional Notes',
+                    border: OutlineInputBorder(),
                   ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (tempController.text.isNotEmpty &&
-                          weightController.text.isNotEmpty) {
-                        final vitals = {
-                          'temperature': double.parse(tempController.text),
-                          'weight': double.parse(weightController.text),
-                          'bloodPressure': bpController.text.isNotEmpty
-                              ? bpController.text
-                              : null,
-                          'heartRate': hrController.text.isNotEmpty
-                              ? int.parse(hrController.text)
-                              : null,
-                          'additionalNotes': notesController.text.isNotEmpty
-                              ? notesController.text
-                              : null,
-                          'recordedAt': DateTime.now().toIso8601String(),
-                        };
-
-                        final updatedAppointment = appointment.copyWith(
-                          vitals: vitals,
-                          updatedAt: DateTime.now(),
-                        );
-
-                        controller.updateFullAppointment(updatedAppointment);
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        tempController.dispose();
+                        weightController.dispose();
+                        bpController.dispose();
+                        hrController.dispose();
+                        notesController.dispose();
                         Get.back();
-                        Get.snackbar("Success", "Vital signs recorded!");
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                      },
+                      child: const Text('Cancel'),
                     ),
-                    child: const Text('Save',
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (tempController.text.isNotEmpty &&
+                            weightController.text.isNotEmpty) {
+                          final vitals = {
+                            'temperature':
+                                double.tryParse(tempController.text) ?? 0.0,
+                            'weight':
+                                double.tryParse(weightController.text) ?? 0.0,
+                            'bloodPressure': bpController.text.isNotEmpty
+                                ? bpController.text
+                                : null,
+                            'heartRate': hrController.text.isNotEmpty
+                                ? int.tryParse(hrController.text)
+                                : null,
+                            'additionalNotes': notesController.text.isNotEmpty
+                                ? notesController.text
+                                : null,
+                            'recordedAt': DateTime.now().toIso8601String(),
+                          };
+
+                          final updatedAppointment = appointment.copyWith(
+                            vitals: vitals,
+                            updatedAt: DateTime.now(),
+                          );
+
+                          tempController.dispose();
+                          weightController.dispose();
+                          bpController.dispose();
+                          hrController.dispose();
+                          notesController.dispose();
+
+                          controller.updateFullAppointment(updatedAppointment);
+                          Get.back();
+                          Get.snackbar("Success", "Vital signs recorded!");
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
+                      ),
+                      child: const Text('Save',
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -851,9 +803,7 @@ class WebAppointmentTile extends StatelessWidget {
   }
 
   void _showCompleteServiceDialog(WebAppointmentController controller) {
-    // Check if this is a vaccination service
     if (controller.isVaccinationService(appointment.service)) {
-      // Show vaccination-specific dialog
       Get.dialog(
         VaccinationCompletionDialog(appointment: appointment),
         barrierDismissible: false,
@@ -861,7 +811,6 @@ class WebAppointmentTile extends StatelessWidget {
       return;
     }
 
-    // Show regular service completion dialog for non-vaccination services
     final diagnosisController = TextEditingController();
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
@@ -886,11 +835,8 @@ class WebAppointmentTile extends StatelessWidget {
                         color: Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 24,
-                      ),
+                      child: const Icon(Icons.check_circle,
+                          color: Colors.green, size: 24),
                     ),
                     const SizedBox(width: 12),
                     const Expanded(
@@ -907,7 +853,7 @@ class WebAppointmentTile extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Fill in the medical information below',
+                            'Fill in the medical information',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
@@ -930,7 +876,7 @@ class WebAppointmentTile extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Note: Diagnosis and Treatment are required for proper medical record creation',
+                          'Diagnosis and Treatment are required',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.orange[700],
@@ -946,7 +892,7 @@ class WebAppointmentTile extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: 'Diagnosis *',
                     border: OutlineInputBorder(),
-                    hintText: 'Required - Enter diagnosis',
+                    hintText: 'Enter diagnosis',
                   ),
                   maxLines: 2,
                 ),
@@ -956,7 +902,7 @@ class WebAppointmentTile extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: 'Treatment *',
                     border: OutlineInputBorder(),
-                    hintText: 'Required - Enter treatment provided',
+                    hintText: 'Enter treatment provided',
                   ),
                   maxLines: 2,
                 ),
@@ -966,7 +912,6 @@ class WebAppointmentTile extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: 'Prescription (Optional)',
                     border: OutlineInputBorder(),
-                    hintText: 'Leave empty for N/A',
                   ),
                   maxLines: 2,
                 ),
@@ -976,7 +921,6 @@ class WebAppointmentTile extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: 'Veterinary Notes (Optional)',
                     border: OutlineInputBorder(),
-                    hintText: 'Leave empty for N/A',
                   ),
                   maxLines: 3,
                 ),
@@ -985,30 +929,28 @@ class WebAppointmentTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Get.back(),
+                      onPressed: () {
+                        diagnosisController.dispose();
+                        treatmentController.dispose();
+                        prescriptionController.dispose();
+                        notesController.dispose();
+                        Get.back();
+                      },
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton(
                       onPressed: () {
-                        // Validate required fields
                         if (diagnosisController.text.trim().isEmpty) {
-                          Get.snackbar(
-                            'Required Field',
-                            'Please enter a diagnosis',
-                            backgroundColor: Colors.orange,
-                            colorText: Colors.white,
-                          );
+                          Get.snackbar('Required', 'Enter diagnosis',
+                              backgroundColor: Colors.orange,
+                              colorText: Colors.white);
                           return;
                         }
-
                         if (treatmentController.text.trim().isEmpty) {
-                          Get.snackbar(
-                            'Required Field',
-                            'Please enter the treatment provided',
-                            backgroundColor: Colors.orange,
-                            colorText: Colors.white,
-                          );
+                          Get.snackbar('Required', 'Enter treatment',
+                              backgroundColor: Colors.orange,
+                              colorText: Colors.white);
                           return;
                         }
 
@@ -1024,6 +966,11 @@ class WebAppointmentTile extends StatelessWidget {
                               ? notesController.text.trim()
                               : null,
                         );
+
+                        diagnosisController.dispose();
+                        treatmentController.dispose();
+                        prescriptionController.dispose();
+                        notesController.dispose();
                         Get.back();
                       },
                       style: ElevatedButton.styleFrom(
@@ -1038,91 +985,6 @@ class WebAppointmentTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildServiceTypeIndicator() {
-    final controller = Get.find<WebAppointmentController>();
-    final isVaccination = controller.isVaccinationService(appointment.service);
-
-    if (!isVaccination) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.vaccines, size: 14, color: Colors.green[700]),
-          const SizedBox(width: 4),
-          Text(
-            'VACCINATION',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.green[700],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPastAppointmentCompleteDialog(WebAppointmentController controller) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Complete Past Appointment',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-                'This appointment has already passed. How would you like to mark it?'),
-            SizedBox(height: 16),
-            Text(
-              'Note: This action is for record-keeping purposes.',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          OutlinedButton(
-            onPressed: () {
-              Get.back();
-              // Mark as complete with minimal info
-              controller.completeServiceWithRecord(
-                appointment: appointment,
-                diagnosis: 'Appointment completed retrospectively',
-                treatment: 'N/A',
-              );
-            },
-            child: const Text('Quick Complete'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              _showCompleteServiceDialog(controller);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Complete with Details',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

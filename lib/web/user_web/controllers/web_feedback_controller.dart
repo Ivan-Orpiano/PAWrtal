@@ -28,11 +28,11 @@ class WebFeedbackController extends GetxController {
   RxList<FeedbackAndReport> allFeedback = <FeedbackAndReport>[].obs;
   RxList<FeedbackAndReport> filteredFeedback = <FeedbackAndReport>[].obs;
   RxBool isLoadingFeedback = false.obs;
-  Rx<FeedbackStatus?> statusFilter = Rx<FeedbackStatus?>(null);
-  Rx<Priority?> priorityFilter = Rx<Priority?>(null);
-  Rx<FeedbackType?> typeFilter = Rx<FeedbackType?>(null);
-  Rx<FeedbackCategory?> categoryFilter = Rx<FeedbackCategory?>(null);
-  RxString searchQuery = ''.obs;
+ final Rxn<FeedbackStatus> statusFilter = Rxn<FeedbackStatus>();
+final Rxn<FeedbackType> typeFilter = Rxn<FeedbackType>();
+final Rxn<FeedbackCategory> categoryFilter = Rxn<FeedbackCategory>();
+final Rxn<Priority> priorityFilter = Rxn<Priority>();
+final RxString searchQuery = ''.obs;
 
   // Statistics
   RxMap<String, int> feedbackStats = <String, int>{}.obs;
@@ -590,19 +590,44 @@ class WebFeedbackController extends GetxController {
   }
 
   /// Update filters
-  void updateFilters({
-    FeedbackStatus? status,
-    Priority? priority,
-    FeedbackType? type,
-    FeedbackCategory? category,
-  }) {
-    if (status != null) statusFilter.value = status;
-    if (priority != null) priorityFilter.value = priority;
-    if (type != null) typeFilter.value = type;
-    if (category != null) categoryFilter.value = category;
-
-    filterFeedback();
+/// Update filters
+void updateFilters({
+  FeedbackStatus? status,
+  Priority? priority,
+  FeedbackType? type,
+  FeedbackCategory? category,
+  bool clearStatus = false,
+  bool clearPriority = false,
+  bool clearType = false,
+  bool clearCategory = false,
+}) {
+  // Clear filters if explicitly requested OR if null value is passed
+  if (clearStatus || status == null) {
+    statusFilter.value = null;
+  } else {
+    statusFilter.value = status;
   }
+  
+  if (clearPriority || priority == null) {
+    priorityFilter.value = null;
+  } else {
+    priorityFilter.value = priority;
+  }
+  
+  if (clearType || type == null) {
+    typeFilter.value = null;
+  } else {
+    typeFilter.value = type;
+  }
+  
+  if (clearCategory || category == null) {
+    categoryFilter.value = null;
+  } else {
+    categoryFilter.value = category;
+  }
+
+  filterFeedback();
+}
 
   /// Clear all filters
   void clearFilters() {

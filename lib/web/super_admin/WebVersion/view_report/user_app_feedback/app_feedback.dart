@@ -14,7 +14,8 @@ class AdminFeedbackManagement extends StatefulWidget {
   const AdminFeedbackManagement({super.key});
 
   @override
-  State<AdminFeedbackManagement> createState() => _AdminFeedbackManagementState();
+  State<AdminFeedbackManagement> createState() =>
+      _AdminFeedbackManagementState();
 }
 
 class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
@@ -37,16 +38,16 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        key: _scaffoldKey,
+      key: _scaffoldKey,
       appBar: AppBar(
-              surfaceTintColor: Colors.transparent,
-            leading: IconButton(
-        icon: const Icon(Icons.menu_rounded, color: Color(0xFF517399)),
-        onPressed: () {
-          _scaffoldKey.currentState?.openDrawer();
-        },
-        tooltip: 'Menu',
-      ),
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.menu_rounded, color: Color(0xFF517399)),
+          onPressed: () {
+            _scaffoldKey.currentState?.openDrawer();
+          },
+          tooltip: 'Menu',
+        ),
         title: const Row(
           children: [
             Icon(Icons.feedback, color: Color(0xFF517399)),
@@ -89,50 +90,51 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
 
   Widget _buildStatsCards() {
     return Obx(() => Container(
-      color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          _buildStatCard(
-            'Total',
-            controller.feedbackStats['total']?.toString() ?? '0',
-            Colors.blue,
-            Icons.feedback,
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _buildStatCard(
+                'Total',
+                controller.feedbackStats['total']?.toString() ?? '0',
+                Colors.blue,
+                Icons.feedback,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Pending',
+                controller.feedbackStats['pending']?.toString() ?? '0',
+                Colors.orange,
+                Icons.pending,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'In Progress',
+                controller.feedbackStats['inProgress']?.toString() ?? '0',
+                Colors.blue,
+                Icons.work,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Resolved',
+                controller.feedbackStats['resolved']?.toString() ?? '0',
+                Colors.green,
+                Icons.check_circle,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Critical',
+                controller.feedbackStats['critical']?.toString() ?? '0',
+                Colors.red,
+                Icons.warning,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          _buildStatCard(
-            'Pending',
-            controller.feedbackStats['pending']?.toString() ?? '0',
-            Colors.orange,
-            Icons.pending,
-          ),
-          const SizedBox(width: 12),
-          _buildStatCard(
-            'In Progress',
-            controller.feedbackStats['inProgress']?.toString() ?? '0',
-            Colors.blue,
-            Icons.work,
-          ),
-          const SizedBox(width: 12),
-          _buildStatCard(
-            'Resolved',
-            controller.feedbackStats['resolved']?.toString() ?? '0',
-            Colors.green,
-            Icons.check_circle,
-          ),
-          const SizedBox(width: 12),
-          _buildStatCard(
-            'Critical',
-            controller.feedbackStats['critical']?.toString() ?? '0',
-            Colors.red,
-            Icons.warning,
-          ),
-        ],
-      ),
-    ));
+        ));
   }
 
-  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+      String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -192,70 +194,97 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               hintText: 'Search feedback...',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      searchController.clear();
-                      controller.updateSearchQuery('');
-                    },
-                  )
-                : const SizedBox()),
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        searchController.clear();
+                        controller.updateSearchQuery('');
+                      },
+                    )
+                  : const SizedBox()),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Color(0xFF517399)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+                borderSide:
+                    const BorderSide(color: Color(0xFF517399), width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             onChanged: (value) => controller.updateSearchQuery(value),
           ),
           const SizedBox(height: 12),
-          
+
           // Filter Dropdowns
-         // Filter Dropdowns
+
           Row(
             children: [
               Expanded(
                 child: Obx(() => _buildFilterDropdown<FeedbackStatus>(
-                  'Status',
-                  controller.statusFilter.value,
-                  FeedbackStatus.values,
-                  (value) => controller.updateFilters(status: value),
-                  (status) => status.displayName,
-                )),
+                      'Status',
+                      controller.statusFilter.value,
+                      FeedbackStatus.values,
+                      (value) {
+                        // If value is null (All selected), clear the filter
+                        if (value == null) {
+                          controller.updateFilters(clearStatus: true);
+                        } else {
+                          controller.updateFilters(status: value);
+                        }
+                      },
+                      (status) => status.displayName,
+                    )),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Obx(() => _buildFilterDropdown<FeedbackType>(
-                  'Type',
-                  controller.typeFilter.value,
-                  FeedbackType.values,
-                  (value) => controller.updateFilters(type: value),
-                  (type) => type.displayName,
-                )),
+                      'Type',
+                      controller.typeFilter.value,
+                      FeedbackType.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearType: true);
+                        } else {
+                          controller.updateFilters(type: value);
+                        }
+                      },
+                      (type) => type.displayName,
+                    )),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Obx(() => _buildFilterDropdown<FeedbackCategory>(
-                  'Category',
-                  controller.categoryFilter.value,
-                  FeedbackCategory.values,
-                  (value) => controller.updateFilters(category: value),
-                  (category) => category.displayName,
-                )),
+                      'Category',
+                      controller.categoryFilter.value,
+                      FeedbackCategory.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearCategory: true);
+                        } else {
+                          controller.updateFilters(category: value);
+                        }
+                      },
+                      (category) => category.displayName,
+                    )),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Obx(() => _buildFilterDropdown<Priority>(
-                  'Priority',
-                  controller.priorityFilter.value,
-                  Priority.values,
-                  (value) => controller.updateFilters(priority: value),
-                  (priority) => priority.displayName,
-                )),
+                      'Priority',
+                      controller.priorityFilter.value,
+                      Priority.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearPriority: true);
+                        } else {
+                          controller.updateFilters(priority: value);
+                        }
+                      },
+                      (priority) => priority.displayName,
+                    )),
               ),
             ],
           ),
@@ -287,12 +316,12 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       items: [
         DropdownMenuItem<T>(
           value: null,
-          child: Text('All'),
+          child: Text('All $label'),
         ),
         ...items.map((item) => DropdownMenuItem<T>(
-          value: item,
-          child: Text(getText(item)),
-        )),
+              value: item,
+              child: Text(getText(item)),
+            )),
       ],
       onChanged: onChanged,
     );
@@ -362,7 +391,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Subject
               Text(
                 feedback.subject,
@@ -373,7 +402,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Description
               Text(
                 feedback.description,
@@ -385,7 +414,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
-              
+
               // Meta Information
               Row(
                 children: [
@@ -413,30 +442,34 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ],
                 ],
               ),
-              
+
               // Quick Actions for Closed/Resolved
               if (feedback.status == FeedbackStatus.closed ||
-                feedback.status == FeedbackStatus.resolved) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (feedback.status == FeedbackStatus.closed)
-                    ElevatedButton.icon(
-                      onPressed: () => _archiveFeedback(feedback), // Now with confirmation
-                      icon: const Icon(Icons.archive, size: 16, color: Colors.white),
-                      label: const Text('Archive'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[600], // Changed color for better visibility
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  feedback.status == FeedbackStatus.resolved) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (feedback.status == FeedbackStatus.closed)
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            _archiveFeedback(feedback), // Now with confirmation
+                        icon: const Icon(Icons.archive,
+                            size: 16, color: Colors.white),
+                        label: const Text('Archive'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[
+                              600], // Changed color for better visibility
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -605,137 +638,138 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   }
 
   void _archiveFeedback(FeedbackAndReport feedback) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      title: Row(
-        children: [
-          Icon(Icons.archive, color: Colors.orange[700], size: 24),
-          const SizedBox(width: 12),
-          const Text(
-            'Archive Feedback',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.w600,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: Row(
+          children: [
+            Icon(Icons.archive, color: Colors.orange[700], size: 24),
+            const SizedBox(width: 12),
+            const Text(
+              'Archive Feedback',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Are you sure you want to archive this feedback?',
-            style: TextStyle(
-              color: Colors.grey[800],
-              fontSize: 14,
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to archive this feedback?',
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.subject, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        feedback.subject,
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.subject, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          feedback.subject,
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Text(
-                      feedback.userName,
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        feedback.userName,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Archived feedback can be permanently deleted later.',
                       style: TextStyle(
-                        color: Colors.grey[700],
+                        color: Colors.orange[900],
                         fontSize: 12,
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange[200]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Archived feedback can be permanently deleted later.',
-                    style: TextStyle(
-                      color: Colors.orange[900],
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
+          ElevatedButton.icon(
+            onPressed: () {
+              controller.archiveFeedback(feedback.documentId!);
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.archive, size: 18),
+            label: const Text('Archive'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[600],
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            controller.archiveFeedback(feedback.documentId!);
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.archive, size: 18),
-          label: const Text('Archive'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange[600],
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
+
   void _showFeedbackDetails(FeedbackAndReport feedback) {
     showDialog(
       context: context,
@@ -745,308 +779,312 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       ),
     );
   }
+
   Widget _buildDrawer(BuildContext context) {
-  return Drawer(
-    backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-    child: Column(
-      children: [
-        // Header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color.fromRGBO(81, 115, 153, 1),
-                Color.fromRGBO(81, 115, 153, 0.8),
+    return Drawer(
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.fromRGBO(81, 115, 153, 1),
+                  Color.fromRGBO(81, 115, 153, 0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Developer',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Management Panel',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.admin_panel_settings_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Developer',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Management Panel',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
 
-        // Menu Items
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              _buildDrawerItem(
-                context,
-                icon: Icons.local_hospital_rounded,
-                title: 'Veterinary Clinics',
-                subtitle: 'Manage vet clinics',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SuperAdminVetClinicDashboard(),
-                    ),
-                  );
-                },
-              ),
-              _buildDrawerItem(
-                context,
-                icon: Icons.people_rounded,
-                title: 'Pet Owner Management',
-                subtitle: 'Manage user accounts',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SuperAdminUserManagementScreen(),
-                    ),
-                  );
-                },
-              ),
-              _buildDrawerItem(
-                context,
-                icon: Icons.delete_forever_rounded,
-                title: 'Deletion Reports',
-                subtitle: 'Feedback deletion requests',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const VeterinaryReport(),
-                    ),
-                  );
-                },
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Divider(),
-              ),
-            ],
-          ),
-        ),
-
-        // Logout Button
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: _isLoggingOut
-                ? Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(81, 115, 153, 0.7),
-                          Color.fromRGBO(81, 115, 153, 0.5),
-                        ],
+          // Menu Items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.local_hospital_rounded,
+                  title: 'Veterinary Clinics',
+                  subtitle: 'Manage vet clinics',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const SuperAdminVetClinicDashboard(),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Logging Out...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : InkWell(
-                    onTap: () async {
-                      setState(() => _isLoggingOut = true);
-                      try {
-                        await LogoutHelper.logout();
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() => _isLoggingOut = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Logout failed: ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.people_rounded,
+                  title: 'Pet Owner Management',
+                  subtitle: 'Manage user accounts',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const SuperAdminUserManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.delete_forever_rounded,
+                  title: 'Deletion Reports',
+                  subtitle: 'Feedback deletion requests',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VeterinaryReport(),
+                      ),
+                    );
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Divider(),
+                ),
+              ],
+            ),
+          ),
+
+          // Logout Button
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: _isLoggingOut
+                  ? Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color.fromRGBO(220, 53, 69, 1),
-                            Color.fromRGBO(200, 35, 51, 1),
+                            Color.fromRGBO(81, 115, 153, 0.7),
+                            Color.fromRGBO(81, 115, 153, 0.5),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.logout_rounded,
-                            color: Colors.white,
-                            size: 20,
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
                           ),
                           SizedBox(width: 12),
                           Text(
-                            'Log Out',
+                            'Logging Out...',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
+                    )
+                  : InkWell(
+                      onTap: () async {
+                        setState(() => _isLoggingOut = true);
+                        try {
+                          await LogoutHelper.logout();
+                        } catch (e) {
+                          if (mounted) {
+                            setState(() => _isLoggingOut = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Logout failed: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromRGBO(220, 53, 69, 1),
+                              Color.fromRGBO(200, 35, 51, 1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.logout_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Log Out',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-Widget _buildDrawerItem(
-  BuildContext context, {
-  required IconData icon,
-  required String title,
-  required String subtitle,
-  required VoidCallback onTap,
-}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color.fromRGBO(81, 115, 153, 0.2),
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color.fromRGBO(81, 115, 153, 0.2),
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color.fromRGBO(81, 115, 153, 0.2),
-                    Color.fromRGBO(81, 115, 153, 0.1),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color.fromRGBO(81, 115, 153, 0.2),
+                      Color.fromRGBO(81, 115, 153, 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color.fromRGBO(81, 115, 153, 1),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color.fromRGBO(81, 115, 153, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                color: const Color.fromRGBO(81, 115, 153, 1),
-                size: 24,
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: Color.fromRGBO(81, 115, 153, 0.5),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color.fromRGBO(81, 115, 153, 1),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: Color.fromRGBO(81, 115, 153, 0.5),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 // Feedback Details Dialog
@@ -1099,7 +1137,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Content
             Expanded(
               child: SingleChildScrollView(
@@ -1112,7 +1150,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       'User ID: ${widget.feedback.userId}',
                     ]),
                     const SizedBox(height: 16),
-                    
                     _buildDetailSection('Feedback Information', [
                       'ID: ${widget.feedback.documentId}',
                       'Subject: ${widget.feedback.subject}',
@@ -1123,27 +1160,23 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                       'Submitted: ${_formatFullDateTime(widget.feedback.submittedAt)}',
                     ]),
                     const SizedBox(height: 16),
-                    
                     _buildDetailSection('Technical Information', [
                       'App Version: ${widget.feedback.appVersion}',
                       'Device Info: ${widget.feedback.deviceInfo}',
                       'Platform: ${widget.feedback.platform}',
                     ]),
                     const SizedBox(height: 16),
-                    
                     _buildDescriptionSection(),
-                    
                     if (widget.feedback.attachments.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _buildAttachmentsSection(),
                     ],
-                    
                     const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
             _buildActionButtons(),
           ],
@@ -1301,7 +1334,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
     );
   }
 
-
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -1326,14 +1358,15 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 .toList(),
             onChanged: (status) {
               if (status != null && status != widget.feedback.status) {
-                widget.controller.updateStatus(widget.feedback.documentId!, status);
+                widget.controller
+                    .updateStatus(widget.feedback.documentId!, status);
                 Navigator.pop(context);
               }
             },
           ),
         ),
         const SizedBox(width: 16),
-        
+
         // Priority Dropdown
         Expanded(
           child: DropdownButtonFormField<Priority>(
@@ -1355,14 +1388,15 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
                 .toList(),
             onChanged: (priority) {
               if (priority != null && priority != widget.feedback.priority) {
-                widget.controller.updatePriority(widget.feedback.documentId!, priority);
+                widget.controller
+                    .updatePriority(widget.feedback.documentId!, priority);
                 Navigator.pop(context);
               }
             },
           ),
         ),
         const SizedBox(width: 16),
-        
+
         // Archive Button (only for closed)
         if (widget.feedback.status == FeedbackStatus.closed)
           ElevatedButton.icon(
@@ -1377,7 +1411,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
               foregroundColor: Colors.white,
             ),
           ),
-        
+
         // Delete Button (only for archived)
         if (widget.feedback.status == FeedbackStatus.archived)
           ElevatedButton.icon(
@@ -1408,7 +1442,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
       widget.feedback.documentId!,
       _replyController.text.trim(),
     );
-    
+
     setState(() {
       _isReplying = false;
     });
