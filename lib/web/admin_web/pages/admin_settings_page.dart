@@ -100,42 +100,17 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   final GetStorage storage = GetStorage();
 
   void _navigateToDashboard() {
-    Get.offNamed('/adminHome');
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   Widget _buildBackButton() {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
       child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => Navigator.pop(context),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.arrow_back, size: 18, color: Colors.grey[700]),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Back',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        child: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.arrow_back, size: 24, color: Colors.grey[700]),
+          padding: const EdgeInsets.all(8),
         ),
       ),
     );
@@ -165,6 +140,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     );
   }
 
+  bool get _isMobile => MediaQuery.of(context).size.width < 768;
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -188,88 +165,291 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         },
         child: Scaffold(
           backgroundColor: Colors.grey[50],
-          body: Column(children: [
-            Container(
-              height: 81,
-              decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                      bottom: BorderSide(color: Colors.black26, width: 1))),
-              child: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: _getResponsivePadding()),
-                    child: SizedBox(
-                      height: 80,
-                      child: Row(
-                        children: [
-                          _buildBackButton(),
-                          const Spacer(flex: 1),
-                          InkWell(
-                            onTap: _navigateToDashboard,
-                            child: Image.asset(
-                              'lib/images/PAWrtal_logo.png',
-                              width: 150,
-                              height: 100,
-                            ),
-                          ),
-                          const Spacer(flex: 1),
-
-                          // WebNotificationIcon(
-                          //   right: _getNotifRight(),
-                          //   top: 70,
-                          //   width: 500,
-                          // ),
-                          // AdminWebProfile(
-                          //   right: _getIconRight(),
-                          //   top: 70,
-                          //   width: 250,
-                          // )
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Row(
-                children: [
-                  Container(
-                    width: 240,
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        _buildSidebarItem('Profile', Icons.person, 0),
-                        _buildSidebarItem('Settings', Icons.settings, 1),
-                        _buildSidebarItem('Help', Icons.help_outline, 2),
-                        _buildSidebarItem(
-                            'Send Feedback', Icons.feedback_outlined, 3),
-                        const Divider(color: Colors.grey),
-                        _buildSidebarItem('Sign out', Icons.logout, -1,
-                            isDestructive: true),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(
-                      color: Colors.grey[50],
-                      child: _buildContentArea(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ]),
+          body: _isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
         ),
       ),
     );
   }
 
+  Widget _buildDesktopLayout() {
+    return Column(
+      children: [
+        Container(
+          height: 81,
+          decoration: const BoxDecoration(
+              color: Colors.white,
+              border:
+                  Border(bottom: BorderSide(color: Colors.black26, width: 1))),
+          child: Column(
+            children: [
+              Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: _getResponsivePadding()),
+                child: SizedBox(
+                  height: 80,
+                  child: Row(
+                    children: [
+                      _buildBackButton(),
+                      const Spacer(flex: 1),
+                      InkWell(
+                        onTap: _navigateToDashboard,
+                        child: Image.asset(
+                          'lib/images/PAWrtal_logo.png',
+                          width: 150,
+                          height: 100,
+                        ),
+                      ),
+                      const Spacer(flex: 1),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: 240,
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    _buildSidebarItem('Profile', Icons.person, 0),
+                    _buildSidebarItem('Settings', Icons.settings, 1),
+                    _buildSidebarItem('Help', Icons.help_outline, 2),
+                    _buildSidebarItem(
+                        'Send Feedback', Icons.feedback_outlined, 3),
+                    const Divider(color: Colors.grey),
+                    _buildSidebarItem('Sign out', Icons.logout, -1,
+                        isDestructive: true),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  color: Colors.grey[50],
+                  child: _buildContentArea(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: _buildMobileBackButton(),
+        ),
+        title: Center(
+          child: InkWell(
+            onTap: _navigateToDashboard,
+            child: Image.asset(
+              'lib/images/PAWrtal_logo.png',
+              width: 100,
+              height: 60,
+            ),
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Builder(
+              builder: (context) => IconButton(
+                onPressed: () => Scaffold.of(context).openDrawer(),
+                icon: Icon(Icons.menu, color: Colors.grey[700], size: 24),
+                padding: const EdgeInsets.all(8),
+              ),
+            ),
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: Colors.black26,
+            height: 1,
+          ),
+        ),
+      ),
+      drawer: _buildMobileDrawer(),
+      body: Container(
+        color: Colors.grey[50],
+        child: _buildContentArea(),
+      ),
+    );
+  }
+
+  Widget _buildMobileDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.purple[400]!, Colors.blue[400]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.admin_panel_settings,
+                      color: Colors.purple, size: 32),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  storage.read("name") ?? "Admin",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  storage.read("email") ?? "admin@example.com",
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                const SizedBox(height: 8),
+                _buildDrawerItem('Profile', Icons.person, 0),
+                _buildDrawerItem('Settings', Icons.settings, 1),
+                _buildDrawerItem('Help', Icons.help_outline, 2),
+                _buildDrawerItem('Send Feedback', Icons.feedback_outlined, 3),
+                const Divider(color: Colors.grey),
+                _buildDrawerItem('Sign out', Icons.logout, -1,
+                    isDestructive: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, IconData icon, int index,
+      {bool isDestructive = false}) {
+    final isSelected = selectedIndex == index;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: isSelected
+            ? LinearGradient(
+                colors: [Colors.blue[50]!, Colors.blue[100]!.withOpacity(0.3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (title == 'Sign out') {
+              Navigator.pop(context); // Close drawer
+              _showLogoutDialog();
+            } else {
+              setState(() => selectedIndex = index);
+              Navigator.pop(context); // Close drawer after selection
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDestructive
+                        ? Colors.red.withOpacity(0.1)
+                        : isSelected
+                            ? Colors.blue.withOpacity(0.15)
+                            : Colors.grey.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isDestructive
+                        ? Colors.red[600]
+                        : isSelected
+                            ? Colors.blue[700]
+                            : Colors.grey[600],
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: isDestructive
+                          ? Colors.red[600]
+                          : isSelected
+                              ? Colors.blue[700]
+                              : Colors.grey[700],
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.blue[600],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileBackButton() {
+    return IconButton(
+      onPressed: () => Navigator.pop(context),
+      icon: Icon(Icons.arrow_back, size: 24, color: Colors.grey[700]),
+      padding: const EdgeInsets.all(8),
+    );
+  }
+
   double _getResponsivePadding() => MediaQuery.of(context).size.width * 0.02;
-  double _getNotifRight() => 75.0;
-  double _getIconRight() => 75.0;
 
   Widget _buildSidebarItem(String title, IconData icon, int index,
       {bool isDestructive = false}) {
@@ -381,19 +561,17 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     final profilePictureId = storage.read("clinicProfilePictureId") as String?;
     final userJoinDate = storage.read("joinDate") ?? "January 2024";
 
-    // Initialize the controller
     final profilePictureController = Get.put(
       AdminPfpController(authRepository: Get.find<AuthRepository>()),
       tag: 'admin_profile_picture',
     );
 
-    // Set current profile picture if exists
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
       profilePictureController.setCurrentProfilePicture(profilePictureId);
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(_isMobile ? 16 : 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -445,7 +623,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             ],
           ),
           const SizedBox(height: 32),
-          // Clinic Profile Picture Section
           Obx(() => Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -463,7 +640,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   ],
                 ),
                 child: Container(
-                  padding: const EdgeInsets.all(28),
+                  padding: EdgeInsets.all(_isMobile ? 16 : 28),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -473,90 +650,96 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          // Clinic Profile Picture - Clickable
-                          Stack(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.purple.withOpacity(0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
+                      _isMobile
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.purple.withOpacity(0.3),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => profilePictureController
+                                              .pickProfilePicture(),
+                                          borderRadius:
+                                              BorderRadius.circular(60),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(60),
+                                            child: profilePictureController
+                                                .getPreviewImage(size: 96),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.blue[600],
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.blue.withOpacity(0.4),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () => profilePictureController
-                                        .pickProfilePicture(),
-                                    borderRadius: BorderRadius.circular(60),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(60),
-                                      child: profilePictureController
-                                          .getPreviewImage(size: 96),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Edit overlay
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.blue[600],
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.blue.withOpacity(0.4),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 24),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                                const SizedBox(height: 16),
                                 Text(
                                   userName,
+                                  textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     color: Colors.black87,
-                                    fontSize: 24,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.5,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(Icons.email_outlined,
                                         size: 16, color: Colors.grey[600]),
                                     const SizedBox(width: 6),
-                                    Text(userEmail,
-                                        style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 14)),
+                                    Expanded(
+                                      child: Text(userEmail,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 13)),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
                                 Wrap(
+                                  alignment: WrapAlignment.center,
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: [
@@ -639,11 +822,185 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                                   ],
                                 ),
                               ],
+                            )
+                          : Row(
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.purple.withOpacity(0.3),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => profilePictureController
+                                              .pickProfilePicture(),
+                                          borderRadius:
+                                              BorderRadius.circular(60),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(60),
+                                            child: profilePictureController
+                                                .getPreviewImage(size: 96),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.blue[600],
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.blue.withOpacity(0.4),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        userName,
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.email_outlined,
+                                              size: 16,
+                                              color: Colors.grey[600]),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(userEmail,
+                                                style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 14)),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(colors: [
+                                                Colors.purple[100]!,
+                                                Colors.purple[50]!
+                                              ]),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              border: Border.all(
+                                                  color: Colors.purple[200]!,
+                                                  width: 1),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.admin_panel_settings,
+                                                    size: 14,
+                                                    color: Colors.purple[700]),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  userRole.toUpperCase(),
+                                                  style: TextStyle(
+                                                    color: Colors.purple[700],
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(colors: [
+                                                Colors.green[100]!,
+                                                Colors.green[50]!
+                                              ]),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              border: Border.all(
+                                                  color: Colors.green[200]!,
+                                                  width: 1),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 8,
+                                                  height: 8,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green[600],
+                                                    shape: BoxShape.circle,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.green
+                                                            .withOpacity(0.5),
+                                                        blurRadius: 4,
+                                                        spreadRadius: 1,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Active',
+                                                  style: TextStyle(
+                                                    color: Colors.green[700],
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                      // Show save/cancel buttons if changes pending
                       if (profilePictureController.hasChanges()) ...[
                         const SizedBox(height: 20),
                         const Divider(color: Colors.grey),
@@ -674,7 +1031,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                                       : () async {
                                           await profilePictureController
                                               .saveProfilePicture(clinicId);
-                                          // Update storage after successful upload
                                           storage.write(
                                               'clinicProfilePictureId',
                                               profilePictureController
@@ -768,7 +1124,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   Widget _buildSettingsContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(_isMobile ? 16 : 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -917,7 +1273,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   Widget _buildHelpContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(_isMobile ? 16 : 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1128,11 +1484,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     ));
 
     return Obx(() => SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(_isMobile ? 16 : 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 children: [
                   Container(
@@ -1172,12 +1527,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 32),
-
-              // Main Form
               Container(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(_isMobile ? 20 : 32),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -1193,7 +1545,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Feedback Type Selection
                     const Text(
                       'What type of feedback is this?',
                       style: TextStyle(
@@ -1258,10 +1609,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         );
                       }).toList(),
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Category Selection
                     const Text(
                       'Which area does this relate to?',
                       style: TextStyle(
@@ -1300,10 +1648,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         }
                       },
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Subject Field
                     const Text(
                       'Subject',
                       style: TextStyle(
@@ -1340,10 +1685,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                             TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Description Field
                     const Text(
                       'Details',
                       style: TextStyle(
@@ -1382,10 +1724,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                             TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ),
-
                     const SizedBox(height: 32),
-
-                    // File Upload Section
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -1572,10 +1911,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Submit Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -1634,7 +1970,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         ));
   }
 
-  // Helper methods for feedback types
   Color _getFeedbackTypeColor(FeedbackType type) {
     switch (type) {
       case FeedbackType.bug:
@@ -1669,7 +2004,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     }
   }
 
-  // Helper Widgets
   Widget _buildModernCard({
     required String title,
     required IconData icon,
@@ -1917,7 +2251,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           title: const Text('Change Password',
               style: TextStyle(color: Colors.black87)),
           content: SizedBox(
-            width: 400,
+            width: _isMobile ? double.infinity : 400,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -15,7 +15,7 @@ class ClinicSettings {
   late bool autoAcceptAppointments;
   late String createdAt;
   late String updatedAt;
-  // REMOVED: staffEmailTemplate field completely
+  late String dashboardPic; // NEW: Dashboard picture
 
   ClinicSettings({
     this.documentId,
@@ -32,6 +32,7 @@ class ClinicSettings {
     this.autoAcceptAppointments = false,
     String? createdAt,
     String? updatedAt,
+    this.dashboardPic = '', // NEW: Dashboard picture
   })  : operatingHours = operatingHours ?? _getDefaultOperatingHours(),
         gallery = gallery ?? [],
         services = services ?? [],
@@ -66,6 +67,7 @@ class ClinicSettings {
       autoAcceptAppointments: map['autoAcceptAppointments'] ?? false,
       createdAt: map['createdAt'] ?? DateTime.now().toIso8601String(),
       updatedAt: map['updatedAt'] ?? DateTime.now().toIso8601String(),
+      dashboardPic: map['dashboardPic'] ?? '', // NEW: Dashboard picture
     );
   }
 
@@ -126,6 +128,7 @@ class ClinicSettings {
       'autoAcceptAppointments': autoAcceptAppointments,
       'createdAt': createdAt,
       'updatedAt': DateTime.now().toIso8601String(),
+      'dashboardPic': dashboardPic, // NEW: Dashboard picture
     };
   }
 
@@ -294,6 +297,7 @@ class ClinicSettings {
     bool? autoAcceptAppointments,
     String? createdAt,
     String? updatedAt,
+    String? dashboardPic, // NEW: Dashboard picture
   }) {
     return ClinicSettings(
       documentId: documentId ?? this.documentId,
@@ -311,6 +315,7 @@ class ClinicSettings {
           autoAcceptAppointments ?? this.autoAcceptAppointments,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      dashboardPic: dashboardPic ?? this.dashboardPic, // NEW: Dashboard picture
     );
   }
 }
