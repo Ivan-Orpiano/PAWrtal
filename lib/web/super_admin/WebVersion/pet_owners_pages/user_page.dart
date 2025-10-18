@@ -482,8 +482,7 @@ class _SuperAdminUserManagementScreenState
                     ),
                   );
                 },
-              ),
-            
+              ),            
             ],
           ),
         ),

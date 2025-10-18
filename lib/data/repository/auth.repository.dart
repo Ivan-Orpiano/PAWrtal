@@ -18,6 +18,7 @@ import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/models/archived_user_model.dart';
+import 'package:capstone_app/data/models/archived_clinic_model.dart';
 import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 
@@ -1588,6 +1589,105 @@ class AuthRepository {
     return appWriteProvider.getArchiveStatistics();
   }
 
+// ============= ARCHIVE CLINIC METHODS (REPOSITORY LAYER) =============
+
+  /// Archive clinic (soft delete)
+  Future<Map<String, dynamic>> archiveClinic({
+    required String clinicId,
+    required String clinicDocumentId,
+    required String archivedBy,
+    String archiveReason = 'No reason provided',
+  }) {
+    return appWriteProvider.archiveClinic(
+      clinicId: clinicId,
+      clinicDocumentId: clinicDocumentId,
+      archivedBy: archivedBy,
+      archiveReason: archiveReason,
+    );
+  }
+
+  /// Get archived clinic by clinicId
+  Future<ArchivedClinic?> getArchivedClinicByClinicId(String clinicId) async {
+    try {
+      final doc = await appWriteProvider.getArchivedClinicByClinicId(clinicId);
+      if (doc != null) {
+        final archivedClinic = ArchivedClinic.fromMap(doc.data);
+        return archivedClinic.copyWith(documentId: doc.$id);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting archived clinic in repository: $e');
+      return null;
+    }
+  }
+
+  /// Get all archived clinics
+  Future<List<ArchivedClinic>> getAllArchivedClinics({
+    bool includePermanentlyDeleted = false,
+    int limit = 100,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getAllArchivedClinics(
+        includePermanentlyDeleted: includePermanentlyDeleted,
+        limit: limit,
+      );
+
+      return docs.map((doc) {
+        final archivedClinic = ArchivedClinic.fromMap(doc.data);
+        return archivedClinic.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting all archived clinics in repository: $e');
+      return [];
+    }
+  }
+
+  /// Get clinics due for permanent deletion
+  Future<List<ArchivedClinic>> getClinicsDueForDeletion() async {
+    try {
+      final docs = await appWriteProvider.getClinicsDueForDeletion();
+
+      return docs.map((doc) {
+        final archivedClinic = ArchivedClinic.fromMap(doc.data);
+        return archivedClinic.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting clinics due for deletion in repository: $e');
+      return [];
+    }
+  }
+
+  /// Permanently delete clinic
+  Future<Map<String, dynamic>> permanentlyDeleteClinic(String clinicId) {
+    return appWriteProvider.permanentlyDeleteClinic(clinicId);
+  }
+
+  /// Recover archived clinic
+  Future<Map<String, dynamic>> recoverArchivedClinic({
+    required String clinicId,
+    required String recoveredBy,
+  }) {
+    return appWriteProvider.recoverArchivedClinic(
+      clinicId: clinicId,
+      recoveredBy: recoveredBy,
+    );
+  }
+
+  /// Process scheduled clinic deletions (background job)
+  Future<Map<String, dynamic>> processScheduledClinicDeletions() {
+    return appWriteProvider.processScheduledClinicDeletions();
+  }
+
+  /// Subscribe to archived clinics changes
+  Stream<RealtimeMessage> subscribeToArchivedClinics() {
+    return appWriteProvider.subscribeToArchivedClinics();
+  }
+
+  /// Get clinic archive statistics
+  Future<Map<String, int>> getClinicArchiveStatistics() {
+    return appWriteProvider.getClinicArchiveStatistics();
+  }
+
   // ============= CLINIC PROFILE PICTURE REPOSITORY METHODS =============
 
   /// Upload clinic profile picture
@@ -1624,34 +1724,34 @@ class AuthRepository {
   }
 
   Future<models.File> uploadUserProfilePicture(dynamic image) {
-  return appWriteProvider.uploadUserProfilePicture(image);
-}
+    return appWriteProvider.uploadUserProfilePicture(image);
+  }
 
-/// Delete user profile picture
-Future<void> deleteUserProfilePicture(String fileId) {
-  return appWriteProvider.deleteUserProfilePicture(fileId);
-}
+  /// Delete user profile picture
+  Future<void> deleteUserProfilePicture(String fileId) {
+    return appWriteProvider.deleteUserProfilePicture(fileId);
+  }
 
-/// Get user profile picture URL
-String getUserProfilePictureUrl(String profilePictureId) {
-  return appWriteProvider.getUserProfilePictureUrl(profilePictureId);
-}
+  /// Get user profile picture URL
+  String getUserProfilePictureUrl(String profilePictureId) {
+    return appWriteProvider.getUserProfilePictureUrl(profilePictureId);
+  }
 
-/// Update user profile picture (with automatic old picture deletion)
-Future<String> updateUserProfilePicture(
-  String userDocumentId,
-  String? oldProfilePictureId,
-  dynamic newImage,
-) {
-  return appWriteProvider.updateUserProfilePicture(
-    userDocumentId,
-    oldProfilePictureId,
-    newImage,
-  );
-}
+  /// Update user profile picture (with automatic old picture deletion)
+  Future<String> updateUserProfilePicture(
+    String userDocumentId,
+    String? oldProfilePictureId,
+    dynamic newImage,
+  ) {
+    return appWriteProvider.updateUserProfilePicture(
+      userDocumentId,
+      oldProfilePictureId,
+      newImage,
+    );
+  }
 
-/// Get user with profile picture URL
-Future<Map<String, dynamic>?> getUserWithProfilePicture(String userId) {
-  return appWriteProvider.getUserWithProfilePicture(userId);
-}
+  /// Get user with profile picture URL
+  Future<Map<String, dynamic>?> getUserWithProfilePicture(String userId) {
+    return appWriteProvider.getUserWithProfilePicture(userId);
+  }
 }

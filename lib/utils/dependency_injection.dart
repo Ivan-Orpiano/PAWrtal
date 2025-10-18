@@ -9,7 +9,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/services/archive_service.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/services/user_archive_service.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/services/clinic_archive_service.dart';
 
 Future<void> initializeDependencies() async {
   await GetStorage.init();
@@ -25,6 +26,12 @@ Future<void> initializeDependencies() async {
     permanent: true,
   );
   print('>>> ✓ Archive Service initialized and running');
+
+Get.put(
+  ClinicArchiveService(Get.find<AuthRepository>()),
+  permanent: true,
+);
+print('>>> ✓ Clinic Archive Service initialized and running');
 
   Get.put(DashboardController());
   Get.put(MessagingController());
