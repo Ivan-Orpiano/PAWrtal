@@ -202,6 +202,12 @@ class WebLoginPage extends GetView<WebLoginController> {
                                           keyboardType: TextInputType.text,
                                           maxLength:
                                               50, // Hard limit: 50 characters
+                                              onFieldSubmitted: (_) {
+                                                if (!controller.isLoading.value &&
+                                                    !controller.isGoogleLoading.value) {
+                                                  controller.signIn();
+                                                }
+                                              },
                                           decoration: InputDecoration(
                                             prefixIcon: const Icon(
                                                 Icons.person_rounded),
@@ -230,43 +236,35 @@ class WebLoginPage extends GetView<WebLoginController> {
                                       SizedBox(
                                         width: fieldWidth,
                                         child: Obx(() => TextFormField(
-                                              controller:
-                                                  controller.passwordController,
-                                              obscureText: !controller
-                                                  .isPasswordVisible.value,
-                                              maxLength:
-                                                  50, // Hard limit: 50 characters
+                                              controller: controller.passwordController,
+                                              obscureText: !controller.isPasswordVisible.value,
+                                              maxLength: 50,
+                                              onFieldSubmitted: (_) {
+                                                if (!controller.isLoading.value &&
+                                                    !controller.isGoogleLoading.value) {
+                                                  controller.signIn();
+                                                }
+                                              },
                                               decoration: InputDecoration(
-                                                prefixIcon: const Icon(
-                                                    Icons.lock_rounded),
+                                                prefixIcon: const Icon(Icons.lock_rounded),
                                                 suffixIcon: IconButton(
                                                   icon: Icon(
-                                                    controller.isPasswordVisible
-                                                            .value
+                                                    controller.isPasswordVisible.value
                                                         ? Icons.visibility
                                                         : Icons.visibility_off,
                                                   ),
-                                                  onPressed: controller
-                                                      .togglePasswordVisibility,
+                                                  onPressed: controller.togglePasswordVisibility,
                                                 ),
                                                 hintText: "Password",
                                                 border: OutlineInputBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20)),
-                                                counterText:
-                                                    "", // Hide character counter
+                                                    borderRadius: BorderRadius.circular(20)),
+                                                counterText: "",
                                               ),
                                               onChanged: (value) {
-                                                // Clear error when user starts typing
-                                                if (controller.errorMessage
-                                                    .value.isNotEmpty) {
-                                                  controller
-                                                      .errorMessage.value = '';
+                                                if (controller.errorMessage.value.isNotEmpty) {
+                                                  controller.errorMessage.value = '';
                                                 }
                                               },
-                                              // validator:
-                                              //     controller.validatePassword,
                                             )),
                                       ),
 
