@@ -1,4 +1,3 @@
-import 'package:capstone_app/notifications/components/user_notification_panel.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_profile_icon.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_appointment_panel.dart';
@@ -372,10 +371,10 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                             child: WebSearchBar(width: 380),
                           ),
                           const Spacer(flex: 1),
-                          const UserNotificationButton(
-                            right: 125,
+                          WebNotificationIcon(
+                            right: notifRight,
                             top: 70,
-                            width: 450,
+                            width: 500,
                           ),
                           WebProfileIcon(
                             right: iconRight,

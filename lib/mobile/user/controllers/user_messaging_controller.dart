@@ -3,7 +3,6 @@ import 'package:appwrite/appwrite.dart' as models;
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
-import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -277,10 +276,8 @@ class MessagingController extends GetxController {
         attachmentUrl: attachmentUrl,
       );
 
-      // CRITICAL FIX: Create notification for ADMIN about new message from user
-      await _createMessageNotificationForAdmin(sentMessage, messageText);
-
-      // Update conversation in local list
+      // Update conversation in local list - user sent message so their unread count stays 0
+      // The clinic's unread count will be incremented by the server
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
@@ -303,59 +300,6 @@ class MessagingController extends GetxController {
     } finally {
       isSendingMessage.value = false;
     }
-  }
-
-  Future<void> _createMessageNotificationForAdmin(
-      Message message, String messageText) async {
-    try {
-      if (currentConversation.value == null) return;
-
-      // Get user name for the notification
-      final userName =
-          _userSession.userName.isNotEmpty ? _userSession.userName : 'User';
-
-      // Create notification for the admin/clinic
-      final notification = NotificationModel(
-        recipientId: currentConversation.value!.clinicId, // Clinic as recipient
-        recipientType: 'admin',
-        type: NotificationType.newMessage,
-        priority: NotificationPriority.normal,
-        title: 'New Message',
-        message:
-            '$userName: ${messageText.length > 50 ? "${messageText.substring(0, 50)}..." : messageText}',
-        conversationId: currentConversation.value!.documentId,
-        messageId: message.documentId,
-        userId: _userSession.userId,
-        actionUrl:
-            '/messages?conversation=${currentConversation.value!.documentId}',
-        data: {
-          'senderName': userName,
-          'messagePreview': messageText.length > 50
-              ? '${messageText.substring(0, 50)}...'
-              : messageText,
-        },
-      );
-
-      await _authRepository.createNotification(notification);
-      print('>>> Created message notification for admin from user: $userName');
-    } catch (e) {
-      print('>>> Error creating message notification for admin: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> _getUserData(String userId) async {
-    try {
-      final userDoc = await _authRepository.getUserById(userId);
-      if (userDoc != null) {
-        return {
-          'name': userDoc.data['name'] ?? 'Unknown User',
-          'email': userDoc.data['email'] ?? '',
-        };
-      }
-    } catch (e) {
-      print('Error getting user data: $e');
-    }
-    return {'name': 'Unknown User', 'email': ''};
   }
 
 // Helper method to check if conversation has unread messages for current user
@@ -539,6 +483,7 @@ class MessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
+          // More robust duplicate check
           final existingIndex = currentMessages.indexWhere((m) =>
               m.documentId == messageWithId.documentId ||
               (m.messageText == messageWithId.messageText &&
@@ -552,26 +497,16 @@ class MessagingController extends GetxController {
           if (existingIndex == -1) {
             currentMessages.add(messageWithId);
 
+            // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
 
-            // CRITICAL FIX: Handle incoming message from clinic
-            if (messageWithId.senderType == 'admin' &&
-                messageWithId.receiverId == _userSession.userId) {
-              print('>>> New message from clinic received');
-
-              // If user is NOT viewing this conversation, the notification
-              // will already be created by the backend. Just mark as read if viewing.
-              if (currentConversation.value?.documentId == conversationId) {
-                markConversationAsRead(conversationId);
-              } else {
-                // User is not viewing this conversation - notification already created
-                print(
-                    '>>> User not viewing conversation - notification will be shown');
-              }
-            } else if (messageWithId.senderId == _userSession.userId) {
-              // User sent this message - mark as read immediately
+            // If this is a message TO the current user and they're viewing the conversation,
+            // mark it as read immediately (but don't mark their own messages as read)
+            if (messageWithId.receiverId == _userSession.userId &&
+                messageWithId.senderId != _userSession.userId &&
+                currentConversation.value?.documentId == conversationId) {
               markConversationAsRead(conversationId);
             }
           }
