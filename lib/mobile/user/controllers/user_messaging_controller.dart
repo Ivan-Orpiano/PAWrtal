@@ -539,7 +539,6 @@ class MessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
-          // More robust duplicate check
           final existingIndex = currentMessages.indexWhere((m) =>
               m.documentId == messageWithId.documentId ||
               (m.messageText == messageWithId.messageText &&
@@ -553,16 +552,26 @@ class MessagingController extends GetxController {
           if (existingIndex == -1) {
             currentMessages.add(messageWithId);
 
-            // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
 
-            // If this is a message TO the current user and they're viewing the conversation,
-            // mark it as read immediately (but don't mark their own messages as read)
-            if (messageWithId.receiverId == _userSession.userId &&
-                messageWithId.senderId != _userSession.userId &&
-                currentConversation.value?.documentId == conversationId) {
+            // CRITICAL FIX: Handle incoming message from clinic
+            if (messageWithId.senderType == 'admin' &&
+                messageWithId.receiverId == _userSession.userId) {
+              print('>>> New message from clinic received');
+
+              // If user is NOT viewing this conversation, the notification
+              // will already be created by the backend. Just mark as read if viewing.
+              if (currentConversation.value?.documentId == conversationId) {
+                markConversationAsRead(conversationId);
+              } else {
+                // User is not viewing this conversation - notification already created
+                print(
+                    '>>> User not viewing conversation - notification will be shown');
+              }
+            } else if (messageWithId.senderId == _userSession.userId) {
+              // User sent this message - mark as read immediately
               markConversationAsRead(conversationId);
             }
           }
