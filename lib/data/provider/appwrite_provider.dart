@@ -3997,33 +3997,35 @@ class AppWriteProvider {
     }
   }
 
-  /// Get all archived users (for admin dashboard)
-  Future<List<Document>> getAllArchivedUsers({
-    bool includePermanentlyDeleted = false,
-    int limit = 100,
-  }) async {
-    try {
-      List<String> queries = [
-        Query.orderDesc('archivedAt'),
-        Query.limit(limit),
-      ];
+ /// Get all archived users (for admin dashboard)
+    Future<List<Document>> getAllArchivedUsers({
+      bool includePermanentlyDeleted = false,
+      int limit = 100,
+    }) async {
+      try {
+        List<String> queries = [
+          Query.orderDesc('archivedAt'),
+          Query.limit(limit),
+          // Don't show recovered users (they should be deleted, but just in case)
+          Query.equal('isRecovered', false),
+        ];
 
-      if (!includePermanentlyDeleted) {
-        queries.add(Query.equal('isPermanentlyDeleted', false));
+        if (!includePermanentlyDeleted) {
+          queries.add(Query.equal('isPermanentlyDeleted', false));
+        }
+
+        final result = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.archivedUsersCollectionID,
+          queries: queries,
+        );
+
+        return result.documents;
+      } catch (e) {
+        print('Error getting archived users: $e');
+        return [];
       }
-
-      final result = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.archivedUsersCollectionID,
-        queries: queries,
-      );
-
-      return result.documents;
-    } catch (e) {
-      print('Error getting archived users: $e');
-      return [];
     }
-  }
 
   /// Get users due for permanent deletion
   Future<List<Document>> getUsersDueForDeletion() async {
@@ -4234,172 +4236,160 @@ class AppWriteProvider {
   }
 
   /// Recover archived user (restore within 30 days)
-  Future<Map<String, dynamic>> recoverArchivedUser({
-    required String userId,
-    required String recoveredBy,
-  }) async {
-    try {
-      print('>>> ============================================');
-      print('>>> RECOVERING ARCHIVED USER');
-      print('>>> User ID: $userId');
-      print('>>> ============================================');
+/// Recover archived user (restore within 30 days)
+Future<Map<String, dynamic>> recoverArchivedUser({
+  required String userId,
+  required String recoveredBy,
+}) async {
+  try {
+    print('>>> ============================================');
+    print('>>> RECOVERING ARCHIVED USER');
+    print('>>> User ID: $userId');
+    print('>>> ============================================');
 
-      // Get archived record
-      final archivedDoc = await getArchivedUserByUserId(userId);
-      if (archivedDoc == null) {
-        return {
-          'success': false,
-          'error': 'Archived user not found',
-        };
-      }
-
-      // Check if already permanently deleted
-      if (archivedDoc.data['isPermanentlyDeleted'] == true) {
-        return {
-          'success': false,
-          'error': 'User has been permanently deleted and cannot be recovered',
-        };
-      }
-
-      final originalDocId = archivedDoc.data['originalDocumentId'];
-
-      // Parse the original user data from JSON string
-      final originalUserDataString =
-          archivedDoc.data['originalUserData'] as String?;
-
-      if (originalUserDataString == null || originalUserDataString.isEmpty) {
-        return {
-          'success': false,
-          'error': 'Original user data not found in archive',
-        };
-      }
-
-      print('>>> Step 1: Parsing original user data...');
-
-      Map<String, dynamic> originalUserData;
-      try {
-        originalUserData =
-            Map<String, dynamic>.from(jsonDecode(originalUserDataString));
-        print('>>> Original user data parsed successfully');
-      } catch (e) {
-        print('>>> ERROR parsing original user data: $e');
-        return {
-          'success': false,
-          'error': 'Failed to parse original user data',
-        };
-      }
-
-      print('>>> Step 2: Recreating user document in Users collection...');
-
-      // Recreate the user document with original data
-      final restoredUserData = {
-        'userId': originalUserData['userId'] ?? userId,
-        'name': originalUserData['name'] ?? '',
-        'email': originalUserData['email'] ?? '',
-        'role': originalUserData['role'] ?? 'user',
-        'phone': originalUserData['phone'] ?? '',
-        'idVerified': originalUserData['idVerified'] ?? false,
-        'idVerifiedAt': originalUserData['idVerifiedAt'],
-        // Ensure no archive flags
-        'isArchived': false,
+    // Step 1: Get archived record
+    final archivedDoc = await getArchivedUserByUserId(userId);
+    if (archivedDoc == null) {
+      return {
+        'success': false,
+        'error': 'Archived user not found',
       };
+    }
 
-      // Try to create new user document with same ID
-      Document restoredDoc;
-      try {
-        restoredDoc = await databases!.createDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.usersCollectionID,
-          documentId: originalDocId, // Use original document ID
-          data: restoredUserData,
-        );
-        print('>>> Step 2: User document recreated: ${restoredDoc.$id}');
-      } catch (e) {
-        // If document already exists, it might have been recovered already
-        if (e.toString().contains('already exists') ||
-            e.toString().contains('unique')) {
-          print('>>> Document already exists, checking if it was recovered...');
+    // Check if already permanently deleted
+    if (archivedDoc.data['isPermanentlyDeleted'] == true) {
+      return {
+        'success': false,
+        'error': 'User has been permanently deleted and cannot be recovered',
+      };
+    }
 
-          // Try to get the existing document
-          try {
-            final existingDoc = await databases!.getDocument(
-              databaseId: AppwriteConstants.dbID,
-              collectionId: AppwriteConstants.usersCollectionID,
-              documentId: originalDocId,
-            );
+    final originalDocId = archivedDoc.data['originalDocumentId'];
+    final archivedDocId = archivedDoc.$id; // Save this for later deletion
+    
+    // Parse the original user data from JSON string
+    final originalUserDataString = archivedDoc.data['originalUserData'] as String?;
+    
+    if (originalUserDataString == null || originalUserDataString.isEmpty) {
+      return {
+        'success': false,
+        'error': 'Original user data not found in archive',
+      };
+    }
 
-            // Document exists, just mark archive as recovered
-            print(
-                '>>> User document already exists, updating archive record...');
-            await databases!.updateDocument(
-              databaseId: AppwriteConstants.dbID,
-              collectionId: AppwriteConstants.archivedUsersCollectionID,
-              documentId: archivedDoc.$id,
-              data: {
-                'isRecovered': true,
-                'recoveredAt': DateTime.now().toIso8601String(),
-                'recoveredBy': recoveredBy,
-              },
-            );
+    print('>>> Step 1: Parsing original user data...');
+    
+    Map<String, dynamic> originalUserData;
+    try {
+      originalUserData = Map<String, dynamic>.from(jsonDecode(originalUserDataString));
+      print('>>> Original user data parsed successfully');
+    } catch (e) {
+      print('>>> ERROR parsing original user data: $e');
+      return {
+        'success': false,
+        'error': 'Failed to parse original user data',
+      };
+    }
 
-            return {
-              'success': true,
-              'message': 'User was already recovered, archive record updated',
-              'restoredDocumentId': existingDoc.$id,
-            };
-          } catch (getError) {
-            print('>>> Error checking existing document: $getError');
-          }
+    print('>>> Step 2: Recreating user document in Users collection...');
+    
+    // Recreate the user document with original data
+    final restoredUserData = {
+      'userId': originalUserData['userId'] ?? userId,
+      'name': originalUserData['name'] ?? '',
+      'email': originalUserData['email'] ?? '',
+      'role': originalUserData['role'] ?? 'user',
+      'phone': originalUserData['phone'] ?? '',
+      'idVerified': originalUserData['idVerified'] ?? false,
+      'idVerifiedAt': originalUserData['idVerifiedAt'],
+      // Ensure no archive flags - user is fully active
+      'isArchived': false,
+      // Clear any archive-related fields
+      'archivedAt': null,
+      'archivedBy': null,
+      'archiveReason': null,
+      'archivedDocumentId': null,
+    };
+
+    // Try to create new user document with same ID
+    Document restoredDoc;
+    try {
+      restoredDoc = await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        documentId: originalDocId, // Use original document ID
+        data: restoredUserData,
+      );
+      print('>>> Step 2: User document recreated: ${restoredDoc.$id}');
+    } catch (e) {
+      // If document already exists, update it instead
+      if (e.toString().contains('already exists') || 
+          e.toString().contains('unique')) {
+        print('>>> Document already exists, updating instead...');
+        
+        try {
+          restoredDoc = await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.usersCollectionID,
+            documentId: originalDocId,
+            data: restoredUserData,
+          );
+          print('>>> Step 2: User document updated: ${restoredDoc.$id}');
+        } catch (updateError) {
+          print('>>> ERROR updating existing document: $updateError');
+          return {
+            'success': false,
+            'error': 'Failed to update existing user document: ${updateError.toString()}',
+          };
         }
-
+      } else {
         print('>>> ERROR creating user document: $e');
         return {
           'success': false,
           'error': 'Failed to recreate user document: ${e.toString()}',
         };
       }
-
-      // Step 3: Update archived record to mark as recovered
-      print('>>> Step 3: Updating archived record...');
-      try {
-        await databases!.updateDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.archivedUsersCollectionID,
-          documentId: archivedDoc.$id,
-          data: {
-            'isRecovered': true,
-            'recoveredAt': DateTime.now().toIso8601String(),
-            'recoveredBy': recoveredBy,
-          },
-        );
-        print('>>> Step 3: Archive record updated');
-      } catch (e) {
-        print('>>> WARNING: Failed to update archive record: $e');
-        // Don't fail the recovery if this fails
-      }
-
-      print('>>> ============================================');
-      print('>>> USER RECOVERED SUCCESSFULLY');
-      print('>>> Restored document ID: ${restoredDoc.$id}');
-      print('>>> ============================================');
-
-      return {
-        'success': true,
-        'message': 'User recovered successfully',
-        'restoredDocumentId': restoredDoc.$id,
-      };
-    } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR RECOVERING USER: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
-
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
     }
+
+    // Step 3: DELETE the archived record completely (not just mark as recovered)
+    print('>>> Step 3: DELETING archived record from ArchivedUsers collection...');
+    try {
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.archivedUsersCollectionID,
+        documentId: archivedDocId,
+      );
+      print('>>> Step 3: Archived record DELETED completely');
+    } catch (e) {
+      print('>>> ERROR deleting archive record: $e');
+      // This is critical - if we can't delete the archive, the recovery is incomplete
+      // But the user document is already restored, so we continue
+      print('>>> WARNING: User was restored but archive record could not be deleted');
+    }
+
+    print('>>> ============================================');
+    print('>>> USER RECOVERED SUCCESSFULLY');
+    print('>>> Restored document ID: ${restoredDoc.$id}');
+    print('>>> Archive record deleted: $archivedDocId');
+    print('>>> ============================================');
+
+    return {
+      'success': true,
+      'message': 'User recovered successfully and removed from archive',
+      'restoredDocumentId': restoredDoc.$id,
+    };
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> ERROR RECOVERING USER: $e');
+    print('>>> Stack trace: ${StackTrace.current}');
+    print('>>> ============================================');
+    
+    return {
+      'success': false,
+      'error': e.toString(),
+    };
   }
+}
 
   /// Background job to check and permanently delete users (should be called periodically)
   Future<Map<String, dynamic>> processScheduledDeletions() async {
@@ -4471,56 +4461,61 @@ class AppWriteProvider {
     ]).stream;
   }
 
-  /// Get archive statistics
-  Future<Map<String, int>> getArchiveStatistics() async {
-    try {
-      final allArchived = await getAllArchivedUsers(
-        includePermanentlyDeleted: true,
-        limit: 1000,
-      );
+    /// Get archive statistics
+    Future<Map<String, int>> getArchiveStatistics() async {
+      try {
+        final allArchived = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.archivedUsersCollectionID,
+          queries: [
+            Query.limit(1000),
+          ],
+        );
 
-      int activeArchives = 0;
-      int recovered = 0;
-      int permanentlyDeleted = 0;
-      int dueSoon = 0; // Due within 7 days
+        int activeArchives = 0;
+        int permanentlyDeleted = 0;
+        int dueSoon = 0; // Due within 7 days
 
-      final now = DateTime.now();
-      final sevenDaysFromNow = now.add(const Duration(days: 7));
+        final now = DateTime.now();
+        final sevenDaysFromNow = now.add(const Duration(days: 7));
 
-      for (var doc in allArchived) {
-        if (doc.data['isPermanentlyDeleted'] == true) {
-          permanentlyDeleted++;
-        } else if (doc.data['isRecovered'] == true) {
-          recovered++;
-        } else {
-          activeArchives++;
+        for (var doc in allArchived.documents) {
+          // Skip recovered users (they should be deleted, but just in case)
+          if (doc.data['isRecovered'] == true) {
+            continue;
+          }
 
-          final scheduledDeletion =
-              DateTime.parse(doc.data['scheduledDeletionAt']);
-          if (scheduledDeletion.isBefore(sevenDaysFromNow)) {
-            dueSoon++;
+          if (doc.data['isPermanentlyDeleted'] == true) {
+            permanentlyDeleted++;
+          } else {
+            activeArchives++;
+            
+            final scheduledDeletion = 
+                DateTime.parse(doc.data['scheduledDeletionAt']);
+            if (scheduledDeletion.isBefore(sevenDaysFromNow)) {
+              dueSoon++;
+            }
           }
         }
-      }
 
-      return {
-        'total': allArchived.length,
-        'activeArchives': activeArchives,
-        'recovered': recovered,
-        'permanentlyDeleted': permanentlyDeleted,
-        'dueSoon': dueSoon,
-      };
-    } catch (e) {
-      print('Error getting archive statistics: $e');
-      return {
-        'total': 0,
-        'activeArchives': 0,
-        'recovered': 0,
-        'permanentlyDeleted': 0,
-        'dueSoon': 0,
-      };
+        return {
+          'total': activeArchives + permanentlyDeleted, // Don't count recovered
+          'activeArchives': activeArchives,
+          'recovered': 0, // Always 0 since they're deleted
+          'permanentlyDeleted': permanentlyDeleted,
+          'dueSoon': dueSoon,
+        };
+      } catch (e) {
+        print('Error getting archive statistics: $e');
+        return {
+          'total': 0,
+          'activeArchives': 0,
+          'recovered': 0,
+          'permanentlyDeleted': 0,
+          'dueSoon': 0,
+        };
+      }
     }
-  }
 Future<models.File> uploadUserProfilePicture(dynamic image) async {
   try {
     print('>>> Uploading user profile picture...');
