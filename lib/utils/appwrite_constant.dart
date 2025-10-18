@@ -20,6 +20,7 @@ class AppwriteConstants {
   static String feedbackAndReportCollectionID = "feedbackandreport";
   static String feedbackAttachmentsBucketID = "67ef83bd0022c1e63789";
   static String archivedUsersCollectionID = "archiveduser";
+  static String archivedClinicsCollectionID = "archivedclinic";
 
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID !=

@@ -1,34 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/data/models/archived_user_model.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/services/user_archive_service.dart';
+import 'package:capstone_app/data/models/archived_clinic_model.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/services/clinic_archive_service.dart';
 import 'package:intl/intl.dart';
 import 'package:appwrite/appwrite.dart';
 
-/// Super Admin Dashboard for Archived Users
-class ArchivedUsersDashboard extends StatefulWidget {
-  const ArchivedUsersDashboard({Key? key}) : super(key: key);
+/// Super Admin Dashboard for Archived Clinics
+class ArchivedClinicsDashboard extends StatefulWidget {
+  const ArchivedClinicsDashboard({Key? key}) : super(key: key);
 
   @override
-  State<ArchivedUsersDashboard> createState() => _ArchivedUsersDashboardState();
+  State<ArchivedClinicsDashboard> createState() => _ArchivedClinicsDashboardState();
 }
 
-class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
+class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
-  final ArchiveService _archiveService = Get.find<ArchiveService>();
+  final ClinicArchiveService _archiveService = Get.find<ClinicArchiveService>();
 
-  List<ArchivedUser> _archivedUsers = [];
+  List<ArchivedClinic> _archivedClinics = [];
   Map<String, int> _stats = {};
   bool _isLoading = true;
   String _searchQuery = '';
   String _filterStatus = 'active'; // active, recovered, deleted, all
-  String _selectedSort = 'newest'; // 'newest', 'oldest', 'alphabetical'
+  String _selectedSort = 'newest'; // newest, oldest, alphabetical
 
-  // Real-time subscription
   RealtimeSubscription? _archiveSubscription;
 
-  // Colors - UPDATED PALETTE
+  // Colors
   static const Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
   static const Color primaryColor = Color.fromRGBO(81, 115, 153, 1);
   static const Color accentTeal = Color(0xFF5B9BD5);
@@ -40,7 +39,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
   @override
   void initState() {
     super.initState();
-    _loadArchivedUsers();
+    _loadArchivedClinics();
     _loadStats();
     _setupRealtimeSubscription();
   }
@@ -51,21 +50,21 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     super.dispose();
   }
 
-  Future<void> _loadArchivedUsers() async {
+  Future<void> _loadArchivedClinics() async {
     setState(() => _isLoading = true);
 
     try {
-      final users = await _authRepository.getAllArchivedUsers(
+      final clinics = await _authRepository.getAllArchivedClinics(
         includePermanentlyDeleted: _filterStatus == 'all' || _filterStatus == 'deleted',
         limit: 500,
       );
 
       setState(() {
-        _archivedUsers = users;
+        _archivedClinics = clinics;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading archived users: $e');
+      print('Error loading archived clinics: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -81,13 +80,12 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
 
   void _setupRealtimeSubscription() {
     try {
-      final subscription = _authRepository.subscribeToArchivedUsers();
-
+      final subscription = _authRepository.subscribeToArchivedClinics();
       _archiveSubscription = subscription as RealtimeSubscription?;
 
       subscription.listen((event) {
-        print('>>> Archive real-time event received');
-        _loadArchivedUsers();
+        print('>>> Clinic archive real-time event received');
+        _loadArchivedClinics();
         _loadStats();
       });
     } catch (e) {
@@ -95,18 +93,18 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     }
   }
 
-  List<ArchivedUser> get _filteredUsers {
-    var filtered = _archivedUsers.where((user) {
+  List<ArchivedClinic> get _filteredClinics {
+    var filtered = _archivedClinics.where((clinic) {
       // Filter by status
       switch (_filterStatus) {
         case 'active':
-          if (user.isPermanentlyDeleted || user.isRecovered) return false;
+          if (clinic.isPermanentlyDeleted || clinic.isRecovered) return false;
           break;
         case 'recovered':
-          if (!user.isRecovered) return false;
+          if (!clinic.isRecovered) return false;
           break;
         case 'deleted':
-          if (!user.isPermanentlyDeleted) return false;
+          if (!clinic.isPermanentlyDeleted) return false;
           break;
         case 'all':
           break;
@@ -115,9 +113,9 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       // Filter by search query
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        return user.name.toLowerCase().contains(query) ||
-            user.email.toLowerCase().contains(query) ||
-            (user.phone?.toLowerCase().contains(query) ?? false);
+        return clinic.clinicName.toLowerCase().contains(query) ||
+            clinic.email.toLowerCase().contains(query) ||
+            clinic.address.toLowerCase().contains(query);
       }
 
       return true;
@@ -126,7 +124,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     // Apply sorting
     switch (_selectedSort) {
       case 'alphabetical':
-        filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        filtered.sort((a, b) => a.clinicName.toLowerCase().compareTo(b.clinicName.toLowerCase()));
         break;
       case 'oldest':
         filtered.sort((a, b) => a.scheduledDeletionAt.compareTo(b.scheduledDeletionAt));
@@ -179,7 +177,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                 ),
                 const SizedBox(width: 12),
                 const Text(
-                  'Sort Archived Users',
+                  'Sort Archived Clinics',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -191,7 +189,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             const SizedBox(height: 24),
             _buildSortOption(
               'Newest First',
-              'Recently archived users',
+              'Recently archived clinics',
               Icons.arrow_downward_rounded,
               'newest',
               [successGreen, accentTeal],
@@ -199,7 +197,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             const SizedBox(height: 12),
             _buildSortOption(
               'Oldest First',
-              'Users due for deletion soon',
+              'Clinics due for deletion soon',
               Icons.arrow_upward_rounded,
               'oldest',
               [warningOrange, primaryColor],
@@ -207,7 +205,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             const SizedBox(height: 12),
             _buildSortOption(
               'Alphabetical (A-Z)',
-              'Sort by user name',
+              'Sort by clinic name',
               Icons.sort_by_alpha_rounded,
               'alphabetical',
               [primaryColor, darkBlue],
@@ -292,12 +290,12 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     );
   }
 
-  Future<void> _recoverUser(ArchivedUser user) async {
+  Future<void> _recoverClinic(ArchivedClinic clinic) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Recover User'),
-        content: Text('Are you sure you want to recover ${user.name}?'),
+        title: const Text('Recover Clinic'),
+        content: Text('Are you sure you want to recover ${clinic.clinicName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -316,19 +314,19 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
 
     try {
       final currentUser = await _authRepository.getUser();
-      final result = await _authRepository.recoverArchivedUser(
-        userId: user.userId,
+      final result = await _authRepository.recoverArchivedClinic(
+        clinicId: clinic.clinicId,
         recoveredBy: currentUser?.name ?? 'Super Admin',
       );
 
       if (result['success'] == true) {
         Get.snackbar(
           'Success',
-          '${user.name} has been recovered successfully',
+          '${clinic.clinicName} has been recovered successfully',
           backgroundColor: successGreen,
           colorText: Colors.white,
         );
-        _loadArchivedUsers();
+        _loadArchivedClinics();
         _loadStats();
       } else {
         throw Exception(result['error']);
@@ -336,7 +334,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to recover user: $e',
+        'Failed to recover clinic: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -349,7 +347,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       builder: (context) => AlertDialog(
         title: const Text('Process Scheduled Deletions'),
         content: const Text(
-          'This will permanently delete all users whose 30-day period has expired. This action cannot be undone. Continue?',
+          'This will permanently delete all clinics whose 30-day period has expired. This action cannot be undone. Continue?',
         ),
         actions: [
           TextButton(
@@ -389,7 +387,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
 
       final result = await _archiveService.processNow();
 
-      Get.back(); // Close loading dialog
+      Get.back();
 
       Get.dialog(
         AlertDialog(
@@ -398,7 +396,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Users processed: ${result['processed']}'),
+              Text('Clinics processed: ${result['processed']}'),
               if (result['errors'] != null && (result['errors'] as List).isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -417,10 +415,10 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
         ),
       );
 
-      _loadArchivedUsers();
+      _loadArchivedClinics();
       _loadStats();
     } catch (e) {
-      Get.back(); // Close loading dialog
+      Get.back();
       Get.snackbar(
         'Error',
         'Failed to process deletions: $e',
@@ -456,7 +454,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             ),
             const SizedBox(width: 12),
             const Text(
-              'Archived Users',
+              'Archived Clinics',
               style: TextStyle(
                 color: primaryColor,
                 fontWeight: FontWeight.bold,
@@ -469,7 +467,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
           IconButton(
             icon: const Icon(Icons.refresh, color: primaryColor),
             onPressed: () {
-              _loadArchivedUsers();
+              _loadArchivedClinics();
               _loadStats();
             },
             tooltip: 'Refresh',
@@ -484,26 +482,20 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       ),
       body: Column(
         children: [
-          // Stats Section - UPDATED DESIGN
           _buildStatsSection(),
-
-          // Search and Filter - UPDATED WITH SORT BUTTON
           _buildSearchAndFilter(),
-
-          // User List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                : _filteredUsers.isEmpty
+                : _filteredClinics.isEmpty
                     ? _buildEmptyState()
-                    : _buildUserList(),
+                    : _buildClinicList(),
           ),
         ],
       ),
     );
   }
 
-  // UPDATED: Stats Section with new color scheme
   Widget _buildStatsSection() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -603,7 +595,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     );
   }
 
-  // UPDATED: Stat Item with gradient
   Widget _buildStatItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
@@ -639,13 +630,11 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     );
   }
 
-  // UPDATED: Search and Filter with Sort button
   Widget _buildSearchAndFilter() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          // Search Bar with Sort Button
           Row(
             children: [
               Expanded(
@@ -667,7 +656,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                   child: TextField(
                     onChanged: (value) => setState(() => _searchQuery = value),
                     decoration: InputDecoration(
-                      hintText: 'Search by name, email, or phone...',
+                      hintText: 'Search by name, email, or address...',
                       hintStyle: TextStyle(color: Colors.grey[400]),
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(8),
@@ -723,8 +712,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             ],
           ),
           const SizedBox(height: 12),
-
-          // Filter Chips and Sort Info
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -794,7 +781,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
         onSelected: (selected) {
           if (selected) {
             setState(() => _filterStatus = value);
-            _loadArchivedUsers();
+            _loadArchivedClinics();
           }
         },
         backgroundColor: Colors.white,
@@ -820,7 +807,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No archived users found',
+            'No archived clinics found',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -829,7 +816,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Archived users will appear here',
+            'Archived clinics will appear here',
             style: TextStyle(
               fontSize: 14,
               color: primaryColor.withOpacity(0.5),
@@ -840,26 +827,25 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     );
   }
 
-  Widget _buildUserList() {
+  Widget _buildClinicList() {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredUsers.length,
+      itemCount: _filteredClinics.length,
       itemBuilder: (context, index) {
-        return _buildUserCard(_filteredUsers[index]);
+        return _buildClinicCard(_filteredClinics[index]);
       },
     );
   }
 
-  // UPDATED: User Card with improved colors
-  Widget _buildUserCard(ArchivedUser user) {
-    final daysLeft = user.daysUntilDeletion;
+  Widget _buildClinicCard(ArchivedClinic clinic) {
+    final daysLeft = clinic.daysUntilDeletion;
     final isDueSoon = daysLeft <= 7 && daysLeft > 0;
-    final isDueNow = user.isDeletionDue;
+    final isDueNow = clinic.isDeletionDue;
 
     Color statusColor;
-    if (user.isPermanentlyDeleted) {
+    if (clinic.isPermanentlyDeleted) {
       statusColor = Colors.grey;
-    } else if (user.isRecovered) {
+    } else if (clinic.isRecovered) {
       statusColor = successGreen;
     } else if (isDueNow) {
       statusColor = darkRed;
@@ -889,7 +875,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             children: [
               Row(
                 children: [
-                  // Avatar
                   Container(
                     width: 50,
                     height: 50,
@@ -907,25 +892,20 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       ],
                     ),
                     child: Center(
-                      child: Text(
-                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Icon(
+                        Icons.local_hospital,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
-
-                  // User Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user.name,
+                          clinic.clinicName,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -934,7 +914,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          user.email,
+                          clinic.email,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[600],
@@ -943,8 +923,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       ],
                     ),
                   ),
-
-                  // Status Badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -955,7 +933,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       border: Border.all(color: statusColor.withOpacity(0.3)),
                     ),
                     child: Text(
-                      user.statusText,
+                      clinic.statusText,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -965,29 +943,24 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                   ),
                 ],
               ),
-
               const Divider(height: 24),
-
-              // Details Section - UPDATED WITH NEW DESIGN
-              _buildDetailRow(Icons.person, 'Archived by', user.archivedBy),
+              _buildDetailRow(Icons.person, 'Archived by', clinic.archivedBy),
               const SizedBox(height: 8),
               _buildDetailRow(
                 Icons.calendar_today,
                 'Archived on',
-                _formatDateTime(user.archivedAt.toIso8601String()),
+                _formatDateTime(clinic.archivedAt.toIso8601String()),
               ),
               const SizedBox(height: 8),
               _buildDetailRow(
                 Icons.delete_forever,
                 'Scheduled deletion',
-                _formatDateTime(user.scheduledDeletionAt.toIso8601String()),
+                _formatDateTime(clinic.scheduledDeletionAt.toIso8601String()),
               ),
-              if (user.archiveReason.isNotEmpty && user.archiveReason != 'No reason provided') ...[
+              if (clinic.archiveReason.isNotEmpty && clinic.archiveReason != 'No reason provided') ...[
                 const SizedBox(height: 8),
-                _buildDetailRow(Icons.info_outline, 'Reason', user.archiveReason),
+                _buildDetailRow(Icons.info_outline, 'Reason', clinic.archiveReason),
               ],
-
-              // Warning Banner
               if (isDueSoon || isDueNow) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -1014,7 +987,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       Expanded(
                         child: Text(
                           isDueNow
-                              ? 'This user is due for permanent deletion'
+                              ? 'This clinic is due for permanent deletion'
                               : 'Will be permanently deleted in $daysLeft days',
                           style: TextStyle(
                             fontSize: 12,
@@ -1027,9 +1000,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                   ),
                 ),
               ],
-
-              // Actions
-              if (!user.isPermanentlyDeleted && !user.isRecovered) ...[
+              if (!clinic.isPermanentlyDeleted && !clinic.isRecovered) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -1048,10 +1019,10 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: () => _recoverUser(user),
+                      onPressed: () => _recoverClinic(clinic),
                       icon: const Icon(Icons.restore, size: 18, color: Colors.white),
                       label: const Text(
-                        'Recover User',
+                        'Recover Clinic',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -1073,7 +1044,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     );
   }
 
-  // UPDATED: Detail Row with new gradient design
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

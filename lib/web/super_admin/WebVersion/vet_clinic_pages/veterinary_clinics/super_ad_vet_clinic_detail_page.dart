@@ -567,7 +567,7 @@ class _SuperAdminVetClinicDetailPageState
             icon: isDeleting ? Icons.hourglass_empty : Icons.archive,
             label: isDeleting ? 'Archiving...' : 'Archive',
             subtitle: 'Archive Clinic',
-            color: Colors.red[700]!,
+            color: Colors.orange[700]!,
             onPressed: isDeleting
                 ? null
                 : () => _showDeleteConfirmation(context, clinic),
@@ -1136,69 +1136,7 @@ class _SuperAdminVetClinicDetailPageState
               },
             ),
           ),
-
-          const SizedBox(height: 24),
-
-          // Real-time sync status footer
-          // Container(
-          //   margin: const EdgeInsets.symmetric(horizontal: 20),
-          //   padding: const EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     gradient: LinearGradient(
-          //       colors: [
-          //         const Color(0xFF10B981).withOpacity(0.08),
-          //         const Color(0xFF10B981).withOpacity(0.04),
-          //       ],
-          //     ),
-          //     borderRadius: BorderRadius.circular(16),
-          //     border: Border.all(
-          //       color: const Color(0xFF10B981).withOpacity(0.2),
-          //       width: 1.5,
-          //     ),
-          //   ),
-          //   child: Row(
-          //     children: [
-          //       Container(
-          //         padding: const EdgeInsets.all(8),
-          //         decoration: BoxDecoration(
-          //           color: const Color(0xFF10B981).withOpacity(0.15),
-          //           shape: BoxShape.circle,
-          //         ),
-          //         child: const Icon(
-          //           Icons.cloud_done_rounded,
-          //           color: Color(0xFF10B981),
-          //           size: 18,
-          //         ),
-          //       ),
-          //       const SizedBox(width: 12),
-          //       Expanded(
-          //         child: Column(
-          //           crossAxisAlignment: CrossAxisAlignment.start,
-          //           children: [
-          //             const Text(
-          //               'Real-time Sync Active',
-          //               style: TextStyle(
-          //                 fontWeight: FontWeight.bold,
-          //                 fontSize: 13,
-          //                 color: Color(0xFF10B981),
-          //               ),
-          //             ),
-          //             Text(
-          //               'Gallery updates automatically from admin',
-          //               style: TextStyle(
-          //                 fontSize: 11,
-          //                 color: Colors.grey[600],
-          //                 fontWeight: FontWeight.w600,
-          //               ),
-          //             ),
-          //           ],
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
-
-          const SizedBox(height: 20),
+           const SizedBox(height: 20),
         ],
       ),
     );
@@ -1758,147 +1696,187 @@ class _SuperAdminVetClinicDetailPageState
     }
   }
 
-  void _showDeleteConfirmation(BuildContext context, Clinic clinic) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 28),
-            const SizedBox(width: 12),
-            const Text('Archive Clinic'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Are you sure you want to archive "${clinic.clinicName}"?',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          size: 18, color: Colors.red[700]),
-                      const SizedBox(width: 8),
-                      Text(
-                        'This will archive the following, including the:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('• All appointments'),
-                  const Text('• All medical records'),
-                  const Text('• All conversations'),
-                  const Text('• Staff accounts'),
-                  const Text('• Gallery images'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'All of these would be archived.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+ void _showDeleteConfirmation(BuildContext context, Clinic clinic) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Icon(Icons.archive_rounded, color: Colors.orange[700], size: 28),
+          const SizedBox(width: 12),
+          const Text('Archive Clinic'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Are you sure you want to archive "${clinic.clinicName}"?',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteClinic(clinic);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              foregroundColor: Colors.white,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange[200]!),
             ),
-            child: const Text('Archive'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 18, color: Colors.orange[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'This will archive the clinic and:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('• All appointments'),
+                const Text('• All medical records'),
+                const Text('• All conversations'),
+                const Text('• Staff accounts (deactivated)'),
+                const Text('• Gallery images'),
+                const SizedBox(height: 8),
+                Text(
+                  'The clinic will be PERMANENTLY DELETED in 30 days.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[700],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'You can recover it within 30 days from the Archived Clinics page.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange[700],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Future<void> _deleteClinic(Clinic clinic) async {
-    setState(() {
-      isDeleting = true;
-    });
-
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                color: Color.fromRGBO(81, 115, 153, 1),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Archiving clinic...',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
-      );
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _archiveClinic(clinic); // CHANGED FROM _deleteClinic
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange[700],
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Archive'),
+        ),
+      ],
+    ),
+  );
+}
 
-      final results = await authRepository.deleteClinicCompletely(
-        clinic.documentId ?? '',
-      );
+  Future<void> _archiveClinic(Clinic clinic) async {
+  setState(() {
+    isDeleting = true;
+  });
 
-      if (mounted) Navigator.pop(context);
+  try {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              color: Color.fromRGBO(81, 115, 153, 1),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Archiving clinic...',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
 
-      if (results['clinicDeleted'] == true) {
-        _showDeletionResults(results);
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      } else {
-        _showErrorSnackbar('Failed to archive clinic');
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      _showErrorSnackbar('Error: ${e.toString()}');
-    } finally {
+    // Get current admin info
+    final currentUser = await authRepository.getUser();
+    final adminName = currentUser?.name ?? 'Super Admin';
+
+    // Archive the clinic
+    final results = await authRepository.archiveClinic(
+      clinicId: clinic.documentId ?? '',
+      clinicDocumentId: clinic.documentId ?? '',
+      archivedBy: adminName,
+      archiveReason: 'Archived by super admin',
+    );
+
+    if (mounted) Navigator.pop(context);
+
+    if (results['success'] == true) {
       if (mounted) {
-        setState(() {
-          isDeleting = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.archive, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Clinic archived successfully. Will be permanently deleted in 30 days.',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange[700],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
+      
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } else {
+      _showErrorSnackbar('Failed to archive clinic: ${results['error']}');
+    }
+  } catch (e) {
+    if (mounted) Navigator.pop(context);
+    _showErrorSnackbar('Error: ${e.toString()}');
+  } finally {
+    if (mounted) {
+      setState(() {
+        isDeleting = false;
+      });
     }
   }
+}
 
   void _showDeletionResults(Map<String, dynamic> results) {
     showDialog(

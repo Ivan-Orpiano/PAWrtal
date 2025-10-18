@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/archive_clinics/archived_clinics_dashboard.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_detail_page.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_sort_button.dart';
@@ -444,10 +445,29 @@ class _SuperAdminVetClinicDashboardState
                   );
                 },
               ),
-              const Padding(
+                const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Divider(),
               ),
+                const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Divider(),
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.archive_rounded,
+                title: 'Archived Clinics',
+                subtitle: 'View & manage archives',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ArchivedClinicsDashboard(),
+                    ),
+                  );
+                },
+              ),      
             ],
           ),
         ),
