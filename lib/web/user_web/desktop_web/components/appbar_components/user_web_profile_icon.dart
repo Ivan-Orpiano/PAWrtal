@@ -1,3 +1,5 @@
+// Replace the entire WebProfileIcon widget with this updated version
+
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -30,30 +32,46 @@ class _WebProfileIconState extends State<WebProfileIcon> {
   User? currentUser;
   bool isIdVerified = false;
   bool isLoadingVerification = true;
+  String? profilePictureId;
+  String profilePictureUrl = '';
 
   @override
   void initState() {
     super.initState();
-    _loadUserVerificationStatus();
+    _loadUserData();
   }
 
-  Future<void> _loadUserVerificationStatus() async {
+  Future<void> _loadUserData() async {
     try {
       final user = await appWriteProvider.getUser();
       if (user != null) {
         final verificationStatus =
             await appWriteProvider.getUserVerificationStatus(user.$id);
+        
+        // Load profile picture
+        final userDoc = await appWriteProvider.getUserById(user.$id);
+        String? pfpId;
+        String pfpUrl = '';
+        
+        if (userDoc != null) {
+          pfpId = userDoc.data['profilePictureId'] as String?;
+          if (pfpId != null && pfpId.isNotEmpty) {
+            pfpUrl = authRepository.getUserProfilePictureUrl(pfpId);
+          }
+        }
 
         if (mounted) {
           setState(() {
             currentUser = user;
             isIdVerified = verificationStatus['isVerified'] as bool? ?? false;
+            profilePictureId = pfpId;
+            profilePictureUrl = pfpUrl;
             isLoadingVerification = false;
           });
         }
       }
     } catch (e) {
-      print('Error loading verification status: $e');
+      print('Error loading user data: $e');
       if (mounted) {
         setState(() {
           isLoadingVerification = false;
@@ -79,6 +97,8 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
   void _togglePopup(BuildContext context) {
     if (_overlayEntry == null) {
+      // Refresh user data when opening popup
+      _loadUserData();
       _overlayEntry = _createOverlayEntry(context);
       Overlay.of(context).insert(_overlayEntry!);
     } else {
@@ -193,7 +213,10 @@ class _WebProfileIconState extends State<WebProfileIcon> {
           initialIndex: index,
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh profile picture when returning from settings
+      _loadUserData();
+    });
   }
 
   Future<void> _handleVerifyNow() async {
@@ -213,8 +236,36 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
     // Refresh verification status if verification was completed
     if (result == true) {
-      await _loadUserVerificationStatus();
+      await _loadUserData();
     }
+  }
+
+  Widget _buildProfileAvatar(String userName) {
+    if (profilePictureUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 17.5,
+        backgroundColor: Colors.grey[200],
+        backgroundImage: NetworkImage(profilePictureUrl),
+        onBackgroundImageError: (exception, stackTrace) {
+          print('Error loading profile picture: $exception');
+        },
+      );
+    }
+
+    // Show placeholder with user's initial
+    final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+    return CircleAvatar(
+      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+      radius: 17.5,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   OverlayEntry _createOverlayEntry(BuildContext context) {
@@ -279,30 +330,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             child: Row(
                               children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color.fromARGB(255, 81, 115, 153),
-                                        Color.fromARGB(255, 95, 135, 175),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.all(12),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
+                                _buildProfileAvatar(userName),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
@@ -494,19 +522,13 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
   @override
   Widget build(BuildContext context) {
+    final userName = storage.read("userName") ?? "User";
+    
     return Padding(
       padding: const EdgeInsets.only(left: 16),
       child: InkWell(
         onTap: () => _togglePopup(context),
-        child: const CircleAvatar(
-          backgroundColor: Color.fromARGB(255, 81, 115, 153),
-          radius: 17.5,
-          child: Icon(
-            Icons.person,
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
+        child: _buildProfileAvatar(userName),
       ),
     );
   }

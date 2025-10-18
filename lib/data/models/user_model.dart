@@ -5,12 +5,13 @@ class User {
   late String role;
   String? phone;
   String? documentId;
+  String? profilePictureId; // NEW: Profile picture field
 
   // ID verification fields
   bool idVerified;
   String? idVerifiedAt;
 
-  // Archive/Soft Delete fields (ADD THESE AFTER LINE 13)
+  // Archive/Soft Delete fields
   bool isArchived;
   String? archivedAt;
   String? archivedBy;
@@ -24,7 +25,8 @@ class User {
         archivedAt = map["archivedAt"] as String?,
         archivedBy = map["archivedBy"] as String?,
         archiveReason = map["archiveReason"] as String?,
-        archivedDocumentId = map["archivedDocumentId"] as String? {
+        archivedDocumentId = map["archivedDocumentId"] as String?,
+        profilePictureId = map["profilePictureId"] as String? { // NEW
     documentId = map["\$id"] ?? '';
     userId = map["userId"] ?? '';
     name = map["name"] ?? '';
@@ -40,6 +42,7 @@ class User {
       'phone': phone,
       'email': email,
       'role': role,
+      'profilePictureId': profilePictureId, // NEW
       'idVerified': idVerified,
       'idVerifiedAt': idVerifiedAt,
       'isArchived': isArchived,
@@ -66,7 +69,7 @@ class User {
     }
   }
 
-  // Helper getter for archive status (ADD THIS)
+  // Helper getter for archive status
   String get archiveStatusText {
     if (!isArchived) return 'Active';
     
@@ -89,7 +92,7 @@ class User {
     return 'Archived';
   }
 
-  // Helper getter to check if user can be recovered (ADD THIS)
+  // Helper getter to check if user can be recovered
   bool get canBeRecovered {
     if (!isArchived || archivedAt == null) return false;
     
@@ -100,5 +103,10 @@ class User {
     } catch (e) {
       return false;
     }
+  }
+
+  // NEW: Helper getter to check if user has profile picture
+  bool get hasProfilePicture {
+    return profilePictureId != null && profilePictureId!.isNotEmpty;
   }
 }

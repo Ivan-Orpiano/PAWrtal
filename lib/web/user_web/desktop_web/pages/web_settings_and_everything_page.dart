@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/web/user_web/controllers/web_user_pfp_controller.dart';
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -279,417 +280,496 @@ class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingP
     }
   }
 
-  Widget _buildProfileContent() {
-    final userEmail = storage.read("email") ?? "user@example.com";
-    final userName = storage.read("userName") ?? "User";
-    final userRole = storage.read("role") ?? "user";
-    final userPhone = storage.read("phone") ?? "+1 (555) 000-0000";
-    final userBio = storage.read("bio") ?? "";
-    final userJoinDate = storage.read("joinDate") ?? "January 2024";
+// Replace the _buildProfileContent() method in WebSettingsAndEverythingPage with this:
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue[400]!, Colors.purple[400]!],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(Icons.person, color: Colors.blue[600], size: 24),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Your Profile',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage your personal information and preferences',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.4),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 32),
-          
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue[50]!, Colors.purple[50]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(28),
+Widget _buildProfileContent() {
+  final userEmail = storage.read("email") ?? "user@example.com";
+  final userName = storage.read("userName") ?? "User";
+  final userRole = storage.read("role") ?? "user";
+  final userPhone = storage.read("phone") ?? "+1 (555) 000-0000";
+  final userBio = storage.read("bio") ?? "";
+  final userJoinDate = storage.read("joinDate") ?? "January 2024";
+  final userId = storage.read("userId") ?? "";
+  final profilePictureId = storage.read("userProfilePictureId") as String?;
+
+  // Initialize profile picture controller
+  final profilePictureController = Get.put(
+    UserPfpController(authRepository: Get.find<AuthRepository>()),
+    tag: 'user_profile_picture',
+  );
+
+  // Set current profile picture if exists
+  if (profilePictureId != null && profilePictureId.isNotEmpty) {
+    profilePictureController.setCurrentProfilePicture(profilePictureId);
+  }
+
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(32),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.blue.withOpacity(0.1), width: 1),
+                gradient: LinearGradient(
+                  colors: [Colors.blue[400]!, Colors.purple[400]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(Icons.person, color: Colors.blue[600], size: 24),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Stack(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 48,
-                          backgroundColor: Colors.transparent,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [Colors.blue[400]!, Colors.purple[500]!],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 2,
-                        right: 2,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _showSnackbar('Info', 'Profile photo upload coming soon', Colors.blue),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [Colors.blue[500]!, Colors.blue[700]!]),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.4),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          userName,
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.email_outlined, size: 16, color: Colors.grey[600]),
-                            const SizedBox(width: 6),
-                            Text(userEmail, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [Colors.blue[100]!, Colors.blue[50]!]),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.blue[200]!, width: 1),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.workspace_premium, size: 14, color: Colors.blue[700]),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    userRole.toUpperCase(),
-                                    style: TextStyle(
-                                      color: Colors.blue[700],
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [Colors.green[100]!, Colors.green[50]!]),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.green[200]!, width: 1),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[600],
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.green.withOpacity(0.5),
-                                          blurRadius: 4,
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Active',
-                                    style: TextStyle(
-                                      color: Colors.green[700],
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                  const Text(
+                    'Your Profile',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage your personal information and preferences',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.4),
                   ),
                 ],
               ),
             ),
-          ),
-          
-          const SizedBox(height: 28),
-          
-          _buildModernCard(
-            title: 'Personal Information',
-            icon: Icons.badge_outlined,
-            iconColor: Colors.blue,
-            children: [
-              _buildModernInfoTile(
-                icon: Icons.person_outline,
-                label: 'Full Name',
-                value: userName,
-                iconColor: Colors.blue,
-              ),
-              _buildModernInfoTile(
-                icon: Icons.email_outlined,
-                label: 'Email Address',
-                value: userEmail,
-                iconColor: Colors.purple,
-              ),
-              _buildModernInfoTile(
-                icon: Icons.phone_outlined,
-                label: 'Phone Number',
-                value: userPhone,
-                iconColor: Colors.green,
-              ),
-              _buildModernInfoTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Member Since',
-                value: userJoinDate,
-                iconColor: Colors.orange,
-                isLast: true,
-              ),
-            ],
-            action: TextButton.icon(
-              onPressed: _showEditProfileDialog,
-              icon: Icon(Icons.edit_outlined, size: 16, color: Colors.blue[700]),
-              label: Text('Edit Profile', style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.w600)),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                backgroundColor: Colors.blue.withOpacity(0.08),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
+          ],
+        ),
+        
+        const SizedBox(height: 32),
+        
+        Obx(() => Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue[50]!, Colors.purple[50]!],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          
-          const SizedBox(height: 20),
-          
-          _buildModernCard(
-            title: 'About',
-            icon: Icons.info_outline,
-            iconColor: Colors.indigo,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Text(
-                  userBio.isEmpty ? 'No bio added yet. Share something about yourself!' : userBio,
-                  style: TextStyle(
-                    color: userBio.isEmpty ? Colors.grey[500] : Colors.grey[700],
-                    fontSize: 14,
-                    fontStyle: userBio.isEmpty ? FontStyle.italic : FontStyle.normal,
-                    height: 1.6,
-                  ),
-                ),
-              ),
-            ],
-            action: TextButton.icon(
-              onPressed: () => _showEditBioDialog(userBio),
-              icon: Icon(Icons.edit_outlined, size: 16, color: Colors.indigo[700]),
-              label: Text('Edit Bio', style: TextStyle(color: Colors.indigo[700], fontWeight: FontWeight.w600)),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                backgroundColor: Colors.indigo.withOpacity(0.08),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 20),
-          
-          _buildModernCard(
-            title: 'Account Security',
-            icon: Icons.security,
-            iconColor: Colors.green,
-            children: [
-              _buildSecurityOption(
-                icon: Icons.lock_outline,
-                title: 'Change Password',
-                subtitle: 'Last changed 30 days ago',
-                color: Colors.blue,
-                onTap: _showChangePasswordDialog,
-              ),
-              const SizedBox(height: 12),
-              _buildSecurityOption(
-                icon: Icons.verified_user_outlined,
-                title: 'Two-Factor Authentication',
-                subtitle: 'Add an extra layer of security',
-                color: Colors.green,
-                onTap: () => _showSnackbar('Info', 'Two-factor authentication setup coming soon', Colors.blue),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          
-          const SizedBox(height: 20),
-          
-          Container(
-            padding: const EdgeInsets.all(24),
+          child: Container(
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.red[50],
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red[200]!, width: 1.5),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.blue.withOpacity(0.1), width: 1),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red[100],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 20),
+                    Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => profilePictureController.pickProfilePicture(),
+                              borderRadius: BorderRadius.circular(60),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(60),
+                                child: profilePictureController.getPreviewImage(
+                                  size: 96,
+                                  userName: userName,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => profilePictureController.pickProfilePicture(),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [Colors.blue[500]!, Colors.blue[700]!]),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 3),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.blue.withOpacity(0.4),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Danger Zone',
-                      style: TextStyle(color: Colors.red[800], fontSize: 16, fontWeight: FontWeight.w700),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.email_outlined, size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 6),
+                              Text(userEmail, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [Colors.blue[100]!, Colors.blue[50]!]),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.blue[200]!, width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.workspace_premium, size: 14, color: Colors.blue[700]),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      userRole.toUpperCase(),
+                                      style: TextStyle(
+                                        color: Colors.blue[700],
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [Colors.green[100]!, Colors.green[50]!]),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.green[200]!, width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[600],
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.green.withOpacity(0.5),
+                                            blurRadius: 4,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Active',
+                                      style: TextStyle(
+                                        color: Colors.green[700],
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Irreversible actions that require careful consideration',
-                  style: TextStyle(color: Colors.red[700], fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _showDeactivateAccountDialog,
-                  icon: const Icon(Icons.person_off_outlined, size: 18),
-                  label: const Text('Deactivate Account'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red[700],
-                    side: BorderSide(color: Colors.red[300]!, width: 1.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                
+                // Show save/cancel buttons if there are changes
+                if (profilePictureController.hasChanges()) ...[
+                  const SizedBox(height: 20),
+                  const Divider(color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Spacer(),
+                      OutlinedButton(
+                        onPressed: () => profilePictureController.cancelChanges(),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.grey),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: profilePictureController.isUploading.value
+                            ? null
+                            : () async {
+                                // Get user document ID
+                                final userDoc = await Get.find<AuthRepository>().getUserById(userId);
+                                if (userDoc != null) {
+                                  final newFileId = await profilePictureController.saveProfilePicture(
+                                    userId,
+                                    userDoc.$id,
+                                  );
+                                  if (newFileId != null) {
+                                    // Update GetStorage with new profile picture ID
+                                    storage.write('userProfilePictureId', newFileId);
+                                    setState(() {});
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[600],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: profilePictureController.isUploading.value
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Save Profile Picture'),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        )),
+        
+        const SizedBox(height: 28),
+        
+        _buildModernCard(
+          title: 'Personal Information',
+          icon: Icons.badge_outlined,
+          iconColor: Colors.blue,
+          children: [
+            _buildModernInfoTile(
+              icon: Icons.person_outline,
+              label: 'Full Name',
+              value: userName,
+              iconColor: Colors.blue,
+            ),
+            _buildModernInfoTile(
+              icon: Icons.email_outlined,
+              label: 'Email Address',
+              value: userEmail,
+              iconColor: Colors.purple,
+            ),
+            _buildModernInfoTile(
+              icon: Icons.phone_outlined,
+              label: 'Phone Number',
+              value: userPhone,
+              iconColor: Colors.green,
+            ),
+            _buildModernInfoTile(
+              icon: Icons.calendar_today_outlined,
+              label: 'Member Since',
+              value: userJoinDate,
+              iconColor: Colors.orange,
+              isLast: true,
+            ),
+          ],
+          action: TextButton.icon(
+            onPressed: _showEditProfileDialog,
+            icon: Icon(Icons.edit_outlined, size: 16, color: Colors.blue[700]),
+            label: Text('Edit Profile', style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.w600)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              backgroundColor: Colors.blue.withOpacity(0.08),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 20),
+        
+        _buildModernCard(
+          title: 'About',
+          icon: Icons.info_outline,
+          iconColor: Colors.indigo,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Text(
+                userBio.isEmpty ? 'No bio added yet. Share something about yourself!' : userBio,
+                style: TextStyle(
+                  color: userBio.isEmpty ? Colors.grey[500] : Colors.grey[700],
+                  fontSize: 14,
+                  fontStyle: userBio.isEmpty ? FontStyle.italic : FontStyle.normal,
+                  height: 1.6,
+                ),
+              ),
+            ),
+          ],
+          action: TextButton.icon(
+            onPressed: () => _showEditBioDialog(userBio),
+            icon: Icon(Icons.edit_outlined, size: 16, color: Colors.indigo[700]),
+            label: Text('Edit Bio', style: TextStyle(color: Colors.indigo[700], fontWeight: FontWeight.w600)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              backgroundColor: Colors.indigo.withOpacity(0.08),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 20),
+        
+        _buildModernCard(
+          title: 'Account Security',
+          icon: Icons.security,
+          iconColor: Colors.green,
+          children: [
+            _buildSecurityOption(
+              icon: Icons.lock_outline,
+              title: 'Change Password',
+              subtitle: 'Last changed 30 days ago',
+              color: Colors.blue,
+              onTap: _showChangePasswordDialog,
+            ),
+            const SizedBox(height: 12),
+            _buildSecurityOption(
+              icon: Icons.verified_user_outlined,
+              title: 'Two-Factor Authentication',
+              subtitle: 'Add an extra layer of security',
+              color: Colors.green,
+              onTap: () => _showSnackbar('Info', 'Two-factor authentication setup coming soon', Colors.blue),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 20),
+        
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.red[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.red[200]!, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red[100],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Danger Zone',
+                    style: TextStyle(color: Colors.red[800], fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Irreversible actions that require careful consideration',
+                style: TextStyle(color: Colors.red[700], fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _showDeactivateAccountDialog,
+                icon: const Icon(Icons.person_off_outlined, size: 18),
+                label: const Text('Deactivate Account'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red[700],
+                  side: BorderSide(color: Colors.red[300]!, width: 1.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildSettingsContent() {
     return SingleChildScrollView(
