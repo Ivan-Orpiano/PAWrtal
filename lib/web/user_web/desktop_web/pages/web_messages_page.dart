@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -64,6 +65,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           latestConversation.clinicId,
           clinicData['name'],
           clinicData['image'],
+          clinicData['profilePictureId'],
         );
       });
     }
@@ -97,6 +99,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
         final clinicData = {
           'name': clinic.clinicName,
           'image': clinic.image,
+          'profilePictureId': clinic.profilePictureId ?? '',
           'address': clinic.address,
         };
         _clinicCache[clinicId] = clinicData;
@@ -106,10 +109,10 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
       print('Error loading clinic: $e');
     }
 
-    return {'name': 'Unknown Clinic', 'image': '', 'address': ''};
+    return {'name': 'Unknown Clinic', 'image': '', 'profilePictureId': '', 'address': ''};
   }
 
-  void _selectConversation(Conversation conversation, String clinicId, String clinicName, String clinicImage) async {
+  void _selectConversation(Conversation conversation, String clinicId, String clinicName, String clinicImage, String profilePictureId) async {
     setState(() {
       _showStarters = false;
     });
@@ -117,6 +120,10 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     
     // Load conversation starters for this clinic
     await _controller.loadConversationStarters(clinicId);
+  }
+
+  String _getProfileImageUrl(String profilePictureId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
   }
 
   @override
@@ -267,6 +274,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                       final clinicData = snapshot.data ?? {
                         'name': 'Loading...',
                         'image': '',
+                        'profilePictureId': '',
                         'address': ''
                       };
                       // Check if this conversation is selected using controller's state
@@ -295,6 +303,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           conversation.clinicId,
           clinicData['name'],
           clinicData['image'],
+          clinicData['profilePictureId'],
         ),
         child: Container(
           padding: const EdgeInsets.all(12),
@@ -303,20 +312,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           ),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: clinicData['image'].isNotEmpty
-                    ? Image.network(
-                        clinicData['image'],
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildDefaultAvatar(clinicData['name']);
-                        },
-                      )
-                    : _buildDefaultAvatar(clinicData['name']),
-              ),
+              _buildProfileImage(clinicData, 48),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -383,20 +379,62 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     );
   }
 
-  Widget _buildDefaultAvatar(String name) {
+  Widget _buildProfileImage(Map<String, dynamic> clinicData, double size) {
+    final profilePictureId = clinicData['profilePictureId'] as String? ?? '';
+    final fallbackImage = clinicData['image'] as String? ?? '';
+    final clinicName = clinicData['name'] as String? ?? 'Clinic';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size / 2),
+      child: profilePictureId.isNotEmpty
+          ? Image.network(
+              _getProfileImageUrl(profilePictureId),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback to regular image if profile picture fails
+                return fallbackImage.isNotEmpty
+                    ? Image.network(
+                        fallbackImage,
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildDefaultAvatar(clinicName, size);
+                        },
+                      )
+                    : _buildDefaultAvatar(clinicName, size);
+              },
+            )
+          : fallbackImage.isNotEmpty
+              ? Image.network(
+                  fallbackImage,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildDefaultAvatar(clinicName, size);
+                  },
+                )
+              : _buildDefaultAvatar(clinicName, size),
+    );
+  }
+
+  Widget _buildDefaultAvatar(String name, double size) {
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: const Color.fromARGB(255, 81, 115, 153),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(size / 2),
       ),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 20,
+            fontSize: size * 0.4,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -432,6 +470,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           final clinicData = snapshot.data ?? {
             'name': 'Loading...',
             'image': '',
+            'profilePictureId': '',
           };
           
           return Container(
@@ -442,7 +481,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
             ),
             child: Column(
               children: [
-                _buildMessagesHeader(clinicData['name'], clinicData['image']),
+                _buildMessagesHeader(clinicData['name'], clinicData),
                 if (_showStarters) _buildConversationStarters(),
                 Expanded(child: _buildMessagesList()),
                 _buildMessageInput(),
@@ -454,7 +493,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     });
   }
 
-  Widget _buildMessagesHeader(String clinicName, String clinicImage) {
+  Widget _buildMessagesHeader(String clinicName, Map<String, dynamic> clinicData) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -473,36 +512,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
       ),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: clinicImage.isNotEmpty
-                ? Image.network(
-                    clinicImage,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildDefaultAvatar(clinicName);
-                    },
-                  )
-                : Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 81, 115, 153),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        clinicName[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
+          _buildProfileImage(clinicData, 40),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

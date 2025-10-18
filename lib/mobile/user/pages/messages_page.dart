@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
@@ -86,6 +87,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
         final conversationData = {
           'name': clinic.clinicName,
           'image': clinic.image,
+          'profilePictureId': clinic.profilePictureId ?? '',
           'isOnline': false, // Will be updated with real status
         };
 
@@ -99,8 +101,76 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
     return {
       'name': 'Unknown Clinic',
       'image': '',
+      'profilePictureId': '',
       'isOnline': false,
     };
+  }
+
+  String _getProfileImageUrl(String profilePictureId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
+  }
+
+  Widget _buildProfileImage(Map<String, dynamic> clinicData, double size) {
+    final profilePictureId = clinicData['profilePictureId'] as String? ?? '';
+    final fallbackImage = clinicData['image'] as String? ?? '';
+    final clinicName = clinicData['name'] as String? ?? 'Clinic';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size / 2),
+      child: profilePictureId.isNotEmpty
+          ? Image.network(
+              _getProfileImageUrl(profilePictureId),
+              height: size,
+              width: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback to regular image if profile picture fails
+                return fallbackImage.isNotEmpty
+                    ? Image.network(
+                        fallbackImage,
+                        height: size,
+                        width: size,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildDefaultAvatar(clinicName, size);
+                        },
+                      )
+                    : _buildDefaultAvatar(clinicName, size);
+              },
+            )
+          : fallbackImage.isNotEmpty
+              ? Image.network(
+                  fallbackImage,
+                  height: size,
+                  width: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildDefaultAvatar(clinicName, size);
+                  },
+                )
+              : _buildDefaultAvatar(clinicName, size),
+    );
+  }
+
+  Widget _buildDefaultAvatar(String name, double size) {
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 81, 115, 153),
+        borderRadius: BorderRadius.circular(size / 2),
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildConversationTile(Conversation conversation) {
@@ -108,7 +178,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
       future: _getConversationData(conversation),
       builder: (context, snapshot) {
         final data = snapshot.data ??
-            {'name': 'Loading...', 'image': '', 'isOnline': false};
+            {'name': 'Loading...', 'image': '', 'profilePictureId': '', 'isOnline': false};
 
         // Use userUnreadCount for user side
         final hasUnreadMessages = conversation.userUnreadCount > 0;
@@ -125,6 +195,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                   receiverType: 'clinic',
                   receiverName: data['name'],
                   receiverImage: data['image'],
+                  receiverProfilePictureId: data['profilePictureId'],
                 ),
               ),
             );
@@ -157,55 +228,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                 // Profile Image with Online Status
                 Stack(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(25),
-                      child: data['image'].isNotEmpty
-                          ? Image.network(
-                              data['image'],
-                              height: 50,
-                              width: 50,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 50,
-                                  width: 50,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        const Color.fromARGB(255, 81, 115, 153),
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      data['name'][0].toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              height: 50,
-                              width: 50,
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 81, 115, 153),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  data['name'][0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
+                    _buildProfileImage(data, 50),
                     // Online status indicator
                     if (data['isOnline'])
                       Positioned(

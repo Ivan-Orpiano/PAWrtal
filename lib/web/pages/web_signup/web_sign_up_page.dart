@@ -110,6 +110,12 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                         controller: controller.emailController,
                         keyboardType: TextInputType.emailAddress,
                         maxLength: 50,
+                        onFieldSubmitted: (_) {
+                          if (!controller.isLoading.value &&
+                              !controller.isGoogleLoading.value) {
+                            controller.signUp();
+                          }
+                        },
                         decoration: InputDecoration(
                           counterText: "",
                           prefixIcon: Icon(
@@ -173,6 +179,12 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                         controller: controller.nameController,
                         keyboardType: TextInputType.name,
                         maxLength: 50,
+                        onFieldSubmitted: (_) {
+                          if (!controller.isLoading.value &&
+                              !controller.isGoogleLoading.value) {
+                            controller.signUp();
+                          }
+                        },
                         decoration: InputDecoration(
                           counterText: "",
                           prefixIcon: Icon(
@@ -236,6 +248,12 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                         controller: controller.passwordController,
                         maxLength: 50,
                         obscureText: !controller.isPasswordVisible.value,
+                        onFieldSubmitted: (_) {
+                          if (!controller.isLoading.value &&
+                              !controller.isGoogleLoading.value) {
+                            controller.signUp();
+                          }
+                        },
                         decoration: InputDecoration(
                           counterText: "",
                           prefixIcon: Icon(
@@ -307,6 +325,12 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                         controller: controller.confirmPasswordController,
                         maxLength: 50,
                         obscureText: !controller.isConfirmPasswordVisible.value,
+                        onFieldSubmitted: (_) {
+                          if (!controller.isLoading.value &&
+                              !controller.isGoogleLoading.value) {
+                            controller.signUp();
+                          }
+                        },
                         decoration: InputDecoration(
                           counterText: "",
                           prefixIcon: Icon(
