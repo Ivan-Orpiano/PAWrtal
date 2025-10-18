@@ -809,44 +809,44 @@ class WebAppointmentController extends GetxController {
     }
   }
 
-  // Future<void> _createAppointmentNotificationForUser({
-  //   required String type,
-  //   required Appointment appointment,
-  //   String? notes,
-  // }) async {
-  //   try {
-  //     final ownerName = getOwnerName(appointment.userId);
-  //     final petName = getPetName(appointment.petId);
+  Future<void> _createAppointmentNotificationForUser({
+    required String type,
+    required Appointment appointment,
+    String? notes,
+  }) async {
+    try {
+      final ownerName = getOwnerName(appointment.userId);
+      final petName = getPetName(appointment.petId);
 
-  //     // Get clinic name for user notification
-  //     final clinicDoc =
-  //         await authRepository.getClinicById(appointment.clinicId);
-  //     final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
+      // Get clinic name for user notification
+      final clinicDoc =
+          await authRepository.getClinicById(appointment.clinicId);
+      final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
 
-  //     // Create notification for USER only
-  //     final userNotification = NotificationModel.appointmentStatusUpdate(
-  //       userId: appointment.userId,
-  //       appointmentId: appointment.documentId!,
-  //       petName: petName,
-  //       clinicName: clinicName,
-  //       status: type,
-  //       notes: notes,
-  //     );
+      // Create notification for USER only
+      final userNotification = NotificationModel.appointmentStatusUpdate(
+        userId: appointment.userId,
+        appointmentId: appointment.documentId!,
+        petName: petName,
+        clinicName: clinicName,
+        status: type,
+        notes: notes,
+      );
 
-  //     await authRepository.createNotification(userNotification);
+      await authRepository.createNotification(userNotification);
 
-  //     // Also create automated message in conversation
-  //     await _createAutomatedMessage(
-  //       clinicId: appointment.clinicId,
-  //       userId: appointment.userId,
-  //       type: type,
-  //       petName: petName,
-  //       notes: notes,
-  //     );
-  //   } catch (e) {
-  //     print('Error creating appointment notification for user: $e');
-  //   }
-  // }
+      // Also create automated message in conversation
+      await _createAutomatedMessage(
+        clinicId: appointment.clinicId,
+        userId: appointment.userId,
+        type: type,
+        petName: petName,
+        notes: notes,
+      );
+    } catch (e) {
+      print('Error creating appointment notification for user: $e');
+    }
+  }
 
   Future<void> checkInPatient(Appointment appointment) async {
     if (!appointment.isToday) {

@@ -30,18 +30,52 @@ Future<void> initializeDependencies() async {
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
 
-  final adminNotificationController = Get.put(NotificationController(
-    authRepository: Get.find<AuthRepository>(),
-    session: Get.find<UserSessionService>(),
-  ));
+  final adminNotificationController = Get.put(
+    NotificationController(
+      authRepository: Get.find<AuthRepository>(),
+      session: Get.find<UserSessionService>(),
+    ),
+    permanent: true,
+  );
 
-  final userNotificationController = Get.put(UserNotificationController(
-    authRepository: Get.find<AuthRepository>(),
-    session: Get.find<UserSessionService>(),
-  ), tag: 'user');
+  final userNotificationController = Get.put(
+    UserNotificationController(
+      authRepository: Get.find<AuthRepository>(),
+      session: Get.find<UserSessionService>(),
+    ),
+    tag: 'user',
+    permanent: true,
+  );
 
-  Future.delayed(const Duration(milliseconds: 500), () {
-    adminNotificationController.loadNotifications(refresh: true);
-    userNotificationController.loadNotifications(refresh: true);
+  Future.delayed(const Duration(milliseconds: 500), () async {
+    try {
+      final storage = GetStorage();
+      final userRole = storage.read('role') as String?;
+
+      print('>>> Loading notifications for role: $userRole');
+
+      if (userRole == 'admin' || userRole == 'staff') {
+        print('>>> Loading admin notifications...');
+        await adminNotificationController.loadNotifications(refresh: true);
+        print(
+            '>>> Admin notifications loaded: ${adminNotificationController.notifications.length}');
+      } else if (userRole == 'user' || userRole == 'customer') {
+        print('>>> Loading user notifications...');
+        await userNotificationController.loadNotifications(refresh: true);
+        print(
+            '>>> User notifications loaded: ${userNotificationController.notifications.length}');
+      } else {
+        print('>>> No role found, loading both controllers...');
+        // Load both just in case
+        await Future.wait([
+          adminNotificationController.loadNotifications(refresh: true),
+          userNotificationController.loadNotifications(refresh: true),
+        ]);
+      }
+
+      print('>>> ✓ Notification system fully initialized');
+    } catch (e) {
+      print('>>> ERROR initializing notifications: $e');
+    }
   });
 }

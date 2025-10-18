@@ -10,10 +10,14 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/notifications/controllers/user_notification_controller.dart';
+import 'package:capstone_app/notifications/components/toast_notification_system.dart';
 
 class EnhancedUserAppointmentController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
+  
+  // CRITICAL FIX: Add notification controller reference
+  late final UserNotificationController _notificationController;
 
   EnhancedUserAppointmentController({
     required this.authRepository,
@@ -34,6 +38,15 @@ class EnhancedUserAppointmentController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    
+    // CRITICAL FIX: Initialize notification controller reference
+    try {
+      _notificationController = Get.find<UserNotificationController>(tag: 'user');
+      print('>>> User notification controller connected to appointment controller');
+    } catch (e) {
+      print('>>> ERROR: Could not find UserNotificationController: $e');
+    }
+    
     fetchAppointments();
     _setupRealtimeSubscription();
     _setupReviewSubscription();
@@ -99,21 +112,110 @@ class EnhancedUserAppointmentController extends GetxController {
     final payload = message.payload;
     final eventType = message.events.first;
 
-    print('Realtime update received: $eventType');
-    print('Payload: $payload');
+    print('>>> User Appointment Realtime update: $eventType');
+    print('>>> Payload: $payload');
 
     if (eventType.contains('create')) {
       _addOrUpdateAppointment(payload);
-      print('Added new appointment');
+      print('>>> Added new appointment');
     } else if (eventType.contains('update')) {
       _addOrUpdateAppointment(payload);
-      print('Updated appointment');
+      
+      // CRITICAL FIX: Show notification for appointment status updates
+      final appointment = Appointment.fromMap(payload);
+      _handleAppointmentStatusChange(appointment);
+      
+      print('>>> Updated appointment');
     } else if (eventType.contains('delete')) {
       appointments.removeWhere((a) => a.documentId == payload['\$id']);
-      print('Deleted appointment');
+      print('>>> Deleted appointment');
     }
 
     appointments.refresh();
+  }
+
+  // CRITICAL FIX: Handle appointment status changes with notifications
+  void _handleAppointmentStatusChange(Appointment appointment) {
+    try {
+      final existingIndex = appointments.indexWhere((a) => a.documentId == appointment.documentId);
+      
+      if (existingIndex != -1) {
+        final oldAppointment = appointments[existingIndex];
+        
+        // Check if status changed
+        if (oldAppointment.status != appointment.status) {
+          print('>>> Appointment status changed: ${oldAppointment.status} -> ${appointment.status}');
+          
+          // Show appropriate notification based on new status
+          switch (appointment.status) {
+            case 'accepted':
+              _showAppointmentAcceptedNotification(appointment);
+              break;
+            case 'declined':
+              _showAppointmentDeclinedNotification(appointment);
+              break;
+            case 'completed':
+              _showAppointmentCompletedNotification(appointment);
+              break;
+            case 'in_progress':
+              _showAppointmentInProgressNotification(appointment);
+              break;
+            case 'cancelled':
+              if (appointment.cancelledBy == 'clinic') {
+                _showAppointmentCancelledByClinicNotification(appointment);
+              }
+              break;
+            case 'no_show':
+              _showAppointmentNoShowNotification(appointment);
+              break;
+          }
+        }
+      }
+    } catch (e) {
+      print('>>> Error handling appointment status change: $e');
+    }
+  }
+
+  void _showAppointmentAcceptedNotification(Appointment appointment) {
+    ToastNotificationService.showSuccessToast(
+      'Appointment Accepted',
+      'Your appointment for ${getPetName(appointment)} has been accepted!',
+    );
+  }
+
+  void _showAppointmentDeclinedNotification(Appointment appointment) {
+    ToastNotificationService.showErrorToast(
+      'Appointment Declined',
+      'Your appointment for ${getPetName(appointment)} was declined by the clinic.',
+    );
+  }
+
+  void _showAppointmentCompletedNotification(Appointment appointment) {
+    ToastNotificationService.showSuccessToast(
+      'Appointment Completed',
+      'Your appointment for ${getPetName(appointment)} has been completed!',
+    );
+  }
+
+  void _showAppointmentInProgressNotification(Appointment appointment) {
+    ToastNotificationService.showInfoToast(
+      'Treatment Started',
+      '${getPetName(appointment)} is now being treated.',
+    );
+  }
+
+  void _showAppointmentCancelledByClinicNotification(Appointment appointment) {
+    ToastNotificationService.showErrorToast(
+      'Appointment Cancelled',
+      'The clinic cancelled your appointment for ${getPetName(appointment)}.',
+    );
+  }
+
+  void _showAppointmentNoShowNotification(Appointment appointment) {
+    ToastNotificationService.showErrorToast(
+      'Missed Appointment',
+      'You missed your appointment for ${getPetName(appointment)}.',
+    );
   }
 
   void _addOrUpdateAppointment(Map<String, dynamic> payload) {
@@ -291,19 +393,18 @@ class EnhancedUserAppointmentController extends GetxController {
     }).toList();
   }
 
-  // NEW: Cancel pending appointment (direct deletion, no reason needed)
+  // CRITICAL FIX: Cancel pending appointment with notification
   Future<void> cancelPendingAppointment(String appointmentId) async {
     try {
       isLoading.value = true;
 
-      // Get the appointment details before cancelling
       final appointment =
           appointments.firstWhere((a) => a.documentId == appointmentId);
 
-      // Update appointment status to cancelled
+      // Update appointment status
       await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
 
-      // CRITICAL FIX: Create notification for admin about cancellation
+      // CRITICAL: Create notification for admin
       await _createAdminNotificationForUserCancellation(
         appointment,
         'User cancelled pending appointment request',
@@ -312,60 +413,21 @@ class EnhancedUserAppointmentController extends GetxController {
       // Remove from local list
       appointments.removeWhere((a) => a.documentId == appointmentId);
 
-      Get.snackbar(
-        "Cancelled",
-        "Appointment request cancelled successfully",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.shade50,
-        colorText: Colors.orange.shade700,
-        icon: const Icon(Icons.cancel_outlined, color: Colors.orange),
-        duration: const Duration(seconds: 2),
+      ToastNotificationService.showSuccessToast(
+        'Request Cancelled',
+        'Appointment request cancelled successfully',
       );
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to cancel appointment: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      ToastNotificationService.showErrorToast(
+        'Error',
+        'Failed to cancel appointment: $e',
       );
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> _createUserNotificationForAppointmentUpdate({
-    required String type,
-    required Appointment appointment,
-    String? notes,
-  }) async {
-    try {
-      // Get clinic name for notification
-      final clinicDoc =
-          await authRepository.getClinicById(appointment.clinicId);
-      final clinicName = clinicDoc?.data['clinicName'] ?? 'Veterinary Clinic';
-
-      // Get pet name
-      final petName = getPetName(appointment);
-
-      // Create notification for USER
-      final userNotification = NotificationModel.appointmentStatusUpdate(
-        userId: appointment.userId,
-        appointmentId: appointment.documentId!,
-        petName: petName,
-        clinicName: clinicName,
-        status: type,
-        notes: notes,
-      );
-
-      await authRepository.createNotification(userNotification);
-      print('Created appointment notification for user: $type');
-    } catch (e) {
-      print('Error creating appointment notification for user: $e');
-    }
-  }
-
-  // NEW: Cancel accepted appointment (with reason)
+  // CRITICAL FIX: Cancel accepted appointment with reason and notification
   Future<void> cancelAcceptedAppointment(
     String appointmentId,
     String cancellationReason,
@@ -385,32 +447,25 @@ class EnhancedUserAppointmentController extends GetxController {
         'updatedAt': DateTime.now().toIso8601String(),
       });
 
-      // Create notification for admin about user cancellation
+      // CRITICAL: Create notification for admin
       await _createAdminNotificationForUserCancellation(
           appointment, cancellationReason);
 
-      Get.snackbar(
-        "Appointment Cancelled",
-        "Your appointment has been cancelled. The clinic has been notified.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.shade50,
-        colorText: Colors.orange.shade700,
-        icon: const Icon(Icons.info_outline, color: Colors.orange),
-        duration: const Duration(seconds: 3),
+      ToastNotificationService.showSuccessToast(
+        'Appointment Cancelled',
+        'The clinic has been notified',
       );
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to cancel appointment: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      ToastNotificationService.showErrorToast(
+        'Error',
+        'Failed to cancel appointment: $e',
       );
     } finally {
       isLoading.value = false;
     }
   }
 
+  // CRITICAL FIX: Create admin notification for user cancellation
   Future<void> _createAdminNotificationForUserCancellation(
     Appointment appointment,
     String cancellationReason,
@@ -418,6 +473,10 @@ class EnhancedUserAppointmentController extends GetxController {
     try {
       final ownerName = getOwnerName(appointment.userId);
       final petName = getPetName(appointment);
+
+      print('>>> Creating admin notification for user cancellation');
+      print('>>> Clinic ID: ${appointment.clinicId}');
+      print('>>> User: $ownerName, Pet: $petName');
 
       final adminNotification = NotificationModel(
         recipientId: appointment.clinicId,
@@ -440,9 +499,9 @@ class EnhancedUserAppointmentController extends GetxController {
       );
 
       await authRepository.createNotification(adminNotification);
-      print('>>> Created admin notification for user cancellation');
+      print('>>> ✓ Admin notification created for user cancellation');
     } catch (e) {
-      print('>>> Error creating admin notification for user cancellation: $e');
+      print('>>> ERROR creating admin notification for user cancellation: $e');
     }
   }
 
@@ -467,7 +526,6 @@ class EnhancedUserAppointmentController extends GetxController {
 
   String getOwnerName(String userId) {
     if (!ownersCache.containsKey(userId)) {
-      // Trigger a fetch if we don't have the data
       _fetchOwnerData(userId);
       return 'Loading...';
     }
@@ -479,7 +537,6 @@ class EnhancedUserAppointmentController extends GetxController {
       try {
         final ownerDoc = await authRepository.getUserById(userId);
         if (ownerDoc != null) {
-          // Create a proper User object
           final user = User.fromMap(ownerDoc.data);
           ownersCache[userId] = {
             'name': user.name,
@@ -487,7 +544,6 @@ class EnhancedUserAppointmentController extends GetxController {
             'phone': user.phone,
           };
         } else {
-          // Add fallback data to prevent repeated fetching
           ownersCache[userId] = {
             'name': 'User #${userId.substring(0, 6)}',
             'email': 'N/A',
@@ -496,7 +552,6 @@ class EnhancedUserAppointmentController extends GetxController {
         }
       } catch (e) {
         print("Error fetching owner $userId: $e");
-        // Add fallback data
         ownersCache[userId] = {
           'name': 'User #${userId.substring(0, 6)}',
           'email': 'N/A',
@@ -564,12 +619,10 @@ class EnhancedUserAppointmentController extends GetxController {
   }
 
   bool canCancelAppointment(Appointment appointment) {
-    // Can cancel pending appointments anytime
     if (appointment.status == 'pending') {
       return true;
     }
 
-    // Can cancel accepted appointments if at least 2 hours before appointment time
     if (appointment.status == 'accepted') {
       return appointment.dateTime
           .isAfter(DateTime.now().add(const Duration(hours: 2)));
@@ -578,7 +631,6 @@ class EnhancedUserAppointmentController extends GetxController {
     return false;
   }
 
-  // NEW: Check if appointment needs cancellation reason
   bool needsCancellationReason(Appointment appointment) {
     return appointment.status == 'accepted';
   }

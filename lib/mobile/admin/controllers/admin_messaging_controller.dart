@@ -845,7 +845,6 @@ class AdminMessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
-          // More robust duplicate check
           final existingIndex = currentMessages.indexWhere((m) =>
               m.documentId == messageWithId.documentId ||
               (m.messageText == messageWithId.messageText &&
@@ -859,16 +858,25 @@ class AdminMessagingController extends GetxController {
           if (existingIndex == -1) {
             currentMessages.add(messageWithId);
 
-            // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
 
-            // If this is a message TO the admin and they're viewing the conversation,
-            // mark it as read immediately (but don't mark their own messages as read)
-            if (messageWithId.receiverId == _userSession.userId &&
-                messageWithId.senderId != _userSession.userId &&
-                currentConversation.value?.documentId == conversationId) {
+            // CRITICAL FIX: Handle incoming message from user
+            if (messageWithId.senderType == 'user' &&
+                messageWithId.receiverId == _userSession.userId) {
+              print('>>> New message from user received');
+
+              // If admin is viewing this conversation, mark as read
+              if (currentConversation.value?.documentId == conversationId) {
+                markConversationAsRead(conversationId);
+              } else {
+                // Admin is not viewing this conversation - notification already created
+                print(
+                    '>>> Admin not viewing conversation - notification will be shown');
+              }
+            } else if (messageWithId.senderId == _userSession.userId) {
+              // Admin sent this message - mark as read immediately
               markConversationAsRead(conversationId);
             }
           }
