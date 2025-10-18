@@ -1622,4 +1622,36 @@ class AuthRepository {
   Future<Map<String, dynamic>?> getClinicWithProfilePicture(String clinicId) {
     return appWriteProvider.getClinicWithProfilePicture(clinicId);
   }
+
+  Future<models.File> uploadUserProfilePicture(dynamic image) {
+  return appWriteProvider.uploadUserProfilePicture(image);
+}
+
+/// Delete user profile picture
+Future<void> deleteUserProfilePicture(String fileId) {
+  return appWriteProvider.deleteUserProfilePicture(fileId);
+}
+
+/// Get user profile picture URL
+String getUserProfilePictureUrl(String profilePictureId) {
+  return appWriteProvider.getUserProfilePictureUrl(profilePictureId);
+}
+
+/// Update user profile picture (with automatic old picture deletion)
+Future<String> updateUserProfilePicture(
+  String userDocumentId,
+  String? oldProfilePictureId,
+  dynamic newImage,
+) {
+  return appWriteProvider.updateUserProfilePicture(
+    userDocumentId,
+    oldProfilePictureId,
+    newImage,
+  );
+}
+
+/// Get user with profile picture URL
+Future<Map<String, dynamic>?> getUserWithProfilePicture(String userId) {
+  return appWriteProvider.getUserWithProfilePicture(userId);
+}
 }

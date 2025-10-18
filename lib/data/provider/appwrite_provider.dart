@@ -4483,4 +4483,146 @@ class AppWriteProvider {
       };
     }
   }
+Future<models.File> uploadUserProfilePicture(dynamic image) async {
+  try {
+    print('>>> Uploading user profile picture...');
+
+    String fileName = "user_profile_${DateTime.now().millisecondsSinceEpoch}.jpg";
+    InputFile inputFile;
+
+    if (image is String) {
+      // Mobile path-based upload
+      inputFile = InputFile.fromPath(
+        path: image,
+        filename: fileName,
+      );
+    } else if (image is InputFile) {
+      // Web bytes-based upload or pre-constructed InputFile
+      inputFile = image;
+    } else {
+      throw Exception('Invalid profile picture format');
+    }
+
+    final response = await storage!.createFile(
+      bucketId: AppwriteConstants.imageBucketID,
+      fileId: ID.unique(),
+      file: inputFile,
+    );
+
+    print('>>> User profile picture uploaded successfully: ${response.$id}');
+    return response;
+  } catch (e) {
+    print('>>> Error uploading user profile picture: $e');
+    rethrow;
+  }
+}
+
+/// Delete user profile picture by file ID
+Future<void> deleteUserProfilePicture(String fileId) async {
+  try {
+    print('>>> Deleting user profile picture: $fileId');
+
+    await storage!.deleteFile(
+      bucketId: AppwriteConstants.imageBucketID,
+      fileId: fileId,
+    );
+
+    print('>>> User profile picture deleted successfully');
+  } catch (e) {
+    print('>>> Error deleting user profile picture: $e');
+    rethrow;
+  }
+}
+
+/// Get user profile picture URL
+String getUserProfilePictureUrl(String profilePictureId) {
+  if (profilePictureId.isEmpty) {
+    return '';
+  }
+
+  final url = '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
+  print('>>> Generated user profile picture URL: $url');
+  return url;
+}
+
+/// Update user profile picture
+Future<String> updateUserProfilePicture(
+  String userDocumentId,
+  String? oldProfilePictureId,
+  dynamic newImage,
+) async {
+  try {
+    print('>>> ============================================');
+    print('>>> UPDATING USER PROFILE PICTURE');
+    print('>>> User Document ID: $userDocumentId');
+    print('>>> Old picture ID: $oldProfilePictureId');
+    print('>>> ============================================');
+
+    // Upload new profile picture
+    print('>>> Step 1: Uploading new profile picture...');
+    final uploadedFile = await uploadUserProfilePicture(newImage);
+    final newFileId = uploadedFile.$id;
+    print('>>> New file uploaded with ID: $newFileId');
+
+    // Delete old profile picture if it exists
+    if (oldProfilePictureId != null && oldProfilePictureId.isNotEmpty) {
+      print('>>> Step 2: Deleting old profile picture...');
+      try {
+        await deleteUserProfilePicture(oldProfilePictureId);
+        print('>>> Old profile picture deleted');
+      } catch (e) {
+        print('>>> Warning: Failed to delete old picture: $e');
+        // Don't fail the entire operation if old deletion fails
+      }
+    }
+
+    // Update user record in Users collection
+    print('>>> Step 3: Updating user record...');
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.usersCollectionID,
+      documentId: userDocumentId,
+      data: {
+        'profilePictureId': newFileId,
+      },
+    );
+    print('>>> User record updated successfully');
+
+    print('>>> ============================================');
+    print('>>> USER PROFILE PICTURE UPDATE COMPLETE');
+    print('>>> ============================================');
+
+    return newFileId;
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> ERROR UPDATING USER PROFILE PICTURE: $e');
+    print('>>> ============================================');
+    rethrow;
+  }
+}
+
+/// Get user with profile picture URL included
+Future<Map<String, dynamic>?> getUserWithProfilePicture(String userId) async {
+  try {
+    final userDoc = await getUserById(userId);
+    if (userDoc == null) return null;
+
+    final profilePictureId = userDoc.data['profilePictureId'] as String?;
+    String profilePictureUrl = '';
+
+    if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      profilePictureUrl = getUserProfilePictureUrl(profilePictureId);
+    }
+
+    return {
+      'user': userDoc.data,
+      'userDocId': userDoc.$id,
+      'profilePictureId': profilePictureId,
+      'profilePictureUrl': profilePictureUrl,
+    };
+  } catch (e) {
+    print('Error getting user with profile picture: $e');
+    return null;
+  }
+}
 }
