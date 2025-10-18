@@ -583,7 +583,6 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
     );
   }
 
-
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -636,7 +635,27 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
             const SizedBox(height: 24),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: isTablet
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.controller.clinic.value!.clinicName,
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _buildGalleryPreview(isMobile),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: isTablet || isMobile
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -644,36 +663,23 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                           width: double.infinity,
                           child: _buildLeftContent(isMobile),
                         ),
-                        const SizedBox(height: 24),
-                        // REMOVED: Elevated button for tablet
                       ],
                     )
-                  : isMobile
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: _buildLeftContent(isMobile),
-                            ),
-                            const SizedBox(height: 24),
-                            // REMOVED: Elevated button for mobile
-                          ],
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: getLeftSideWidth(screenWidth),
-                              child: _buildLeftContent(isMobile),
-                            ),
-                            const SizedBox(width: 40),
-                            SizedBox(
-                              width: 420,
-                              child: _buildAppointmentPanel(settings, isMobile),
-                            ),
-                          ],
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: getLeftSideWidth(screenWidth),
+                          child: _buildLeftContent(isMobile),
                         ),
+                        const SizedBox(width: 40),
+                        if (settings != null)
+                          SizedBox(
+                            width: 420,
+                            child: _buildAppointmentPanel(settings, isMobile),
+                          ),
+                      ],
+                    ),
             ),
             const SizedBox(height: 64),
             _buildLocationSection(isMobile),
@@ -697,10 +703,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
           padding: EdgeInsets.symmetric(vertical: 32),
           child: SizedBox(
             width: double.infinity,
-            child: Divider(
-              height: 1,
-              thickness: 0.5,
-            ),
+            child: Divider(height: 1, thickness: 0.5),
           ),
         ),
         if (widget.controller.clinic.value?.documentId != null)
@@ -715,6 +718,11 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   Widget _buildGalleryPreview(bool isMobile) {
     return Obx(() {
       final images = widget.controller.galleryImages;
+
+      print('>>> Gallery Preview: ${images.length} images');
+      for (var img in images) {
+        print('>>> Image URL: $img');
+      }
 
       if (images.isEmpty) {
         return Container(
@@ -741,19 +749,117 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
       }
 
       if (isMobile) {
-        return SizedBox(
-          height: 300,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Image.network(
-              images[0],
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              errorBuilder: (_, __, ___) =>
-                  Container(color: Colors.grey.shade200),
+        return Column(
+          children: [
+            Container(
+              height: 250,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.network(
+                  images[0],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print('>>> Error loading image: $error');
+                    return Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: Icon(Icons.error, color: Colors.red, size: 48),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
+            if (images.length > 1) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: images.length - 1,
+                  itemBuilder: (context, index) {
+                    final imageIndex = index + 1;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () =>
+                            _showImageDialog(images[imageIndex], imageIndex),
+                        child: Container(
+                          width: 120,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              images[imageIndex],
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Center(
+                                    child: Icon(Icons.error,
+                                        color: Colors.red, size: 24),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (images.length > 5)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showAllPhotosDialog(),
+                      icon: const Icon(Icons.grid_view_rounded),
+                      label: Text(
+                        "View all ${images.length} photos",
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ],
         );
       }
 
@@ -761,7 +867,6 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
         height: 520,
         child: Row(
           children: [
-            // Main image (left side - 60% width)
             Flexible(
               flex: 3,
               child: ClipRRect(
@@ -774,19 +879,38 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
-                  errorBuilder: (_, __, ___) =>
-                      Container(color: Colors.grey.shade200),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print('>>> Error loading main image: $error');
+                    return Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: Icon(Icons.error, color: Colors.red, size: 64),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
             if (images.length > 1) const SizedBox(width: 12),
-            // Right side images (40% width)
             if (images.length > 1)
               Flexible(
                 flex: 2,
                 child: Column(
                   children: [
-                    // First right image
                     Expanded(
                       child: ClipRRect(
                         borderRadius: images.length > 2
@@ -800,13 +924,34 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: Colors.grey.shade200),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print('>>> Error loading image 2: $error');
+                            return Container(
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: Icon(Icons.error, color: Colors.red),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                     if (images.length > 2) const SizedBox(height: 10),
-                    // Second right image
                     if (images.length > 2)
                       Expanded(
                         child: ClipRRect(
@@ -818,15 +963,38 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
-                            errorBuilder: (_, __, ___) =>
-                                Container(color: Colors.grey.shade200),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  ));
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              print('>>> Error loading image 3: $error');
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: const Center(
+                                  child: Icon(Icons.error, color: Colors.red),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-            // Additional images (3rd and 4th) if available
             if (images.length > 3) const SizedBox(width: 12),
             if (images.length > 3)
               Flexible(
@@ -843,27 +1011,121 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: Colors.grey.shade200),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print('>>> Error loading image 4: $error');
+                            return Container(
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: Icon(Icons.error, color: Colors.red),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          bottomRight: Radius.circular(20),
-                        ),
-                        child: images.length > 4
-                            ? Image.network(
-                                images[4],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (_, __, ___) =>
-                                    Container(color: Colors.grey.shade200),
-                              )
-                            : Container(color: Colors.grey.shade200),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              bottomRight: Radius.circular(20),
+                            ),
+                            child: images.length > 4
+                                ? Image.network(
+                                    images[4],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print(
+                                          '>>> Error loading image 5: $error');
+                                      return Container(
+                                        color: Colors.grey.shade200,
+                                        child: const Center(
+                                          child: Icon(Icons.error,
+                                              color: Colors.red),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(color: Colors.grey.shade200),
+                          ),
+                          if (images.length > 4)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.black26,
+                                  borderRadius: BorderRadius.only(
+                                    bottomRight: Radius.circular(20),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Align(
+                            alignment: Alignment.center,
+                            child: InkWell(
+                              onTap: () => _showAllPhotosDialog(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.grid_view_rounded),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      images.length > 5
+                                          ? "Show all ${images.length} photos"
+                                          : "Show all photos",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -873,6 +1135,180 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
         ),
       );
     });
+  }
+
+  void _showAllPhotosDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: const EdgeInsets.all(40),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey, width: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${widget.controller.clinic.value?.clinicName ?? 'Clinic'} - Gallery (${widget.controller.galleryImages.length} photos)",
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Obx(() {
+                    final images = widget.controller.galleryImages;
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(20),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: images.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () => _showImageDialog(images[index], index),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              images[index],
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                print(
+                                    '>>> Error loading gallery image $index: $error');
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Center(
+                                    child: Icon(Icons.error, color: Colors.red),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showImageDialog(String imagePath, int index) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imagePath,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        print('>>> Error loading full image: $error');
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child:
+                                Icon(Icons.error, color: Colors.red, size: 64),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 20,
+                right: 20,
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildClinicHeader(bool isMobile) {
