@@ -143,16 +143,15 @@ class UserPfpController extends GetxController {
     }
 
     // If there's a current profile picture from database
-    if (currentProfilePictureId.isNotEmpty) {
-      final imageUrl =
-          authRepository.getImageUrl(currentProfilePictureId.value);
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(size / 2),
-        child: Image.network(
-          imageUrl,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
+        if (currentProfilePictureId.isNotEmpty) {
+          final imageUrl = authRepository.getUserProfilePictureUrl(currentProfilePictureId.value);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(size / 2),
+            child: Image.network(
+              imageUrl,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return _buildPlaceholder(size, placeholderColor, userName);
           },
@@ -219,70 +218,68 @@ class UserPfpController extends GetxController {
 
   /// Save profile picture to database
   /// Returns the new file ID if successful, null otherwise
-  Future<String?> saveProfilePicture(String userId, String userDocumentId) async {
-    if (selectedFile.value == null) {
-      _showError('No image selected');
-      return null;
-    }
-
-    try {
-      isUploading.value = true;
-
-      // Delete old profile picture if it exists
-      if (currentProfilePictureId.isNotEmpty) {
-        try {
-          await authRepository.deleteImage(currentProfilePictureId.value);
-        } catch (e) {
-          print('Warning: Failed to delete old profile picture: $e');
-        }
-      }
-
-      // Convert PlatformFile to InputFile for upload
-      final file = selectedFile.value!;
-      final fileName = 'user_profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.${file.extension}';
-      
-      InputFile inputFile;
-      if (file.bytes != null) {
-        // Web upload
-        inputFile = InputFile.fromBytes(
-          bytes: file.bytes!,
-          filename: fileName,
-        );
-      } else if (file.path != null) {
-        // Mobile upload
-        inputFile = InputFile.fromPath(
-          path: file.path!,
-          filename: fileName,
-        );
-      } else {
-        throw Exception('File has neither bytes nor path');
-      }
-
-      // Upload new profile picture
-      final uploadedFile = await authRepository.uploadImage(inputFile);
-
-      // Update user record with new profile picture ID using the provider method
-      final newFileId = await authRepository.updateUserProfilePicture(
-        userDocumentId,
-        currentProfilePictureId.value.isEmpty ? null : currentProfilePictureId.value,
-        inputFile,
-      );
-
-      // Update local state
-      currentProfilePictureId.value = newFileId;
-      selectedFile.value = null;
-      previewUrl.value = '';
-
-      _showSuccess('Profile picture updated successfully');
-
-      isUploading.value = false;
-      return newFileId;
-    } catch (e) {
-      isUploading.value = false;
-      _showError('Failed to upload profile picture: $e');
-      return null;
-    }
+Future<String?> saveProfilePicture(String userDocumentId) async {
+  if (selectedFile.value == null) {
+    _showError('No image selected');
+    return null;
   }
+
+  try {
+    isUploading.value = true;
+
+    // Delete old profile picture if it exists
+    if (currentProfilePictureId.isNotEmpty) {
+      try {
+        await authRepository.deleteUserProfilePicture(currentProfilePictureId.value);
+      } catch (e) {
+        print('Warning: Failed to delete old profile picture: $e');
+      }
+    }
+
+    // Convert PlatformFile to InputFile for upload
+    final file = selectedFile.value!;
+    final fileName = 'user_profile_${DateTime.now().millisecondsSinceEpoch}.${file.extension}';
+    
+    InputFile inputFile;
+    if (file.bytes != null) {
+      inputFile = InputFile.fromBytes(
+        bytes: file.bytes!,
+        filename: fileName,
+      );
+    } else if (file.path != null) {
+      inputFile = InputFile.fromPath(
+        path: file.path!,
+        filename: fileName,
+      );
+    } else {
+      throw Exception('File has neither bytes nor path');
+    }
+
+    // Upload new profile picture
+    final uploadedFile = await authRepository.uploadUserProfilePicture(inputFile);
+
+    // Update user record with new profile picture ID
+    await authRepository.updateUserProfilePicture(
+      userDocumentId,
+      currentProfilePictureId.isEmpty ? null : currentProfilePictureId.value,
+      inputFile,
+    );
+
+    // Update local state
+    currentProfilePictureId.value = uploadedFile.$id;
+    selectedFile.value = null;
+    previewUrl.value = '';
+
+    _showSuccess('Profile picture updated successfully');
+
+    isUploading.value = false;
+    return uploadedFile.$id;
+  } catch (e) {
+    isUploading.value = false;
+    _showError('Failed to upload profile picture: $e');
+    return null;
+  }
+}
 
   /// Cancel changes and revert to previous state
   void cancelChanges() {

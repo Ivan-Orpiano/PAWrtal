@@ -98,14 +98,20 @@ class AppWriteProvider {
             'clinicName', clinicDoc.data['clinicName'] ?? 'Unknown Clinic');
         _storage.write('adminId', user.$id);
 
-        // Store profile picture ID from clinic document
-        final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
-        if (profilePictureId != null && profilePictureId.isNotEmpty) {
-          _storage.write('clinicProfilePictureId', profilePictureId);
-          print('>>> Clinic profile picture ID stored: $profilePictureId');
-        } else {
-          _storage.write('clinicProfilePictureId', '');
-          print('>>> No profile picture for this clinic');
+        try {
+          final userDoc = await getUserById(user.$id);
+          if (userDoc != null) {
+            final profilePictureId = userDoc.data['profilePictureId'] as String?;
+            if (profilePictureId != null && profilePictureId.isNotEmpty) {
+              _storage.write('userProfilePictureId', profilePictureId);
+              print('>>> Profile picture ID stored: $profilePictureId');
+            } else {
+              _storage.write('userProfilePictureId', '');
+            }
+          }
+        } catch (e) {
+          print('>>> Warning: Could not fetch profile picture ID: $e');
+          _storage.write('userProfilePictureId', '');
         }
 
         print('>>> Stored in GetStorage:');
@@ -113,7 +119,7 @@ class AppWriteProvider {
         print('>>> - email: ${user.email}');
         print('>>> - role: admin');
         print('>>> - clinicId: ${clinicDoc.$id}');
-        print('>>> - clinicProfilePictureId: $profilePictureId');
+        print('>>> - userProfilePictureId: ${_storage.read('userProfilePictureId') ?? ''}');
 
         return {
           'success': true,
@@ -218,6 +224,38 @@ class AppWriteProvider {
       print('>>> - userName: ${user.name}');
       print('>>> - role: $role');
       print('>>> ============================================');
+
+      print('>>> Step 5: Fetching profile picture...');
+        try {
+          final userDoc = await getUserById(user.$id);
+          if (userDoc != null) {
+            final profilePictureId = userDoc.data['profilePictureId'] as String?;
+            final docId = userDoc.$id; // This is the documentId from Appwrite
+            
+            _storage.write('userDocumentId', docId); // Store for later updates
+            
+            if (profilePictureId != null && profilePictureId.isNotEmpty) {
+              _storage.write('userProfilePictureId', profilePictureId);
+              print('>>> Profile picture ID stored: $profilePictureId');
+              print('>>> User document ID stored: $docId');
+            } else {
+              _storage.write('userProfilePictureId', '');
+              print('>>> No profile picture for this user');
+            }
+          }
+        } catch (e) {
+          print('>>> Error fetching profile picture: $e');
+          _storage.write('userProfilePictureId', '');
+        }
+
+        print('>>> Stored in GetStorage:');
+        print('>>> - userId: ${user.$id}');
+        print('>>> - email: ${user.email}');
+        print('>>> - userName: ${user.name}');
+        print('>>> - role: $role');
+        print('>>> - userDocumentId: ${_storage.read('userDocumentId')}');
+        print('>>> - userProfilePictureId: ${_storage.read('userProfilePictureId')}');
+
 
       return {
         'success': true,
