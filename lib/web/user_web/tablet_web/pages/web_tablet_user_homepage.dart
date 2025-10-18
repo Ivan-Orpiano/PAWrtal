@@ -72,7 +72,7 @@ class _WebTabletUserHomepageState extends State<WebTabletUserHomepage> {
             padding: EdgeInsets.only(right: 60),
             child: Row(
               children: [
-                UserNotificationButton(),
+                WebNotificationIcon(),
                 WebProfileIcon(),
               ],
             ),

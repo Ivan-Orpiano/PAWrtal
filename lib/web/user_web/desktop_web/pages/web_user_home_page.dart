@@ -72,7 +72,7 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
             padding: EdgeInsets.only(right: 65),
             child: Row(
               children: [
-                UserNotificationButton(),
+                WebNotificationIcon(),
                 WebProfileIcon(),
               ],
             ),

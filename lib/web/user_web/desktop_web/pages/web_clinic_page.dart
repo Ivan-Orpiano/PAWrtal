@@ -372,10 +372,10 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                             child: WebSearchBar(width: 380),
                           ),
                           const Spacer(flex: 1),
-                          const UserNotificationButton(
-                            right: 125,
+                          WebNotificationIcon(
+                            right: notifRight,
                             top: 70,
-                            width: 450,
+                            width: 500,
                           ),
                           WebProfileIcon(
                             right: iconRight,
