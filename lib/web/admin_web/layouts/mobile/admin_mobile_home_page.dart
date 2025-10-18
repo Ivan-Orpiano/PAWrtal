@@ -1,5 +1,8 @@
 import 'package:capstone_app/web/admin_web/components/staffs/data/permission_guard.dart';
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
+import 'package:capstone_app/web/admin_web/components/appbar/admin_web_notif.dart';
+import 'package:capstone_app/web/admin_web/components/appbar/admin_web_profile.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -81,18 +84,14 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
           ),
         ),
         actions: [
-          IconButton(
-            onPressed: () {
-              // TODO: Implement notifications
-            },
-            icon: const Icon(Icons.notifications),
+          // Notification Icon with AdminWebNotif
+          AdminWebNotif(
+            right: 0,
+            top: 70,
+            width: 400,
           ),
-          IconButton(
-            onPressed: () {
-              // TODO: Show profile menu
-            },
-            icon: const Icon(Icons.account_circle),
-          ),
+          // Profile Icon with AdminWebProfile - wrapped with custom navigation
+          _buildProfileButton(controller),
         ],
       ),
       body: Obx(() {
@@ -100,7 +99,6 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
           return const Center(child: Text('Page not found'));
         }
 
-        // Wrap the current page with permission guard
         return _wrapWithPermissionGuard(
           controller.pages[widget.selectedIndex],
           widget.selectedIndex,
@@ -120,7 +118,6 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
           ],
         ),
         child: Obx(() {
-          // Build navigation items dynamically based on controller's navigation labels
           final navItems = List.generate(
             controller.navigationLabels.length,
             (index) {
@@ -146,6 +143,16 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
             items: navItems,
           );
         }),
+      ),
+    );
+  }
+
+  Widget _buildProfileButton(WebAdminHomeController controller) {
+    return Builder(
+      builder: (context) => AdminWebProfile(
+        right: 0,
+        top: 70,
+        width: 250,
       ),
     );
   }

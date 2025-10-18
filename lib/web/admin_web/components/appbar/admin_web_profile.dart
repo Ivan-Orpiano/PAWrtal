@@ -23,7 +23,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   final GetStorage storage = GetStorage();
   late AuthRepository _authRepository;
 
-  // Cached clinic data
   String _cachedClinicName = 'Clinic';
   String _cachedProfilePictureId = '';
 
@@ -34,14 +33,12 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     _loadClinicDataFromStorage();
   }
 
-  /// Load clinic data from storage (instant)
   void _loadClinicDataFromStorage() {
     _cachedClinicName = storage.read("clinicName") as String? ?? 'Clinic';
     _cachedProfilePictureId =
         storage.read("clinicProfilePictureId") as String? ?? '';
   }
 
-  /// Fetch fresh clinic data in background (without blocking UI)
   Future<void> _refreshClinicDataInBackground() async {
     try {
       final clinicId = storage.read("clinicId") as String?;
@@ -52,7 +49,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
         final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
 
-        // Update cache and storage
         setState(() {
           _cachedClinicName = newClinicName;
           _cachedProfilePictureId = newProfilePictureId;
@@ -67,9 +63,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
 
   void _togglePopup(BuildContext context) {
     if (_overlayEntry == null) {
-      // Refresh data in background when opening popup (non-blocking)
       _refreshClinicDataInBackground();
-
       _overlayEntry = _createOverlayEntry(context);
       Overlay.of(context).insert(_overlayEntry!);
     } else {
@@ -312,5 +306,11 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _overlayEntry?.remove();
+    super.dispose();
   }
 }

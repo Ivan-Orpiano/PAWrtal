@@ -46,20 +46,20 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
     );
   }
 
-  Icon _getIconForLabel(String label) {
+  IconData _getIconForLabel(String label) {
     switch (label) {
       case 'Home':
-        return const Icon(Icons.dashboard, size: 20);
+        return Icons.dashboard;
       case 'Clinic':
-        return const Icon(Icons.local_hospital, size: 20);
+        return Icons.local_hospital;
       case 'Appointments':
-        return const Icon(Icons.calendar_today, size: 20);
+        return Icons.calendar_today;
       case 'Messages':
-        return const Icon(Icons.message, size: 20);
+        return Icons.message;
       case 'Staffs':
-        return const Icon(Icons.people, size: 20);
+        return Icons.people;
       default:
-        return const Icon(Icons.circle, size: 20);
+        return Icons.circle;
     }
   }
 
@@ -103,106 +103,6 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
           )
         ],
       ),
-      drawer: SafeArea(
-        child: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 81, 115, 153),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircleAvatar(
-                      backgroundColor: Colors.white,
-                      radius: 28,
-                      child: Icon(
-                        Icons.admin_panel_settings,
-                        color: Color.fromARGB(255, 81, 115, 153),
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Obx(() {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _controller.userName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            _controller.userRole.value.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      );
-                    }),
-                  ],
-                ),
-              ),
-              Obx(() {
-                return Column(
-                  children: List.generate(
-                    _controller.navigationLabels.length,
-                    (index) {
-                      final label = _controller.navigationLabels[index];
-                      final hasPermission =
-                          index == 0 || _controller.hasAuthority(label);
-                      final isViewOnly =
-                          !hasPermission && _controller.isStaff;
-
-                      return ListTile(
-                        leading: _getIconForLabel(label),
-                        title: Text(
-                          label,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        selected: widget.selectedIndex == index,
-                        selectedTileColor: const Color.fromARGB(255, 81, 115, 153)
-                            .withOpacity(0.1),
-                        trailing: isViewOnly
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'View Only',
-                                  style: TextStyle(
-                                      fontSize: 9, color: Colors.orange),
-                                ),
-                              )
-                            : null,
-                        onTap: () {
-                          Navigator.pop(context);
-                          Future.delayed(const Duration(milliseconds: 100), () {
-                            widget.onItemSelected(index);
-                          });
-                        },
-                      );
-                    },
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
       body: Obx(() {
         if (widget.selectedIndex >= _controller.pages.length) {
           return const Center(child: Text('Page not found'));
@@ -214,6 +114,45 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
           _controller,
         );
       }),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: Obx(() {
+          final navItems = List.generate(
+            _controller.navigationLabels.length,
+            (index) {
+              final label = _controller.navigationLabels[index];
+
+              return BottomNavigationBarItem(
+                icon: Icon(_getIconForLabel(label)),
+                label: label,
+              );
+            },
+          );
+
+          return BottomNavigationBar(
+            currentIndex: widget.selectedIndex < navItems.length
+                ? widget.selectedIndex
+                : 0,
+            onTap: widget.onItemSelected,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color.fromARGB(255, 81, 115, 153),
+            unselectedItemColor: Colors.grey,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            items: navItems,
+          );
+        }),
+      ),
     );
   }
 }

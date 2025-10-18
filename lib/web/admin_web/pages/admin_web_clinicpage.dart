@@ -605,6 +605,9 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                         ],
                       ),
                 const SizedBox(height: 16),
+                // Drag and Drop Area for Desktop
+                if (!isMobile) _buildDragAndDropArea(isMobile),
+                if (!isMobile) const SizedBox(height: 16),
                 Obx(() {
                   if (controller.galleryImages.isEmpty) {
                     return Container(
@@ -720,8 +723,401 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          // Dashboard Preview Section
+          _buildSectionCard(
+            title: "Dashboard Preview",
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "This is how your clinic appears on the user dashboard",
+                  style: TextStyle(
+                    fontSize: isMobile ? 13 : 14,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Dashboard Tile Preview
+                Obx(() {
+                  final clinic = controller.clinic.value;
+                  final displayImage =
+                      controller.tempDashboardPic.value.isNotEmpty
+                          ? controller.tempDashboardPic.value
+                          : (clinic?.image ?? '');
+
+                  return SizedBox(
+                    width: isMobile ? double.infinity : 350,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tile Preview
+                        Stack(
+                          children: [
+                            SizedBox(
+                              height: 250,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: displayImage.isNotEmpty
+                                    ? Image.network(
+                                        displayImage,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return Container(
+                                            color: Colors.grey[200],
+                                            child: const Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.grey[200],
+                                            child: Center(
+                                              child: Icon(
+                                                  Icons.image_not_supported,
+                                                  size: 48,
+                                                  color: Colors.grey[400]),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : Container(
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: Icon(Icons.photo,
+                                              size: 48,
+                                              color: Colors.grey[400]),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            // Status Badge
+                            Positioned(
+                              top: 10,
+                              left: 10,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: controller.isClinicOpen.value
+                                      ? Colors.green
+                                      : Colors.red,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  controller.isClinicOpen.value
+                                      ? "OPEN"
+                                      : "CLOSED",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Like Button
+                            Positioned(
+                              top: 10,
+                              right: 10,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.favorite_border_rounded,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: null,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Clinic Name and Rating
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                clinic?.clinicName ?? "Clinic Name",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.amber,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  "4.95",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Address
+                        Text(
+                          clinic?.address ?? "Address",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        // Hours
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 12,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                controller.clinicSettings.value
+                                        ?.getTodayHours() ??
+                                    "Hours",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 24),
+                // Control Buttons
+                Obx(() {
+                  return Column(
+                    children: [
+                      if (controller.dashboardPicChanged.value)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.orange[200]!,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info, color: Colors.orange[700]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  "Picture selected. Click 'Save Picture' to confirm changes.",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (controller.dashboardPicChanged.value)
+                        const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (controller.dashboardPicChanged.value)
+                            TextButton(
+                              onPressed: controller.isSaving.value
+                                  ? null
+                                  : controller.cancelDashboardPictureSelection,
+                              child: const Text("Cancel"),
+                            ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: controller.isSaving.value
+                                ? null
+                                : controller.setDashboardPicture,
+                            icon: controller.isSaving.value
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(Icons.image_search),
+                            label: Text(
+                              controller.isSaving.value
+                                  ? "Uploading..."
+                                  : "Add/Replace Picture",
+                              style: TextStyle(fontSize: isMobile ? 12 : 13),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                          if (controller.dashboardPicChanged.value) ...[
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: controller.isSaving.value
+                                  ? null
+                                  : controller.saveDashboardPicture,
+                              icon: controller.isSaving.value
+                                  ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : const Icon(Icons.save),
+                              label: Text(
+                                controller.isSaving.value
+                                    ? "Saving..."
+                                    : "Save Picture",
+                                style: TextStyle(fontSize: isMobile ? 12 : 13),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  // NEW: Drag and Drop Area Widget
+  Widget _buildDragAndDropArea(bool isMobile) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        bool isDragOver = false;
+
+        return SizedBox(
+          width: double.infinity,
+          child: DragTarget<List<String>>(
+            onWillAcceptWithDetails: (details) {
+              setState(() => isDragOver = true);
+              return true;
+            },
+            onLeave: (_) {
+              setState(() => isDragOver = false);
+            },
+            onAcceptWithDetails: (details) {
+              setState(() => isDragOver = false);
+            },
+            builder: (context, candidateData, rejectedData) {
+              return MouseRegion(
+                onEnter: (_) => setState(() => isDragOver = true),
+                onExit: (_) => setState(() => isDragOver = false),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isDragOver
+                          ? const Color.fromARGB(255, 81, 115, 153)
+                          : Colors.grey[300]!,
+                      width: isDragOver ? 2 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    color: isDragOver
+                        ? const Color.fromARGB(255, 81, 115, 153)
+                            .withOpacity(0.05)
+                        : Colors.grey[50],
+                  ),
+                  child: InkWell(
+                    onTap: controller.isSaving.value
+                        ? null
+                        : controller.addGalleryImages,
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.cloud_upload_outlined,
+                            size: 48,
+                            color: isDragOver
+                                ? const Color.fromARGB(255, 81, 115, 153)
+                                : Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            isDragOver
+                                ? "Drop images here to upload"
+                                : "Drag images here or click to upload",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDragOver
+                                  ? const Color.fromARGB(255, 81, 115, 153)
+                                  : Colors.grey[700],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Supported formats: JPG, PNG",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

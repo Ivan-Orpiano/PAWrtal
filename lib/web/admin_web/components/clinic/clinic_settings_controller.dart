@@ -1,3 +1,4 @@
+import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -22,6 +23,10 @@ class ClinicSettingsController extends GetxController {
   var isSaving = false.obs;
   var clinic = Rxn<Clinic>();
   var clinicSettings = Rxn<ClinicSettings>();
+
+  // NEW: Dashboard picture observable
+  var tempDashboardPic = ''.obs;
+  var dashboardPicChanged = false.obs;
 
   // Flag to track if controllers are initialized
   var _controllersInitialized = false;
@@ -275,6 +280,9 @@ class ClinicSettingsController extends GetxController {
       selectedLocation.value = settings.location;
       emergencyContactController.text = settings.emergencyContact;
       specialInstructionsController.text = settings.specialInstructions;
+      // NEW: Initialize dashboard picture
+      tempDashboardPic.value = settings.dashboardPic;
+      dashboardPicChanged.value = false;
     } catch (e) {
       print('Error populating settings fields: $e');
     }
@@ -401,16 +409,98 @@ class ClinicSettingsController extends GetxController {
         location: selectedLocation.value,
         emergencyContact: _safeGetText(emergencyContactController).trim(),
         specialInstructions: _safeGetText(specialInstructionsController).trim(),
+        dashboardPic: tempDashboardPic.value, // NEW: Save dashboard picture
       );
 
       await authRepository.updateClinicSettings(updatedSettings);
       clinicSettings.value = updatedSettings;
+      dashboardPicChanged.value = false; // NEW: Reset change flag
 
       _showSnackBar("Clinic settings updated successfully!");
     } catch (e) {
       _showSnackBar("Failed to update clinic settings: $e", isError: true);
     } finally {
       isSaving.value = false;
+    }
+  }
+
+  // NEW: Add/update dashboard picture
+  Future<void> setDashboardPicture() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        isSaving.value = true;
+
+        final file = result.files.first;
+
+        try {
+          models.File? uploadedFile;
+
+          if (file.bytes != null) {
+            final uploadedFiles =
+                await authRepository.uploadClinicGalleryImages([file]);
+            if (uploadedFiles.isNotEmpty) {
+              uploadedFile = uploadedFiles.first;
+            }
+          } else if (file.path != null) {
+            uploadedFile = await authRepository.uploadImage(file.path!);
+          } else {
+            _showSnackBar("Failed to process image", isError: true);
+            return;
+          }
+
+          if (uploadedFile != null) {
+            final imageId = uploadedFile.$id;
+            final imageUrl =
+                '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
+
+            tempDashboardPic.value = imageUrl;
+            dashboardPicChanged.value = true;
+
+            _showSnackBar(
+                "Dashboard picture selected. Click 'Save Picture' to confirm.");
+          } else {
+            _showSnackBar("Failed to upload image", isError: true);
+          }
+        } catch (e) {
+          print("Error uploading dashboard picture: $e");
+          _showSnackBar("Failed to upload image: $e", isError: true);
+        }
+      }
+    } catch (e) {
+      print("Error in setDashboardPicture: $e");
+      _showSnackBar("Failed to select image: $e", isError: true);
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  // NEW: Save dashboard picture to database
+  Future<void> saveDashboardPicture() async {
+    if (tempDashboardPic.value.isEmpty) {
+      _showSnackBar("No picture selected", isError: true);
+      return;
+    }
+
+    try {
+      isSaving.value = true;
+      await saveClinicSettings();
+    } catch (e) {
+      _showSnackBar("Failed to save picture: $e", isError: true);
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  // NEW: Cancel dashboard picture selection
+  void cancelDashboardPictureSelection() {
+    if (clinicSettings.value != null) {
+      tempDashboardPic.value = clinicSettings.value!.dashboardPic;
+      dashboardPicChanged.value = false;
     }
   }
 
