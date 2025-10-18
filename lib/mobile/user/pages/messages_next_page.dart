@@ -2,6 +2,7 @@ import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.d
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -11,6 +12,7 @@ class MessagesNextPage extends StatefulWidget {
   final String receiverType;
   final String receiverName;
   final String receiverImage;
+  final String? receiverProfilePictureId;
 
   const MessagesNextPage({
     super.key,
@@ -19,6 +21,7 @@ class MessagesNextPage extends StatefulWidget {
     required this.receiverType,
     required this.receiverName,
     required this.receiverImage,
+    this.receiverProfilePictureId,
   });
 
   @override
@@ -39,6 +42,81 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
         widget.receiverType,
       );
     });
+  }
+
+  String _getProfileImageUrl(String profilePictureId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
+  }
+
+  Widget _buildProfileImage(double size) {
+    final profilePictureId = widget.receiverProfilePictureId ?? '';
+    final fallbackImage = widget.receiverImage;
+    final clinicName = widget.receiverName;
+
+    if (profilePictureId.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Image.network(
+          _getProfileImageUrl(profilePictureId),
+          height: size,
+          width: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback to regular image if profile picture fails
+            return fallbackImage.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(size / 2),
+                    child: Image.network(
+                      fallbackImage,
+                      height: size,
+                      width: size,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildDefaultAvatar(clinicName, size);
+                      },
+                    ),
+                  )
+                : _buildDefaultAvatar(clinicName, size);
+          },
+        ),
+      );
+    } else if (fallbackImage.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Image.network(
+          fallbackImage,
+          height: size,
+          width: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultAvatar(clinicName, size);
+          },
+        ),
+      );
+    } else {
+      return _buildDefaultAvatar(clinicName, size);
+    }
+  }
+
+  Widget _buildDefaultAvatar(String name, double size) {
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 81, 115, 153),
+        borderRadius: BorderRadius.circular(size / 2),
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.4,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -62,52 +140,7 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
               children: [
                 Stack(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: widget.receiverImage.isNotEmpty
-                          ? Image.network(
-                              widget.receiverImage,
-                              height: 40,
-                              width: 40,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 40,
-                                  width: 40,
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 81, 115, 153),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      widget.receiverName[0].toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              height: 40,
-                              width: 40,
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 81, 115, 153),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  widget.receiverName[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
+                    _buildProfileImage(40),
                     // Online status indicator
                     Obx(() {
                       final status = _messagingController.getUserStatus(widget.receiverId);
@@ -222,10 +255,9 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
               return ListView.builder(
                 controller: _messagingController.scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                reverse: true, // This makes newest messages appear at bottom
+                reverse: true,
                 itemCount: _messagingController.currentMessages.length,
                 itemBuilder: (context, index) {
-                  // Reverse the index to show messages in correct order
                   final reversedIndex = _messagingController.currentMessages.length - 1 - index;
                   final message = _messagingController.currentMessages[reversedIndex];
                   return _buildMessageBubble(message);

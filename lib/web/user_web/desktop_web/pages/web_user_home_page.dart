@@ -1,4 +1,3 @@
-import 'package:capstone_app/notifications/components/user_notification_panel.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_profile_icon.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_appointments_page.dart';
@@ -69,10 +68,10 @@ class _WebUserHomePageState extends State<WebUserHomePage> {
         ),
         actions: const [
           Padding(
-            padding: EdgeInsets.only(right: 65),
+            padding: EdgeInsets.only(right: 70),
             child: Row(
               children: [
-                UserNotificationButton(),
+                WebNotificationIcon(),
                 WebProfileIcon(),
               ],
             ),

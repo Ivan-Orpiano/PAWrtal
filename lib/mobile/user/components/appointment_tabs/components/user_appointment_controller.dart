@@ -1,23 +1,16 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
-import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone_app/notifications/controllers/user_notification_controller.dart';
-import 'package:capstone_app/notifications/components/toast_notification_system.dart';
 
 class EnhancedUserAppointmentController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
-  
-  // CRITICAL FIX: Add notification controller reference
-  late final UserNotificationController _notificationController;
 
   EnhancedUserAppointmentController({
     required this.authRepository,
@@ -28,8 +21,7 @@ class EnhancedUserAppointmentController extends GetxController {
   var appointments = <Appointment>[].obs;
   var clinics = <String, Clinic>{}.obs;
   var pets = <String, Pet>{}.obs;
-  var ownersCache = <String, Map<String, dynamic>>{}.obs;
-
+  
   var appointmentReviews = <String, bool>{}.obs;
 
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
@@ -38,15 +30,6 @@ class EnhancedUserAppointmentController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
-    // CRITICAL FIX: Initialize notification controller reference
-    try {
-      _notificationController = Get.find<UserNotificationController>(tag: 'user');
-      print('>>> User notification controller connected to appointment controller');
-    } catch (e) {
-      print('>>> ERROR: Could not find UserNotificationController: $e');
-    }
-    
     fetchAppointments();
     _setupRealtimeSubscription();
     _setupReviewSubscription();
@@ -78,8 +61,9 @@ class EnhancedUserAppointmentController extends GetxController {
       final userId = session.userId;
       if (userId.isEmpty) return;
 
-      _reviewSubscription =
-          authRepository.subscribeToClinicReviews('').listen((message) {
+      _reviewSubscription = authRepository
+          .subscribeToClinicReviews('')
+          .listen((message) {
         _handleReviewUpdate(message);
       });
     } catch (e) {
@@ -112,110 +96,21 @@ class EnhancedUserAppointmentController extends GetxController {
     final payload = message.payload;
     final eventType = message.events.first;
 
-    print('>>> User Appointment Realtime update: $eventType');
-    print('>>> Payload: $payload');
+    print('Realtime update received: $eventType');
+    print('Payload: $payload');
 
     if (eventType.contains('create')) {
       _addOrUpdateAppointment(payload);
-      print('>>> Added new appointment');
+      print('Added new appointment');
     } else if (eventType.contains('update')) {
       _addOrUpdateAppointment(payload);
-      
-      // CRITICAL FIX: Show notification for appointment status updates
-      final appointment = Appointment.fromMap(payload);
-      _handleAppointmentStatusChange(appointment);
-      
-      print('>>> Updated appointment');
+      print('Updated appointment');
     } else if (eventType.contains('delete')) {
       appointments.removeWhere((a) => a.documentId == payload['\$id']);
-      print('>>> Deleted appointment');
+      print('Deleted appointment');
     }
 
     appointments.refresh();
-  }
-
-  // CRITICAL FIX: Handle appointment status changes with notifications
-  void _handleAppointmentStatusChange(Appointment appointment) {
-    try {
-      final existingIndex = appointments.indexWhere((a) => a.documentId == appointment.documentId);
-      
-      if (existingIndex != -1) {
-        final oldAppointment = appointments[existingIndex];
-        
-        // Check if status changed
-        if (oldAppointment.status != appointment.status) {
-          print('>>> Appointment status changed: ${oldAppointment.status} -> ${appointment.status}');
-          
-          // Show appropriate notification based on new status
-          switch (appointment.status) {
-            case 'accepted':
-              _showAppointmentAcceptedNotification(appointment);
-              break;
-            case 'declined':
-              _showAppointmentDeclinedNotification(appointment);
-              break;
-            case 'completed':
-              _showAppointmentCompletedNotification(appointment);
-              break;
-            case 'in_progress':
-              _showAppointmentInProgressNotification(appointment);
-              break;
-            case 'cancelled':
-              if (appointment.cancelledBy == 'clinic') {
-                _showAppointmentCancelledByClinicNotification(appointment);
-              }
-              break;
-            case 'no_show':
-              _showAppointmentNoShowNotification(appointment);
-              break;
-          }
-        }
-      }
-    } catch (e) {
-      print('>>> Error handling appointment status change: $e');
-    }
-  }
-
-  void _showAppointmentAcceptedNotification(Appointment appointment) {
-    ToastNotificationService.showSuccessToast(
-      'Appointment Accepted',
-      'Your appointment for ${getPetName(appointment)} has been accepted!',
-    );
-  }
-
-  void _showAppointmentDeclinedNotification(Appointment appointment) {
-    ToastNotificationService.showErrorToast(
-      'Appointment Declined',
-      'Your appointment for ${getPetName(appointment)} was declined by the clinic.',
-    );
-  }
-
-  void _showAppointmentCompletedNotification(Appointment appointment) {
-    ToastNotificationService.showSuccessToast(
-      'Appointment Completed',
-      'Your appointment for ${getPetName(appointment)} has been completed!',
-    );
-  }
-
-  void _showAppointmentInProgressNotification(Appointment appointment) {
-    ToastNotificationService.showInfoToast(
-      'Treatment Started',
-      '${getPetName(appointment)} is now being treated.',
-    );
-  }
-
-  void _showAppointmentCancelledByClinicNotification(Appointment appointment) {
-    ToastNotificationService.showErrorToast(
-      'Appointment Cancelled',
-      'The clinic cancelled your appointment for ${getPetName(appointment)}.',
-    );
-  }
-
-  void _showAppointmentNoShowNotification(Appointment appointment) {
-    ToastNotificationService.showErrorToast(
-      'Missed Appointment',
-      'You missed your appointment for ${getPetName(appointment)}.',
-    );
   }
 
   void _addOrUpdateAppointment(Map<String, dynamic> payload) {
@@ -235,8 +130,7 @@ class EnhancedUserAppointmentController extends GetxController {
 
   Future<void> _checkAppointmentReview(String appointmentId) async {
     try {
-      final hasReview =
-          await authRepository.hasUserReviewedAppointment(appointmentId);
+      final hasReview = await authRepository.hasUserReviewedAppointment(appointmentId);
       appointmentReviews[appointmentId] = hasReview;
     } catch (e) {
       print('Error checking appointment review: $e');
@@ -255,7 +149,7 @@ class EnhancedUserAppointmentController extends GetxController {
 
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
-
+      
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
     } catch (e) {
@@ -354,7 +248,7 @@ class EnhancedUserAppointmentController extends GetxController {
   List<Appointment> get completed {
     return appointments.where((a) {
       if (a.status != 'completed') return false;
-
+      
       final hasReview = appointmentReviews[a.documentId] ?? false;
       return !hasReview;
     }).toList()
@@ -363,17 +257,17 @@ class EnhancedUserAppointmentController extends GetxController {
 
   List<Appointment> get history {
     return appointments.where((a) {
-      if (a.status == 'cancelled' ||
-          a.status == 'declined' ||
+      if (a.status == 'cancelled' || 
+          a.status == 'declined' || 
           a.status == 'no_show') {
         return true;
       }
-
+      
       if (a.status == 'completed') {
         final hasReview = appointmentReviews[a.documentId] ?? false;
         return hasReview;
       }
-
+      
       return false;
     }).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -393,50 +287,45 @@ class EnhancedUserAppointmentController extends GetxController {
     }).toList();
   }
 
-  // CRITICAL FIX: Cancel pending appointment with notification
+  // NEW: Cancel pending appointment (direct deletion, no reason needed)
   Future<void> cancelPendingAppointment(String appointmentId) async {
     try {
       isLoading.value = true;
-
-      final appointment =
-          appointments.firstWhere((a) => a.documentId == appointmentId);
-
-      // Update appointment status
+      
       await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
 
-      // CRITICAL: Create notification for admin
-      await _createAdminNotificationForUserCancellation(
-        appointment,
-        'User cancelled pending appointment request',
-      );
-
-      // Remove from local list
+      // Remove from local list immediately for better UX
       appointments.removeWhere((a) => a.documentId == appointmentId);
 
-      ToastNotificationService.showSuccessToast(
-        'Request Cancelled',
-        'Appointment request cancelled successfully',
+      Get.snackbar(
+        "Cancelled",
+        "Appointment request cancelled successfully",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade50,
+        colorText: Colors.orange.shade700,
+        icon: const Icon(Icons.cancel_outlined, color: Colors.orange),
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      ToastNotificationService.showErrorToast(
-        'Error',
-        'Failed to cancel appointment: $e',
+      Get.snackbar(
+        "Error",
+        "Failed to cancel appointment: $e",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // CRITICAL FIX: Cancel accepted appointment with reason and notification
+  // NEW: Cancel accepted appointment (with reason)
   Future<void> cancelAcceptedAppointment(
     String appointmentId,
     String cancellationReason,
   ) async {
     try {
       isLoading.value = true;
-
-      final appointment =
-          appointments.firstWhere((a) => a.documentId == appointmentId);
 
       // Update appointment with cancellation details
       await authRepository.updateFullAppointment(appointmentId, {
@@ -447,61 +336,25 @@ class EnhancedUserAppointmentController extends GetxController {
         'updatedAt': DateTime.now().toIso8601String(),
       });
 
-      // CRITICAL: Create notification for admin
-      await _createAdminNotificationForUserCancellation(
-          appointment, cancellationReason);
-
-      ToastNotificationService.showSuccessToast(
-        'Appointment Cancelled',
-        'The clinic has been notified',
+      Get.snackbar(
+        "Appointment Cancelled",
+        "Your appointment has been cancelled. The clinic has been notified.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade50,
+        colorText: Colors.orange.shade700,
+        icon: const Icon(Icons.info_outline, color: Colors.orange),
+        duration: const Duration(seconds: 3),
       );
     } catch (e) {
-      ToastNotificationService.showErrorToast(
-        'Error',
-        'Failed to cancel appointment: $e',
+      Get.snackbar(
+        "Error",
+        "Failed to cancel appointment: $e",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  // CRITICAL FIX: Create admin notification for user cancellation
-  Future<void> _createAdminNotificationForUserCancellation(
-    Appointment appointment,
-    String cancellationReason,
-  ) async {
-    try {
-      final ownerName = getOwnerName(appointment.userId);
-      final petName = getPetName(appointment);
-
-      print('>>> Creating admin notification for user cancellation');
-      print('>>> Clinic ID: ${appointment.clinicId}');
-      print('>>> User: $ownerName, Pet: $petName');
-
-      final adminNotification = NotificationModel(
-        recipientId: appointment.clinicId,
-        recipientType: 'admin',
-        type: NotificationType.appointmentCancelled,
-        priority: NotificationPriority.high,
-        title: 'Appointment Cancelled by User',
-        message: '$ownerName cancelled appointment for $petName',
-        appointmentId: appointment.documentId,
-        userId: appointment.userId,
-        actionUrl: '/appointments',
-        data: {
-          'cancellationReason': cancellationReason,
-          'petName': petName,
-          'ownerName': ownerName,
-          'service': appointment.service,
-          'appointmentTime': appointment.dateTime.toIso8601String(),
-          'cancelledBy': 'user',
-        },
-      );
-
-      await authRepository.createNotification(adminNotification);
-      print('>>> ✓ Admin notification created for user cancellation');
-    } catch (e) {
-      print('>>> ERROR creating admin notification for user cancellation: $e');
     }
   }
 
@@ -517,48 +370,6 @@ class EnhancedUserAppointmentController extends GetxController {
   String getPetNameForAppointment(Appointment appointment) {
     final pet = pets[appointment.petId];
     return pet?.name ?? appointment.petId;
-  }
-
-  String getPetName(Appointment appointment) {
-    final pet = pets[appointment.petId];
-    return pet?.name ?? appointment.petId;
-  }
-
-  String getOwnerName(String userId) {
-    if (!ownersCache.containsKey(userId)) {
-      _fetchOwnerData(userId);
-      return 'Loading...';
-    }
-    return ownersCache[userId]?['name'] ?? 'User #${userId.substring(0, 6)}';
-  }
-
-  Future<void> _fetchOwnerData(String userId) async {
-    if (!ownersCache.containsKey(userId)) {
-      try {
-        final ownerDoc = await authRepository.getUserById(userId);
-        if (ownerDoc != null) {
-          final user = User.fromMap(ownerDoc.data);
-          ownersCache[userId] = {
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
-          };
-        } else {
-          ownersCache[userId] = {
-            'name': 'User #${userId.substring(0, 6)}',
-            'email': 'N/A',
-            'phone': 'N/A',
-          };
-        }
-      } catch (e) {
-        print("Error fetching owner $userId: $e");
-        ownersCache[userId] = {
-          'name': 'User #${userId.substring(0, 6)}',
-          'email': 'N/A',
-          'phone': 'N/A',
-        };
-      }
-    }
   }
 
   String getClinicNameForAppointment(Appointment appointment) {
@@ -588,8 +399,8 @@ class EnhancedUserAppointmentController extends GetxController {
       case 'declined':
         return 'Not approved by clinic';
       case 'cancelled':
-        return appointment.cancelledBy == 'user'
-            ? 'Cancelled by you'
+        return appointment.cancelledBy == 'user' 
+            ? 'Cancelled by you' 
             : 'Cancelled by clinic';
       default:
         return appointment.status;
@@ -619,18 +430,21 @@ class EnhancedUserAppointmentController extends GetxController {
   }
 
   bool canCancelAppointment(Appointment appointment) {
+    // Can cancel pending appointments anytime
     if (appointment.status == 'pending') {
       return true;
     }
-
+    
+    // Can cancel accepted appointments if at least 2 hours before appointment time
     if (appointment.status == 'accepted') {
       return appointment.dateTime
           .isAfter(DateTime.now().add(const Duration(hours: 2)));
     }
-
+    
     return false;
   }
 
+  // NEW: Check if appointment needs cancellation reason
   bool needsCancellationReason(Appointment appointment) {
     return appointment.status == 'accepted';
   }
@@ -661,11 +475,11 @@ class EnhancedUserAppointmentController extends GetxController {
       'history': history.length,
     };
   }
-
+  
   bool hasReview(String appointmentId) {
     return appointmentReviews[appointmentId] ?? false;
   }
-
+  
   Future<void> refreshAfterReview(String appointmentId) async {
     await _checkAppointmentReview(appointmentId);
     appointments.refresh();

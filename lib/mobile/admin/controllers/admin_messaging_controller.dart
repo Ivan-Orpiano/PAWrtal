@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:appwrite/appwrite.dart' as models;
-import 'package:capstone_app/notifications/controllers/admin_notification_controller.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
-import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -15,7 +13,6 @@ import 'package:get/get.dart';
 class AdminMessagingController extends GetxController {
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final UserSessionService _userSession = Get.find<UserSessionService>();
-  late final NotificationController _notificationController;
 
   // Observable variables
   final conversations = <Conversation>[].obs;
@@ -54,16 +51,6 @@ class AdminMessagingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-
-    if (!Get.isRegistered<NotificationController>()) {
-      _notificationController = Get.put(NotificationController(
-        authRepository: _authRepository,
-        session: _userSession,
-      ));
-    } else {
-      _notificationController = Get.find<NotificationController>();
-    }
-
     setUserOnline();
   }
 
@@ -382,15 +369,14 @@ class AdminMessagingController extends GetxController {
         attachmentUrl: attachmentUrl,
       );
 
-      // CRITICAL: Create notification for USER about new message from admin
-      await _createMessageNotificationForUser(sentMessage, messageText);
-
-      // Update conversation
+      // Update conversation in local list - admin sent message so their unread count stays 0
+      // The user's unread count will be incremented by the server
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.timestamp,
-        clinicUnreadCount: 0, // Admin's unread count stays 0
+        clinicUnreadCount:
+            0, // Admin's unread count stays 0 since they sent the message
       );
       currentConversation.value = updatedConversation;
 
@@ -406,59 +392,6 @@ class AdminMessagingController extends GetxController {
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isSendingMessage.value = false;
-    }
-  }
-
-  Future<void> _createMessageNotificationForUser(
-      Message message, String messageText) async {
-    try {
-      if (currentConversation.value == null) return;
-
-      // Get admin/clinic name for the notification
-      final adminName = _userSession.userName.isNotEmpty
-          ? _userSession.userName
-          : 'Clinic Staff';
-
-      // Get clinic name
-      String clinicName = 'Veterinary Clinic';
-      try {
-        final clinicDoc = await _authRepository
-            .getClinicById(currentConversation.value!.clinicId);
-        if (clinicDoc != null) {
-          clinicName = clinicDoc.data['clinicName'] ?? 'Veterinary Clinic';
-        }
-      } catch (e) {
-        print('Error getting clinic name: $e');
-      }
-
-      // Create notification for the user
-      final notification = NotificationModel(
-        recipientId: currentConversation.value!.userId, // User as recipient
-        recipientType: 'user',
-        type: NotificationType.newMessage,
-        priority: NotificationPriority.normal,
-        title: 'New Message from $clinicName',
-        message:
-            '$adminName: ${messageText.length > 50 ? "${messageText.substring(0, 50)}..." : messageText}',
-        conversationId: currentConversation.value!.documentId,
-        messageId: message.documentId,
-        userId: currentConversation.value!.userId,
-        actionUrl:
-            '/messages?conversation=${currentConversation.value!.documentId}',
-        data: {
-          'senderName': adminName,
-          'clinicName': clinicName,
-          'messagePreview': messageText.length > 50
-              ? '${messageText.substring(0, 50)}...'
-              : messageText,
-        },
-      );
-
-      await _authRepository.createNotification(notification);
-      print(
-          '>>> Created message notification for user: ${currentConversation.value!.userId}');
-    } catch (e) {
-      print('>>> Error creating message notification for user: $e');
     }
   }
 
@@ -720,58 +653,20 @@ class AdminMessagingController extends GetxController {
             '>>> Clinic unread count: ${updatedConversation.clinicUnreadCount}');
         // If admin is not viewing this conversation, use the actual unread counts from server
         conversations[index] = updatedConversation;
-
-        if (updatedConversation.clinicUnreadCount > 0 &&
-            updatedConversation.lastMessageText != null) {
-          _createMessageNotificationForAdmin(updatedConversation);
-        }
       }
 
       // Move updated conversation to top if it has new messages and it's not already at the top
       if (updatedConversation.clinicUnreadCount > 0 && index != 0) {
+        print('>>> Moving conversation to top (has unread messages)');
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
       }
+
+      print('>>> Conversation updated successfully');
     } else {
       print('>>> Conversation not found in list - adding as new');
       // If conversation doesn't exist, add it
       _handleNewConversation(updatedConversation);
-    }
-  }
-
-  Future<void> _createMessageNotificationForAdmin(
-      Conversation conversation) async {
-    try {
-      // Only create notification if the message is FROM a user TO the admin
-      // Check the last message to see who sent it
-      final messages = await _authRepository.getConversationMessages(
-        conversation.documentId!,
-        limit: 1,
-      );
-
-      if (messages.isNotEmpty) {
-        final lastMessage = messages.first;
-
-        // Only notify admin if the message was sent by a user (not by admin)
-        if (lastMessage.senderType == 'user') {
-          final userData = await _getUserData(conversation.userId);
-
-          final notification = NotificationModel.newMessage(
-            clinicId: conversation.clinicId,
-            conversationId: conversation.documentId!,
-            messageId: lastMessage.documentId!,
-            userId: conversation.userId,
-            senderName: userData['name'],
-            messagePreview: conversation.lastMessageText!,
-          );
-
-          await _authRepository.createNotification(notification);
-          print(
-              'Created message notification for admin from user: ${userData['name']}');
-        }
-      }
-    } catch (e) {
-      print('Error creating message notification for admin: $e');
     }
   }
 
@@ -786,50 +681,11 @@ class AdminMessagingController extends GetxController {
     if (!exists) {
       print('>>> Adding new conversation to list at position 0');
       conversations.insert(0, newConversation);
-      _createNewConversationNotification(newConversation);
       print('>>> New conversation added successfully');
       print('>>> Total conversations: ${conversations.length}');
     } else {
       print('>>> Conversation already exists - skipping');
     }
-  }
-
-  Future<void> _createNewConversationNotification(
-      Conversation conversation) async {
-    try {
-      // Get user data for notification
-      final userData = await _getUserData(conversation.userId);
-
-      await _notificationController.createNotification(
-        NotificationModel(
-          recipientId: conversation.clinicId,
-          recipientType: 'admin',
-          type: NotificationType.newMessage,
-          title: 'New Conversation Started',
-          message: '${userData['name']} started a new conversation',
-          conversationId: conversation.documentId,
-          userId: conversation.userId,
-          actionUrl: '/messages?conversation=${conversation.documentId}',
-        ),
-      );
-    } catch (e) {
-      print('Error creating new conversation notification: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> _getUserData(String userId) async {
-    try {
-      final userDoc = await _authRepository.getUserById(userId);
-      if (userDoc != null) {
-        return {
-          'name': userDoc.data['name'] ?? 'Unknown User',
-          'email': userDoc.data['email'] ?? '',
-        };
-      }
-    } catch (e) {
-      print('Error getting user data: $e');
-    }
-    return {'name': 'Unknown User', 'email': ''};
   }
 
   void subscribeToMessages(String conversationId) {
@@ -845,6 +701,7 @@ class AdminMessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
+          // More robust duplicate check
           final existingIndex = currentMessages.indexWhere((m) =>
               m.documentId == messageWithId.documentId ||
               (m.messageText == messageWithId.messageText &&
@@ -858,25 +715,16 @@ class AdminMessagingController extends GetxController {
           if (existingIndex == -1) {
             currentMessages.add(messageWithId);
 
+            // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
 
-            // CRITICAL FIX: Handle incoming message from user
-            if (messageWithId.senderType == 'user' &&
-                messageWithId.receiverId == _userSession.userId) {
-              print('>>> New message from user received');
-
-              // If admin is viewing this conversation, mark as read
-              if (currentConversation.value?.documentId == conversationId) {
-                markConversationAsRead(conversationId);
-              } else {
-                // Admin is not viewing this conversation - notification already created
-                print(
-                    '>>> Admin not viewing conversation - notification will be shown');
-              }
-            } else if (messageWithId.senderId == _userSession.userId) {
-              // Admin sent this message - mark as read immediately
+            // If this is a message TO the admin and they're viewing the conversation,
+            // mark it as read immediately (but don't mark their own messages as read)
+            if (messageWithId.receiverId == _userSession.userId &&
+                messageWithId.senderId != _userSession.userId &&
+                currentConversation.value?.documentId == conversationId) {
               markConversationAsRead(conversationId);
             }
           }
