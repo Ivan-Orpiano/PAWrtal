@@ -23,6 +23,9 @@ class AdminDashboardController extends GetxController {
     required this.session,
   });
 
+  RealtimeSubscription? _conversationSubscription;
+  RealtimeSubscription? _messageSubscription;
+
   var isLoading = false.obs;
   var clinicData = Rxn<Clinic>();
   var appointments = <Appointment>[].obs;
@@ -61,6 +64,8 @@ class AdminDashboardController extends GetxController {
     print('>>> ============================================');
 
     _appointmentSubscription?.close();
+    _conversationSubscription?.close();
+    _messageSubscription?.close();
     _fallbackTimer?.cancel();
 
     // Clear all data to prevent memory leaks
@@ -74,6 +79,7 @@ class AdminDashboardController extends GetxController {
     petsCache.clear();
     ownersCache.clear();
     calendarAppointments.clear();
+    _userNamesCache.clear();
 
     super.onClose();
   }
@@ -93,18 +99,28 @@ class AdminDashboardController extends GetxController {
         print('>>> Clinic loaded: ${clinicData.value!.clinicName}');
         print('>>> Clinic ID: ${clinicData.value!.documentId}');
 
-        await fetchAllAppointments();
-        await fetchAppointmentStats();
+        // Fetch data in parallel for better performance
+        await Future.wait([
+          fetchAllAppointments(),
+          fetchAppointmentStats(),
+          fetchRecentMessages(), // Now fetches REAL messages
+        ]);
+
+        // Generate calendar data after appointments are loaded
         await generateCalendarData();
-        await fetchRecentMessages();
+
+        // Initialize real-time updates last
         await _initializeRealTimeUpdates();
+
+        print('>>> ============================================');
+        print('>>> DASHBOARD INITIALIZATION COMPLETE');
+        print('>>> - Appointments: ${appointments.length}');
+        print('>>> - Recent Messages: ${recentMessages.length}');
+        print('>>> - Today\'s Appointments: ${todayAppointments.length}');
+        print('>>> ============================================');
       } else {
         print('>>> ERROR: No clinic data loaded!');
       }
-
-      print('>>> ============================================');
-      print('>>> DASHBOARD INITIALIZATION COMPLETE');
-      print('>>> ============================================');
     } catch (e) {
       print('>>> ERROR: Failed to load dashboard data: $e');
       Get.snackbar("Error", "Failed to load dashboard data: $e");
@@ -113,18 +129,13 @@ class AdminDashboardController extends GetxController {
     }
   }
 
-  Future<void> _initializeRealTimeUpdates() async {
+// Add this method to refresh messages separately if needed
+  Future<void> refreshMessages() async {
     try {
-      if (clinicData.value?.documentId == null) return;
-
-      await _subscribeToAppointmentUpdates();
-      _setupFallbackPolling();
-
-      isRealTimeConnected.value = true;
-      print("Real-time updates initialized successfully");
+      await fetchRecentMessages();
+      print('>>> Messages refreshed: ${recentMessages.length} recent messages');
     } catch (e) {
-      print("Failed to initialize real-time updates: $e");
-      _setupFallbackPolling(interval: 15);
+      print('>>> Error refreshing messages: $e');
     }
   }
 
@@ -314,11 +325,12 @@ class AdminDashboardController extends GetxController {
     _fallbackTimer = Timer.periodic(Duration(seconds: interval), (timer) {
       if (!isRealTimeConnected.value) {
         print("Fallback polling: refreshing data...");
-        refreshDashboardData();
+        refreshDashboardData(); // This now includes messages
       }
     });
   }
 
+  @override
   Future<void> refreshDashboard() async {
     await refreshDashboardData();
 
@@ -333,15 +345,95 @@ class AdminDashboardController extends GetxController {
 
   Future<void> refreshDashboardData() async {
     try {
-      await fetchAllAppointments();
-      await fetchAppointmentStats();
+      await Future.wait([
+        fetchAllAppointments(),
+        fetchAppointmentStats(),
+        fetchRecentMessages(), // Add this
+      ]);
+
       await generateCalendarData();
-      await fetchRecentMessages();
       lastUpdateTime.value = DateTime.now();
 
       _removeDuplicateAppointments();
+
+      print('>>> Dashboard data refreshed successfully');
+      print('>>> - Recent messages: ${recentMessages.length}');
     } catch (e) {
       print("Error refreshing dashboard data: $e");
+    }
+  }
+
+  // Add these methods to AdminDashboardController
+
+  Future<void> _initializeRealTimeUpdates() async {
+    try {
+      if (clinicData.value?.documentId == null) return;
+
+      // Subscribe to appointments
+      await _subscribeToAppointmentUpdates();
+
+      // Subscribe to conversations (for message updates)
+      await _subscribeToConversationUpdates();
+
+      _setupFallbackPolling();
+
+      isRealTimeConnected.value = true;
+      print("Real-time updates initialized successfully");
+    } catch (e) {
+      print("Failed to initialize real-time updates: $e");
+      _setupFallbackPolling(interval: 15);
+    }
+  }
+
+// Add this new method for conversation updates
+  Future<void> _subscribeToConversationUpdates() async {
+    try {
+      await _conversationSubscription?.close();
+
+      final realtime = Realtime(authRepository.client);
+
+      _conversationSubscription = realtime.subscribe([
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents'
+      ]);
+
+      _conversationSubscription!.stream.listen(
+        (response) {
+          _handleConversationRealTimeUpdate(response);
+        },
+        onError: (error) {
+          print("Conversation subscription error: $error");
+        },
+      );
+
+      print(">>> Subscribed to conversation updates");
+    } catch (e) {
+      print("Error setting up conversation subscription: $e");
+    }
+  }
+
+// Add this handler for conversation updates
+  void _handleConversationRealTimeUpdate(RealtimeMessage response) {
+    try {
+      final payload = response.payload;
+
+      // Only process if this is for our clinic
+      final conversationClinicId = payload['clinicId'];
+      if (conversationClinicId != clinicData.value?.documentId) return;
+
+      print(">>> Conversation update received: ${response.events}");
+
+      // Check if this is a message-related update
+      final hasMessageUpdate = response.events.any(
+          (event) => event.contains('.update') || event.contains('.create'));
+
+      if (hasMessageUpdate) {
+        // Refresh messages after a short delay to ensure data is consistent
+        Future.delayed(const Duration(milliseconds: 500), () {
+          fetchRecentMessages();
+        });
+      }
+    } catch (e) {
+      print("Error handling conversation update: $e");
     }
   }
 
@@ -625,34 +717,101 @@ class AdminDashboardController extends GetxController {
   }
 
   Future<void> fetchRecentMessages() async {
-    recentMessages.assignAll([
-      {
-        'id': '1',
-        'senderName': 'Sarah Johnson',
-        'message':
-            'Thank you for taking care of Buddy. When should we schedule the next checkup?',
-        'time': DateTime.now().subtract(const Duration(hours: 2)),
-        'isRead': false,
-        'petName': 'Buddy',
-      },
-      {
-        'id': '2',
-        'senderName': 'Mike Chen',
-        'message':
-            'Luna seems to be feeling much better after the treatment. Thank you!',
-        'time': DateTime.now().subtract(const Duration(hours: 5)),
-        'isRead': true,
-        'petName': 'Luna',
-      },
-      {
-        'id': '3',
-        'senderName': 'Jennifer Davis',
-        'message': 'Can we reschedule Max\'s appointment to next week?',
-        'time': DateTime.now().subtract(const Duration(days: 1)),
-        'isRead': false,
-        'petName': 'Max',
-      },
-    ]);
+    if (clinicData.value?.documentId == null) {
+      print('>>> ERROR: Cannot fetch messages - no clinic ID');
+      return;
+    }
+
+    try {
+      print(
+          '>>> Fetching recent messages for clinic: ${clinicData.value!.documentId}');
+
+      // Get all conversations for this clinic
+      final conversations = await authRepository
+          .getClinicConversations(clinicData.value!.documentId!);
+
+      print('>>> Found ${conversations.length} conversations');
+
+      if (conversations.isEmpty) {
+        recentMessages.clear();
+        return;
+      }
+
+      // Sort conversations by lastMessageTime (most recent first)
+      conversations.sort((a, b) {
+        if (a.lastMessageTime == null && b.lastMessageTime == null) return 0;
+        if (a.lastMessageTime == null) return 1;
+        if (b.lastMessageTime == null) return -1;
+        return b.lastMessageTime!.compareTo(a.lastMessageTime!);
+      });
+
+      // Take only the 3 most recent conversations
+      final recentConversations = conversations.take(3).toList();
+
+      // Build the recent messages list
+      final List<Map<String, dynamic>> messages = [];
+
+      for (var conversation in recentConversations) {
+        if (conversation.lastMessageText == null ||
+            conversation.lastMessageTime == null) {
+          continue;
+        }
+
+        // Fetch user data for the sender
+        String senderName = 'Unknown User';
+        try {
+          final userDoc = await authRepository.getUserById(conversation.userId);
+          if (userDoc != null) {
+            final user = User.fromMap(userDoc.data);
+            senderName = user.name;
+          }
+        } catch (e) {
+          print('>>> Error fetching user ${conversation.userId}: $e');
+          senderName = 'User #${conversation.userId.substring(0, 6)}';
+        }
+
+        messages.add({
+          'id': conversation.documentId ?? '',
+          'senderName': senderName,
+          'senderId': conversation.userId,
+          'message': conversation.lastMessageText ?? '',
+          'time': conversation.lastMessageTime!,
+          'isRead': conversation.clinicUnreadCount == 0,
+          'unreadCount': conversation.clinicUnreadCount,
+          'conversationId': conversation.documentId,
+        });
+      }
+
+      print('>>> Processed ${messages.length} recent messages');
+      recentMessages.assignAll(messages);
+    } catch (e) {
+      print('>>> ERROR fetching recent messages: $e');
+      recentMessages.clear();
+    }
+  }
+
+// Add this helper method to cache user data
+  final Map<String, String> _userNamesCache = {};
+
+  Future<String> _getUserName(String userId) async {
+    if (_userNamesCache.containsKey(userId)) {
+      return _userNamesCache[userId]!;
+    }
+
+    try {
+      final userDoc = await authRepository.getUserById(userId);
+      if (userDoc != null) {
+        final user = User.fromMap(userDoc.data);
+        _userNamesCache[userId] = user.name;
+        return user.name;
+      }
+    } catch (e) {
+      print('Error fetching user name for $userId: $e');
+    }
+
+    final fallback = 'User #${userId.substring(0, 6)}';
+    _userNamesCache[userId] = fallback;
+    return fallback;
   }
 
   String getOwnerName(String userId) {

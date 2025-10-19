@@ -234,7 +234,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                                 ),
                               ),
                               Text(
-                                'All Time',
+                                controller.viewMode.value.label,
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 8,

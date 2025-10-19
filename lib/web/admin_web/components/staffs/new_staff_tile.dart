@@ -33,23 +33,24 @@ class NewStaffTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSmall = MediaQuery.of(context).size.width <= 600;
+    final isSmall = MediaQuery.of(context).size.width <= 768;
 
     return Material(
-      elevation: 3.0,
-      borderRadius: BorderRadius.circular(20),
+      elevation: isSmall ? 2.0 : 3.0,
+      borderRadius: BorderRadius.circular(isSmall ? 16 : 20),
       shadowColor: primaryTeal.withOpacity(0.2),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isSmall ? 16 : 20),
         onTap: () => _showStaffForm(context),
         hoverColor: primaryTeal.withOpacity(0.04),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: primaryTeal.withOpacity(0.3), width: 2.5),
+            borderRadius: BorderRadius.circular(isSmall ? 16 : 20),
+            border: Border.all(
+                color: primaryTeal.withOpacity(0.3), width: isSmall ? 2 : 2.5),
           ),
-          padding: EdgeInsets.all(isSmall ? 14 : 20),
+          padding: EdgeInsets.all(isSmall ? 12 : 20),
           child: isSmall ? _buildMobileLayout() : _buildDesktopLayout(),
         ),
       ),
@@ -57,7 +58,7 @@ class NewStaffTile extends StatelessWidget {
   }
 
   Widget _buildMobileLayout() {
-    return Row(
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
@@ -70,36 +71,32 @@ class NewStaffTile extends StatelessWidget {
           child: const Icon(Icons.person_add_alt_1_rounded,
               color: primaryTeal, size: 24),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Add New Staff',
+        const SizedBox(height: 8),
+        Column(
+          children: [
+            const Text(
+              'Add Staff',
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.bold, color: darkText),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: primaryTeal.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Create account',
                 style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: darkText),
+                    color: primaryTeal,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: primaryTeal.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'Create account',
-                  style: TextStyle(
-                      color: primaryTeal,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-        const Icon(Icons.add, color: primaryTeal, size: 20),
       ],
     );
   }
@@ -355,7 +352,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           children: [
             // Header
             Container(
-              padding: EdgeInsets.all(isDesktop ? 24 : 20),
+              padding: EdgeInsets.all(isDesktop ? 24 : 16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -377,18 +374,18 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(isDesktop ? 8 : 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.medical_services_rounded,
                       color: Colors.white,
-                      size: 26,
+                      size: isDesktop ? 26 : 22,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: isDesktop ? 16 : 12),
                   Expanded(
                     child: Text(
                       'Create New Staff Account',
@@ -406,7 +403,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
             // Content
             Flexible(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(isDesktop ? 28 : 20),
+                padding: EdgeInsets.all(isDesktop ? 28 : 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -414,15 +411,15 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     Center(
                       child: _buildProfilePhotoSection(),
                     ),
-                    const SizedBox(height: 28),
+                    SizedBox(height: isDesktop ? 28 : 20),
 
                     // Personal Info
                     _buildSectionHeader('Personal Information',
                         Icons.person_outline, primaryBlue),
-                    const SizedBox(height: 20),
+                    SizedBox(height: isDesktop ? 20 : 16),
 
                     _buildPersonalInfoFields(isDesktop),
-                    const SizedBox(height: 28),
+                    SizedBox(height: isDesktop ? 28 : 20),
 
                     // Authorities
                     _buildSectionHeader(
@@ -432,7 +429,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                       subtitle:
                           'Select which sections this staff member can access',
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: isDesktop ? 20 : 16),
 
                     _buildPermissionsSection(),
                   ],
@@ -442,7 +439,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
 
             // Actions
             Container(
-              padding: EdgeInsets.all(isDesktop ? 24 : 20),
+              padding: EdgeInsets.all(isDesktop ? 24 : 16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -459,13 +456,15 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                 children: [
                   TextButton(
                     onPressed: _handleCancel,
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
-                          color: mediumGray, fontWeight: FontWeight.w600),
+                          color: mediumGray,
+                          fontWeight: FontWeight.w600,
+                          fontSize: isDesktop ? 14 : 13),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: isDesktop ? 16 : 12),
                   Container(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
@@ -483,13 +482,16 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                       onPressed: _handleCreateStaff,
                       icon:
                           const Icon(Icons.arrow_forward, color: Colors.white),
-                      label: const Text('Continue',
-                          style: TextStyle(color: Colors.white)),
+                      label: Text('Continue',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isDesktop ? 14 : 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 28, vertical: 14),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 28 : 20,
+                            vertical: isDesktop ? 14 : 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
@@ -1871,8 +1873,11 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
 
   Widget _buildSectionHeader(String title, IconData icon, Color color,
       {String? subtitle}) {
+    final isDesktop = MediaQuery.of(context).size.width > 768;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 16 : 12, vertical: isDesktop ? 8 : 6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(15),
@@ -1880,26 +1885,27 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: EdgeInsets.all(isDesktop ? 6 : 5),
             decoration: BoxDecoration(
               color: color.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: isDesktop ? 20 : 18),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: isDesktop ? 12 : 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(
-                        fontSize: 17,
+                    style: TextStyle(
+                        fontSize: isDesktop ? 17 : 15,
                         fontWeight: FontWeight.bold,
                         color: darkText)),
                 if (subtitle != null)
                   Text(subtitle,
-                      style: const TextStyle(color: mediumGray, fontSize: 13)),
+                      style: TextStyle(
+                          color: mediumGray, fontSize: isDesktop ? 13 : 11)),
               ],
             ),
           ),

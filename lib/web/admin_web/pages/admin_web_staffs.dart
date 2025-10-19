@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:capstone_app/web/admin_web/components/staffs/staff_full_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:typed_data';
@@ -72,7 +75,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
     try {
       final role = _getStorage.read('role') as String?;
-      // Resolve clinic by role
       if (role == 'admin') {
         final clinicDoc =
             await _authRepository.getClinicByAdminId(_session.userId);
@@ -113,8 +115,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
   Future<void> _addNewStaff(
     String name,
-    String username, // NEW
-    String email, // NEW (optional)
+    String username,
+    String email,
     String phone,
     List<String> authorities,
     Uint8List? imageBytes,
@@ -125,7 +127,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     try {
       String imageUrl = '';
 
-      // Upload image if provided
       if (imageBytes != null && imageBytes.isNotEmpty) {
         try {
           final inputFile = InputFile.fromBytes(
@@ -148,14 +149,14 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
       final result = await _authRepository.createStaffAccount(
         name: name,
-        username: username, // NEW: Pass username
+        username: username,
         password: password,
         clinicId: _clinic!.documentId!,
         authorities: authorities,
         createdBy: _session.userId,
         image: imageUrl,
         phone: phone,
-        email: email, // NEW: Pass optional email
+        email: email,
       );
 
       if (result['success'] == true) {
@@ -370,7 +371,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
                   child: filteredStaffs.isEmpty &&
                           _searchController.text.isNotEmpty
                       ? _buildEmptyState()
-                      : _buildStaffGrid(),
+                      : _buildStaffGrid(isSmall, isMedium, isLarge),
                 ),
               ),
             ),
@@ -382,75 +383,87 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
   Widget _buildTitleSection(bool isLarge, bool isMedium, bool isSmall) {
     if (!isMedium) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      primaryTeal.withOpacity(0.2),
-                      primaryBlue.withOpacity(0.15)
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: primaryTeal.withOpacity(0.3), width: 1.5),
-                ),
-                child: const Icon(Icons.group_rounded,
-                    color: primaryTeal, size: 20),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  primaryTeal.withOpacity(0.2),
+                  primaryBlue.withOpacity(0.15)
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                          colors: [darkText, deepBlue, primaryTeal])
-                      .createShader(bounds),
-                  blendMode: BlendMode.srcIn,
-                  child: Text(
-                    'Staff Management',
-                    style: TextStyle(
-                      fontSize: isSmall ? 18 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+              borderRadius: BorderRadius.circular(12),
+              border:
+                  Border.all(color: primaryTeal.withOpacity(0.3), width: 1.5),
+            ),
+            child:
+                const Icon(Icons.group_rounded, color: primaryTeal, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                      colors: [darkText, deepBlue, primaryTeal])
+                  .createShader(bounds),
+              blendMode: BlendMode.srcIn,
+              child: Text(
+                'Staff Management',
+                style: TextStyle(
+                  fontSize: isSmall ? 18 : 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Manage ${_clinic?.clinicName ?? "your clinic"}\'s staff and permissions',
-            style: const TextStyle(
-                fontSize: 14, color: mediumGray, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMobileStatCard(
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  primaryBlue.withOpacity(0.1),
+                  softBlue.withOpacity(0.05)
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border:
+                  Border.all(color: primaryBlue.withOpacity(0.3), width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
                   'Total Staff',
-                  staffList.length.toString(),
-                  Icons.people_rounded,
-                  const [primaryBlue, softBlue],
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: primaryBlue,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildMobileStatCard(
-                  'Active',
-                  staffList.where((s) => s.isActive).length.toString(),
-                  Icons.check_circle_rounded,
-                  const [vetGreen, primaryTeal],
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.people_rounded,
+                        color: primaryBlue, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      staffList.length.toString(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: primaryBlue,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       );
@@ -504,137 +517,141 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
               ],
             ),
           ),
-          if (isLarge) ...[
-            _buildStatCard('Total Staff', staffList.length.toString(),
-                Icons.people_rounded, const [primaryBlue, softBlue]),
-            const SizedBox(width: 18),
-            _buildStatCard(
-              'Active',
-              staffList.where((s) => s.isActive).length.toString(),
-              Icons.check_circle_rounded,
-              const [vetGreen, primaryTeal],
-            ),
-          ],
+          _buildStatCard('Total Staff', staffList.length.toString(),
+              Icons.people_rounded, const [primaryBlue, softBlue]),
         ],
       );
     }
   }
 
   Widget _buildFilterTags() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primaryTeal.withOpacity(0.1),
-                  primaryBlue.withOpacity(0.08)
-                ],
+    final scrollController = ScrollController();
+
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+        },
+        scrollbars: false,
+      ),
+      child: SingleChildScrollView(
+        controller: scrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    primaryTeal.withOpacity(0.1),
+                    primaryBlue.withOpacity(0.08)
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: primaryTeal.withOpacity(0.2)),
               ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: primaryTeal.withOpacity(0.2)),
+              child: const Text(
+                'Filter by permission',
+                style: TextStyle(
+                    fontSize: 14, color: darkText, fontWeight: FontWeight.w600),
+              ),
             ),
-            child: const Text(
-              'Filter by permission',
-              style: TextStyle(
-                  fontSize: 14, color: darkText, fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(width: 16),
-          ...tags.map((tag) {
-            final bool isSelected = tag == selectedTag;
-            IconData icon;
-            List<Color> colors;
+            const SizedBox(width: 16),
+            ...tags.map((tag) {
+              final bool isSelected = tag == selectedTag;
+              IconData icon;
+              List<Color> colors;
 
-            switch (tag) {
-              case 'Clinic':
-                icon = Icons.local_hospital_rounded;
-                colors = const [primaryTeal, primaryBlue];
-                break;
-              case 'Appointments':
-                icon = Icons.calendar_month_rounded;
-                colors = const [primaryBlue, softBlue];
-                break;
-              case 'Messages':
-                icon = Icons.message_rounded;
-                colors = const [vetOrange, primaryTeal];
-                break;
-              default:
-                icon = Icons.check_circle;
-                colors = const [mediumGray, mediumGray];
-            }
+              switch (tag) {
+                case 'Clinic':
+                  icon = Icons.local_hospital_rounded;
+                  colors = const [primaryTeal, primaryBlue];
+                  break;
+                case 'Appointments':
+                  icon = Icons.calendar_month_rounded;
+                  colors = const [primaryBlue, softBlue];
+                  break;
+                case 'Messages':
+                  icon = Icons.message_rounded;
+                  colors = const [vetOrange, primaryTeal];
+                  break;
+                default:
+                  icon = Icons.check_circle;
+                  colors = const [mediumGray, mediumGray];
+              }
 
-            return Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: GestureDetector(
-                onTap: () =>
-                    setState(() => selectedTag = isSelected ? null : tag),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? LinearGradient(colors: colors)
-                        : LinearGradient(
-                            colors: [
-                              colors.first.withOpacity(0.1),
-                              colors.last.withOpacity(0.05)
-                            ],
-                          ),
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(
-                      color: isSelected
-                          ? colors.first
-                          : colors.first.withOpacity(0.3),
-                      width: 2,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: colors.first.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: GestureDetector(
+                  onTap: () =>
+                      setState(() => selectedTag = isSelected ? null : tag),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? LinearGradient(colors: colors)
+                          : LinearGradient(
+                              colors: [
+                                colors.first.withOpacity(0.1),
+                                colors.last.withOpacity(0.05)
+                              ],
                             ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon,
-                          size: 18,
-                          color: isSelected ? Colors.white : colors.first),
-                      const SizedBox(width: 8),
-                      Text(
-                        tag,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : colors.first,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isSelected
+                            ? colors.first
+                            : colors.first.withOpacity(0.3),
+                        width: 2,
                       ),
-                    ],
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: colors.first.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon,
+                            size: 18,
+                            color: isSelected ? Colors.white : colors.first),
+                        const SizedBox(width: 8),
+                        Text(
+                          tag,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : colors.first,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              );
+            }),
+            if (selectedTag != null)
+              IconButton(
+                onPressed: () => setState(() => selectedTag = null),
+                tooltip: 'Clear filter',
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                      color: Color(0x1AFF0000), shape: BoxShape.circle),
+                  child: Icon(Icons.clear, size: 16, color: Colors.red[600]),
+                ),
               ),
-            );
-          }),
-          if (selectedTag != null)
-            IconButton(
-              onPressed: () => setState(() => selectedTag = null),
-              tooltip: 'Clear filter',
-              icon: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                    color: Color(0x1AFF0000), shape: BoxShape.circle),
-                child: Icon(Icons.clear, size: 16, color: Colors.red[600]),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -774,57 +791,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     );
   }
 
-  Widget _buildMobileStatCard(
-      String label, String value, IconData icon, List<Color> colors) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.first.withOpacity(0.15),
-            colors.last.withOpacity(0.08)
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.first.withOpacity(0.3), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: colors.first.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-                gradient: LinearGradient(colors: colors),
-                shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.white, size: 16),
-          ),
-          const SizedBox(height: 8),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: colors.first.withOpacity(0.9),
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -882,14 +848,16 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     );
   }
 
-  Widget _buildStaffGrid() {
+  Widget _buildStaffGrid(bool isSmall, bool isMedium, bool isLarge) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double w = constraints.maxWidth;
-        final double spacing = w > 768 ? 20.0 : 12.0;
+        final double spacing = isSmall ? 12.0 : 20.0;
 
         int cols;
-        if (w >= 1600) {
+        if (isSmall) {
+          cols = 3;
+        } else if (w >= 1600) {
           cols = 8;
         } else if (w >= 1400) {
           cols = 7;
@@ -901,53 +869,60 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           cols = 4;
         } else if (w >= 620) {
           cols = 3;
-        } else if (w >= 460) {
-          cols = 2;
         } else {
-          cols = 1;
+          cols = 2;
         }
 
         final double tileWidth = (w - (cols - 1) * spacing) / cols;
-        final double baseRatio = (cols <= 2) ? 0.66 : 0.62;
+        final double baseRatio = (cols <= 2) ? 0.66 : (isSmall ? 0.75 : 0.62);
 
-        final double minH = (cols <= 1)
-            ? 340
-            : (cols == 2)
-                ? 300
-                : (cols == 3)
-                    ? 260
-                    : (cols == 4)
-                        ? 250
-                        : (cols == 5)
-                            ? 240
-                            : (cols == 6)
-                                ? 230
-                                : (cols == 7)
-                                    ? 220
-                                    : 210;
+        final double minH;
+        if (isSmall) {
+          minH = 160;
+        } else {
+          minH = (cols <= 1)
+              ? 340
+              : (cols == 2)
+                  ? 300
+                  : (cols == 3)
+                      ? 260
+                      : (cols == 4)
+                          ? 250
+                          : (cols == 5)
+                              ? 240
+                              : (cols == 6)
+                                  ? 230
+                                  : (cols == 7)
+                                      ? 220
+                                      : 210;
+        }
 
         int maxChips = 0;
         for (final s in filteredStaffs) {
           if (s.authorities.length > maxChips) maxChips = s.authorities.length;
         }
 
-        const double chipW = 96.0;
-        const double chipGap = 8.0;
-        final double innerW = tileWidth - 48.0;
+        final double chipW = isSmall ? 70.0 : 96.0;
+        final double chipGap = isSmall ? 4.0 : 8.0;
+        final double innerW = tileWidth - (isSmall ? 24.0 : 48.0);
         final double chipsTotalW =
             maxChips > 0 ? (maxChips * chipW + (maxChips - 1) * chipGap) : 0.0;
         final int chipLines =
             (chipsTotalW > 0 && innerW > 0) ? (chipsTotalW / innerW).ceil() : 1;
-        final double extraForWrap =
-            (chipLines > 1) ? (chipLines - 1) * 30.0 : 0.0;
+        final double extraForWrap = isSmall
+            ? (chipLines > 1)
+                ? (chipLines - 1) * 20.0
+                : 0.0
+            : (chipLines > 1)
+                ? (chipLines - 1) * 30.0
+                : 0.0;
 
         double finalHeight = tileWidth / baseRatio;
         if (finalHeight < minH) finalHeight = minH;
-        finalHeight += extraForWrap + 6;
+        finalHeight += extraForWrap + (isSmall ? 2 : 6);
 
         final double finalRatio = tileWidth / finalHeight;
 
-        // total items: 1 (NewStaffTile) + filtered staff count
         final totalItems = 1 + filteredStaffs.length;
 
         return GridView.builder(
@@ -968,15 +943,248 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
             final staffIndex = index - 1;
             final staff = filteredStaffs[staffIndex];
 
-            return StaffTile(
-              staff: staff,
-              onUpdate: (authorities) =>
-                  _updateStaffAuthorities(staff, authorities),
-              onRemove: () => _removeStaff(staff),
-            );
+            return isSmall
+                ? _buildMobileStaffTile(staff)
+                : StaffTile(
+                    staff: staff,
+                    onUpdate: (authorities) =>
+                        _updateStaffAuthorities(staff, authorities),
+                    onRemove: () => _removeStaff(staff),
+                  );
           },
         );
       },
+    );
+  }
+
+  Widget _buildMobileStaffTile(StaffModel.Staff staff) {
+    return Material(
+      elevation: 2.0,
+      borderRadius: BorderRadius.circular(16),
+      shadowColor: primaryTeal.withOpacity(0.15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (_) => StaffFullDetails(
+              staffName: staff.name,
+              username: staff.username,
+              phone: staff.phone,
+              email: staff.email,
+              initialAuthorities: staff.authorities,
+              onAuthoritiesUpdated: (authorities) =>
+                  _updateStaffAuthorities(staff, authorities),
+              onRemove: () => _removeStaff(staff),
+              imageBytes: null,
+              staffDocumentId: staff.documentId!,
+              currentImageUrl: staff.image.isNotEmpty ? staff.image : null,
+            ),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: primaryTeal.withOpacity(0.2), width: 1.5),
+          ),
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Profile Image
+              Stack(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: staff.image.isEmpty
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                primaryTeal.withOpacity(0.15),
+                                primaryBlue.withOpacity(0.1),
+                              ],
+                            )
+                          : null,
+                      border: Border.all(
+                        color: primaryTeal.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                      image: staff.image.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(staff.image),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: staff.image.isEmpty
+                        ? const Icon(Icons.person, size: 24, color: primaryTeal)
+                        : null,
+                  ),
+                  if (staff.authorities.isNotEmpty)
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [vetGreen, primaryTeal],
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${staff.authorities.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              // Name
+              Text(
+                staff.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                  color: darkText,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+
+              // Permissions with containers
+              if (staff.authorities.isNotEmpty)
+                Flexible(
+                  child: Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          lightGray,
+                          lightVetGreen.withOpacity(0.2),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: primaryTeal.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            'Permissions',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: mediumGray,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        ...staff.authorities.map((auth) {
+                          IconData icon;
+                          List<Color> colors;
+                          switch (auth) {
+                            case 'Clinic':
+                              icon = Icons.local_hospital;
+                              colors = [primaryTeal, primaryBlue];
+                              break;
+                            case 'Appointments':
+                              icon = Icons.calendar_month;
+                              colors = [primaryBlue, softBlue];
+                              break;
+                            case 'Messages':
+                              icon = Icons.message;
+                              colors = [vetOrange, primaryTeal];
+                              break;
+                            default:
+                              icon = Icons.check_circle;
+                              colors = [mediumGray, mediumGray];
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 3),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    colors.first.withOpacity(0.2),
+                                    colors.last.withOpacity(0.1),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: colors.first.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(icon, size: 9, color: colors.first),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      auth,
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: colors.first,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    'No permissions',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey[500],
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
