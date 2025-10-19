@@ -323,7 +323,7 @@ class WebAppointmentTile extends StatelessWidget {
             child: SizedBox(
               height: buttonHeight,
               child: OutlinedButton(
-                onPressed: () => controller.markNoShow(appointment),
+                onPressed: () => controller.confirmMarkNoShow(appointment),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange,
                   side: const BorderSide(color: Colors.orange),
@@ -378,7 +378,8 @@ class WebAppointmentTile extends StatelessWidget {
               child: SizedBox(
                 height: buttonHeight,
                 child: ElevatedButton(
-                  onPressed: () => controller.acceptAppointment(appointment),
+                  onPressed: () =>
+                      controller.confirmAcceptAppointment(appointment),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -413,7 +414,7 @@ class WebAppointmentTile extends StatelessWidget {
               child: SizedBox(
                 height: buttonHeight,
                 child: OutlinedButton(
-                  onPressed: () => controller.markNoShow(appointment),
+                  onPressed: () => controller.confirmMarkNoShow(appointment),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.orange,
                     side: const BorderSide(color: Colors.orange),
@@ -429,7 +430,8 @@ class WebAppointmentTile extends StatelessWidget {
               child: SizedBox(
                 height: buttonHeight,
                 child: ElevatedButton(
-                  onPressed: () => controller.checkInPatient(appointment),
+                  onPressed: () =>
+                      controller.confirmCheckInPatient(appointment),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -450,7 +452,8 @@ class WebAppointmentTile extends StatelessWidget {
                 child: SizedBox(
                   height: buttonHeight,
                   child: ElevatedButton(
-                    onPressed: () => controller.startService(appointment),
+                    onPressed: () =>
+                        controller.confirmStartService(appointment),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,

@@ -861,82 +861,105 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         border: Border.all(
             color: _getStatusColor(appointment.status).withOpacity(0.3)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: _getStatusColor(appointment.status),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: const Icon(Icons.pets, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  controller.getPetName(appointment.petId),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  controller.getOwnerName(appointment.userId),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-                Text(
-                  appointment.service,
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text(
-                DateFormat('hh:mm a').format(appointment.dateTime),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   color: _getStatusColor(appointment.status),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(25),
                 ),
-                child: Text(
-                  _getStatusDisplayText(appointment.status),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: const Icon(Icons.pets, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      controller.getPetName(appointment.petId),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      controller.getOwnerName(appointment.userId),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    ),
+                    Text(
+                      appointment.service,
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                  ],
                 ),
               ),
-              if (appointment.status == 'pending') ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 24,
-                  child: ElevatedButton(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    DateFormat('hh:mm a').format(appointment.dateTime),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(appointment.status),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _getStatusDisplayText(appointment.status),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Show action buttons only for pending appointments
+          if (appointment.status == 'pending') ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
                     onPressed: () =>
-                        controller.quickAcceptAppointment(appointment),
+                        controller.confirmQuickDeclineAppointment(appointment),
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Decline'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        controller.confirmQuickAcceptAppointment(appointment),
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Accept'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: const Size(0, 24),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
-                    child: const Text('Accept',
-                        style: TextStyle(fontSize: 10, color: Colors.white)),
                   ),
                 ),
               ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
