@@ -22,6 +22,9 @@ class AppwriteConstants {
   static String archivedUsersCollectionID = "archiveduser";
   static String archivedClinicsCollectionID = "archivedclinic";
 
+  static String pushNotificationProviderID = "68f47697001c82e7ce64";
+  static String emailAutomationProviderID = "68f47f4b002a327bba16";
+
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID !=
             "REPLACE_WITH_CONVERSATIONS_COLLECTION_ID" &&
