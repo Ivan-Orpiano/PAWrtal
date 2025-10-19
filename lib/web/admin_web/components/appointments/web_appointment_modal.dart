@@ -29,13 +29,13 @@ class WebAppointmentModal extends StatelessWidget {
           children: [
             _buildHeader(controller),
             const SizedBox(height: 24),
-            
             Expanded(
               child: SingleChildScrollView(
-                child: isMobile ? _buildMobileLayout(controller) : _buildDesktopLayout(controller),
+                child: isMobile
+                    ? _buildMobileLayout(controller)
+                    : _buildDesktopLayout(controller),
               ),
             ),
-            
             const SizedBox(height: 24),
             _buildActionSection(context, controller),
           ],
@@ -198,7 +198,8 @@ class WebAppointmentModal extends StatelessWidget {
           _buildDetailRow(
             Icons.schedule,
             'Scheduled Time',
-            DateFormat('EEEE, MMMM dd, yyyy • hh:mm a').format(appointment.dateTime),
+            DateFormat('EEEE, MMMM dd, yyyy • hh:mm a')
+                .format(appointment.dateTime),
           ),
           const SizedBox(height: 12),
           _buildDetailRow(
@@ -273,7 +274,6 @@ class WebAppointmentModal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          
           _buildTimelineItem(
             'Appointment Scheduled',
             appointment.status != 'pending',
@@ -300,8 +300,8 @@ class WebAppointmentModal extends StatelessWidget {
             appointment.serviceCompletedAt,
             isLast: true,
           ),
-          
-          if (appointment.waitingTime != null || appointment.serviceDuration != null) ...[
+          if (appointment.waitingTime != null ||
+              appointment.serviceDuration != null) ...[
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
@@ -323,7 +323,8 @@ class WebAppointmentModal extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.access_time, size: 18, color: Colors.orange[700]),
+                    Icon(Icons.access_time,
+                        size: 18, color: Colors.orange[700]),
                     const SizedBox(width: 8),
                     Text(
                       'Waiting time: ${_formatDuration(appointment.waitingTime!)}',
@@ -461,22 +462,18 @@ class WebAppointmentModal extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          
           if (appointment.diagnosis != null) ...[
             _buildMedicalRow('Diagnosis', appointment.diagnosis!),
             const SizedBox(height: 12),
           ],
-          
           if (appointment.treatment != null) ...[
             _buildMedicalRow('Treatment', appointment.treatment!),
             const SizedBox(height: 12),
           ],
-          
           if (appointment.prescription != null) ...[
             _buildMedicalRow('Prescription', appointment.prescription!),
             const SizedBox(height: 12),
           ],
-          
           if (appointment.vetNotes != null) ...[
             _buildMedicalRow('Veterinary Notes', appointment.vetNotes!),
           ],
@@ -511,9 +508,9 @@ class WebAppointmentModal extends StatelessWidget {
 
   Widget _buildVitalsSection() {
     if (appointment.vitals == null) return const SizedBox.shrink();
-    
+
     final vitals = appointment.vitals!;
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -539,7 +536,6 @@ class WebAppointmentModal extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          
           GridView.count(
             crossAxisCount: 2,
             childAspectRatio: 3,
@@ -549,16 +545,19 @@ class WebAppointmentModal extends StatelessWidget {
             mainAxisSpacing: 12,
             children: [
               if (vitals['temperature'] != null)
-                _buildVitalCard('Temperature', '${vitals['temperature']}°C', Icons.thermostat),
+                _buildVitalCard('Temperature', '${vitals['temperature']}°C',
+                    Icons.thermostat),
               if (vitals['weight'] != null)
-                _buildVitalCard('Weight', '${vitals['weight']}kg', Icons.monitor_weight),
+                _buildVitalCard(
+                    'Weight', '${vitals['weight']}kg', Icons.monitor_weight),
               if (vitals['heartRate'] != null)
-                _buildVitalCard('Heart Rate', '${vitals['heartRate']} bpm', Icons.favorite),
+                _buildVitalCard(
+                    'Heart Rate', '${vitals['heartRate']} bpm', Icons.favorite),
               if (vitals['bloodPressure'] != null)
-                _buildVitalCard('Blood Pressure', '${vitals['bloodPressure']}', Icons.bloodtype),
+                _buildVitalCard('Blood Pressure', '${vitals['bloodPressure']}',
+                    Icons.bloodtype),
             ],
           ),
-          
           if (vitals['additionalNotes'] != null) ...[
             const SizedBox(height: 16),
             _buildMedicalRow('Additional Notes', vitals['additionalNotes']),
@@ -602,7 +601,8 @@ class WebAppointmentModal extends StatelessWidget {
     );
   }
 
-  Widget _buildActionSection(BuildContext context, WebAppointmentController controller) {
+  Widget _buildActionSection(
+      BuildContext context, WebAppointmentController controller) {
     switch (appointment.status) {
       case 'pending':
         return Row(
@@ -611,7 +611,7 @@ class WebAppointmentModal extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  controller.declineAppointment(appointment, 'Appointment declined by clinic staff');
+                  _showDeclineDialogModal(controller);
                 },
                 icon: const Icon(Icons.close),
                 label: const Text('Decline'),
@@ -628,7 +628,7 @@ class WebAppointmentModal extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  controller.acceptAppointment(appointment);
+                  controller.confirmAcceptAppointment(appointment);
                 },
                 icon: const Icon(Icons.check),
                 label: const Text('Accept Appointment'),
@@ -658,14 +658,14 @@ class WebAppointmentModal extends StatelessWidget {
             ],
           );
         }
-        
+
         return Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  controller.markNoShow(appointment);
+                  controller.confirmMarkNoShow(appointment);
                 },
                 icon: const Icon(Icons.person_off),
                 label: const Text('No Show'),
@@ -682,7 +682,7 @@ class WebAppointmentModal extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  controller.checkInPatient(appointment);
+                  controller.confirmCheckInPatient(appointment);
                 },
                 icon: const Icon(Icons.login),
                 label: const Text('Check In Patient'),
@@ -728,6 +728,197 @@ class WebAppointmentModal extends StatelessWidget {
           ],
         );
     }
+  }
+
+  // ============= HELPER METHODS =============
+
+  Future<bool> _showDiscardChangesDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Text(
+            'Discard Changes?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          content: const Text(
+            'You have unsaved changes. Are you sure you want to discard them? This action cannot be undone.',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Continue Editing',
+                style: TextStyle(color: Color.fromARGB(255, 81, 115, 153)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text(
+                'Discard Changes',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
+  void _showDeclineDialogModal(WebAppointmentController controller) {
+    String selectedReason = '';
+    final customReasonController = TextEditingController();
+    bool hasChanges = false;
+
+    final predefinedReasons = [
+      'Time slot already booked',
+      'Clinic at full capacity',
+      'Service not available',
+      'Emergency override needed',
+      'Insufficient information provided',
+      'Other (specify below)',
+    ];
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  if (hasChanges) {
+                    return await _showDiscardChangesDialog(Get.context!);
+                  }
+                  return true;
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.cancel,
+                              color: Colors.red, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Decline Appointment',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Please select or provide a reason for declining:',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 16),
+                    ...predefinedReasons.map((reason) {
+                      return RadioListTile<String>(
+                        title:
+                            Text(reason, style: const TextStyle(fontSize: 14)),
+                        value: reason,
+                        groupValue: selectedReason,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedReason = value!;
+                            hasChanges = true;
+                          });
+                        },
+                        activeColor: const Color.fromARGB(255, 81, 115, 153),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: customReasonController,
+                      decoration: InputDecoration(
+                        labelText: 'Custom reason (optional)',
+                        hintText: 'Enter additional details...',
+                        border: const OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      maxLength: 200,
+                      onChanged: (value) {
+                        if (value.isNotEmpty) {
+                          hasChanges = true;
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            customReasonController.dispose();
+                            Get.back();
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: selectedReason.isEmpty
+                              ? null
+                              : () {
+                                  String finalReason = selectedReason;
+                                  if (customReasonController.text.isNotEmpty) {
+                                    finalReason = selectedReason ==
+                                            'Other (specify below)'
+                                        ? customReasonController.text
+                                        : '$selectedReason - ${customReasonController.text}';
+                                  }
+
+                                  customReasonController.dispose();
+                                  Get.back();
+                                  controller.declineAppointment(
+                                      appointment, finalReason);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          child: const Text('Decline Appointment',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   List<Color> _getStatusGradient(String status) {

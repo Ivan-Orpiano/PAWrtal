@@ -1042,4 +1042,274 @@ class AdminDashboardController extends GetxController {
       };
     }
   }
+  // Add these methods to AdminDashboardController class
+
+  /// Confirm before accepting appointment from dashboard
+  Future<void> confirmQuickAcceptAppointment(Appointment appointment) async {
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Accept Appointment?',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You are about to accept this appointment.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${getPetName(appointment.petId)} • ${appointment.service}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Owner: ${getOwnerName(appointment.userId)}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('MMM dd, yyyy • hh:mm a')
+                        .format(appointment.dateTime),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'The time slot will be reserved and the client will be notified.',
+              style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Accept', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await quickAcceptAppointment(appointment);
+    }
+  }
+
+  /// Confirm before declining appointment from dashboard
+  Future<void> confirmQuickDeclineAppointment(Appointment appointment) async {
+    String selectedReason = '';
+    final customReasonController = TextEditingController();
+    bool hasChanges = false;
+
+    final predefinedReasons = [
+      'Time slot already booked',
+      'Clinic at full capacity',
+      'Service not available',
+      'Emergency override needed',
+      'Insufficient information provided',
+      'Other (specify below)',
+    ];
+
+    final result = await Get.dialog<Map<String, String>?>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  customReasonController.dispose();
+                  return true;
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.cancel,
+                              color: Colors.red, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Decline Appointment',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Please select or provide a reason for declining:',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 16),
+                    ...predefinedReasons.map((reason) {
+                      return RadioListTile<String>(
+                        title:
+                            Text(reason, style: const TextStyle(fontSize: 14)),
+                        value: reason,
+                        groupValue: selectedReason,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedReason = value!;
+                            hasChanges = true;
+                          });
+                        },
+                        activeColor: const Color.fromARGB(255, 81, 115, 153),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: customReasonController,
+                      decoration: InputDecoration(
+                        labelText: 'Custom reason (optional)',
+                        hintText: 'Enter additional details...',
+                        border: const OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      maxLength: 200,
+                      onChanged: (value) {
+                        if (value.isNotEmpty) {
+                          hasChanges = true;
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            customReasonController.dispose();
+                            Get.back();
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: selectedReason.isEmpty
+                              ? null
+                              : () {
+                                  String finalReason = selectedReason;
+                                  if (customReasonController.text.isNotEmpty) {
+                                    finalReason = selectedReason ==
+                                            'Other (specify below)'
+                                        ? customReasonController.text
+                                        : '$selectedReason - ${customReasonController.text}';
+                                  }
+
+                                  Get.back(result: {
+                                    'reason': finalReason,
+                                  });
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          child: const Text('Decline Appointment',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (result != null && result['reason'] != null) {
+      await quickDeclineAppointment(appointment, result['reason']!);
+      customReasonController.dispose();
+    } else {
+      customReasonController.dispose();
+    }
+  }
+
+  /// Quick decline appointment
+  Future<void> quickDeclineAppointment(
+      Appointment appointment, String reason) async {
+    try {
+      await authRepository.updateAppointmentStatus(
+        appointment.documentId!,
+        'declined',
+      );
+
+      // Update the appointment in the local list if needed
+      final index = appointments
+          .indexWhere((a) => a.documentId == appointment.documentId);
+      if (index != -1) {
+        appointments[index] = appointment.copyWith(
+          status: 'declined',
+          updatedAt: DateTime.now(),
+        );
+        appointments.refresh();
+      }
+
+      Get.snackbar(
+        "Success",
+        "Appointment declined. Patient will be notified.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+
+      // Refresh dashboard data
+      await refreshDashboardData();
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Failed to decline appointment: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
 }

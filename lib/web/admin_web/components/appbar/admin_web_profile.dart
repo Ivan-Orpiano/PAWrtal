@@ -25,18 +25,55 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
 
   String _cachedClinicName = 'Clinic';
   String _cachedProfilePictureId = '';
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _authRepository = Get.find<AuthRepository>();
     _loadClinicDataFromStorage();
+    // Load clinic data from database immediately on init
+    _initializeClinicData();
   }
 
   void _loadClinicDataFromStorage() {
     _cachedClinicName = storage.read("clinicName") as String? ?? 'Clinic';
     _cachedProfilePictureId =
         storage.read("clinicProfilePictureId") as String? ?? '';
+  }
+
+  /// Initialize clinic data from database on first load
+  Future<void> _initializeClinicData() async {
+    try {
+      final clinicId = storage.read("clinicId") as String?;
+      if (clinicId == null || clinicId.isEmpty) {
+        _isInitialized = true;
+        return;
+      }
+
+      final clinicDoc = await _authRepository.getClinicById(clinicId);
+      if (clinicDoc != null) {
+        final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
+        final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+
+        if (mounted) {
+          setState(() {
+            _cachedClinicName = newClinicName;
+            _cachedProfilePictureId = newProfilePictureId;
+            _isInitialized = true;
+          });
+        }
+
+        // Update storage for next time
+        storage.write('clinicName', newClinicName);
+        storage.write('clinicProfilePictureId', newProfilePictureId);
+      } else {
+        _isInitialized = true;
+      }
+    } catch (e) {
+      print('Error initializing clinic data: $e');
+      _isInitialized = true;
+    }
   }
 
   Future<void> _refreshClinicDataInBackground() async {
@@ -49,10 +86,12 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
         final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
 
-        setState(() {
-          _cachedClinicName = newClinicName;
-          _cachedProfilePictureId = newProfilePictureId;
-        });
+        if (mounted) {
+          setState(() {
+            _cachedClinicName = newClinicName;
+            _cachedProfilePictureId = newProfilePictureId;
+          });
+        }
         storage.write('clinicName', newClinicName);
         storage.write('clinicProfilePictureId', newProfilePictureId);
       }
