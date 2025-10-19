@@ -966,82 +966,182 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   Widget _buildMessageItem(Map<String, dynamic> message, bool isMobile) {
     final isUnread = !message['isRead'];
+    final unreadCount = message['unreadCount'] ?? 0;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isUnread
-            ? Colors.blue.withOpacity(0.1)
-            : Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
+    // Format the time
+    final messageTime = message['time'] as DateTime;
+    final now = DateTime.now();
+    final difference = now.difference(messageTime);
+
+    String timeDisplay;
+    if (difference.inMinutes < 1) {
+      timeDisplay = 'Just now';
+    } else if (difference.inHours < 1) {
+      timeDisplay = '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      timeDisplay = '${difference.inHours}h ago';
+    } else if (difference.inDays == 1) {
+      timeDisplay = 'Yesterday';
+    } else if (difference.inDays < 7) {
+      timeDisplay = '${difference.inDays}d ago';
+    } else {
+      timeDisplay = DateFormat('MMM dd').format(messageTime);
+    }
+
+    return InkWell(
+      onTap: () {
+        // Navigate to messages page and open this conversation
+        _handleNavigateToMessagesWithConversation(
+          message['conversationId'] as String?,
+          message['senderId'] as String,
+          message['senderName'] as String,
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
           color: isUnread
-              ? Colors.blue.withOpacity(0.3)
-              : Colors.grey.withOpacity(0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: isUnread ? Colors.blue : Colors.grey,
-            radius: 20,
-            child: Text(
-              message['senderName'][0].toUpperCase(),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+              ? Colors.blue.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isUnread
+                ? Colors.blue.withOpacity(0.3)
+                : Colors.grey.withOpacity(0.2),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        child: Row(
+          children: [
+            Stack(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        message['senderName'],
-                        style: TextStyle(
-                          fontWeight:
-                              isUnread ? FontWeight.bold : FontWeight.w600,
-                          fontSize: 14,
+                CircleAvatar(
+                  backgroundColor: isUnread ? Colors.blue : Colors.grey,
+                  radius: 20,
+                  child: Text(
+                    message['senderName'][0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (isUnread && unreadCount > 0)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Center(
+                        child: Text(
+                          unreadCount > 9 ? '9+' : unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                    Text(
-                      DateFormat('hh:mm a').format(message['time']),
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message['message'],
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 13,
                   ),
-                ),
               ],
             ),
-          ),
-          if (isUnread)
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          message['senderName'],
+                          style: TextStyle(
+                            fontWeight:
+                                isUnread ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        timeDisplay,
+                        style: TextStyle(
+                          color: isUnread ? Colors.blue[700] : Colors.grey[500],
+                          fontSize: 12,
+                          fontWeight:
+                              isUnread ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    message['message'],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isUnread ? Colors.black87 : Colors.grey[700],
+                      fontSize: 13,
+                      fontWeight:
+                          isUnread ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
             ),
-        ],
+            if (isUnread)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+// Add this new helper method to handle navigation with conversation opening
+  void _handleNavigateToMessagesWithConversation(
+    String? conversationId,
+    String userId,
+    String userName,
+  ) {
+    if (!permissionController.canAccessFeature('messages')) {
+      permissionController.showPermissionDeniedDialog('Messages');
+      return;
+    }
+
+    final messagesIndex =
+        permissionController.navigationLabels.indexOf('Messages');
+
+    if (messagesIndex == -1) {
+      print('>>> ERROR: Messages page not found in navigation');
+      return;
+    }
+
+    print('>>> Navigating to Messages at index $messagesIndex');
+    print('>>> Will open conversation for user: $userName ($userId)');
+
+    // Navigate to messages page
+    permissionController.setSelectedIndex(messagesIndex);
+
+    // TODO: If you want to auto-open the conversation, you can add logic here
+    // to pass the conversation info to the messages controller
+    // This would require modifying the AdminMessagingController to accept
+    // a parameter for which conversation to open initially
   }
 
   Widget _buildUpcomingAppointments(

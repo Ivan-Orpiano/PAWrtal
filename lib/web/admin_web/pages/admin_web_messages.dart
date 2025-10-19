@@ -40,8 +40,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   @override
   void dispose() {
-    // Don't dispose controller - it's managed by GetX
-    // Just cancel any local operations
     super.dispose();
   }
 
@@ -114,7 +112,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         print('>>> Step 3: Initializing controller with clinic ID: $_clinicId');
         await _controller.initializeForClinic(_clinicId!);
 
-        // CRITICAL: Ensure real-time subscriptions are active for conversation list
         print(
             '>>> Step 4: Activating real-time subscriptions for conversation list...');
         _controller.subscribeToClinicConversationUpdates(_clinicId!);
@@ -193,7 +190,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       ),
     );
 
-    // Reload conversations when returning to ensure we have latest data
     if (mounted) {
       await _controller.loadClinicConversations(_clinicId!);
     }
@@ -238,40 +234,36 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       );
     }
 
-    // Check screen width to determine layout
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 600) {
-          // Mobile layout - show conversation list
           return _buildMobileLayout();
         } else {
-          // Tablet/Desktop layout - show split view
           return _buildDesktopLayout();
         }
       },
     );
   }
 
-  // MOBILE LAYOUT - Conversation List Only
   Widget _buildMobileLayout() {
     return Scaffold(
       backgroundColor: Colors.blue.shade50,
       body: Column(
         children: [
-          // Header
           Container(
-            height: 75,
-            padding: const EdgeInsets.only(top: 20),
+            color: const Color.fromARGB(255, 248, 253, 255),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               children: [
+                const SizedBox(
+                    width: 56), // Balance the IconButton on the right
                 Expanded(
-                  child: Center(
-                    child: Text(
-                      "Messages",
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
+                  child: Text(
+                    "Messages",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
                     ),
                   ),
                 ),
@@ -291,22 +283,15 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               ],
             ),
           ),
-
-          // Main Content
           Expanded(
             child: Container(
               width: double.maxFinite,
               height: double.maxFinite,
               decoration: const BoxDecoration(
                 color: Color.fromARGB(255, 248, 253, 255),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
               ),
               child: Column(
                 children: [
-                  // Search Bar
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Container(
@@ -335,8 +320,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                       ),
                     ),
                   ),
-
-                  // Conversations List
                   Expanded(
                     child: Obx(() {
                       if (_controller.isLoading.value) {
@@ -380,7 +363,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                         );
                       }
 
-                      // Real-time updates are handled by controller
                       return RefreshIndicator(
                         onRefresh: () async {
                           await _controller.loadClinicConversations(_clinicId!);
@@ -426,13 +408,11 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
     return InkWell(
       onTap: () async {
-        // Navigate and wait for return
         await _openConversationInMobile(
           conversation,
           conversation.userId,
           userData['name'],
         );
-        // Refresh conversations when returning
         await _controller.loadClinicConversations(_clinicId!);
       },
       child: Container(
@@ -458,7 +438,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         ),
         child: Row(
           children: [
-            // Profile Image with Online Status
             Stack(
               children: [
                 CircleAvatar(
@@ -495,8 +474,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               ],
             ),
             const SizedBox(width: 12),
-
-            // Conversation Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,19 +555,15 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     );
   }
 
-  // DESKTOP/TABLET LAYOUT - Split View
   Widget _buildDesktopLayout() {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 238, 238, 238),
       body: Row(
         children: [
-          // Left Panel - Conversations List
           SizedBox(
             width: 350,
             child: _buildConversationsList(),
           ),
-
-          // Right Panel - Messages
           Expanded(
             child: _selectedConversation == null
                 ? _buildEmptyState()
@@ -606,7 +579,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       color: Colors.white,
       child: Column(
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -621,11 +593,16 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             ),
             child: Row(
               children: [
-                const Text(
-                  'Messages',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                const SizedBox(
+                    width: 48), // Balance the IconButton on the right
+                Expanded(
+                  child: Text(
+                    'Messages',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.auto_awesome),
                   tooltip: 'Manage Starters',
@@ -641,8 +618,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               ],
             ),
           ),
-
-          // Search
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -657,8 +632,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               ),
             ),
           ),
-
-          // Conversations
           Expanded(
             child: Obx(() {
               if (_controller.isLoading.value) {
@@ -933,7 +906,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         return const Center(child: Text('No messages yet'));
       }
 
-      // Real-time updates handled by Obx wrapper
       return ListView.builder(
         controller: _controller.scrollController,
         padding: const EdgeInsets.all(16),
@@ -1044,7 +1016,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   }
 }
 
-// MOBILE MESSAGES PAGE - Separate page for mobile conversation view
 class _AdminMobileMessagesPage extends StatefulWidget {
   final Conversation conversation;
   final String userId;
@@ -1078,8 +1049,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
 
   @override
   void dispose() {
-    // Don't dispose the controller since it's shared
-    // Just navigate back
     super.dispose();
   }
 
@@ -1115,7 +1084,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
                         ),
                       ),
                     ),
-                    // Online status indicator
                     Obx(() {
                       final status =
                           widget.controller.getUserStatus(widget.userId);
@@ -1171,7 +1139,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
       ),
       body: Column(
         children: [
-          // Messages List with Reverse ListView
           Expanded(
             child: Obx(() {
               if (widget.controller.isLoadingConversation.value) {
@@ -1202,8 +1169,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
               );
             }),
           ),
-
-          // Message Input
           _buildMessageInput(),
         ],
       ),
@@ -1360,29 +1325,20 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
       child: SafeArea(
         child: Row(
           children: [
-            // Camera button
             IconButton(
               icon: Icon(
                 Icons.camera_alt_rounded,
                 color: Colors.grey[600],
               ),
-              onPressed: () {
-                // Implement camera functionality
-              },
+              onPressed: () {},
             ),
-
-            // Photo button
             IconButton(
               icon: Icon(
                 Icons.photo,
                 color: Colors.grey[600],
               ),
-              onPressed: () {
-                // Implement photo picker functionality
-              },
+              onPressed: () {},
             ),
-
-            // Message input
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1405,10 +1361,7 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
                 ),
               ),
             ),
-
             const SizedBox(width: 8),
-
-            // Send button
             Obx(() => CircleAvatar(
                   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                   child: IconButton(

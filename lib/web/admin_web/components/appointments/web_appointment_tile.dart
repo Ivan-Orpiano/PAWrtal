@@ -522,6 +522,7 @@ class WebAppointmentTile extends StatelessWidget {
   void _showDeclineDialog(WebAppointmentController controller) {
     String selectedReason = '';
     final customReasonController = TextEditingController();
+    bool hasChanges = false; // Track if user made changes
 
     final predefinedReasons = [
       'Time slot already booked',
@@ -540,104 +541,129 @@ class WebAppointmentTile extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: StatefulBuilder(
             builder: (context, setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+              return WillPopScope(
+                onWillPop: () async {
+                  if (hasChanges) {
+                    return await _showDiscardChangesDialog(context);
+                  }
+                  return true;
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.cancel,
+                              color: Colors.red, size: 24),
                         ),
-                        child: const Icon(Icons.cancel,
-                            color: Colors.red, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Decline Appointment',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Decline Appointment',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Please select or provide a reason for declining:',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 16),
-                  ...predefinedReasons.map((reason) {
-                    return RadioListTile<String>(
-                      title: Text(reason, style: const TextStyle(fontSize: 14)),
-                      value: reason,
-                      groupValue: selectedReason,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedReason = value!;
-                        });
-                      },
-                      activeColor: const Color.fromARGB(255, 81, 115, 153),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    );
-                  }),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: customReasonController,
-                    decoration: InputDecoration(
-                      labelText: 'Custom reason (optional)',
-                      hintText: 'Enter additional details...',
-                      border: const OutlineInputBorder(),
+                      ],
                     ),
-                    maxLines: 3,
-                    maxLength: 200,
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          customReasonController.dispose();
-                          Get.back();
+                    const SizedBox(height: 20),
+                    Text(
+                      'Please select or provide a reason for declining:',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 16),
+                    ...predefinedReasons.map((reason) {
+                      return RadioListTile<String>(
+                        title:
+                            Text(reason, style: const TextStyle(fontSize: 14)),
+                        value: reason,
+                        groupValue: selectedReason,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedReason = value!;
+                            hasChanges = true;
+                          });
                         },
-                        child: const Text('Cancel'),
+                        activeColor: const Color.fromARGB(255, 81, 115, 153),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: customReasonController,
+                      decoration: InputDecoration(
+                        labelText: 'Custom reason (optional)',
+                        hintText: 'Enter additional details...',
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(width: 16),
-                      ElevatedButton(
-                        onPressed: selectedReason.isEmpty
-                            ? null
-                            : () {
-                                String finalReason = selectedReason;
-                                if (customReasonController.text.isNotEmpty) {
-                                  finalReason = selectedReason ==
-                                          'Other (specify below)'
-                                      ? customReasonController.text
-                                      : '$selectedReason - ${customReasonController.text}';
+                      maxLines: 3,
+                      maxLength: 200,
+                      onChanged: (value) {
+                        if (value.isNotEmpty) {
+                          hasChanges = true;
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            if (hasChanges) {
+                              _showDiscardChangesDialog(context)
+                                  .then((discard) {
+                                if (discard == true) {
+                                  customReasonController.dispose();
+                                  Get.back();
                                 }
-
-                                customReasonController.dispose();
-                                Get.back();
-                                controller.declineAppointment(
-                                    appointment, finalReason);
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                              });
+                            } else {
+                              customReasonController.dispose();
+                              Get.back();
+                            }
+                          },
+                          child: const Text('Cancel'),
                         ),
-                        child: const Text('Decline Appointment',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: selectedReason.isEmpty
+                              ? null
+                              : () {
+                                  String finalReason = selectedReason;
+                                  if (customReasonController.text.isNotEmpty) {
+                                    finalReason = selectedReason ==
+                                            'Other (specify below)'
+                                        ? customReasonController.text
+                                        : '$selectedReason - ${customReasonController.text}';
+                                  }
+
+                                  customReasonController.dispose();
+                                  Get.back();
+                                  controller.declineAppointment(
+                                      appointment, finalReason);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          child: const Text('Decline Appointment',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -652,6 +678,7 @@ class WebAppointmentTile extends StatelessWidget {
     final bpController = TextEditingController();
     final hrController = TextEditingController();
     final notesController = TextEditingController();
+    bool hasChanges = false;
 
     Get.dialog(
       Dialog(
@@ -659,143 +686,190 @@ class WebAppointmentTile extends StatelessWidget {
         child: Container(
           width: 500,
           padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Record Vital Signs',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color.fromARGB(255, 81, 115, 153),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  if (hasChanges) {
+                    return await _showDiscardChangesDialog(context);
+                  }
+                  return true;
+                },
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Record Vital Signs',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromARGB(255, 81, 115, 153),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: tempController,
+                              decoration: const InputDecoration(
+                                labelText: 'Temperature (°C)',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                              onChanged: (value) {
+                                if (value.isNotEmpty) hasChanges = true;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextField(
+                              controller: weightController,
+                              decoration: const InputDecoration(
+                                labelText: 'Weight (kg)',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                              onChanged: (value) {
+                                if (value.isNotEmpty) hasChanges = true;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: bpController,
+                              decoration: const InputDecoration(
+                                labelText: 'Blood Pressure',
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty) hasChanges = true;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextField(
+                              controller: hrController,
+                              decoration: const InputDecoration(
+                                labelText: 'Heart Rate (bpm)',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                              onChanged: (value) {
+                                if (value.isNotEmpty) hasChanges = true;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Additional Notes',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) hasChanges = true;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              if (hasChanges) {
+                                _showDiscardChangesDialog(context)
+                                    .then((discard) {
+                                  if (discard == true) {
+                                    tempController.dispose();
+                                    weightController.dispose();
+                                    bpController.dispose();
+                                    hrController.dispose();
+                                    notesController.dispose();
+                                    Get.back();
+                                  }
+                                });
+                              } else {
+                                tempController.dispose();
+                                weightController.dispose();
+                                bpController.dispose();
+                                hrController.dispose();
+                                notesController.dispose();
+                                Get.back();
+                              }
+                            },
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (tempController.text.isNotEmpty &&
+                                  weightController.text.isNotEmpty) {
+                                final vitals = {
+                                  'temperature':
+                                      double.tryParse(tempController.text) ??
+                                          0.0,
+                                  'weight':
+                                      double.tryParse(weightController.text) ??
+                                          0.0,
+                                  'bloodPressure': bpController.text.isNotEmpty
+                                      ? bpController.text
+                                      : null,
+                                  'heartRate': hrController.text.isNotEmpty
+                                      ? int.tryParse(hrController.text)
+                                      : null,
+                                  'additionalNotes':
+                                      notesController.text.isNotEmpty
+                                          ? notesController.text
+                                          : null,
+                                  'recordedAt':
+                                      DateTime.now().toIso8601String(),
+                                };
+
+                                final updatedAppointment = appointment.copyWith(
+                                  vitals: vitals,
+                                  updatedAt: DateTime.now(),
+                                );
+
+                                tempController.dispose();
+                                weightController.dispose();
+                                bpController.dispose();
+                                hrController.dispose();
+                                notesController.dispose();
+
+                                controller
+                                    .updateFullAppointment(updatedAppointment);
+                                Get.back();
+                                Get.snackbar(
+                                    "Success", "Vital signs recorded!");
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                            ),
+                            child: const Text('Save',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: tempController,
-                        decoration: const InputDecoration(
-                          labelText: 'Temperature (°C)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: weightController,
-                        decoration: const InputDecoration(
-                          labelText: 'Weight (kg)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: bpController,
-                        decoration: const InputDecoration(
-                          labelText: 'Blood Pressure',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: hrController,
-                        decoration: const InputDecoration(
-                          labelText: 'Heart Rate (bpm)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Additional Notes',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        tempController.dispose();
-                        weightController.dispose();
-                        bpController.dispose();
-                        hrController.dispose();
-                        notesController.dispose();
-                        Get.back();
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (tempController.text.isNotEmpty &&
-                            weightController.text.isNotEmpty) {
-                          final vitals = {
-                            'temperature':
-                                double.tryParse(tempController.text) ?? 0.0,
-                            'weight':
-                                double.tryParse(weightController.text) ?? 0.0,
-                            'bloodPressure': bpController.text.isNotEmpty
-                                ? bpController.text
-                                : null,
-                            'heartRate': hrController.text.isNotEmpty
-                                ? int.tryParse(hrController.text)
-                                : null,
-                            'additionalNotes': notesController.text.isNotEmpty
-                                ? notesController.text
-                                : null,
-                            'recordedAt': DateTime.now().toIso8601String(),
-                          };
-
-                          final updatedAppointment = appointment.copyWith(
-                            vitals: vitals,
-                            updatedAt: DateTime.now(),
-                          );
-
-                          tempController.dispose();
-                          weightController.dispose();
-                          bpController.dispose();
-                          hrController.dispose();
-                          notesController.dispose();
-
-                          controller.updateFullAppointment(updatedAppointment);
-                          Get.back();
-                          Get.snackbar("Success", "Vital signs recorded!");
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 81, 115, 153),
-                      ),
-                      child: const Text('Save',
-                          style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -815,6 +889,7 @@ class WebAppointmentTile extends StatelessWidget {
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
     final notesController = TextEditingController();
+    bool hasChanges = false;
 
     Get.dialog(
       Dialog(
@@ -822,171 +897,257 @@ class WebAppointmentTile extends StatelessWidget {
         child: Container(
           width: 600,
           padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.check_circle,
-                          color: Colors.green, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return WillPopScope(
+                onWillPop: () async {
+                  if (hasChanges) {
+                    return await _showDiscardChangesDialog(context);
+                  }
+                  return true;
+                },
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            'Complete Service',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color.fromARGB(255, 81, 115, 153),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
+                            child: const Icon(Icons.check_circle,
+                                color: Colors.green, size: 24),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Fill in the medical information',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Complete Service',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color.fromARGB(255, 81, 115, 153),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Fill in the medical information',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          color: Colors.orange[700], size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Diagnosis and Treatment are required',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[700],
-                          ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange[200]!),
                         ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.orange[700], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Diagnosis and Treatment are required',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange[700],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: diagnosisController,
+                        decoration: const InputDecoration(
+                          labelText: 'Diagnosis *',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter diagnosis',
+                        ),
+                        maxLines: 2,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) hasChanges = true;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: treatmentController,
+                        decoration: const InputDecoration(
+                          labelText: 'Treatment *',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter treatment provided',
+                        ),
+                        maxLines: 2,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) hasChanges = true;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: prescriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Prescription (Optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) hasChanges = true;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Veterinary Notes (Optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) hasChanges = true;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              if (hasChanges) {
+                                _showDiscardChangesDialog(context)
+                                    .then((discard) {
+                                  if (discard == true) {
+                                    diagnosisController.dispose();
+                                    treatmentController.dispose();
+                                    prescriptionController.dispose();
+                                    notesController.dispose();
+                                    Get.back();
+                                  }
+                                });
+                              } else {
+                                diagnosisController.dispose();
+                                treatmentController.dispose();
+                                prescriptionController.dispose();
+                                notesController.dispose();
+                                Get.back();
+                              }
+                            },
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (diagnosisController.text.trim().isEmpty) {
+                                Get.snackbar('Required', 'Enter diagnosis',
+                                    backgroundColor: Colors.orange,
+                                    colorText: Colors.white);
+                                return;
+                              }
+                              if (treatmentController.text.trim().isEmpty) {
+                                Get.snackbar('Required', 'Enter treatment',
+                                    backgroundColor: Colors.orange,
+                                    colorText: Colors.white);
+                                return;
+                              }
+
+                              controller.completeServiceWithRecord(
+                                appointment: appointment,
+                                diagnosis: diagnosisController.text.trim(),
+                                treatment: treatmentController.text.trim(),
+                                prescription: prescriptionController.text
+                                        .trim()
+                                        .isNotEmpty
+                                    ? prescriptionController.text.trim()
+                                    : null,
+                                vetNotes: notesController.text.trim().isNotEmpty
+                                    ? notesController.text.trim()
+                                    : null,
+                              );
+
+                              diagnosisController.dispose();
+                              treatmentController.dispose();
+                              prescriptionController.dispose();
+                              notesController.dispose();
+                              Get.back();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                            ),
+                            child: const Text('Complete Service',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: diagnosisController,
-                  decoration: const InputDecoration(
-                    labelText: 'Diagnosis *',
-                    border: OutlineInputBorder(),
-                    hintText: 'Enter diagnosis',
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: treatmentController,
-                  decoration: const InputDecoration(
-                    labelText: 'Treatment *',
-                    border: OutlineInputBorder(),
-                    hintText: 'Enter treatment provided',
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: prescriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Prescription (Optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Veterinary Notes (Optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        diagnosisController.dispose();
-                        treatmentController.dispose();
-                        prescriptionController.dispose();
-                        notesController.dispose();
-                        Get.back();
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (diagnosisController.text.trim().isEmpty) {
-                          Get.snackbar('Required', 'Enter diagnosis',
-                              backgroundColor: Colors.orange,
-                              colorText: Colors.white);
-                          return;
-                        }
-                        if (treatmentController.text.trim().isEmpty) {
-                          Get.snackbar('Required', 'Enter treatment',
-                              backgroundColor: Colors.orange,
-                              colorText: Colors.white);
-                          return;
-                        }
-
-                        controller.completeServiceWithRecord(
-                          appointment: appointment,
-                          diagnosis: diagnosisController.text.trim(),
-                          treatment: treatmentController.text.trim(),
-                          prescription:
-                              prescriptionController.text.trim().isNotEmpty
-                                  ? prescriptionController.text.trim()
-                                  : null,
-                          vetNotes: notesController.text.trim().isNotEmpty
-                              ? notesController.text.trim()
-                              : null,
-                        );
-
-                        diagnosisController.dispose();
-                        treatmentController.dispose();
-                        prescriptionController.dispose();
-                        notesController.dispose();
-                        Get.back();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                      child: const Text('Complete Service',
-                          style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
     );
+  }
+
+  // NEW HELPER METHOD - Add to WebAppointmentTile class
+  Future<bool> _showDiscardChangesDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Text(
+            'Discard Changes?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          content: const Text(
+            'You have unsaved changes. Are you sure you want to discard them? This action cannot be undone.',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Continue Editing',
+                style: TextStyle(color: Color.fromARGB(255, 81, 115, 153)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text(
+                'Discard Changes',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
   }
 
   List<Color> _getStatusGradient(String status) {
