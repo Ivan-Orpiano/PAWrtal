@@ -10,7 +10,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterin
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
-
+import 'package:capstone_app/utils/image_helper.dart'; 
 /// ============================================
 /// SUPER ADMIN USER MANAGEMENT SCREEN
 /// ============================================
@@ -787,6 +787,7 @@ class UserCard extends StatefulWidget {
   State<UserCard> createState() => _UserCardState();
 }
 
+
 class _UserCardState extends State<UserCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -810,6 +811,31 @@ class _UserCardState extends State<UserCard>
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+    Widget _buildPlaceholderAvatar() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [primaryBlue, accentTeal],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          widget.user.name.isNotEmpty
+              ? widget.user.name[0].toUpperCase()
+              : '?',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 
@@ -884,42 +910,54 @@ class _UserCardState extends State<UserCard>
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Avatar
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [primaryBlue, accentTeal],
-                        ),
-                        border: Border.all(
-                          color: _isHovered ? vetGreen : accentTeal,
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryBlue.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          widget.user.name.isNotEmpty
-                              ? widget.user.name[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                    // Avatar with Profile Picture
+          Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isHovered ? vetGreen : accentTeal,
+                      width: 3,
                     ),
-                    const SizedBox(width: 16),
-
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryBlue.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: widget.user.hasProfilePicture
+                        ? Image.network(
+                            getPetImageUrl(widget.user.profilePictureId),
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderAvatar();
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : _buildPlaceholderAvatar(),
+                  ),
+                ),
+                                        const SizedBox(width: 16),
                     // User info
                     Expanded(
                       child: Column(
@@ -1035,6 +1073,7 @@ class _UserCardState extends State<UserCard>
   }
 }
 
+
 /// ============================================
 /// USER DETAILS DIALOG
 /// ============================================
@@ -1123,6 +1162,30 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
       setState(() => _isDeleting = false);
     }
   }
+  Widget _buildDialogPlaceholderAvatar() {
+  return Container(
+    width: 100,
+    height: 100,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: LinearGradient(
+        colors: [primaryBlue, accentTeal],
+      ),
+    ),
+    child: Center(
+      child: Text(
+        widget.user.name.isNotEmpty
+            ? widget.user.name[0].toUpperCase()
+            : '?',
+        style: const TextStyle(
+          fontSize: 42,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1186,35 +1249,51 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
               ),
               child: Column(
                 children: [
-                  // Avatar
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
+                 // Avatar with Profile Picture
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: Colors.white, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
-                    child: Center(
-                      child: Text(
-                        widget.user.name.isNotEmpty
-                            ? widget.user.name[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.bold,
-                          color: primaryBlue,
-                        ),
-                      ),
-                    ),
-                  ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: widget.user.hasProfilePicture
+                      ? Image.network(
+                          getPetImageUrl(widget.user.profilePictureId),
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDialogPlaceholderAvatar();
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : _buildDialogPlaceholderAvatar(),
+                ),
+              ),
                   const SizedBox(height: 16),
 
                   // Name
