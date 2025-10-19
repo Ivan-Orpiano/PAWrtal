@@ -6,6 +6,7 @@ import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:appwrite/enums.dart';
 import 'package:get_storage/get_storage.dart';
@@ -77,6 +78,13 @@ class AppWriteProvider {
       print('>>> Session created: ${session.$id}');
 
       final user = await account!.get();
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      // TODO: Modify widget.account.createPushTarget to adapt with current system of PAWrtal
+      // await widget.account.createPushTarget(
+      //   targetId: ID.unique(), 
+      //   identifier: fcmToken!, 
+      //   providerId: AppwriteConstants.pushNotificationProviderID,
+      // );
       print('>>> User retrieved: ${user.$id}');
 
       // Step 2: CRITICAL - Check if ADMIN first (highest priority)
