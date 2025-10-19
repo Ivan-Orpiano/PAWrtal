@@ -9,6 +9,7 @@ class ArchivedUser {
   final String email;
   final String role;
   final String? phone;
+  final String? profilePictureId; 
   final String? originalDocumentId;
   
   // Archive metadata
@@ -33,6 +34,7 @@ class ArchivedUser {
     required this.email,
     required this.role,
     this.phone,
+    this.profilePictureId,
     this.originalDocumentId,
     required this.archivedBy,
     DateTime? archivedAt,
@@ -75,6 +77,7 @@ if (map['originalUserData'] != null && map['originalUserData'] is String) {
       email: map['email'] ?? '',
       role: map['role'] ?? 'user',
       phone: map['phone'],
+      profilePictureId: parsedUserData?['profilePictureId'] as String?,
       originalDocumentId: map['originalDocumentId'],
       archivedBy: map['archivedBy'] ?? 'system',
       archivedAt: DateTime.parse(map['archivedAt']),
@@ -109,6 +112,7 @@ Map<String, dynamic> toMap() {
     'email': email,
     'role': role,
     'phone': phone ?? '',
+    'profilePictureId': profilePictureId ?? '', 
     'originalDocumentId': originalDocumentId,
     'archivedBy': archivedBy,
     'archivedAt': archivedAt.toIso8601String(),
@@ -147,6 +151,7 @@ Map<String, dynamic> toMap() {
     String? email,
     String? role,
     String? phone,
+    String? profilePictureId,
     String? originalDocumentId,
     String? archivedBy,
     DateTime? archivedAt,
@@ -165,6 +170,7 @@ Map<String, dynamic> toMap() {
       email: email ?? this.email,
       role: role ?? this.role,
       phone: phone ?? this.phone,
+      profilePictureId: profilePictureId ?? this.profilePictureId, 
       originalDocumentId: originalDocumentId ?? this.originalDocumentId,
       archivedBy: archivedBy ?? this.archivedBy,
       archivedAt: archivedAt ?? this.archivedAt,

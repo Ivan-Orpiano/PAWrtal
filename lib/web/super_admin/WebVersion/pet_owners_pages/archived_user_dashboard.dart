@@ -5,10 +5,12 @@ import 'package:capstone_app/data/models/archived_user_model.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/services/user_archive_service.dart';
 import 'package:intl/intl.dart';
 import 'package:appwrite/appwrite.dart';
+import 'package:capstone_app/utils/image_helper.dart'; 
+import 'package:capstone_app/data/models/user_model.dart';
 
 /// Super Admin Dashboard for Archived Users
 class ArchivedUsersDashboard extends StatefulWidget {
-  const ArchivedUsersDashboard({Key? key}) : super(key: key);
+   const ArchivedUsersDashboard({super.key});
 
   @override
   State<ArchivedUsersDashboard> createState() => _ArchivedUsersDashboardState();
@@ -218,6 +220,28 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       ),
     );
   }
+  Widget _buildArchivedPlaceholderAvatar(ArchivedUser user, Color statusColor) {
+  return Container(
+    width: 50,
+    height: 50,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: LinearGradient(
+        colors: [statusColor, statusColor.withOpacity(0.7)],
+      ),
+    ),
+    child: Center(
+      child: Text(
+        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  );
+}
 
   Widget _buildSortOption(
     String title,
@@ -889,14 +913,15 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
             children: [
               Row(
                 children: [
-                  // Avatar
+                  // Avatar with Profile Picture
                   Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [statusColor, statusColor.withOpacity(0.7)],
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.5),
+                        width: 2,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -906,15 +931,34 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Text(
-                        user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    child: ClipOval(
+                      child: user.profilePictureId != null && user.profilePictureId!.isNotEmpty
+                          ? Image.network(
+                              getPetImageUrl(user.profilePictureId),
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildArchivedPlaceholderAvatar(user, statusColor);
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: statusColor,
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : _buildArchivedPlaceholderAvatar(user, statusColor),
                     ),
                   ),
                   const SizedBox(width: 16),
