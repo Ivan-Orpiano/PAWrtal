@@ -78,8 +78,8 @@ class AppWriteProvider {
       print('>>> Session created: ${session.$id}');
 
       final user = await account!.get();
-      final fcmToken = await FirebaseMessaging.instance.getToken();
-      // TODO: Modify widget.account.createPushTarget to adapt with current system of PAWrtal
+      // final fcmToken = await FirebaseMessaging.instance.getToken();
+      // TODO: Modify widget.account.createPushTarget and FirebaseMessaging.instance.getToken() to adapt with current system of PAWrtal (both web and android)
       // await widget.account.createPushTarget(
       //   targetId: ID.unique(), 
       //   identifier: fcmToken!, 
