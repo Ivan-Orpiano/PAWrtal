@@ -4366,12 +4366,12 @@ class AppWriteProvider {
 
       // Store ONLY essential clinic data to avoid size limits
       final Map<String, dynamic> essentialClinicData = {
-        'clinicId': clinicDoc.data['clinicId'] ?? clinicId,
+        'adminId': clinicDoc.data['adminId'] ?? clinicId,
         'clinicName': clinicDoc.data['clinicName'] ?? '',
         'address': clinicDoc.data['address'] ?? '',
         'contact': clinicDoc.data['contact'] ?? '',
         'email': clinicDoc.data['email'] ?? '',
-        'adminId': clinicDoc.data['adminId'] ?? '',
+        // 'adminId': clinicDoc.data['adminId'] ?? '',
         'services': clinicDoc.data['services'] ?? '',
         'image': clinicDoc.data['image'] ?? '',
         'profilePictureId': clinicDoc.data['profilePictureId'] ?? '',
@@ -4389,7 +4389,7 @@ class AppWriteProvider {
           print(
               '>>> WARNING: Clinic data too large, storing minimal data only');
           final minimalData = {
-            'clinicId': clinicId,
+          //  'clinicId': clinicId,
             'clinicName': clinicDoc.data['clinicName'] ?? '',
             'email': clinicDoc.data['email'] ?? '',
             'adminId': clinicDoc.data['adminId'] ?? '',
@@ -4407,12 +4407,12 @@ class AppWriteProvider {
       }
 
       final archivedClinicData = {
-        'clinicId': clinicId,
+        'adminId': clinicId,
         'clinicName': clinicDoc.data['clinicName'] ?? '',
         'email': clinicDoc.data['email'] ?? '',
         'address': clinicDoc.data['address'] ?? '',
         'contact': clinicDoc.data['contact'] ?? '',
-        'adminId': clinicDoc.data['adminId'] ?? '',
+        // 'adminId': clinicDoc.data['adminId'] ?? '',
         'originalDocumentId': clinicDocumentId,
         'archivedBy': archivedBy,
         'archivedAt': now.toIso8601String(),
@@ -4583,13 +4583,13 @@ class AppWriteProvider {
   }
 
   /// Get archived clinic by clinicId
-  Future<Document?> getArchivedClinicByClinicId(String clinicId) async {
+  Future<Document?> getArchivedClinicByAdminId(String adminId) async {
     try {
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.archivedClinicsCollectionID,
         queries: [
-          Query.equal('clinicId', clinicId),
+          Query.equal('clinicId', adminId),
           Query.equal('isPermanentlyDeleted', false),
           Query.orderDesc('archivedAt'),
           Query.limit(1),
@@ -4663,7 +4663,7 @@ class AppWriteProvider {
       print('>>> Clinic ID: $clinicId');
       print('>>> ============================================');
 
-      final archivedDoc = await getArchivedClinicByClinicId(clinicId);
+      final archivedDoc = await getArchivedClinicByAdminId(clinicId);
       if (archivedDoc == null) {
         throw Exception('Archived clinic record not found');
       }
@@ -4694,107 +4694,106 @@ class AppWriteProvider {
   }
 
   /// Recover archived clinic (restore within 30 days)
-  Future<Map<String, dynamic>> recoverArchivedClinic({
-    required String clinicId,
-    required String recoveredBy,
-  }) async {
-    try {
-      print('>>> ============================================');
-      print('>>> RECOVERING ARCHIVED CLINIC');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
+Future<Map<String, dynamic>> recoverArchivedClinic({
+  required String adminId,  // CHANGED: was clinicId
+  required String recoveredBy,
+}) async{
+  try {
+    print('>>> ============================================');
+    print('>>> RECOVERING ARCHIVED CLINIC');
+    print('>>> Admin ID: $adminId');  // CHANGED: was clinicId
+    print('>>> ============================================');
 
-      final archivedDoc = await getArchivedClinicByClinicId(clinicId);
-      if (archivedDoc == null) {
-        return {'success': false, 'error': 'Archived clinic not found'};
-      }
+    final archivedDoc = await getArchivedClinicByAdminId(adminId);  // CHANGED: method name and parameter
+    if (archivedDoc == null) {
+      return {'success': false, 'error': 'Archived clinic not found'};
+    }
 
-      if (archivedDoc.data['isPermanentlyDeleted'] == true) {
-        return {
-          'success': false,
-          'error':
-              'Clinic has been permanently deleted and cannot be recovered',
-        };
-      }
-
-      final originalDocId = archivedDoc.data['originalDocumentId'];
-      final archivedDocId = archivedDoc.$id;
-
-      final originalClinicDataString =
-          archivedDoc.data['originalClinicData'] as String?;
-
-      if (originalClinicDataString == null ||
-          originalClinicDataString.isEmpty) {
-        return {'success': false, 'error': 'Original clinic data not found'};
-      }
-
-      Map<String, dynamic> originalClinicData;
-      try {
-        originalClinicData =
-            Map<String, dynamic>.from(jsonDecode(originalClinicDataString));
-      } catch (e) {
-        return {
-          'success': false,
-          'error': 'Failed to parse original clinic data'
-        };
-      }
-
-      // Recreate the clinic document with original data
-      final restoredClinicData = {
-        'clinicId': originalClinicData['clinicId'] ?? clinicId,
-        'clinicName': originalClinicData['clinicName'] ?? '',
-        'address': originalClinicData['address'] ?? '',
-        'contact': originalClinicData['contact'] ?? '',
-        'email': originalClinicData['email'] ?? '',
-        'adminId': originalClinicData['adminId'] ?? '',
-        'services': originalClinicData['services'] ?? '',
-        'image': originalClinicData['image'] ?? '',
-        'profilePictureId': originalClinicData['profilePictureId'] ?? '',
-        'createdAt':
-            originalClinicData['createdAt'] ?? DateTime.now().toIso8601String(),
-        'role': 'admin',
-        'createdBy': originalClinicData['createdBy'] ?? 'system',
+    if (archivedDoc.data['isPermanentlyDeleted'] == true) {
+      return {
+        'success': false,
+        'error':
+            'Clinic has been permanently deleted and cannot be recovered',
       };
+    }
 
-      Document restoredDoc;
-      try {
-        restoredDoc = await databases!.createDocument(
+    final originalDocId = archivedDoc.data['originalDocumentId'];
+    final archivedDocId = archivedDoc.$id;
+
+    final originalClinicDataString =
+        archivedDoc.data['originalClinicData'] as String?;
+
+    if (originalClinicDataString == null ||
+        originalClinicDataString.isEmpty) {
+      return {'success': false, 'error': 'Original clinic data not found'};
+    }
+
+    Map<String, dynamic> originalClinicData;
+    try {
+      originalClinicData =
+          Map<String, dynamic>.from(jsonDecode(originalClinicDataString));
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Failed to parse original clinic data'
+      };
+    }
+
+    // Recreate the clinic document with original data
+    final restoredClinicData = {
+      'adminId': originalClinicData['adminId'] ?? adminId,  // CHANGED: was clinicId
+      'clinicName': originalClinicData['clinicName'] ?? '',
+      'address': originalClinicData['address'] ?? '',
+      'contact': originalClinicData['contact'] ?? '',
+      'email': originalClinicData['email'] ?? '',
+      'services': originalClinicData['services'] ?? '',
+      'image': originalClinicData['image'] ?? '',
+      'profilePictureId': originalClinicData['profilePictureId'] ?? '',
+      'createdAt':
+          originalClinicData['createdAt'] ?? DateTime.now().toIso8601String(),
+      'role': 'admin',
+      'createdBy': originalClinicData['createdBy'] ?? 'system',
+    };
+
+    Document restoredDoc;
+    try {
+      restoredDoc = await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicsCollectionID,
+        documentId: originalDocId,
+        data: restoredClinicData,
+      );
+    } catch (e) {
+      if (e.toString().contains('already exists')) {
+        restoredDoc = await databases!.updateDocument(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.clinicsCollectionID,
           documentId: originalDocId,
           data: restoredClinicData,
         );
-      } catch (e) {
-        if (e.toString().contains('already exists')) {
-          restoredDoc = await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.clinicsCollectionID,
-            documentId: originalDocId,
-            data: restoredClinicData,
-          );
-        } else {
-          return {'success': false, 'error': 'Failed to recreate clinic: $e'};
-        }
+      } else {
+        return {'success': false, 'error': 'Failed to recreate clinic: $e'};
       }
-
-      // Delete the archived record
-      await databases!.deleteDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.archivedClinicsCollectionID,
-        documentId: archivedDocId,
-      );
-
-      print('>>> CLINIC RECOVERED SUCCESSFULLY');
-      return {
-        'success': true,
-        'message': 'Clinic recovered successfully',
-        'restoredDocumentId': restoredDoc.$id,
-      };
-    } catch (e) {
-      print('>>> ERROR RECOVERING CLINIC: $e');
-      return {'success': false, 'error': e.toString()};
     }
+
+    // Delete the archived record
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.archivedClinicsCollectionID,
+      documentId: archivedDocId,
+    );
+
+    print('>>> CLINIC RECOVERED SUCCESSFULLY');
+    return {
+      'success': true,
+      'message': 'Clinic recovered successfully',
+      'restoredDocumentId': restoredDoc.$id,
+    };
+  } catch (e) {
+    print('>>> ERROR RECOVERING CLINIC: $e');
+    return {'success': false, 'error': e.toString()};
   }
+}
 
   /// Process scheduled clinic deletions (background job)
   Future<Map<String, dynamic>> processScheduledClinicDeletions() async {

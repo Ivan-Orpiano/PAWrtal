@@ -1035,8 +1035,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       ),
                     ),
                   ),
-
-                // ADD AFTER THE STATUS BADGE:
                 const SizedBox(width: 8),
                 // Verification Badge
                 if (user.idVerified)
@@ -1174,11 +1172,11 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                 ),
               ],
             ],
-          )
-            ],
+            )
+          ],
         ),
       ),
-      )
+    )
     );
   }
 

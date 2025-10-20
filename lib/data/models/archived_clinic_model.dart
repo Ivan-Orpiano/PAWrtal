@@ -9,7 +9,7 @@ class ArchivedClinic {
   final String contact;
   final String adminId;
   final String originalDocumentId;
-  final String archivedBy;
+  final String archivedBy; 
   final DateTime archivedAt;
   final DateTime scheduledDeletionAt;
   final String archiveReason;
