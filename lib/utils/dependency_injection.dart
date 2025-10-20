@@ -2,6 +2,7 @@
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
+import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -25,11 +26,16 @@ Future<void> initializeDependencies() async {
   );
   print('>>> ✓ Archive Service initialized and running');
 
-Get.put(
-  ClinicArchiveService(Get.find<AuthRepository>()),
-  permanent: true,
-);
-print('>>> ✓ Clinic Archive Service initialized and running');
+  Get.put(
+    ClinicArchiveService(Get.find<AuthRepository>()),
+    permanent: true,
+  );
+  print('>>> ✓ Clinic Archive Service initialized and running');
+
+  final notificationService = NotificationService();
+  await notificationService.initializeNotifications();
+  Get.put(notificationService, permanent: true);
+  print('>>> ✓ Notification Service initialized');
 
   Get.put(DashboardController());
   Get.put(MessagingController());

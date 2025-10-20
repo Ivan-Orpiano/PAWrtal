@@ -5,6 +5,7 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
@@ -348,6 +349,8 @@ class WebAppointmentController extends GetxController {
 
       await authRepository.createAppointment(appointment);
 
+      await _notifyAdminOfNewAppointment(appointment);
+
       // Show success message
       Get.snackbar(
         "Success",
@@ -376,6 +379,47 @@ class WebAppointmentController extends GetxController {
       );
     } finally {
       isBooking.value = false;
+    }
+  }
+
+  Future<void> _notifyAdminOfNewAppointment(Appointment appointment) async {
+    try {
+      print('>>> Notifying admin of new appointment');
+
+      // Get clinic admin ID
+      final clinicDoc =
+          await authRepository.getClinicById(clinic.documentId ?? '');
+      if (clinicDoc == null) {
+        print('>>> Clinic not found, skipping admin notification');
+        return;
+      }
+
+      final adminId = clinicDoc.data['adminId'] as String?;
+      if (adminId == null || adminId.isEmpty) {
+        print('>>> Admin ID not found, skipping notification');
+        return;
+      }
+
+      // Get user details
+      final userName = session.userName.isEmpty ? 'A user' : session.userName;
+      final petName = selectedPet.value?.name ?? appointment.petId;
+
+      // Use AppwriteProvider to send notification
+      final appwriteProvider = Get.find<AppWriteProvider>();
+
+      await appwriteProvider.notifyAdminNewAppointment(
+        adminId: adminId,
+        petName: petName,
+        ownerName: userName,
+        service: appointment.service,
+        appointmentDateTime: appointment.dateTime,
+        appointmentId: appointment.documentId ?? '',
+      );
+
+      print('>>> Admin notification sent successfully');
+    } catch (e) {
+      print('>>> Error notifying admin: $e');
+      // Don't fail booking if notification fails
     }
   }
 }

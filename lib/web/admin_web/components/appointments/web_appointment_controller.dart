@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -574,6 +575,8 @@ class WebAppointmentController extends GetxController {
     }
 
     await _updateAppointmentStatus(appointment, 'accepted');
+
+    await _sendAppointmentStatusNotification(appointment, 'accepted');
     Get.snackbar(
         "Success", "Appointment accepted! Time slot has been reserved.");
   }
@@ -589,6 +592,9 @@ class WebAppointmentController extends GetxController {
       );
 
       await updateFullAppointment(updatedAppointment);
+
+      await _sendAppointmentStatusNotification(updatedAppointment, 'declined',
+          declineReason: notes);
       Get.snackbar(
           "Success", "Appointment declined. Patient will be notified.");
     } catch (e) {
@@ -609,6 +615,8 @@ class WebAppointmentController extends GetxController {
     );
 
     await updateFullAppointment(updatedAppointment);
+
+    await _sendAppointmentStatusNotification(updatedAppointment, 'in_progress');
     Get.snackbar(
         "Success", "${getPetName(appointment.petId)} has been checked in!");
   }
@@ -694,6 +702,8 @@ class WebAppointmentController extends GetxController {
         );
         return;
       }
+
+      await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
 
       Get.snackbar(
         "Success",
@@ -1432,6 +1442,53 @@ class WebAppointmentController extends GetxController {
 
     if (result == true) {
       await markNoShow(appointment);
+    }
+  }
+
+  Future<void> _sendAppointmentStatusNotification(
+    Appointment appointment,
+    String status, {
+    String? declineReason,
+  }) async {
+    try {
+      print('>>> Sending appointment notification');
+
+      // Get user details
+      final userDoc = await authRepository.getUserById(appointment.userId);
+      if (userDoc == null) {
+        print('>>> User not found, skipping notification');
+        return;
+      }
+
+      final userName = userDoc.data['name'] ?? 'User';
+      final userEmail = userDoc.data['email'] ?? '';
+
+      // Get pet name
+      final petName = getPetName(appointment.petId);
+
+      // Get clinic name
+      final clinicName = clinicData.value?.clinicName ?? 'Unknown Clinic';
+
+      // Use AppwriteProvider to send notifications
+      final appwriteProvider = Get.find<AppWriteProvider>();
+
+      await appwriteProvider.notifyAppointmentStatusChange(
+        userId: appointment.userId,
+        userEmail: userEmail,
+        userName: userName,
+        status: status,
+        petName: petName,
+        clinicName: clinicName,
+        service: appointment.service,
+        appointmentDateTime: appointment.dateTime,
+        appointmentId: appointment.documentId!,
+        declineReason: declineReason,
+      );
+
+      print('>>> Notification sent successfully');
+    } catch (e) {
+      print('>>> Error sending notification: $e');
+      // Don't fail the operation if notification fails
     }
   }
 }
