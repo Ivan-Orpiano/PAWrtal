@@ -14,7 +14,7 @@ import 'package:get/get.dart';
 import 'package:capstone_app/pages/super_admin_home/super_admin_home_controller.dart';
 import 'dart:async';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
-import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 
