@@ -76,11 +76,22 @@
   class _WebSettingsAndEverythingPageState extends State<WebSettingsAndEverythingPage> {
     int selectedIndex = 0;
     final GetStorage storage = GetStorage();
+    late TextEditingController subjectController;
+    late TextEditingController descriptionController;
 
     @override
     void initState() {
       super.initState();
       selectedIndex = widget.initialIndex;
+      subjectController = TextEditingController();
+      descriptionController = TextEditingController();
+    }
+
+    @override
+    void dispose() {
+      subjectController.dispose();
+      descriptionController.dispose();
+      super.dispose();
     }
 
     void _showSnackbar(String title, String message, Color backgroundColor) {
@@ -1174,8 +1185,8 @@ Widget _buildProfileContent() {
       );
     }
 
+
   Widget _buildFeedbackContent() {
-    // Initialize controller if not already done
     final feedbackController = Get.put(WebFeedbackController(
       authRepository: Get.find<AuthRepository>(),
       session: Get.find<UserSessionService>(),
@@ -1348,7 +1359,7 @@ Widget _buildProfileContent() {
                 
                 const SizedBox(height: 32),
                 
-                // Subject Field
+                // Subject Field - USE TextEditingController
                 const Text(
                   'Subject',
                   style: TextStyle(
@@ -1364,6 +1375,7 @@ Widget _buildProfileContent() {
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  controller: subjectController,
                   maxLength: 100,
                   onChanged: (value) => feedbackController.subject.value = value,
                   decoration: InputDecoration(
@@ -1384,7 +1396,7 @@ Widget _buildProfileContent() {
                 
                 const SizedBox(height: 32),
                 
-                // Description Field
+                // Description Field - USE TextEditingController
                 const Text(
                   'Details',
                   style: TextStyle(
@@ -1400,6 +1412,7 @@ Widget _buildProfileContent() {
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  controller: descriptionController,
                   maxLines: 6,
                   maxLength: 1000,
                   onChanged: (value) => feedbackController.description.value = value,
@@ -1421,7 +1434,7 @@ Widget _buildProfileContent() {
                 
                 const SizedBox(height: 32),
                 
-                // File Upload Section
+                // File Upload Section (keep as is)
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -1482,7 +1495,6 @@ Widget _buildProfileContent() {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Upload Button or File List
                       if (feedbackController.selectedFiles.isEmpty)
                         InkWell(
                           onTap: () => feedbackController.pickFiles(),
@@ -1515,7 +1527,6 @@ Widget _buildProfileContent() {
                           ),
                         ),
                       
-                      // Display selected files
                       if (feedbackController.selectedFiles.isNotEmpty) ...[
                         ...feedbackController.selectedFiles.map((file) => Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -1589,7 +1600,7 @@ Widget _buildProfileContent() {
                 
                 const SizedBox(height: 32),
                 
-                // Submit Button
+                // Submit Button - CLEAR TextEditingControllers ON SUCCESS
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -1598,7 +1609,9 @@ Widget _buildProfileContent() {
                       : () async {
                           final success = await feedbackController.submitFeedback();
                           if (success) {
-                            // Optionally show success dialog or navigate
+                            // CLEAR THE TextEditingControllers
+                            subjectController.clear();
+                            descriptionController.clear();
                           }
                         },
                     style: ElevatedButton.styleFrom(

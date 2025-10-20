@@ -157,10 +157,15 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
   }
 
   String _getProfileImage() {
-    // Use first gallery image from settings, then fallback to clinic.image
+    // Use dashboardPic from settings if available
+    if (_clinicSettings != null && _clinicSettings!.dashboardPic.isNotEmpty) {
+      return _clinicSettings!.dashboardPic;
+    }
+    // Fallback to first gallery image from settings
     if (_clinicSettings != null && _clinicSettings!.gallery.isNotEmpty) {
       return _clinicSettings!.gallery.first;
     }
+    // Final fallback to clinic.image
     return widget.clinic.image;
   }
 
