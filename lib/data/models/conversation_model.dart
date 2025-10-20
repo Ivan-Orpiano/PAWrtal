@@ -35,8 +35,8 @@ class Conversation {
       clinicId: map['clinicId'] ?? '',
       lastMessageId: map['lastMessageId'],
       lastMessageText: map['lastMessageText'],
-      lastMessageTime: map['lastMessageTime'] != null 
-          ? DateTime.parse(map['lastMessageTime']) 
+      lastMessageTime: map['lastMessageTime'] != null
+          ? DateTime.parse(map['lastMessageTime'])
           : null,
       unreadCount: map['unreadCount'] ?? 0,
       userUnreadCount: map['userUnreadCount'] ?? 0,
@@ -95,10 +95,10 @@ class Conversation {
 
   // Helper methods
   bool get hasMessages => lastMessageId != null;
-  
+
   String get conversationPreview {
     if (lastMessageText != null && lastMessageText!.isNotEmpty) {
-      return lastMessageText!.length > 50 
+      return lastMessageText!.length > 50
           ? '${lastMessageText!.substring(0, 50)}...'
           : lastMessageText!;
     }
@@ -107,18 +107,44 @@ class Conversation {
 
   String get timeAgo {
     if (lastMessageTime == null) return '';
-    
-    final difference = DateTime.now().difference(lastMessageTime!);
-    
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m';
-    } else {
-      return 'today';
+
+    final now = DateTime.now();
+    final msgTime = lastMessageTime!;
+
+    // Format time in 12-hour format with AM/PM
+    final hour = msgTime.hour == 0
+        ? 12
+        : msgTime.hour > 12
+            ? msgTime.hour - 12
+            : msgTime.hour;
+    final minute = msgTime.minute.toString().padLeft(2, '0');
+    final period = msgTime.hour >= 12 ? 'PM' : 'AM';
+    final timeStr = '$hour:$minute $period';
+
+    // If message is from today, show time only
+    if (msgTime.year == now.year &&
+        msgTime.month == now.month &&
+        msgTime.day == now.day) {
+      return timeStr;
     }
+
+    // If message is from yesterday, show "Yesterday" with time
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (msgTime.year == yesterday.year &&
+        msgTime.month == yesterday.month &&
+        msgTime.day == yesterday.day) {
+      return 'Yesterday';
+    }
+
+    // If message is from this week (last 7 days), show day name
+    final difference = now.difference(msgTime);
+    if (difference.inDays < 7) {
+      final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days[msgTime.weekday - 1];
+    }
+
+    // If message is older, show date
+    return '${msgTime.month}/${msgTime.day}/${msgTime.year.toString().substring(2)}';
   }
 
   // Get unread count for specific user type

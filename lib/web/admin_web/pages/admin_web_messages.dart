@@ -40,6 +40,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   @override
   void dispose() {
+    _controller.disposeMessageSubscriptions();
     super.dispose();
   }
 
@@ -116,6 +117,10 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             '>>> Step 4: Activating real-time subscriptions for conversation list...');
         _controller.subscribeToClinicConversationUpdates(_clinicId!);
 
+        // Step 5: Subscribe to conversation changes for real-time updates
+        print('>>> Step 5: Setting up real-time conversation stream...');
+        _setupRealtimeConversationStream(_clinicId!);
+
         print('>>> ============================================');
         print('>>> INITIALIZATION SUCCESSFUL');
         print('>>> Clinic ID: $_clinicId');
@@ -142,28 +147,95 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
   }
 
+  /// Setup real-time stream for conversation updates
+  void _setupRealtimeConversationStream(String clinicId) {
+    try {
+      print(
+          '>>> Setting up real-time conversation stream for clinic: $clinicId');
+
+      _authRepository.subscribeToConversations(clinicId).listen(
+        (realtimeMessage) {
+          print('>>> Real-time event received: ${realtimeMessage.events}');
+          print('>>> Event type: ${realtimeMessage.events.first}');
+
+          // Refresh the conversation list when any conversation changes
+          _refreshConversationsList();
+        },
+        onError: (error) {
+          print('>>> Error in real-time stream: $error');
+        },
+        onDone: () {
+          print('>>> Real-time stream closed');
+        },
+      );
+
+      print('>>> Real-time conversation stream setup complete');
+    } catch (e) {
+      print('>>> Error setting up real-time stream: $e');
+    }
+  }
+
+  /// Refresh the conversations list
+  Future<void> _refreshConversationsList() async {
+    try {
+      print('>>> Refreshing conversation list...');
+      if (_clinicId != null) {
+        await _controller.loadClinicConversations(_clinicId!);
+        print('>>> Conversation list refreshed');
+      }
+    } catch (e) {
+      print('>>> Error refreshing conversation list: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> _getUserData(String userId) async {
     if (_userCache.containsKey(userId)) {
       return _userCache[userId];
     }
 
     try {
+      print('>>> Fetching user data for: $userId');
+
+      // Fetch full user document with profile picture
       final userDoc = await _authRepository.getUserById(userId);
       if (userDoc != null) {
         final user = User.fromMap(userDoc.data);
+
+        // Get profile picture URL if available
+        String profilePictureUrl = '';
+        if (user.hasProfilePicture) {
+          profilePictureUrl =
+              _authRepository.getUserProfilePictureUrl(user.profilePictureId!);
+          print(
+              '>>> Profile picture URL generated: ${profilePictureUrl.substring(0, 50)}...');
+        } else {
+          print('>>> No profile picture for user: $userId');
+        }
+
         final userData = {
           'name': user.name,
           'email': user.email,
           'phone': user.phone ?? '',
+          'profilePictureId': user.profilePictureId ?? '',
+          'profilePictureUrl': profilePictureUrl,
+          'hasProfilePicture': user.hasProfilePicture,
         };
+
         _userCache[userId] = userData;
+        print('>>> User data cached: ${user.name}');
         return userData;
       }
     } catch (e) {
       print('Error loading user: $e');
     }
 
-    return {'name': 'Unknown User', 'email': '', 'phone': ''};
+    return {
+      'name': 'Unknown User',
+      'email': '',
+      'phone': '',
+      'profilePictureUrl': '',
+      'hasProfilePicture': false,
+    };
   }
 
   void _selectConversation(
@@ -186,6 +258,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           userId: userId,
           userName: userName,
           controller: _controller,
+          authRepository: _authRepository,
         ),
       ),
     );
@@ -255,8 +328,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               children: [
-                const SizedBox(
-                    width: 56), // Balance the IconButton on the right
+                const SizedBox(width: 56),
                 Expanded(
                   child: Text(
                     "Messages",
@@ -363,33 +435,29 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                         );
                       }
 
-                      return RefreshIndicator(
-                        onRefresh: () async {
-                          await _controller.loadClinicConversations(_clinicId!);
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        itemCount: _controller.conversations.length,
+                        itemBuilder: (context, index) {
+                          final conversation = _controller.conversations[index];
+                          return FutureBuilder<Map<String, dynamic>>(
+                            future: _getUserData(conversation.userId),
+                            builder: (context, snapshot) {
+                              final userData = snapshot.data ??
+                                  {
+                                    'name': 'Loading...',
+                                    'email': '',
+                                    'phone': '',
+                                    'profilePictureUrl': '',
+                                    'hasProfilePicture': false,
+                                  };
+                              return _buildMobileConversationTile(
+                                conversation,
+                                userData,
+                              );
+                            },
+                          );
                         },
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          itemCount: _controller.conversations.length,
-                          itemBuilder: (context, index) {
-                            final conversation =
-                                _controller.conversations[index];
-                            return FutureBuilder<Map<String, dynamic>>(
-                              future: _getUserData(conversation.userId),
-                              builder: (context, snapshot) {
-                                final userData = snapshot.data ??
-                                    {
-                                      'name': 'Loading...',
-                                      'email': '',
-                                      'phone': ''
-                                    };
-                                return _buildMobileConversationTile(
-                                  conversation,
-                                  userData,
-                                );
-                              },
-                            );
-                          },
-                        ),
                       );
                     }),
                   ),
@@ -438,41 +506,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         ),
         child: Row(
           children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                  child: Text(
-                    userData['name'][0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Obx(() {
-                  final status = _controller.getUserStatus(conversation.userId);
-                  if (status?.isOnline == true) {
-                    return Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                }),
-              ],
-            ),
+            _buildUserAvatar(userData),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -593,8 +627,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             ),
             child: Row(
               children: [
-                const SizedBox(
-                    width: 48), // Balance the IconButton on the right
+                const SizedBox(width: 48),
                 Expanded(
                   child: Text(
                     'Messages',
@@ -662,8 +695,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getUserData(conversation.userId),
                     builder: (context, snapshot) {
-                      final userData =
-                          snapshot.data ?? {'name': 'Loading...', 'email': ''};
+                      final userData = snapshot.data ??
+                          {
+                            'name': 'Loading...',
+                            'email': '',
+                            'profilePictureUrl': '',
+                            'hasProfilePicture': false,
+                          };
                       final isSelected = _selectedConversation?.documentId ==
                           conversation.documentId;
 
@@ -696,41 +734,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           ),
           child: Row(
             children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                    child: Text(
-                      userData['name'][0].toUpperCase(),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Obx(() {
-                    final status =
-                        _controller.getUserStatus(conversation.userId);
-                    if (status?.isOnline == true) {
-                      return Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
-                ],
-              ),
+              _buildUserAvatar(userData),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -802,6 +806,56 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     );
   }
 
+  Widget _buildUserAvatar(Map<String, dynamic> userData) {
+    final hasProfilePicture = userData['hasProfilePicture'] ?? false;
+    final profilePictureUrl = userData['profilePictureUrl'] ?? '';
+    final userName = userData['name'] ?? 'U';
+
+    return Stack(
+      children: [
+        if (hasProfilePicture && profilePictureUrl.isNotEmpty)
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: NetworkImage(profilePictureUrl),
+            onBackgroundImageError: (exception, stackTrace) {
+              print('Error loading profile picture: $exception');
+            },
+          )
+        else
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+            child: Text(
+              userName[0].toUpperCase(),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        Obx(() {
+          final status = _controller.getUserStatus(userData['name'] ?? '');
+          if (status?.isOnline == true) {
+            return Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }),
+      ],
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -836,63 +890,68 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   }
 
   Widget _buildMessagesHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            offset: const Offset(0, 1),
-            blurRadius: 2,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-            child: Text(
-              _selectedUserName![0].toUpperCase(),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getUserData(_selectedUserId!),
+      builder: (context, snapshot) {
+        final userData = snapshot.data ??
+            {
+              'name': 'User',
+              'profilePictureUrl': '',
+              'hasProfilePicture': false,
+            };
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(10),
+              topRight: Radius.circular(10),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade300,
+                offset: const Offset(0, 1),
+                blurRadius: 2,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _selectedUserName!,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+          child: Row(
+            children: [
+              _buildUserAvatar(userData),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userData['name'] ?? 'User',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Obx(() {
+                      final status =
+                          _controller.getUserStatus(_selectedUserId!);
+                      return Text(
+                        status?.statusText ?? 'Offline',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      );
+                    }),
+                  ],
                 ),
-                Obx(() {
-                  final status = _controller.getUserStatus(_selectedUserId!);
-                  return Text(
-                    status?.statusText ?? 'Offline',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  );
-                }),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.call),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () {},
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () {},
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1021,12 +1080,14 @@ class _AdminMobileMessagesPage extends StatefulWidget {
   final String userId;
   final String userName;
   final AdminMessagingController controller;
+  final AuthRepository authRepository;
 
   const _AdminMobileMessagesPage({
     required this.conversation,
     required this.userId,
     required this.userName,
     required this.controller,
+    required this.authRepository,
   });
 
   @override
@@ -1035,9 +1096,12 @@ class _AdminMobileMessagesPage extends StatefulWidget {
 }
 
 class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
+  Map<String, dynamic>? _userProfileData;
+
   @override
   void initState() {
     super.initState();
+    _loadUserProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.controller.openConversation(
         widget.conversation,
@@ -1047,6 +1111,29 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
     });
   }
 
+  Future<void> _loadUserProfile() async {
+    try {
+      final userDoc = await widget.authRepository.getUserById(widget.userId);
+      if (userDoc != null) {
+        final user = User.fromMap(userDoc.data);
+        String profilePictureUrl = '';
+        if (user.hasProfilePicture) {
+          profilePictureUrl = widget.authRepository
+              .getUserProfilePictureUrl(user.profilePictureId!);
+        }
+        setState(() {
+          _userProfileData = {
+            'name': user.name,
+            'profilePictureUrl': profilePictureUrl,
+            'hasProfilePicture': user.hasProfilePicture,
+          };
+        });
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+    }
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -1054,6 +1141,8 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final userData = _userProfileData ?? {'name': widget.userName};
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
@@ -1071,48 +1160,14 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
             ),
             title: Row(
               children: [
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                      child: Text(
-                        widget.userName[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Obx(() {
-                      final status =
-                          widget.controller.getUserStatus(widget.userId);
-                      if (status?.isOnline == true) {
-                        return Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    }),
-                  ],
-                ),
+                _buildMobileUserAvatar(userData),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.userName,
+                        userData['name'] ?? widget.userName,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1125,7 +1180,7 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
                           status?.statusText ?? 'Offline',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: Colors.grey[300],
                           ),
                         );
                       }),
@@ -1150,7 +1205,7 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
               }
 
               if (widget.controller.currentMessages.isEmpty) {
-                return _buildEmptyMessageState();
+                return _buildEmptyMessageState(userData);
               }
 
               return ListView.builder(
@@ -1164,7 +1219,7 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
                       widget.controller.currentMessages.length - 1 - index;
                   final message =
                       widget.controller.currentMessages[reversedIndex];
-                  return _buildMessageBubble(message);
+                  return _buildMessageBubble(message, userData);
                 },
               );
             }),
@@ -1175,7 +1230,57 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
     );
   }
 
-  Widget _buildEmptyMessageState() {
+  Widget _buildMobileUserAvatar(Map<String, dynamic> userData) {
+    final hasProfilePicture = userData['hasProfilePicture'] ?? false;
+    final profilePictureUrl = userData['profilePictureUrl'] ?? '';
+    final userName = userData['name'] ?? 'U';
+
+    return Stack(
+      children: [
+        if (hasProfilePicture && profilePictureUrl.isNotEmpty)
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: NetworkImage(profilePictureUrl),
+            onBackgroundImageError: (exception, stackTrace) {
+              print('Error loading profile picture: $exception');
+            },
+          )
+        else
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+            child: Text(
+              userName[0].toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        Obx(() {
+          final status = widget.controller.getUserStatus(widget.userId);
+          if (status?.isOnline == true) {
+            return Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }),
+      ],
+    );
+  }
+
+  Widget _buildEmptyMessageState(Map<String, dynamic> userData) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1196,7 +1301,7 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Send a message to ${widget.userName}",
+            "Send a message to ${userData['name'] ?? widget.userName}",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -1208,7 +1313,7 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
     );
   }
 
-  Widget _buildMessageBubble(Message message) {
+  Widget _buildMessageBubble(Message message, Map<String, dynamic> userData) {
     final isCurrentUser = widget.controller.isCurrentUser(message.senderId);
     final isStarterMessage = message.isStarterMessage;
 
@@ -1222,15 +1327,22 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
           if (!isCurrentUser) ...[
             CircleAvatar(
               radius: 12,
+              backgroundImage: (userData['hasProfilePicture'] ?? false) &&
+                      (userData['profilePictureUrl'] ?? '').isNotEmpty
+                  ? NetworkImage(userData['profilePictureUrl'])
+                  : null,
               backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-              child: Text(
-                widget.userName[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: (userData['hasProfilePicture'] ?? false) &&
+                      (userData['profilePictureUrl'] ?? '').isNotEmpty
+                  ? null
+                  : Text(
+                      (userData['name'] ?? 'U')[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
             const SizedBox(width: 8),
           ],
