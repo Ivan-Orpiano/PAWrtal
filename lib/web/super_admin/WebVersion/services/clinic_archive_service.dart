@@ -148,7 +148,7 @@ class ClinicArchiveService extends GetxService {
                !clinic.isRecovered;
       }).map((clinic) {
         return {
-          'clinicId': clinic.clinicId,
+          'clinicId': clinic.adminId,
           'clinicName': clinic.clinicName,
           'email': clinic.email,
           'scheduledDeletionAt': clinic.scheduledDeletionAt.toIso8601String(),

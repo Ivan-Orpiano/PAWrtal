@@ -26,6 +26,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
   String _selectedSort = 'newest'; // newest, oldest, alphabetical
 
   RealtimeSubscription? _archiveSubscription;
+  RealtimeSubscription? _storageSubscription;
 
   // Colors
   static const Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
@@ -315,7 +316,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
     try {
       final currentUser = await _authRepository.getUser();
       final result = await _authRepository.recoverArchivedClinic(
-        clinicId: clinic.clinicId,
+        clinicId: clinic.adminId,
         recoveredBy: currentUser?.name ?? 'Super Admin',
       );
 

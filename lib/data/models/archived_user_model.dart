@@ -18,6 +18,9 @@ class ArchivedUser {
   final DateTime scheduledDeletionAt; // 30 days after archival
   final String archiveReason;
   final bool isPermanentlyDeleted;
+
+  final bool idVerified;
+  final String? idVerifiedAt;
   
   // Original user data (stored as JSON for recovery if needed)
   final Map<String, dynamic>? originalUserData;
@@ -41,10 +44,13 @@ class ArchivedUser {
     DateTime? scheduledDeletionAt,
     this.archiveReason = 'No reason provided',
     this.isPermanentlyDeleted = false,
+    this.idVerified = false,
+    this.idVerifiedAt,
     this.originalUserData,
     this.isRecovered = false,
     this.recoveredAt,
     this.recoveredBy,
+
   })  : archivedAt = archivedAt ?? DateTime.now(),
         scheduledDeletionAt = scheduledDeletionAt ?? 
             DateTime.now().add(const Duration(days: 30));
@@ -52,23 +58,15 @@ class ArchivedUser {
   // Convert from Appwrite document
   factory ArchivedUser.fromMap(Map<String, dynamic> map) {
    // Parse originalUserData from JSON string
-Map<String, dynamic>? parsedUserData;
-if (map['originalUserData'] != null && map['originalUserData'] is String) {
-        try {
-          final jsonString = map['originalUserData'] as String;
-          if (jsonString.isNotEmpty && jsonString != '{}') {
-            parsedUserData = Map<String, dynamic>.from(
-              jsonDecode(jsonString)
-            );
-          }
-        } catch (e) {
-          print('>>> Error parsing originalUserData JSON: $e');
-          parsedUserData = null;
-        }
-      } else if (map['originalUserData'] is Map) {
-        // Fallback: if somehow it's stored as Map (shouldn't happen)
-        parsedUserData = Map<String, dynamic>.from(map['originalUserData']);
+Map<String, dynamic> originalData = {};
+ try {
+      final dataString = map['originalUserData'] as String?;
+      if (dataString != null && dataString.isNotEmpty) {
+        originalData = Map<String, dynamic>.from(jsonDecode(dataString));
       }
+    } catch (e) {
+      print('Error parsing original user data: $e');
+    }
 
     return ArchivedUser(
       documentId: map['\$id'],
@@ -77,19 +75,22 @@ if (map['originalUserData'] != null && map['originalUserData'] is String) {
       email: map['email'] ?? '',
       role: map['role'] ?? 'user',
       phone: map['phone'],
-      profilePictureId: parsedUserData?['profilePictureId'] as String?,
+     profilePictureId: originalData['profilePictureId'] as String?,
       originalDocumentId: map['originalDocumentId'],
       archivedBy: map['archivedBy'] ?? 'system',
       archivedAt: DateTime.parse(map['archivedAt']),
       scheduledDeletionAt: DateTime.parse(map['scheduledDeletionAt']),
       archiveReason: map['archiveReason'] ?? 'No reason provided',
       isPermanentlyDeleted: map['isPermanentlyDeleted'] ?? false,
-      originalUserData: parsedUserData,
+      originalUserData: originalData,
       isRecovered: map['isRecovered'] ?? false,
       recoveredAt: map['recoveredAt'] != null 
           ? DateTime.parse(map['recoveredAt']) 
           : null,
       recoveredBy: map['recoveredBy'],
+
+      idVerified: originalData['idVerified'] as bool? ?? false,
+      idVerifiedAt: originalData['idVerifiedAt'] as String?,
     );
   }
 
@@ -158,6 +159,10 @@ Map<String, dynamic> toMap() {
     DateTime? scheduledDeletionAt,
     String? archiveReason,
     bool? isPermanentlyDeleted,
+
+    bool? idVerified,
+    String? idVerifiedAt,
+    
     Map<String, dynamic>? originalUserData,
     bool? isRecovered,
     DateTime? recoveredAt,
@@ -177,6 +182,8 @@ Map<String, dynamic> toMap() {
       scheduledDeletionAt: scheduledDeletionAt ?? this.scheduledDeletionAt,
       archiveReason: archiveReason ?? this.archiveReason,
       isPermanentlyDeleted: isPermanentlyDeleted ?? this.isPermanentlyDeleted,
+      idVerified: idVerified ?? this.idVerified,
+      idVerifiedAt: idVerifiedAt ?? this.idVerifiedAt,
       originalUserData: originalUserData ?? this.originalUserData,
       isRecovered: isRecovered ?? this.isRecovered,
       recoveredAt: recoveredAt ?? this.recoveredAt,
