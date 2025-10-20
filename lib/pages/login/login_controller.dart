@@ -8,6 +8,10 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:capstone_app/notification/services/notification_service.dart';
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
+
 class LoginController extends GetxController {
   AuthRepository authRepository;
   LoginController(this.authRepository);
@@ -271,6 +275,58 @@ class LoginController extends GetxController {
 
       _getStorage.write("role", role);
       _getStorage.write("email", userEmail);
+
+      // Register FCM token for push notifications (Mobile only)
+      print('>>> ==========================================');
+      print('>>> REGISTERING FCM TOKEN FOR PUSH NOTIFICATIONS');
+      print('>>> ==========================================');
+
+      try {
+        // Only register FCM on mobile platforms
+        if (!kIsWeb) {
+          final notificationService = Get.find<NotificationService>();
+
+          // Request permissions
+          final hasPermission = await notificationService.requestPermissions();
+
+          if (hasPermission) {
+            // Get FCM token
+            final fcmToken = await notificationService.getFreshToken();
+
+            if (fcmToken != null && fcmToken.isNotEmpty) {
+              print('>>> FCM Token available: ${fcmToken.substring(0, 20)}...');
+
+              // Get AppwriteProvider instance
+              final appwriteProvider = Get.find<AppWriteProvider>();
+
+              // Register with Appwrite
+              final target = await appwriteProvider.registerUserPushTarget(
+                userId: userId,
+                fcmToken: fcmToken,
+              );
+
+              if (target != null) {
+                _getStorage.write('push_target_id', target.$id);
+                print('>>> ✓ Push notifications enabled for user');
+                print('>>> Target ID: ${target.$id}');
+              } else {
+                print('>>> ⚠ Warning: Could not register push target');
+              }
+            } else {
+              print('>>> ⚠ Warning: FCM token not available');
+            }
+          } else {
+            print('>>> ℹ Push notification permission denied by user');
+          }
+        } else {
+          print('>>> ℹ Web platform: Skipping FCM registration');
+        }
+      } catch (e) {
+        print('>>> ⚠ Warning: FCM registration failed (non-critical): $e');
+        // Don't fail login if FCM registration fails
+      }
+
+      print('>>> ==========================================');
 
       print('>>> ==========================================');
       print('>>> ✓✓✓ LOGIN SUCCESS ✓✓✓');

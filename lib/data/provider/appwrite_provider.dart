@@ -80,13 +80,7 @@ class AppWriteProvider {
       print('>>> Session created: ${session.$id}');
 
       final user = await account!.get();
-      // final fcmToken = await FirebaseMessaging.instance.getToken();
-      // TODO: Modify widget.account.createPushTarget and FirebaseMessaging.instance.getToken() to adapt with current system of PAWrtal (both web and android)
-      // await widget.account.createPushTarget(
-      //   targetId: ID.unique(),
-      //   identifier: fcmToken!,
-      //   providerId: AppwriteConstants.pushNotificationProviderID,
-      // );
+
       print('>>> User retrieved: ${user.$id}');
 
       // Step 2: CRITICAL - Check if ADMIN first (highest priority)
