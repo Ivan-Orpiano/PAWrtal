@@ -228,9 +228,6 @@ class MessagingController extends GetxController {
       final messages =
           await _authRepository.getConversationMessages(conversationId);
       currentMessages.value = messages;
-
-      // With reverse ListView, newest messages automatically appear at bottom
-      // No need to scroll since reverse ListView starts at "top" (which is actually bottom)
     } catch (e) {
       Get.snackbar('Error', 'Failed to load messages: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -238,7 +235,6 @@ class MessagingController extends GetxController {
   }
 
   void _scrollToBottom() {
-    // With reverse ListView, scrolling to 0 position shows newest messages
     if (scrollController.hasClients) {
       scrollController.animateTo(
         0.0,
@@ -248,11 +244,8 @@ class MessagingController extends GetxController {
     }
   }
 
-  void _scrollToBottomWithRetry() {
-    // Not needed with reverse ListView, but keeping for compatibility
-    _scrollToBottom();
-  }
-
+  /// Fixed: Removed senderType, receiverId, messageType, attachmentUrl parameters
+  /// These don't exist in AuthRepository.sendMessage()
   Future<void> sendMessage({String? text, String? attachmentUrl}) async {
     final messageText = text ?? messageController.text.trim();
     if (messageText.isEmpty && attachmentUrl == null) return;
@@ -262,28 +255,33 @@ class MessagingController extends GetxController {
     try {
       isSendingMessage.value = true;
 
-      // Clear input immediately for better UX
       if (text == null) messageController.clear();
 
-      // Send message to server
+      print('>>> ============================================');
+      print('>>> USER CONTROLLER: Sending message');
+      print('>>> Conversation: ${currentConversation.value!.documentId}');
+      print('>>> Sender: ${_userSession.userId}');
+      print('>>> Receiver: ${currentReceiverId.value}');
+      print('>>> Message: $messageText');
+      print('>>> ============================================');
+
+      // Send message - ONLY these parameters exist in the method
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
-        senderType: 'user',
-        receiverId: currentReceiverId.value,
         messageText: messageText,
-        messageType: attachmentUrl != null ? 'image' : 'text',
-        attachmentUrl: attachmentUrl,
+        isStarterMessage: false,
+        attachment: attachmentUrl,
       );
 
-      // Update conversation in local list - user sent message so their unread count stays 0
-      // The clinic's unread count will be incremented by the server
+      print('>>> Message sent successfully: ${sentMessage.documentId}');
+
+      // Update conversation - user sent message so their unread count stays 0
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
-        lastMessageTime: sentMessage.timestamp,
-        userUnreadCount:
-            0, // User's unread count stays 0 since they sent the message
+        lastMessageTime: sentMessage.createdAt,
+        userUnreadCount: 0,
       );
       currentConversation.value = updatedConversation;
 
@@ -294,7 +292,11 @@ class MessagingController extends GetxController {
         conversations.removeAt(index);
         conversations.insert(0, updatedConversation);
       }
+
+      print('>>> ============================================');
     } catch (e) {
+      print('>>> ERROR sending message: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
       Get.snackbar('Error', 'Failed to send message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
@@ -302,11 +304,11 @@ class MessagingController extends GetxController {
     }
   }
 
-// Helper method to check if conversation has unread messages for current user
   bool hasUnreadMessages(Conversation conversation) {
     return conversation.userUnreadCount > 0;
   }
 
+  /// Fixed: Removed senderType, receiverId, messageType parameters
   Future<void> sendStarterMessage(ConversationStarter starter) async {
     if (currentConversation.value == null) return;
 
@@ -317,17 +319,17 @@ class MessagingController extends GetxController {
       // Wait a moment for better UX
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Then send the automated response as if from the clinic
+      // Then send the automated response
+      // Note: In a real app, this should be sent from a backend function
+      // For now, just send the response text as a regular message
       await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: currentReceiverId.value,
-        senderType: 'admin',
-        receiverId: _userSession.userId,
         messageText: starter.responseText,
-        messageType: 'starter',
+        isStarterMessage: true,
       );
 
-      // Don't manually add to currentMessages - let real-time subscription handle it
+      print('>>> Starter message sent');
     } catch (e) {
       Get.snackbar('Error', 'Failed to send starter message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -343,11 +345,8 @@ class MessagingController extends GetxController {
       // Update local conversation unread count
       if (currentConversation.value != null &&
           currentConversation.value!.userUnreadCount > 0) {
-        // Only reset the USER's unread count, keep clinic unread count
         final updatedConversation =
-            currentConversation.value!.copyWith(userUnreadCount: 0
-                // Don't modify clinicUnreadCount
-                );
+            currentConversation.value!.copyWith(userUnreadCount: 0);
         currentConversation.value = updatedConversation;
 
         // Update in conversations list
@@ -418,7 +417,6 @@ class MessagingController extends GetxController {
         final conversationWithId =
             updatedConversation.copyWith(documentId: conversationData['\$id']);
 
-        // Handle different events
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.update')) {
           _handleConversationUpdate(conversationWithId);
@@ -437,23 +435,18 @@ class MessagingController extends GetxController {
         .indexWhere((c) => c.documentId == updatedConversation.documentId);
 
     if (index != -1) {
-      // Check if this is the current conversation the user is viewing
       final isCurrentConversation = currentConversation.value?.documentId ==
           updatedConversation.documentId;
 
       if (isCurrentConversation) {
-        // If user is currently viewing this conversation, reset THEIR unread count to 0
-        // but keep the clinic's unread count as is
         final resetUserUnread =
             updatedConversation.copyWith(userUnreadCount: 0);
         conversations[index] = resetUserUnread;
         currentConversation.value = resetUserUnread;
       } else {
-        // If user is not viewing this conversation, use the actual unread counts from server
         conversations[index] = updatedConversation;
       }
 
-      // Move updated conversation to top if it has new messages for the user and it's not already at the top
       if (updatedConversation.userUnreadCount > 0 && index != 0) {
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
@@ -462,7 +455,6 @@ class MessagingController extends GetxController {
   }
 
   void _handleNewConversation(Conversation newConversation) {
-    // Check if conversation already exists
     final exists =
         conversations.any((c) => c.documentId == newConversation.documentId);
     if (!exists) {
@@ -470,6 +462,8 @@ class MessagingController extends GetxController {
     }
   }
 
+  /// Fixed: Changed m.timestamp to m.messageTimestamp (getter from Message model)
+  /// Removed m.receiverId reference - Message model doesn't have this field
   void subscribeToMessages(String conversationId) {
     _messageSubscription?.cancel();
     _messageSubscription = _authRepository
@@ -483,35 +477,37 @@ class MessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
-          // More robust duplicate check
+          // Check for duplicates by ID and content similarity
           final existingIndex = currentMessages.indexWhere((m) =>
               m.documentId == messageWithId.documentId ||
               (m.messageText == messageWithId.messageText &&
                   m.senderId == messageWithId.senderId &&
-                  m.timestamp
-                          .difference(messageWithId.timestamp)
+                  m.messageTimestamp
+                          .difference(messageWithId.messageTimestamp)
                           .abs()
                           .inSeconds <
                       2));
 
           if (existingIndex == -1) {
+            print('>>> Adding new message to list');
             currentMessages.add(messageWithId);
+            currentMessages.refresh();
 
             // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
 
-            // If this is a message TO the current user and they're viewing the conversation,
-            // mark it as read immediately (but don't mark their own messages as read)
-            if (messageWithId.receiverId == _userSession.userId &&
-                messageWithId.senderId != _userSession.userId &&
+            // If this is a message from the clinic and user is viewing conversation, mark as read
+            if (messageWithId.senderId != _userSession.userId &&
                 currentConversation.value?.documentId == conversationId) {
+              print('>>> Auto-marking incoming message as read');
               markConversationAsRead(conversationId);
             }
           }
         } catch (e) {
           print('Error processing real-time message: $e');
+          print('Stack trace: ${StackTrace.current}');
         }
       }
     });
@@ -551,7 +547,6 @@ class MessagingController extends GetxController {
 
   int getTotalUnreadCount() {
     return conversations.fold(0, (total, conversation) {
-      // For user, only count their unread messages (userUnreadCount)
       return total + conversation.userUnreadCount;
     });
   }

@@ -1106,19 +1106,6 @@ class AppWriteProvider {
     }
   }
 
-  Future<List<Document>> getUserConversations(String userId) async {
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.conversationsCollectionID,
-      queries: [
-        Query.equal("userId", userId),
-        Query.equal("isActive", true),
-        Query.orderDesc("updatedAt"),
-      ],
-    );
-    return result.documents;
-  }
-
   Future<List<Document>> getClinicConversations(String clinicId) async {
     final result = await databases!.listDocuments(
       databaseId: AppwriteConstants.dbID,
@@ -1126,9 +1113,24 @@ class AppWriteProvider {
       queries: [
         Query.equal("clinicId", clinicId),
         Query.equal("isActive", true),
-        Query.orderDesc("updatedAt"),
+        Query.orderDesc("lastMessageTime"), // Order by actual message time
       ],
     );
+
+    return result.documents;
+  }
+
+  Future<List<Document>> getUserConversations(String userId) async {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationsCollectionID,
+      queries: [
+        Query.equal("userId", userId),
+        Query.equal("isActive", true),
+        Query.orderDesc("lastMessageTime"), // Order by actual message time
+      ],
+    );
+
     return result.documents;
   }
 
@@ -1146,6 +1148,11 @@ class AppWriteProvider {
   // ============= MESSAGE METHODS =============
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
+    // Ensure timestamp is always set to now if not provided
+    final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
+    data['timestamp'] = timestamp;
+    data['createdAt'] = timestamp;
+
     final messageDoc = await databases!.createDocument(
       databaseId: AppwriteConstants.dbID,
       collectionId: AppwriteConstants.messagesCollectionID,
@@ -1170,7 +1177,7 @@ class AppWriteProvider {
       Map<String, dynamic> updateData = {
         'lastMessageId': messageDoc.$id,
         'lastMessageText': data['messageText'],
-        'lastMessageTime': data['timestamp'],
+        'lastMessageTime': timestamp, // Use the exact message timestamp
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
@@ -4909,17 +4916,17 @@ class AppWriteProvider {
         profilePictureUrl = getUserProfilePictureUrl(profilePictureId);
       }
 
-        return {
-          'user': userDoc.data,
-          'userDocId': userDoc.$id,
-          'profilePictureId': profilePictureId,
-          'profilePictureUrl': profilePictureUrl,
-        };
-      } catch (e) {
-        print('Error getting user with profile picture: $e');
-        return null;
-      }
+      return {
+        'user': userDoc.data,
+        'userDocId': userDoc.$id,
+        'profilePictureId': profilePictureId,
+        'profilePictureUrl': profilePictureUrl,
+      };
+    } catch (e) {
+      print('Error getting user with profile picture: $e');
+      return null;
     }
+  }
 
 // ============= ADD TO appwrite_provider.dart =============
 

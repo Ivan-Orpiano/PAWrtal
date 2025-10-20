@@ -338,33 +338,166 @@ class AuthRepository {
   Future<Message> sendMessage({
     required String conversationId,
     required String senderId,
-    required String senderType,
-    required String receiverId,
     required String messageText,
-    String messageType = 'text',
-    String? attachmentUrl,
+    bool isStarterMessage = false,
+    String? attachment,
   }) async {
-    final message = Message(
-      conversationId: conversationId,
-      senderId: senderId,
-      senderType: senderType,
-      receiverId: receiverId,
-      messageText: messageText,
-      messageType: messageType,
-      attachmentUrl: attachmentUrl,
-    );
+    try {
+      print('>>> REPOSITORY: Sending message to conversation: $conversationId');
+      print('>>> From: $senderId');
+      print('>>> Text: $messageText');
+      print('>>> Is Starter Message: $isStarterMessage');
 
-    final messageDoc = await createMessage(message);
-    final createdMessage = message.copyWith(documentId: messageDoc.$id);
+      // Create message object
+      final message = Message(
+        conversationId: conversationId,
+        senderId: senderId,
+        messageText: messageText,
+        isStarterMessage: isStarterMessage,
+        attachment: attachment,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-    await appWriteProvider.updateConversation(conversationId, {
-      'lastMessageId': messageDoc.$id,
-      'lastMessageText': messageText,
-      'lastMessageTime': DateTime.now().toIso8601String(),
-      'unreadCount': 1,
-    });
+      // Save message to database
+      final messageDoc = await createMessage(message);
+      final createdMessage = message.copyWith(documentId: messageDoc.$id);
 
-    return createdMessage;
+      print('>>> REPOSITORY: Message created with ID: ${messageDoc.$id}');
+
+      // Update conversation with latest message info
+      await appWriteProvider.updateConversation(conversationId, {
+        'lastMessageId': messageDoc.$id,
+        'lastMessageText': messageText,
+        'lastMessageTime': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+        // Note: unreadCount is handled separately based on sender type
+      });
+
+      print('>>> REPOSITORY: Conversation updated successfully');
+
+      return createdMessage;
+    } catch (e) {
+      print('>>> REPOSITORY: Error sending message: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
+
+  /// Alternative method if you need to send with more context
+  Future<Message> sendMessageAdvanced({
+    required String conversationId,
+    required String senderId,
+    required String messageText,
+    bool isStarterMessage = false,
+    String? attachment,
+    bool updateUnreadCount = true,
+  }) async {
+    try {
+      print('>>> REPOSITORY: Sending message (advanced mode)');
+
+      final message = Message(
+        conversationId: conversationId,
+        senderId: senderId,
+        messageText: messageText,
+        isStarterMessage: isStarterMessage,
+        attachment: attachment,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      final messageDoc = await createMessage(message);
+      final createdMessage = message.copyWith(documentId: messageDoc.$id);
+
+      // Update conversation
+      final updateData = {
+        'lastMessageId': messageDoc.$id,
+        'lastMessageText': messageText,
+        'lastMessageTime': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      await appWriteProvider.updateConversation(conversationId, updateData);
+
+      print('>>> REPOSITORY: Message sent successfully');
+      return createdMessage;
+    } catch (e) {
+      print('>>> REPOSITORY: Error in sendMessageAdvanced: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark a single message as read
+  Future<void> markMessageAsRead(String messageId) async {
+    try {
+      print('>>> REPOSITORY: Marking message as read: $messageId');
+
+      final message = Message(
+        conversationId: '',
+        senderId: '',
+        messageText: '',
+      );
+
+      await appWriteProvider.updateMessage(messageId, {
+        'isRead': true,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      print('>>> REPOSITORY: Message marked as read');
+    } catch (e) {
+      print('>>> REPOSITORY: Error marking message as read: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Conversation>> getClinicConversationsWithAccurateTime(
+      String clinicId) async {
+    try {
+      final docs = await appWriteProvider.getClinicConversations(clinicId);
+
+      return docs.map((doc) {
+        final conversation = Conversation.fromMap(doc.data);
+        final withDocId = conversation.copyWith(documentId: doc.$id);
+
+        // Ensure lastMessageTime is set correctly
+        if (withDocId.lastMessageTime == null &&
+            doc.data['updatedAt'] != null) {
+          return withDocId.copyWith(
+            lastMessageTime: DateTime.parse(doc.data['updatedAt']),
+          );
+        }
+
+        return withDocId;
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic conversations: $e');
+      return [];
+    }
+  }
+
+  Future<List<Conversation>> getUserConversationsWithAccurateTime(
+      String userId) async {
+    try {
+      final docs = await appWriteProvider.getUserConversations(userId);
+
+      return docs.map((doc) {
+        final conversation = Conversation.fromMap(doc.data);
+        final withDocId = conversation.copyWith(documentId: doc.$id);
+
+        // Ensure lastMessageTime is set correctly
+        if (withDocId.lastMessageTime == null &&
+            doc.data['updatedAt'] != null) {
+          return withDocId.copyWith(
+            lastMessageTime: DateTime.parse(doc.data['updatedAt']),
+          );
+        }
+
+        return withDocId;
+      }).toList();
+    } catch (e) {
+      print('Error getting user conversations: $e');
+      return [];
+    }
   }
 
   Future<models.Document> createConversationStarter(

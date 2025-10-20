@@ -965,55 +965,81 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
+  // Replace these methods in admin_web_dashboard.dart
+
   Widget _buildRecentMessages(
       AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
       title: 'Recent Messages',
       subtitle:
-          '${controller.recentMessages.where((m) => !m['isRead']).length} unread',
+          '${controller.recentMessages.where((m) => m['unreadCount'] > 0).length} unread',
       icon: Icons.message,
-      child: controller.recentMessages.isEmpty
-          ? _buildEmptyState('No recent messages', Icons.message)
-          : Column(
-              children: controller.recentMessages.take(3).map((message) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildMessageItem(message, isMobile),
-                );
-              }).toList(),
-            ),
+      child: Obx(() {
+        if (controller.recentMessages.isEmpty) {
+          return _buildEmptyState('No recent messages', Icons.message);
+        }
+
+        return Column(
+          children: controller.recentMessages.take(3).map((message) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildMessageItem(message, isMobile),
+            );
+          }).toList(),
+        );
+      }),
       actionLabel: 'View All',
       onAction: _handleNavigateToMessages,
     );
   }
 
   Widget _buildMessageItem(Map<String, dynamic> message, bool isMobile) {
-    final isUnread = !message['isRead'];
-    final unreadCount = message['unreadCount'] ?? 0;
+    final isUnread = (message['unreadCount'] ?? 0) > 0;
 
-    // Format the time
+    // Format the time - EXACTLY THE SAME LOGIC AS CONVERSATION_MODEL
     final messageTime = message['time'] as DateTime;
     final now = DateTime.now();
-    final difference = now.difference(messageTime);
+
+    // Check if message is from today
+    final isToday = messageTime.year == now.year &&
+        messageTime.month == now.month &&
+        messageTime.day == now.day;
 
     String timeDisplay;
-    if (difference.inMinutes < 1) {
-      timeDisplay = 'Just now';
-    } else if (difference.inHours < 1) {
-      timeDisplay = '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
-      timeDisplay = '${difference.inHours}h ago';
-    } else if (difference.inDays == 1) {
-      timeDisplay = 'Yesterday';
-    } else if (difference.inDays < 7) {
-      timeDisplay = '${difference.inDays}d ago';
+
+    if (isToday) {
+      // If today, show time in 12-hour format with AM/PM
+      final hour = messageTime.hour == 0
+          ? 12
+          : messageTime.hour > 12
+              ? messageTime.hour - 12
+              : messageTime.hour;
+      final minute = messageTime.minute.toString().padLeft(2, '0');
+      final period = messageTime.hour >= 12 ? 'PM' : 'AM';
+      timeDisplay = '$hour:$minute $period';
     } else {
-      timeDisplay = DateFormat('MMM dd').format(messageTime);
+      // If yesterday, show "Yesterday"
+      final yesterday = now.subtract(const Duration(days: 1));
+      if (messageTime.year == yesterday.year &&
+          messageTime.month == yesterday.month &&
+          messageTime.day == yesterday.day) {
+        timeDisplay = 'Yesterday';
+      } else {
+        // If within this week (last 7 days), show day name
+        final difference = now.difference(messageTime);
+        if (difference.inDays < 7) {
+          final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          timeDisplay = days[messageTime.weekday - 1];
+        } else {
+          // If older, show date (M/D/YY format)
+          timeDisplay =
+              '${messageTime.month}/${messageTime.day}/${messageTime.year.toString().substring(2)}';
+        }
+      }
     }
 
     return InkWell(
       onTap: () {
-        // Navigate to messages page and open this conversation
         _handleNavigateToMessagesWithConversation(
           message['conversationId'] as String?,
           message['senderId'] as String,
@@ -1036,47 +1062,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         ),
         child: Row(
           children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  backgroundColor: isUnread ? Colors.blue : Colors.grey,
-                  radius: 20,
-                  child: Text(
-                    message['senderName'][0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (isUnread && unreadCount > 0)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      child: Center(
-                        child: Text(
-                          unreadCount > 9 ? '9+' : unreadCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            // Profile Picture Avatar
+            _buildMessageUserAvatar(message),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1086,7 +1073,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                     children: [
                       Expanded(
                         child: Text(
-                          message['senderName'],
+                          message['senderName'] ?? 'Unknown User',
                           style: TextStyle(
                             fontWeight:
                                 isUnread ? FontWeight.bold : FontWeight.w600,
@@ -1096,7 +1083,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                         ),
                       ),
                       Text(
-                        timeDisplay,
+                        timeDisplay, // ✅ NOW MATCHES MESSAGES PAGE FORMAT
                         style: TextStyle(
                           color: isUnread ? Colors.blue[700] : Colors.grey[500],
                           fontSize: 12,
@@ -1108,7 +1095,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    message['message'],
+                    message['message'] ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1129,10 +1116,84 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                   color: Colors.blue,
                   shape: BoxShape.circle,
                 ),
+                margin: const EdgeInsets.only(left: 8),
               ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Build user avatar with profile picture support
+  Widget _buildMessageUserAvatar(Map<String, dynamic> messageData) {
+    final hasProfilePicture = messageData['hasProfilePicture'] ?? false;
+    final profilePictureUrl = messageData['profilePictureUrl'] ?? '';
+    final userName = messageData['senderName'] ?? 'U';
+
+    return Stack(
+      children: [
+        if (hasProfilePicture && profilePictureUrl.isNotEmpty)
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: NetworkImage(profilePictureUrl),
+              onBackgroundImageError: (exception, stackTrace) {
+                print(
+                    'Error loading profile picture for ${messageData['senderId']}: $exception');
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black.withOpacity(0.0),
+                ),
+              ),
+            ),
+          )
+        else
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+              child: Text(
+                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        // Online status indicator (currently showing offline/grey)
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: Colors.grey[400], // Could be made dynamic with user status
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1161,10 +1222,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     // Navigate to messages page
     permissionController.setSelectedIndex(messagesIndex);
 
-    // TODO: If you want to auto-open the conversation, you can add logic here
-    // to pass the conversation info to the messages controller
-    // This would require modifying the AdminMessagingController to accept
-    // a parameter for which conversation to open initially
+    // The messages controller will handle opening the specific conversation
+    // based on the conversation data passed
   }
 
   Widget _buildUpcomingAppointments(
