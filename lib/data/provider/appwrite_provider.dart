@@ -4,11 +4,13 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:appwrite/enums.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 enum AuthStatus {
@@ -265,6 +267,53 @@ class AppWriteProvider {
       print('>>> - userDocumentId: ${_storage.read('userDocumentId')}');
       print(
           '>>> - userProfilePictureId: ${_storage.read('userProfilePictureId')}');
+
+      // Step 6: Register FCM token for push notifications (Mobile only)
+      print('>>> Step 6: Registering FCM token for push notifications...');
+      try {
+        // Only register FCM on mobile platforms
+        if (!kIsWeb) {
+          final notificationService = Get.find<NotificationService>();
+
+          // Request permissions
+          final hasPermission = await notificationService.requestPermissions();
+
+          if (hasPermission) {
+            // Get FCM token
+            final fcmToken = await notificationService.getFreshToken();
+
+            if (fcmToken != null && fcmToken.isNotEmpty) {
+              print('>>> FCM Token available: ${fcmToken.substring(0, 20)}...');
+
+              // Register with Appwrite
+              final target = await registerUserPushTarget(
+                userId: user.$id,
+                fcmToken: fcmToken,
+              );
+
+              if (target != null) {
+                _storage.write('push_target_id', target.$id);
+                print('>>> Push notifications enabled for user');
+              } else {
+                print('>>> Warning: Could not register push target');
+              }
+            } else {
+              print('>>> Warning: FCM token not available');
+            }
+          } else {
+            print('>>> Push notification permission denied');
+          }
+        } else {
+          print('>>> Web platform: Skipping FCM registration');
+        }
+      } catch (e) {
+        print('>>> Warning: FCM registration failed (non-critical): $e');
+        // Don't fail login if FCM registration fails
+      }
+
+      print('>>> ============================================');
+      print('>>> LOGIN COMPLETE');
+      print('>>> ============================================');
 
       return {
         'success': true,
@@ -4860,17 +4909,17 @@ class AppWriteProvider {
         profilePictureUrl = getUserProfilePictureUrl(profilePictureId);
       }
 
-      return {
-        'user': userDoc.data,
-        'userDocId': userDoc.$id,
-        'profilePictureId': profilePictureId,
-        'profilePictureUrl': profilePictureUrl,
-      };
-    } catch (e) {
-      print('Error getting user with profile picture: $e');
-      return null;
+        return {
+          'user': userDoc.data,
+          'userDocId': userDoc.$id,
+          'profilePictureId': profilePictureId,
+          'profilePictureUrl': profilePictureUrl,
+        };
+      } catch (e) {
+        print('Error getting user with profile picture: $e');
+        return null;
+      }
     }
-  }
 
 // ============= ADD TO appwrite_provider.dart =============
 
@@ -5158,6 +5207,322 @@ class AppWriteProvider {
     } catch (e) {
       print('>>> Error getting deletion request stats: $e');
       return {'total': 0, 'pending': 0, 'approved': 0, 'rejected': 0};
+    }
+  }
+
+// ============= NOTIFICATION & MESSAGING METHODS =============
+
+  /// Register user's FCM push target in Appwrite
+  Future<models.Target?> registerUserPushTarget({
+    required String userId,
+    required String fcmToken,
+  }) async {
+    try {
+      print('>>> Registering push target for user: $userId');
+
+      final target = await account!.createPushTarget(
+        targetId: ID.unique(),
+        identifier: fcmToken,
+        providerId: AppwriteConstants.pushNotificationProviderID,
+      );
+
+      print('>>> Push target registered: ${target.$id}');
+      return target;
+    } catch (e) {
+      print('>>> Error registering push target: $e');
+      // Don't rethrow - just log and return null
+      return null;
+    }
+  }
+
+  /// Update existing push target with new token
+  Future<models.Target?> updateUserPushTarget({
+    required String targetId,
+    required String newFcmToken,
+  }) async {
+    try {
+      print('>>> Updating push target: $targetId');
+
+      final target = await account!.updatePushTarget(
+        targetId: targetId,
+        identifier: newFcmToken,
+      );
+
+      print('>>> Push target updated successfully');
+      return target;
+    } catch (e) {
+      print('>>> Error updating push target: $e');
+      return null;
+    }
+  }
+
+  /// Delete push target (logout)
+  Future<bool> deletePushTarget(String targetId) async {
+    try {
+      print('>>> Deleting push target: $targetId');
+
+      await account!.deletePushTarget(targetId: targetId);
+
+      print('>>> Push target deleted');
+      return true;
+    } catch (e) {
+      print('>>> Error deleting push target: $e');
+      return false;
+    }
+  }
+
+  /// Send push notification via Appwrite Messaging
+  Future<bool> sendPushNotification({
+    required String title,
+    required String body,
+    required List<String> userIds,
+    Map<String, String>? data,
+  }) async {
+    try {
+      print('>>> Sending push notification to ${userIds.length} users');
+
+      final functions = Functions(client);
+
+      final execution = await functions.createExecution(
+        functionId: '68f5a42e001a62b93f10',
+        body: jsonEncode({
+          'title': title,
+          'body': body,
+          'userIds': userIds,
+          'data': data ?? {},
+        }),
+        xasync: false, // Wait for completion
+      );
+
+      print('>>> Push notification execution: ${execution.status}');
+      return execution.status == 'completed';
+    } catch (e) {
+      print('>>> Error sending push notification: $e');
+      return false;
+    }
+  }
+
+  /// Send email via Appwrite Messaging (SendGrid)
+  Future<bool> sendEmail({
+    required String to,
+    required String subject,
+    required String htmlContent,
+  }) async {
+    try {
+      print('>>> Sending email to: $to');
+
+      final functions = Functions(client);
+
+      final execution = await functions.createExecution(
+        functionId: '68f5adca0022608fe911',
+        body: jsonEncode({
+          'to': to,
+          'subject': subject,
+          'htmlContent': htmlContent,
+        }),
+        xasync: false, // Wait for completion
+      );
+
+      print('>>> Email execution: ${execution.status}');
+      return execution.status == 'completed';
+    } catch (e) {
+      print('>>> Error sending email: $e');
+      return false;
+    }
+  }
+
+  /// Helper: Send appointment notification (push + email)
+  Future<void> notifyAppointmentStatusChange({
+    required String userId,
+    required String userEmail,
+    required String userName,
+    required String status,
+    required String petName,
+    required String clinicName,
+    required String service,
+    required DateTime appointmentDateTime,
+    required String appointmentId,
+    String? declineReason,
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> SENDING APPOINTMENT NOTIFICATION');
+      print('>>> User: $userName ($userId)');
+      print('>>> Status: $status');
+      print('>>> ============================================');
+
+      // 1. Send push notification (mobile only)
+      String pushTitle;
+      String pushBody;
+
+      switch (status) {
+        case 'accepted':
+          pushTitle = 'Appointment Confirmed! 🎉';
+          pushBody =
+              'Your appointment for $petName at $clinicName has been accepted.';
+          break;
+        case 'declined':
+          pushTitle = 'Appointment Update';
+          pushBody = 'Your appointment for $petName was declined.';
+          break;
+        case 'in_progress':
+          pushTitle = 'Appointment Started';
+          pushBody = '$petName is now being attended to.';
+          break;
+        case 'completed':
+          pushTitle = 'Appointment Completed ✓';
+          pushBody = '$petName\'s appointment is complete.';
+          break;
+        default:
+          pushTitle = 'Appointment Update';
+          pushBody = 'Your appointment for $petName has been updated.';
+      }
+
+      await sendPushNotification(
+        title: pushTitle,
+        body: pushBody,
+        userIds: [userId],
+        data: {
+          'type': 'appointment',
+          'status': status,
+          'appointmentId': appointmentId,
+          'petName': petName,
+          'clinicName': clinicName,
+        },
+      );
+
+      // 2. Send email (only for accepted/declined)
+      if (status == 'accepted' || status == 'declined') {
+        await sendEmail(
+          to: userEmail,
+          subject: status == 'accepted'
+              ? 'Appointment Confirmed - PAWrtal'
+              : 'Appointment Update - PAWrtal',
+          htmlContent: _buildEmailTemplate(
+            userName: userName,
+            petName: petName,
+            clinicName: clinicName,
+            service: service,
+            appointmentDateTime: appointmentDateTime,
+            status: status,
+            declineReason: declineReason,
+          ),
+        );
+      }
+
+      print('>>> Notifications sent successfully');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Error sending appointment notifications: $e');
+    }
+  }
+
+  /// Helper: Send new appointment notification to admin
+  Future<void> notifyAdminNewAppointment({
+    required String adminId,
+    required String petName,
+    required String ownerName,
+    required String service,
+    required DateTime appointmentDateTime,
+    required String appointmentId,
+  }) async {
+    try {
+      print('>>> Notifying admin of new appointment: $adminId');
+
+      await sendPushNotification(
+        title: 'New Appointment Request 📅',
+        body: '$ownerName booked $service for $petName',
+        userIds: [adminId],
+        data: {
+          'type': 'new_appointment',
+          'appointmentId': appointmentId,
+          'petName': petName,
+          'ownerName': ownerName,
+        },
+      );
+
+      print('>>> Admin notified successfully');
+    } catch (e) {
+      print('>>> Error notifying admin: $e');
+    }
+  }
+
+  String _buildEmailTemplate({
+    required String userName,
+    required String petName,
+    required String clinicName,
+    required String service,
+    required DateTime appointmentDateTime,
+    required String status,
+    String? declineReason,
+  }) {
+    final dateStr =
+        '${appointmentDateTime.day}/${appointmentDateTime.month}/${appointmentDateTime.year}';
+    final timeStr =
+        '${appointmentDateTime.hour.toString().padLeft(2, '0')}:${appointmentDateTime.minute.toString().padLeft(2, '0')}';
+
+    if (status == 'accepted') {
+      return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+    .content { background: #f9f9f9; padding: 30px; }
+    .card { background: white; padding: 20px; border-left: 4px solid #4caf50; margin: 20px 0; }
+    .detail { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎉 Appointment Confirmed!</h1>
+  </div>
+  <div class="content">
+    <p>Dear $userName,</p>
+    <p>Your appointment has been confirmed by <strong>$clinicName</strong>.</p>
+    <div class="card">
+      <h3>Appointment Details</h3>
+      <div class="detail"><strong>Pet:</strong> $petName</div>
+      <div class="detail"><strong>Service:</strong> $service</div>
+      <div class="detail"><strong>Date:</strong> $dateStr at $timeStr</div>
+      <div class="detail"><strong>Clinic:</strong> $clinicName</div>
+    </div>
+    <p>Please arrive 10 minutes early. See you soon!</p>
+    <p>The PAWrtal Team</p>
+  </div>
+</body>
+</html>
+    ''';
+    } else {
+      return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; }
+    .content { background: #f9f9f9; padding: 30px; }
+    .card { background: white; padding: 20px; border-left: 4px solid #ff9800; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Appointment Update</h1>
+  </div>
+  <div class="content">
+    <p>Dear $userName,</p>
+    <p>Your appointment at <strong>$clinicName</strong> could not be confirmed.</p>
+    <div class="card">
+      <p><strong>Reason:</strong> ${declineReason ?? 'Not specified'}</p>
+      <p><strong>Requested:</strong> $dateStr at $timeStr</p>
+    </div>
+    <p>You can try booking a different time slot.</p>
+    <p>The PAWrtal Team</p>
+  </div>
+</body>
+</html>
+    ''';
     }
   }
 }
