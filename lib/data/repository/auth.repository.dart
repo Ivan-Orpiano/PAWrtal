@@ -1361,9 +1361,9 @@ class AuthRepository {
   }
 
   /// Get archived clinic by clinicId
-  Future<ArchivedClinic?> getArchivedClinicByClinicId(String clinicId) async {
+  Future<ArchivedClinic?> getArchivedClinicByAdminId(String adminId) async {
     try {
-      final doc = await appWriteProvider.getArchivedClinicByClinicId(clinicId);
+      final doc = await appWriteProvider.getArchivedClinicByAdminId(adminId);
       if (doc != null) {
         final archivedClinic = ArchivedClinic.fromMap(doc.data);
         return archivedClinic.copyWith(documentId: doc.$id);
@@ -1418,11 +1418,11 @@ class AuthRepository {
 
   /// Recover archived clinic
   Future<Map<String, dynamic>> recoverArchivedClinic({
-    required String clinicId,
+    required String adminId,
     required String recoveredBy,
   }) {
     return appWriteProvider.recoverArchivedClinic(
-      clinicId: clinicId,
+      adminId: adminId,
       recoveredBy: recoveredBy,
     );
   }

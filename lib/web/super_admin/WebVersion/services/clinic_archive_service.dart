@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 class ClinicArchiveService extends GetxService {
   final AuthRepository _authRepository;
   Timer? _deletionTimer;
-  
+
   final RxBool isRunning = false.obs;
   final RxInt lastProcessedCount = 0.obs;
   final RxString lastRunTime = ''.obs;
@@ -109,7 +109,7 @@ class ClinicArchiveService extends GetxService {
   Future<Map<String, dynamic>> processNow() async {
     print('>>> Manual clinic deletion process triggered');
     await _processScheduledDeletions();
-    
+
     return {
       'processed': lastProcessedCount.value,
       'errors': processingErrors.toList(),
@@ -143,9 +143,9 @@ class ClinicArchiveService extends GetxService {
 
       final dueSoon = allArchived.where((clinic) {
         return clinic.scheduledDeletionAt.isBefore(sevenDaysFromNow) &&
-               clinic.scheduledDeletionAt.isAfter(now) &&
-               !clinic.isPermanentlyDeleted &&
-               !clinic.isRecovered;
+            clinic.scheduledDeletionAt.isAfter(now) &&
+            !clinic.isPermanentlyDeleted &&
+            !clinic.isRecovered;
       }).map((clinic) {
         return {
           'clinicId': clinic.adminId,
@@ -193,12 +193,13 @@ class ClinicArchiveService extends GetxService {
   /// Check if a specific clinic is due for deletion
   Future<bool> isClinicDueForDeletion(String clinicId) async {
     try {
-      final archivedClinic = await _authRepository.getArchivedClinicByClinicId(clinicId);
+      final archivedClinic =
+          await _authRepository.getArchivedClinicByAdminId(clinicId);
       if (archivedClinic == null) return false;
-      
-      return archivedClinic.isDeletionDue && 
-             !archivedClinic.isPermanentlyDeleted &&
-             !archivedClinic.isRecovered;
+
+      return archivedClinic.isDeletionDue &&
+          !archivedClinic.isPermanentlyDeleted &&
+          !archivedClinic.isRecovered;
     } catch (e) {
       print('>>> Error checking clinic deletion status: $e');
       return false;
@@ -208,7 +209,8 @@ class ClinicArchiveService extends GetxService {
   /// Get time remaining until deletion for a clinic
   Future<String?> getTimeUntilDeletion(String clinicId) async {
     try {
-      final archivedClinic = await _authRepository.getArchivedClinicByClinicId(clinicId);
+      final archivedClinic =
+          await _authRepository.getArchivedClinicByAdminId(clinicId);
       if (archivedClinic == null) return null;
 
       if (archivedClinic.isPermanentlyDeleted) {

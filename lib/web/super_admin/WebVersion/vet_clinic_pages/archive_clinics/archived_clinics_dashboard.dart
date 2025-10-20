@@ -316,7 +316,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
     try {
       final currentUser = await _authRepository.getUser();
       final result = await _authRepository.recoverArchivedClinic(
-        clinicId: clinic.adminId,
+        adminId: clinic.adminId,
         recoveredBy: currentUser?.name ?? 'Super Admin',
       );
 
