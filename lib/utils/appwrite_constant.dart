@@ -21,6 +21,8 @@ class AppwriteConstants {
   static String feedbackAttachmentsBucketID = "67ef83bd0022c1e63789";
   static String archivedUsersCollectionID = "archiveduser";
   static String archivedClinicsCollectionID = "archivedclinic";
+  static const String feedbackDeletionRequestCollectionID =
+      'feedbackDeletionRequest';
 
   static String pushNotificationProviderID = "68f47697001c82e7ce64";
   static String emailAutomationProviderID = "68f47f4b002a327bba16";
@@ -33,10 +35,11 @@ class AppwriteConstants {
             "REPLACE_WITH_STARTERS_COLLECTION_ID" &&
         userStatusCollectionID != "REPLACE_WITH_USER_STATUS_COLLECTION_ID";
   }
+
   static bool get ratingsAndReviewsConfigured {
     return ratingsAndReviewsCollectionID != "REPLACE_WITH_YOUR_COLLECTION_ID";
   }
-  
+
   static String argosProjectId = "xn67l316fg";
   static String argosLiveformBaseUrl = "https://form.argosidentity.com/";
   static String argosApiBaseUrl = "https://rest-api.argosidentity.com/v3";

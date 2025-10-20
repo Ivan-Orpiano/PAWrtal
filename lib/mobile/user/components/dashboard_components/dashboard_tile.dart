@@ -4,7 +4,7 @@ import 'package:capstone_app/mobile/user/pages/dashboard_next_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class MyDashboardTile extends StatelessWidget {
+class MyDashboardTile extends StatefulWidget {
   final Clinic clinic;
   final ClinicSettings? clinicSettings;
 
@@ -14,9 +14,14 @@ class MyDashboardTile extends StatelessWidget {
     this.clinicSettings,
   });
 
+  @override
+  State<MyDashboardTile> createState() => _MyDashboardTileState();
+}
+
+class _MyDashboardTileState extends State<MyDashboardTile> {
   Widget _buildStatusBadge() {
-    final isOpen = clinicSettings?.isOpen ?? true;
-    final isOpenNow = clinicSettings?.isOpenNow() ?? true;
+    final isOpen = widget.clinicSettings?.isOpen ?? true;
+    final isOpenNow = widget.clinicSettings?.isOpenNow() ?? true;
     
     Color statusColor;
     String statusText;
@@ -50,11 +55,11 @@ class MyDashboardTile extends StatelessWidget {
   }
 
   Widget _buildHoursDisplay() {
-    if (clinicSettings == null) {
+    if (widget.clinicSettings == null) {
       return const SizedBox.shrink();
     }
 
-    final todayHours = clinicSettings!.getTodayHours();
+    final todayHours = widget.clinicSettings!.getTodayHours();
     
     return Row(
       children: [
@@ -82,10 +87,10 @@ class MyDashboardTile extends StatelessWidget {
   List<String> _getServicesList() {
     List<String> services = [];
     
-    if (clinicSettings != null && clinicSettings!.services.isNotEmpty) {
-      services = clinicSettings!.services.take(2).toList();
-    } else if (clinic.services.isNotEmpty) {
-      services = clinic.services
+    if (widget.clinicSettings != null && widget.clinicSettings!.services.isNotEmpty) {
+      services = widget.clinicSettings!.services.take(2).toList();
+    } else if (widget.clinic.services.isNotEmpty) {
+      services = widget.clinic.services
           .split(RegExp(r'[,;|\n]'))
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
@@ -116,10 +121,16 @@ class MyDashboardTile extends StatelessWidget {
   }
 
   String _getImageUrl() {
-    if (clinicSettings != null && clinicSettings!.gallery.isNotEmpty) {
-      return clinicSettings!.gallery.first;
+    // Use dashboardPic from settings if available
+    if (widget.clinicSettings != null && widget.clinicSettings!.dashboardPic.isNotEmpty) {
+      return widget.clinicSettings!.dashboardPic;
     }
-    return clinic.image;
+    // Fallback to first gallery image from settings
+    if (widget.clinicSettings != null && widget.clinicSettings!.gallery.isNotEmpty) {
+      return widget.clinicSettings!.gallery.first;
+    }
+    // Final fallback to clinic.image
+    return widget.clinic.image;
   }
 
   @override
@@ -133,8 +144,8 @@ class MyDashboardTile extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => DashboardNextPage(
-              clinic: clinic,
-              clinicSettings: clinicSettings,
+              clinic: widget.clinic,
+              clinicSettings: widget.clinicSettings,
             ),
           ),
         );
@@ -213,7 +224,7 @@ class MyDashboardTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          clinic.clinicName,
+                          widget.clinic.clinicName,
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.w700,
                             fontSize: 18,
@@ -244,7 +255,7 @@ class MyDashboardTile extends StatelessWidget {
 
                   // Address
                   Text(
-                    clinic.address,
+                    widget.clinic.address,
                     style: GoogleFonts.dmSans(
                       fontStyle: FontStyle.italic,
                       fontSize: 13,

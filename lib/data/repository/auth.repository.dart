@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -1372,5 +1374,101 @@ class AuthRepository {
   /// Get user with profile picture URL
   Future<Map<String, dynamic>?> getUserWithProfilePicture(String userId) {
     return appWriteProvider.getUserWithProfilePicture(userId);
+  }
+  // ============= ADD TO auth.repository.dart =============
+
+  Future<Document> createFeedbackDeletionRequest({
+    required String reviewId,
+    required String clinicId,
+    required String userId,
+    required String appointmentId,
+    required String requestedBy,
+    required String reason,
+    String? additionalDetails,
+    List<String>? attachmentIds,
+  }) async {
+    try {
+      print('>>> REPOSITORY: Creating feedback deletion request...');
+
+      final data = {
+        'reviewId': reviewId,
+        'clinicId': clinicId,
+        'userId': userId,
+        'appointmentId': appointmentId,
+        'requestedBy': requestedBy,
+        'reason': reason,
+        'additionalDetails': additionalDetails ?? '',
+        'attachments': attachmentIds != null
+            ? jsonEncode(attachmentIds)
+            : '', // Convert to JSON string
+        'status': 'pending',
+        'requestedAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+        'reviewedBy': '',
+        'reviewedAt': '',
+        'reviewNotes': '',
+      };
+
+      final doc = await appWriteProvider.createFeedbackDeletionRequest(data);
+      print('>>> REPOSITORY: Deletion request created: ${doc.$id}');
+      return doc;
+    } catch (e) {
+      print('>>> REPOSITORY: Error creating deletion request: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<models.File>> uploadFeedbackDeletionAttachments(
+      List<PlatformFile> files) {
+    return appWriteProvider.uploadFeedbackDeletionAttachments(files);
+  }
+
+  Future<void> deleteFeedbackDeletionAttachments(List<String> fileIds) {
+    return appWriteProvider.deleteFeedbackDeletionAttachments(fileIds);
+  }
+
+  Future<Document?> getFeedbackDeletionRequestById(String requestId) {
+    return appWriteProvider.getFeedbackDeletionRequestById(requestId);
+  }
+
+  Future<List<Document>> getClinicDeletionRequests(
+    String clinicId, {
+    String? status,
+  }) {
+    return appWriteProvider.getClinicDeletionRequests(clinicId, status: status);
+  }
+
+  Future<List<Document>> getPendingDeletionRequests(String clinicId) {
+    return appWriteProvider.getPendingDeletionRequests(clinicId);
+  }
+
+  Future<Map<String, dynamic>> approveDeletionRequest(
+    String requestId,
+    String reviewId,
+    String reviewedBy,
+    String? reviewNotes,
+  ) {
+    return appWriteProvider.approveDeletionRequest(
+      requestId,
+      reviewId,
+      reviewedBy,
+      reviewNotes,
+    );
+  }
+
+  Future<Map<String, dynamic>> rejectDeletionRequest(
+    String requestId,
+    String reviewedBy,
+    String? reviewNotes,
+  ) {
+    return appWriteProvider.rejectDeletionRequest(
+      requestId,
+      reviewedBy,
+      reviewNotes,
+    );
+  }
+
+  Future<Map<String, int>> getDeletionRequestStats(String clinicId) {
+    return appWriteProvider.getDeletionRequestStats(clinicId);
   }
 }

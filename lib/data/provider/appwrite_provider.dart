@@ -3200,6 +3200,7 @@ class AppWriteProvider {
       documentId: documentId,
     );
   }
+
   // ============= FEEDBACK AND REPORT METHODS =============
 
   /// Create new feedback/report
@@ -4908,15 +4909,304 @@ class AppWriteProvider {
         profilePictureUrl = getUserProfilePictureUrl(profilePictureId);
       }
 
+        return {
+          'user': userDoc.data,
+          'userDocId': userDoc.$id,
+          'profilePictureId': profilePictureId,
+          'profilePictureUrl': profilePictureUrl,
+        };
+      } catch (e) {
+        print('Error getting user with profile picture: $e');
+        return null;
+      }
+    }
+
+// ============= ADD TO appwrite_provider.dart =============
+
+// ============= FEEDBACK DELETION REQUEST METHODS =============
+
+  Future<Document> createFeedbackDeletionRequest(
+      Map<String, dynamic> data) async {
+    try {
+      print('>>> Creating feedback deletion request...');
+      print('>>> Reason: ${data['reason']}');
+      print('>>> Review ID: ${data['reviewId']}');
+
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error creating feedback deletion request: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload feedback deletion request attachments
+  Future<List<models.File>> uploadFeedbackDeletionAttachments(
+      List<PlatformFile> files) async {
+    final List<models.File> uploadedFiles = [];
+
+    for (int i = 0; i < files.length; i++) {
+      try {
+        final file = files[i];
+        final extension = file.extension ?? 'jpg';
+        String fileName =
+            "${DateTime.now().millisecondsSinceEpoch}_deletion_request_$i.$extension";
+
+        InputFile inputFile;
+
+        if (file.bytes != null) {
+          inputFile = InputFile.fromBytes(
+            bytes: file.bytes!,
+            filename: fileName,
+          );
+        } else if (file.path != null) {
+          inputFile = InputFile.fromPath(
+            path: file.path!,
+            filename: fileName,
+          );
+        } else {
+          print("Error: File has neither bytes nor path");
+          continue;
+        }
+
+        final response = await storage!.createFile(
+          bucketId: AppwriteConstants.imageBucketID,
+          fileId: ID.unique(),
+          file: inputFile,
+        );
+
+        uploadedFiles.add(response);
+        print(
+            ">>> Successfully uploaded deletion request attachment: ${response.$id}");
+      } catch (e) {
+        print(
+            ">>> Error uploading deletion request attachment ${files[i].name}: $e");
+      }
+    }
+
+    return uploadedFiles;
+  }
+
+  /// Delete feedback deletion request attachments
+  Future<void> deleteFeedbackDeletionAttachments(List<String> fileIds) async {
+    for (String fileId in fileIds) {
+      try {
+        await storage!.deleteFile(
+          bucketId: AppwriteConstants.imageBucketID,
+          fileId: fileId,
+        );
+      } catch (e) {
+        print(">>> Error deleting deletion request attachment $fileId: $e");
+      }
+    }
+  }
+
+  /// Get feedback deletion request by ID
+  Future<Document?> getFeedbackDeletionRequestById(String requestId) async {
+    try {
+      final result = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: requestId,
+      );
+      return result;
+    } catch (e) {
+      print('>>> Error getting feedback deletion request: $e');
+      return null;
+    }
+  }
+
+  /// Get all deletion requests for a clinic
+  Future<List<Document>> getClinicDeletionRequests(
+    String clinicId, {
+    String? status,
+    int limit = 100,
+  }) async {
+    try {
+      List<String> queries = [
+        Query.equal('clinicId', clinicId),
+        Query.orderDesc('requestedAt'),
+        Query.limit(limit),
+      ];
+
+      if (status != null) {
+        queries.add(Query.equal('status', status));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('>>> Error getting clinic deletion requests: $e');
+      return [];
+    }
+  }
+
+  /// Get pending deletion requests for a clinic
+  Future<List<Document>> getPendingDeletionRequests(String clinicId) async {
+    return getClinicDeletionRequests(clinicId, status: 'pending');
+  }
+
+  /// Update deletion request status
+  Future<Document> updateDeletionRequestStatus(
+    String requestId,
+    String status,
+  ) async {
+    try {
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: requestId,
+        data: {
+          'status': status,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('>>> Error updating deletion request status: $e');
+      rethrow;
+    }
+  }
+
+  /// Approve deletion request and archive the review
+  Future<Map<String, dynamic>> approveDeletionRequest(
+    String requestId,
+    String reviewId,
+    String reviewedBy,
+    String? reviewNotes,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> APPROVING DELETION REQUEST');
+      print('>>> Request ID: $requestId');
+      print('>>> Review ID: $reviewId');
+      print('>>> ============================================');
+
+      // Step 1: Update the deletion request status to approved
+      print('>>> Step 1: Updating deletion request status to approved...');
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: requestId,
+        data: {
+          'status': 'approved',
+          'reviewedBy': reviewedBy,
+          'reviewedAt': DateTime.now().toIso8601String(),
+          'reviewNotes': reviewNotes,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      print('>>> Deletion request updated to approved');
+
+      // Step 2: Archive the review by setting isArchived to true
+      print('>>> Step 2: Archiving the review...');
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+        documentId: reviewId,
+        data: {
+          'isArchived': true,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      print('>>> Review archived successfully');
+
+      print('>>> ============================================');
+      print('>>> DELETION REQUEST APPROVED');
+      print('>>> ============================================');
+
       return {
-        'user': userDoc.data,
-        'userDocId': userDoc.$id,
-        'profilePictureId': profilePictureId,
-        'profilePictureUrl': profilePictureUrl,
+        'success': true,
+        'message': 'Deletion request approved and review archived',
       };
     } catch (e) {
-      print('Error getting user with profile picture: $e');
-      return null;
+      print('>>> ============================================');
+      print('>>> ERROR APPROVING DELETION REQUEST: $e');
+      print('>>> ============================================');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> rejectDeletionRequest(
+    String requestId,
+    String reviewedBy,
+    String? reviewNotes,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> REJECTING DELETION REQUEST');
+      print('>>> Request ID: $requestId');
+      print('>>> ============================================');
+
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: requestId,
+        data: {
+          'status': 'rejected',
+          'reviewedBy': reviewedBy,
+          'reviewedAt': DateTime.now().toIso8601String(),
+          'reviewNotes': reviewNotes,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      print('>>> DELETION REQUEST REJECTED');
+      print('>>> ============================================');
+
+      return {
+        'success': true,
+        'message': 'Deletion request rejected',
+      };
+    } catch (e) {
+      print('>>> ERROR REJECTING DELETION REQUEST: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get deletion request statistics for a clinic
+  Future<Map<String, int>> getDeletionRequestStats(String clinicId) async {
+    try {
+      final allRequests = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      int pending = 0;
+      int approved = 0;
+      int rejected = 0;
+
+      for (var doc in allRequests.documents) {
+        final status = doc.data['status'];
+        if (status == 'pending') pending++;
+        if (status == 'approved') approved++;
+        if (status == 'rejected') rejected++;
+      }
+
+      return {
+        'total': allRequests.documents.length,
+        'pending': pending,
+        'approved': approved,
+        'rejected': rejected,
+      };
+    } catch (e) {
+      print('>>> Error getting deletion request stats: $e');
+      return {'total': 0, 'pending': 0, 'approved': 0, 'rejected': 0};
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/admin_web/components/clinic/admin_ratings_and_reviews.dart';
 import 'package:capstone_app/web/admin_web/components/clinic/clinic_settings_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +7,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 
 class AdminClinicPreview extends StatefulWidget {
   final ClinicSettingsController controller;
@@ -707,7 +707,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
           ),
         ),
         if (widget.controller.clinic.value?.documentId != null)
-          WebRatingsAndReviews(
+          AdminRatingsAndReviews(
             reviewsEndKey: reviewsEndKey,
             clinicId: widget.controller.clinic.value!.documentId!,
           ),
