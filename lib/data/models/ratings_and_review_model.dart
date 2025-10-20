@@ -13,6 +13,7 @@ class RatingAndReview {
   final String? petName;
   final String serviceName;
   final int helpfulCount;
+  final bool isArchived; // NEW: Archive status
 
   RatingAndReview({
     this.documentId,
@@ -29,6 +30,7 @@ class RatingAndReview {
     this.petName,
     required this.serviceName,
     this.helpfulCount = 0,
+    this.isArchived = false, // NEW: Default to false
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -41,17 +43,18 @@ class RatingAndReview {
       rating: (map['rating'] ?? 0.0).toDouble(),
       reviewText: map['reviewText'],
       images: map['images'] != null ? List<String>.from(map['images']) : [],
-      createdAt: map['createdAt'] != null 
-          ? DateTime.parse(map['createdAt']) 
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
-      updatedAt: map['updatedAt'] != null 
-          ? DateTime.parse(map['updatedAt']) 
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
           : DateTime.now(),
       isEdited: map['isEdited'] ?? false,
       userName: map['userName'] ?? 'Anonymous',
       petName: map['petName'],
       serviceName: map['serviceName'] ?? 'Service',
       helpfulCount: map['helpfulCount'] ?? 0,
+      isArchived: map['isArchived'] ?? false, // NEW
     );
   }
 
@@ -70,6 +73,7 @@ class RatingAndReview {
       'petName': petName,
       'serviceName': serviceName,
       'helpfulCount': helpfulCount,
+      'isArchived': isArchived, // NEW
     };
   }
 
@@ -88,6 +92,7 @@ class RatingAndReview {
     String? petName,
     String? serviceName,
     int? helpfulCount,
+    bool? isArchived, // NEW
   }) {
     return RatingAndReview(
       documentId: documentId ?? this.documentId,
@@ -104,13 +109,14 @@ class RatingAndReview {
       petName: petName ?? this.petName,
       serviceName: serviceName ?? this.serviceName,
       helpfulCount: helpfulCount ?? this.helpfulCount,
+      isArchived: isArchived ?? this.isArchived, // NEW
     );
   }
 
   // Helper methods
   bool get hasReview => reviewText != null && reviewText!.isNotEmpty;
   bool get hasImages => images.isNotEmpty;
-  
+
   String get ratingText {
     if (rating >= 4.5) return 'Excellent';
     if (rating >= 3.5) return 'Very Good';
@@ -169,7 +175,8 @@ class ClinicRatingStats {
       );
     }
 
-    final totalRating = reviews.fold<double>(0, (sum, review) => sum + review.rating);
+    final totalRating =
+        reviews.fold<double>(0, (sum, review) => sum + review.rating);
     final avgRating = totalRating / reviews.length;
 
     final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
@@ -191,7 +198,7 @@ class ClinicRatingStats {
   }
 
   String get formattedAverage => averageRating.toStringAsFixed(1);
-  
+
   int getPercentageForRating(int stars) {
     if (totalReviews == 0) return 0;
     final count = ratingDistribution[stars] ?? 0;
