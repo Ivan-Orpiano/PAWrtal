@@ -34,7 +34,7 @@ class _SuperAdminUserManagementScreenState
   // Real-time subscription
   RealtimeSubscription? _userSubscription;
   RealtimeSubscription? _verificationSubscription;
-
+  RealtimeSubscription? _storageSubscription;
   // User lists
   List<User> _allUsers = [];
   List<User> _verifiedUsers = [];
@@ -67,6 +67,7 @@ class _SuperAdminUserManagementScreenState
     _tabController.dispose();
     _userSubscription?.close();
     _verificationSubscription?.close();
+    _storageSubscription?.close(); 
     super.dispose();
   }
 
@@ -87,15 +88,27 @@ class _SuperAdminUserManagementScreenState
           Query.limit(1000),
         ],
       );
-
       print('>>> Found ${docs.documents.length} users');
-
       // Convert to User models
       _allUsers = docs.documents.map((doc) => User.fromMap(doc.data)).toList();
-
+      // ADD IMMEDIATELY AFTER:
+      // CRITICAL: Fetch verification status for each user from ID verification collection
+      print('>>> Fetching verification status for ${_allUsers.length} users...');
+      for (var user in _allUsers) {
+        try {
+          final verificationDoc = await _authRepository.getIdVerificationByUserId(user.userId);
+          if (verificationDoc != null && verificationDoc.status == 'approved') {
+            // Update user's verification status from ID verification collection
+            user.idVerified = true;
+            user.idVerifiedAt = verificationDoc.verifiedAt?.toIso8601String();
+            print('>>> User ${user.name} verified from ID collection');
+          }
+        } catch (e) {
+          print('>>> Error fetching verification for ${user.userId}: $e');
+        }
+      }
       // Split into verified and unverified
       _categorizeUsers();
-
       setState(() => _isLoading = false);
     } catch (e) {
       print('>>> Error loading users: $e');
@@ -151,13 +164,42 @@ class _SuperAdminUserManagementScreenState
           _loadUsers();
         }
       });
+       _storageSubscription = realtime.subscribe([
+      'buckets.${AppwriteConstants.imageBucketID}.files'
+    ]);
 
-      print('>>> Real-time subscriptions established');
-    } catch (e) {
-      print('>>> Error setting up real-time subscriptions: $e');
-    }
-  }
+    _storageSubscription!.stream.listen((response) {
+      print('>>> Real-time storage event: ${response.events}');
 
+      // Check if it's a profile picture related event
+      if (response.events.contains('buckets.*.files.*')) {
+        print('>>> Profile picture changed, reloading users...');
+        _loadUsers();
+      }
+    });
+      
+        print('>>> Real-time subscriptions establishedfor archived users (including storage)');
+        // ADD BEFORE THE PRINT STATEMENT:
+        // Subscribe to ID verification changes
+           final verificationRealtimeSubscription = realtime.subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
+        ]);
+
+        verificationRealtimeSubscription.stream.listen((response) {
+          print('>>> Real-time verification event: ${response.events}');
+          
+          // Check if it's a verification status update
+          if (response.events.contains('databases.*.collections.*.documents.*')) {
+            print('>>> Verification status changed, reloading users...');
+            _loadUsers();
+          }
+        });
+
+    _verificationSubscription = verificationRealtimeSubscription;
+        } catch (e) {
+          print('>>> Error setting up real-time subscriptions: $e');
+        }
+      }
   /// Filter users based on search query
   List<User> _filterUsers(List<User> users) {
     if (_searchQuery.isEmpty) return users;
@@ -285,76 +327,81 @@ class _SuperAdminUserManagementScreenState
                 ),
               ),
               // Tabs section remains the same
-              TabBar(
-                controller: _tabController,
-                indicatorColor: primaryBlue,
-                indicatorWeight: 3,
-                labelColor: primaryBlue,
-                unselectedLabelColor: mediumGray,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+            TabBar(
+            controller: _tabController,
+            indicatorColor: primaryBlue,
+            indicatorWeight: 3,
+            labelColor: primaryBlue,
+            unselectedLabelColor: mediumGray,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.verified_user),
+                    const SizedBox(width: 8),
+                    Text('Verified (${_verifiedUsers.length})'),
+                  ],
                 ),
-                tabs: [
-                  Tab(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.verified_user),
-                        const SizedBox(width: 8),
-                        Text('Verified (${_verifiedUsers.length})'),
-                      ],
-                    ),
-                  ),
-                  Tab(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.pending),
-                        const SizedBox(width: 8),
-                        Text('Unverified (${_unverifiedUsers.length})'),
-                      ],
-                    ),
-                  ),
-                ],
+              ),
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.pending),
+                    const SizedBox(width: 8),
+                    Text('Unverified (${_unverifiedUsers.length})'),
+                  ],
+                ),
               ),
             ],
           ),
+                      ],
+          ),
         ),
       ),
-      body: _isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: primaryBlue),
-                  SizedBox(height: 16),
-                  Text(
-                    'Loading users...',
-                    style: TextStyle(color: mediumGray, fontSize: 16),
+     body: RefreshIndicator(
+            onRefresh: () async {
+              await _loadUsers();
+            },
+            child: _isLoading
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: primaryBlue),
+                        SizedBox(height: 16),
+                        Text(
+                          'Loading users...',
+                          style: TextStyle(color: mediumGray, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  )
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Verified users tab
+                      UserListView(
+                        users: _filterUsers(_verifiedUsers),
+                        isVerified: true,
+                        onUserTap: _showUserDetails,
+                      ),
+                      // Unverified users tab
+                      UserListView(
+                        users: _filterUsers(_unverifiedUsers),
+                        isVerified: false,
+                        onUserTap: _showUserDetails,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                // Verified users tab
-                UserListView(
-                  users: _filterUsers(_verifiedUsers),
-                  isVerified: true,
-                  onUserTap: _showUserDetails,
-                ),
-                // Unverified users tab
-                UserListView(
-                  users: _filterUsers(_unverifiedUsers),
-                  isVerified: false,
-                  onUserTap: _showUserDetails,
-                ),
-              ],
-            ),
-    );
-  }
+               ),
+            );
+          }
     Widget _buildDrawer(BuildContext context) {
   return Drawer(
     backgroundColor: backgroundColor,
@@ -929,12 +976,12 @@ class _UserCardState extends State<UserCard>
                     ],
                   ),
                   child: ClipOval(
-                    child: widget.user.hasProfilePicture
-                        ? Image.network(
-                            getPetImageUrl(widget.user.profilePictureId),
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
+                   child: widget.user.hasProfilePicture
+                  ? Image.network(
+                      '${getPetImageUrl(widget.user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholderAvatar();
                             },
@@ -1266,9 +1313,9 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
                   ],
                 ),
                 child: ClipOval(
-                  child: widget.user.hasProfilePicture
+                      child: widget.user.hasProfilePicture
                       ? Image.network(
-                          getPetImageUrl(widget.user.profilePictureId),
+                          '${getPetImageUrl(widget.user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
                           width: 100,
                           height: 100,
                           fit: BoxFit.cover,

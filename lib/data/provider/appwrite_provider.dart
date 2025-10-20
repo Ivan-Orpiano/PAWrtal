@@ -3565,15 +3565,17 @@ class AppWriteProvider {
       final scheduledDeletion = now.add(const Duration(days: 30));
 
       // Store ONLY essential data to avoid size limits
-      final Map<String, dynamic> essentialUserData = {
-        'userId': userDoc.data['userId'] ?? userId,
-        'name': userDoc.data['name'] ?? '',
-        'email': userDoc.data['email'] ?? '',
-        'role': userDoc.data['role'] ?? 'user',
-        'phone': userDoc.data['phone'] ?? '',
-        'idVerified': userDoc.data['idVerified'] ?? false,
-        'idVerifiedAt': userDoc.data['idVerifiedAt'],
-      };
+        final Map<String, dynamic> essentialUserData = {
+      'userId': userDoc.data['userId'] ?? userId,
+      'name': userDoc.data['name'] ?? '',
+      'email': userDoc.data['email'] ?? '',
+      'role': userDoc.data['role'] ?? 'user',
+      'phone': userDoc.data['phone'] ?? '',
+      'profilePictureId': userDoc.data['profilePictureId'] ?? '',
+      'idVerified': userDoc.data['idVerified'] ?? false,
+      'idVerifiedAt': userDoc.data['idVerifiedAt'],
+      'verificationDocumentId': userDoc.data['verificationDocumentId'],
+    };
 
       // Convert to JSON string (Appwrite requires string for 65535 char limit)
       String originalUserDataJson;
@@ -3989,22 +3991,23 @@ class AppWriteProvider {
 
       // Recreate the user document with original data
       final restoredUserData = {
-        'userId': originalUserData['userId'] ?? userId,
-        'name': originalUserData['name'] ?? '',
-        'email': originalUserData['email'] ?? '',
-        'role': originalUserData['role'] ?? 'user',
-        'phone': originalUserData['phone'] ?? '',
-        'idVerified': originalUserData['idVerified'] ?? false,
-        'idVerifiedAt': originalUserData['idVerifiedAt'],
-        // Ensure no archive flags - user is fully active
-        'isArchived': false,
-        // Clear any archive-related fields
-        'archivedAt': null,
-        'archivedBy': null,
-        'archiveReason': null,
-        'archivedDocumentId': null,
-      };
-
+      'userId': originalUserData['userId'] ?? userId,
+      'name': originalUserData['name'] ?? '',
+      'email': originalUserData['email'] ?? '',
+      'role': originalUserData['role'] ?? 'user',
+      'phone': originalUserData['phone'] ?? '',
+      'profilePictureId': originalUserData['profilePictureId'] ?? '',
+      // CRITICAL: Preserve verification status
+      'idVerified': originalUserData['idVerified'] ?? false,
+      'idVerifiedAt': originalUserData['idVerifiedAt'],
+      // Ensure no archive flags - user is fully active
+      'isArchived': false,
+      // Clear any archive-related fields
+      'archivedAt': null,
+      'archivedBy': null,
+      'archiveReason': null,
+      'archivedDocumentId': null,
+    };
       // Try to create new user document with same ID
       Document restoredDoc;
       try {

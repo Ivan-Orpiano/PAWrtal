@@ -3,7 +3,6 @@ import 'dart:convert';
 /// Model for archived clinics (30-day soft delete)
 class ArchivedClinic {
   String? documentId;
-  final String clinicId;
   final String clinicName;
   final String email;
   final String address;
@@ -23,7 +22,6 @@ class ArchivedClinic {
 
   ArchivedClinic({
     this.documentId,
-    required this.clinicId,
     required this.clinicName,
     required this.email,
     required this.address,
@@ -46,7 +44,6 @@ class ArchivedClinic {
   factory ArchivedClinic.fromMap(Map<String, dynamic> map) {
     return ArchivedClinic(
       documentId: map['\$id'],
-      clinicId: map['clinicId'] ?? '',
       clinicName: map['clinicName'] ?? '',
       email: map['email'] ?? '',
       address: map['address'] ?? '',
@@ -60,10 +57,12 @@ class ArchivedClinic {
       isPermanentlyDeleted: map['isPermanentlyDeleted'] ?? false,
       originalClinicData: map['originalClinicData'] ?? '{}',
       isRecovered: map['isRecovered'] ?? false,
-      recoveredAt: map['recoveredAt'] != null ? DateTime.parse(map['recoveredAt']) : null,
+      recoveredAt: map['recoveredAt'] != null
+          ? DateTime.parse(map['recoveredAt'])
+          : null,
       recoveredBy: map['recoveredBy'],
-      permanentlyDeletedAt: map['permanentlyDeletedAt'] != null 
-          ? DateTime.parse(map['permanentlyDeletedAt']) 
+      permanentlyDeletedAt: map['permanentlyDeletedAt'] != null
+          ? DateTime.parse(map['permanentlyDeletedAt'])
           : null,
     );
   }
@@ -71,7 +70,6 @@ class ArchivedClinic {
   /// Convert to Appwrite document
   Map<String, dynamic> toMap() {
     return {
-      'clinicId': clinicId,
       'clinicName': clinicName,
       'email': email,
       'address': address,
@@ -94,7 +92,6 @@ class ArchivedClinic {
   /// Copy with modifications
   ArchivedClinic copyWith({
     String? documentId,
-    String? clinicId,
     String? clinicName,
     String? email,
     String? address,
@@ -114,7 +111,6 @@ class ArchivedClinic {
   }) {
     return ArchivedClinic(
       documentId: documentId ?? this.documentId,
-      clinicId: clinicId ?? this.clinicId,
       clinicName: clinicName ?? this.clinicName,
       email: email ?? this.email,
       address: address ?? this.address,
@@ -153,7 +149,7 @@ class ArchivedClinic {
     if (isPermanentlyDeleted) return 'Permanently Deleted';
     if (isRecovered) return 'Recovered';
     if (isDeletionDue) return 'Due for Deletion';
-    
+
     final days = daysUntilDeletion;
     if (days == 0) return 'Deleting Today';
     if (days == 1) return '1 Day Remaining';
