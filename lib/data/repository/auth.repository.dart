@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -10,9 +9,7 @@ import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
-
 import 'package:file_picker/file_picker.dart';
-
 import '../models/appointment_model.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
@@ -22,7 +19,7 @@ import 'package:capstone_app/data/models/archived_user_model.dart';
 import 'package:capstone_app/data/models/archived_clinic_model.dart';
 import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
-
+import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
 import '../models/feedback_and_report_model.dart';
 
 class AuthRepository {
@@ -1563,17 +1560,31 @@ class AuthRepository {
   Future<Document?> getFeedbackDeletionRequestById(String requestId) {
     return appWriteProvider.getFeedbackDeletionRequestById(requestId);
   }
+  
 
-  Future<List<Document>> getClinicDeletionRequests(
-    String clinicId, {
-    String? status,
-  }) {
-    return appWriteProvider.getClinicDeletionRequests(clinicId, status: status);
+  Future<List<Object>> getClinicDeletionRequests(
+  String clinicId, {
+  String? status,
+})  async {
+  try {
+    final docs = await appWriteProvider.getClinicDeletionRequests(
+      clinicId,
+      status: status,
+    );
+    return docs.map((doc) {
+      final request = FeedbackDeletionRequest.fromMap(doc.data);
+      return request.copyWith(documentId: doc.$id);
+    }).toList();
+  } catch (e) {
+    print('Error getting clinic deletion requests: $e');
+    return [];
   }
+}
 
   Future<List<Document>> getPendingDeletionRequests(String clinicId) {
     return appWriteProvider.getPendingDeletionRequests(clinicId);
   }
+
 
   Future<Map<String, dynamic>> approveDeletionRequest(
     String requestId,
@@ -1604,4 +1615,19 @@ class AuthRepository {
   Future<Map<String, int>> getDeletionRequestStats(String clinicId) {
     return appWriteProvider.getDeletionRequestStats(clinicId);
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
+

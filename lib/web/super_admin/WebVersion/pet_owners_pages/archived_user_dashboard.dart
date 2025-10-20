@@ -1,4 +1,3 @@
-import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -8,7 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/image_helper.dart'; 
 import 'package:capstone_app/data/models/user_model.dart';
-import 'package:capstone_app/data/models/id_verification_model.dart';
 
 /// Super Admin Dashboard for Archived Users
 class ArchivedUsersDashboard extends StatefulWidget {
@@ -31,7 +29,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
 
   // Real-time subscription
   RealtimeSubscription? _archiveSubscription;
-  RealtimeSubscription? _storageSubscription; 
 
   // Colors - UPDATED PALETTE
   static const Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
@@ -49,8 +46,8 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
     _loadArchivedUsers();
     _loadStats();
     _setupRealtimeSubscription();
-     _storageSubscription?.close(); 
   }
+
   @override
   void dispose() {
     _archiveSubscription?.close();
@@ -86,38 +83,20 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
   }
 
   void _setupRealtimeSubscription() {
-  try {
-    // Subscribe to archived users changes
-    final subscription = _authRepository.subscribeToArchivedUsers();
-    _archiveSubscription = subscription as RealtimeSubscription?;
+    try {
+      final subscription = _authRepository.subscribeToArchivedUsers();
 
-    subscription.listen((event) {
-      print('>>> Archive real-time event received');
-      _loadArchivedUsers();
-      _loadStats();
-    });
+      _archiveSubscription = subscription as RealtimeSubscription?;
 
-    // Subscribe to storage bucket changes for profile pictures
-    final realtime = Realtime(_authRepository.appWriteProvider.client);
-    _storageSubscription = realtime.subscribe([
-      'buckets.${AppwriteConstants.imageBucketID}.files'
-    ]);
-
-    _storageSubscription!.stream.listen((response) {
-      print('>>> Real-time storage event in archived users: ${response.events}');
-
-      // Check if it's a profile picture related event
-      if (response.events.contains('buckets.*.files.*')) {
-        print('>>> Profile picture changed, reloading archived users...');
+      subscription.listen((event) {
+        print('>>> Archive real-time event received');
         _loadArchivedUsers();
-      }
-    });
-
-    print('>>> Real-time subscriptions established for archived users (including storage)');
-  } catch (e) {
-    print('Error setting up real-time subscription: $e');
+        _loadStats();
+      });
+    } catch (e) {
+      print('Error setting up real-time subscription: $e');
+    }
   }
-}
 
   List<ArchivedUser> get _filteredUsers {
     var filtered = _archivedUsers.where((user) {
@@ -537,18 +516,12 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
           _buildSearchAndFilter(),
 
           // User List
-            Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await _loadArchivedUsers();
-                await _loadStats();
-              },
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                  : _filteredUsers.isEmpty
-                      ? _buildEmptyState()
-                      : _buildUserList(),
-            ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                : _filteredUsers.isEmpty
+                    ? _buildEmptyState()
+                    : _buildUserList(),
           ),
         ],
       ),
@@ -960,12 +933,12 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       ],
                     ),
                     child: ClipOval(
-                  child: user.profilePictureId != null && user.profilePictureId!.isNotEmpty
-                  ? Image.network(
-                      '${getPetImageUrl(user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
+                      child: user.profilePictureId != null && user.profilePictureId!.isNotEmpty
+                          ? Image.network(
+                              getPetImageUrl(user.profilePictureId),
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return _buildArchivedPlaceholderAvatar(user, statusColor);
                               },
@@ -1035,32 +1008,35 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       ),
                     ),
                   ),
-                const SizedBox(width: 8),
-                // Verification Badge
-                if (user.idVerified)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: vetGreen.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: vetGreen.withOpacity(0.3)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.verified_user, color: vetGreen, size: 12),
-                         SizedBox(width: 4),
-                        Text(
-                          'Verified',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: vetGreen,
+                  const SizedBox(width: 8),
+                  if (user.idVerified)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: vetGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: vetGreen.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.verified_user, color: vetGreen, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Verified',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: vetGreen,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+
+                ],
+              ),
+
               const Divider(height: 24),
 
               // Details Section - UPDATED WITH NEW DESIGN
@@ -1075,18 +1051,18 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
               _buildDetailRow(
                 Icons.delete_forever,
                 'Scheduled deletion',
-                _formatDateTime(user.scheduledDeletionAt.toIso8601String()),  
+                _formatDateTime(user.scheduledDeletionAt.toIso8601String()),
               ),
               if (user.idVerified) ...[
-                const SizedBox(height: 8),
-                _buildDetailRow(
-                  Icons.verified_user,
-                  'ID Verified',
-                  user.idVerifiedAt != null 
-                      ? _formatDateTime(user.idVerifiedAt!)
-                      : 'Yes',
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  _buildDetailRow(
+                    Icons.verified_user,
+                    'ID Verified',
+                    user.idVerifiedAt != null 
+                        ? _formatDateTime(user.idVerifiedAt!)
+                        : 'Yes',
+                  ),
+                ],
               if (user.archiveReason.isNotEmpty && user.archiveReason != 'No reason provided') ...[
                 const SizedBox(height: 8),
                 _buildDetailRow(Icons.info_outline, 'Reason', user.archiveReason),
@@ -1172,11 +1148,9 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                 ),
               ],
             ],
-            )
-          ],
+          ),
         ),
       ),
-    )
     );
   }
 

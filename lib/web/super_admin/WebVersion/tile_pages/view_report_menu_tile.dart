@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/super_admin_feedback_manager.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
 import 'package:flutter/material.dart';
 
 class ViewReportTile extends StatelessWidget {
