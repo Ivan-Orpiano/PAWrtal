@@ -23,6 +23,50 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
   late final PetCreationController controller;
   ImagePickerResult? _selectedImage;
 
+  // Pet type options - easily expandable
+  final List<String> petTypes = [
+    'Dog',
+    'Cat',
+  ];
+
+  // Breed options by pet type - easily expandable
+  final Map<String, List<String>> breedsByType = {
+    'Dog': [
+      'Labrador Retriever',
+      'German Shepherd',
+      'Golden Retriever',
+      'Bulldog',
+      'Beagle',
+      'Poodle',
+      'Rottweiler',
+      'Yorkshire Terrier',
+      'Boxer',
+      'Dachshund',
+      'Siberian Husky',
+      'Chihuahua',
+      'Shih Tzu',
+      'Pug',
+      'Mixed Breed',
+    ],
+    'Cat': [
+      'Persian',
+      'Maine Coon',
+      'Siamese',
+      'Ragdoll',
+      'British Shorthair',
+      'Abyssinian',
+      'Birman',
+      'Oriental Shorthair',
+      'Sphynx',
+      'Devon Rex',
+      'American Shorthair',
+      'Scottish Fold',
+      'Domestic Shorthair',
+      'Domestic Longhair',
+      'Mixed Breed',
+    ],
+  };
+
   @override
   void initState() {
     super.initState();
@@ -41,10 +85,8 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
         });
 
         if (result.isWeb && result.bytes != null) {
-          // Handle web image
           controller.pickWebImage(result.bytes!, result.name);
         } else if (result.isFile && result.file != null) {
-          // Handle mobile/desktop file
           controller.pickImage(result.file!);
         }
       }
@@ -54,6 +96,11 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
         message: "Failed to pick image: $e",
       );
     }
+  }
+
+  List<String> _getAvailableBreeds() {
+    final selectedType = controller.typeController.text;
+    return breedsByType[selectedType] ?? ['Mixed Breed', 'Unknown'];
   }
 
   @override
@@ -115,26 +162,22 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
 
                         if (_selectedImage?.isWeb == true &&
                             _selectedImage?.bytes != null) {
-                          // Show web-picked image
                           imageWidget = ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.memory(_selectedImage!.bytes!,
                                 fit: BoxFit.cover),
                           );
                         } else if (file != null) {
-                          // Show file-picked image (desktop/mobile)
                           imageWidget = ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.file(file, fit: BoxFit.cover),
                           );
                         } else if (url.isNotEmpty) {
-                          // Show existing image from URL
                           imageWidget = ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(url, fit: BoxFit.cover),
                           );
                         } else {
-                          // Show placeholder
                           imageWidget = Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -191,10 +234,21 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildTextField(
-                            controller.typeController,
-                            "Type (e.g. Dog, Cat) *",
-                            Icons.category,
+                          child: _buildSearchableDropdown(
+                            controller: controller.typeController,
+                            label: "Type (e.g. Dog, Cat) *",
+                            icon: Icons.category,
+                            options: petTypes,
+                            onChanged: (value) {
+                              setState(() {
+                                controller.typeController.text = value;
+                                // Reset breed when type changes
+                                if (!_getAvailableBreeds()
+                                    .contains(controller.breedController.text)) {
+                                  controller.breedController.clear();
+                                }
+                              });
+                            },
                           ),
                         ),
                       ],
@@ -203,10 +257,14 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildTextField(
-                            controller.breedController,
-                            "Breed *",
-                            Icons.pets_outlined,
+                          child: _buildSearchableDropdown(
+                            controller: controller.breedController,
+                            label: "Breed *",
+                            icon: Icons.pets_outlined,
+                            options: _getAvailableBreeds(),
+                            onChanged: (value) {
+                              controller.breedController.text = value;
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -282,7 +340,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                               ],
                             ),
                           ),
-                        ), // Empty space
+                        ),
                       ],
                     ),
 
@@ -341,6 +399,129 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchableDropdown({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required List<String> options,
+    required Function(String) onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Autocomplete<String>(
+            initialValue: TextEditingValue(text: controller.text),
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              if (textEditingValue.text.isEmpty) {
+                return options;
+              }
+              return options.where((String option) {
+                return option
+                    .toLowerCase()
+                    .contains(textEditingValue.text.toLowerCase());
+              });
+            },
+            onSelected: (String selection) {
+              onChanged(selection);
+            },
+            fieldViewBuilder: (BuildContext context,
+                TextEditingController fieldController,
+                FocusNode fieldFocusNode,
+                VoidCallback onFieldSubmitted) {
+              // Sync with main controller
+              if (controller.text.isNotEmpty &&
+                  fieldController.text != controller.text) {
+                fieldController.text = controller.text;
+              }
+
+              return TextFormField(
+                controller: fieldController,
+                focusNode: fieldFocusNode,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF3498DB), width: 2),
+                  ),
+                  fillColor: Colors.grey[50],
+                  filled: true,
+                  contentPadding: const EdgeInsets.all(16),
+                  prefixIcon: Icon(icon, color: Colors.grey[500]),
+                  suffixIcon:
+                      Icon(Icons.arrow_drop_down, color: Colors.grey[500]),
+                ),
+                onChanged: (value) {
+                  controller.text = value;
+                },
+                validator: (value) {
+                  if (label.contains('*') && (value == null || value.isEmpty)) {
+                    return "Please enter ${label.replaceAll(' *', '')}";
+                  }
+                  return null;
+                },
+              );
+            },
+            optionsViewBuilder: (BuildContext context,
+                AutocompleteOnSelected<String> onSelected,
+                Iterable<String> options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 200,
+                      maxWidth: 300,
+                    ),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final String option = options.elementAt(index);
+                        return InkWell(
+                          onTap: () {
+                            onSelected(option);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              option,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
