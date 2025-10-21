@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/admin/pages/conversation_starters_page.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
@@ -9,6 +12,19 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+// Helper class for pending conversation data
+class PendingConversationData {
+  final String? conversationId;
+  final String userId;
+  final String userName;
+
+  PendingConversationData({
+    required this.conversationId,
+    required this.userId,
+    required this.userName,
+  });
+}
 
 class AdminWebMessages extends StatefulWidget {
   const AdminWebMessages({super.key});
@@ -36,10 +52,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     super.initState();
     _loadUserRole();
     _initializeMessaging();
+    _setCurrentUserOnline();
   }
 
   @override
   void dispose() {
+    _setCurrentUserOffline();
+    _userStatusSubscription?.cancel();
     _controller.disposeMessageSubscriptions();
     super.dispose();
   }
@@ -117,9 +136,12 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             '>>> Step 4: Activating real-time subscriptions for conversation list...');
         _controller.subscribeToClinicConversationUpdates(_clinicId!);
 
-        // Step 5: Subscribe to conversation changes for real-time updates
         print('>>> Step 5: Setting up real-time conversation stream...');
         _setupRealtimeConversationStream(_clinicId!);
+
+        // NEW: Check for pending conversation after initialization
+        print('>>> Step 6: Checking for pending conversation to open...');
+        await _checkForPendingConversation();
 
         print('>>> ============================================');
         print('>>> INITIALIZATION SUCCESSFUL');
@@ -147,7 +169,96 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
   }
 
-  /// Setup real-time stream for conversation updates
+  Future<void> _checkForPendingConversation() async {
+    // Check if there's a pending conversation to open
+    if (Get.isRegistered<PendingConversationData>(
+        tag: 'pending_conversation')) {
+      final pendingData =
+          Get.find<PendingConversationData>(tag: 'pending_conversation');
+
+      print('>>> ============================================');
+      print('>>> Found pending conversation to open');
+      print('>>> User ID: ${pendingData.userId}');
+      print('>>> User Name: ${pendingData.userName}');
+      print('>>> Conversation ID: ${pendingData.conversationId}');
+      print('>>> ============================================');
+
+      // Wait for conversations to be loaded and UI to be built
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      print(
+          '>>> Current conversations loaded: ${_controller.conversations.length}');
+
+      // Find the conversation in the loaded list
+      Conversation? conversation;
+
+      // First try to find by conversationId
+      if (pendingData.conversationId != null) {
+        try {
+          conversation = _controller.conversations.firstWhere(
+            (c) => c.documentId == pendingData.conversationId,
+          );
+          print('>>> Found conversation by ID: ${conversation.documentId}');
+        } catch (e) {
+          print('>>> Conversation not found by ID, trying by userId...');
+        }
+      }
+
+      // If not found, try to find by userId
+      if (conversation == null) {
+        try {
+          conversation = _controller.conversations.firstWhere(
+            (c) => c.userId == pendingData.userId,
+          );
+          print('>>> Found conversation by userId: ${conversation.userId}');
+        } catch (e) {
+          print('>>> Conversation not found by userId either');
+        }
+      }
+
+      if (conversation != null) {
+        print(
+            '>>> Opening conversation automatically for: ${pendingData.userName}');
+
+        // Get user data first
+        final userData = await _getUserData(pendingData.userId);
+
+        // For mobile layout, navigate to conversation page
+        final screenWidth = MediaQuery.of(context).size.width;
+        if (screenWidth < 600) {
+          print('>>> Opening in MOBILE layout');
+          await _openConversationInMobile(
+            conversation,
+            pendingData.userId,
+            userData['name'] ?? pendingData.userName,
+          );
+        } else {
+          // For desktop layout, select the conversation
+          print('>>> Opening in DESKTOP layout');
+          _selectConversation(
+            conversation,
+            pendingData.userId,
+            userData['name'] ?? pendingData.userName,
+          );
+        }
+        print('>>> Conversation opened successfully');
+      } else {
+        print('>>> ERROR: Could not find conversation');
+        print('>>> Available conversations:');
+        for (var conv in _controller.conversations) {
+          print('>>>   - ID: ${conv.documentId}, UserID: ${conv.userId}');
+        }
+      }
+
+      // Clean up the pending data
+      Get.delete<PendingConversationData>(tag: 'pending_conversation');
+      print('>>> Pending conversation data cleaned up');
+      print('>>> ============================================');
+    } else {
+      print('>>> No pending conversation to open');
+    }
+  }
+
   void _setupRealtimeConversationStream(String clinicId) {
     try {
       print(
@@ -157,8 +268,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         (realtimeMessage) {
           print('>>> Real-time event received: ${realtimeMessage.events}');
           print('>>> Event type: ${realtimeMessage.events.first}');
-
-          // Refresh the conversation list when any conversation changes
           _refreshConversationsList();
         },
         onError: (error) {
@@ -175,7 +284,32 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
   }
 
-  /// Refresh the conversations list
+  StreamSubscription<RealtimeMessage>? _userStatusSubscription;
+
+  Future<void> _setCurrentUserOnline() async {
+    try {
+      final userId = _userSession.userId;
+      if (userId != null && userId.isNotEmpty) {
+        await _authRepository.setUserOnline(userId);
+        print('>>> Current user set to ONLINE: $userId');
+      }
+    } catch (e) {
+      print('>>> Error setting user online: $e');
+    }
+  }
+
+  Future<void> _setCurrentUserOffline() async {
+    try {
+      final userId = _userSession.userId;
+      if (userId != null && userId.isNotEmpty) {
+        await _authRepository.setUserOffline(userId);
+        print('>>> Current user set to OFFLINE: $userId');
+      }
+    } catch (e) {
+      print('>>> Error setting user offline: $e');
+    }
+  }
+
   Future<void> _refreshConversationsList() async {
     try {
       print('>>> Refreshing conversation list...');
@@ -196,12 +330,10 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     try {
       print('>>> Fetching user data for: $userId');
 
-      // Fetch full user document with profile picture
       final userDoc = await _authRepository.getUserById(userId);
       if (userDoc != null) {
         final user = User.fromMap(userDoc.data);
 
-        // Get profile picture URL if available
         String profilePictureUrl = '';
         if (user.hasProfilePicture) {
           profilePictureUrl =
@@ -481,7 +613,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           conversation.userId,
           userData['name'],
         );
-        await _controller.loadClinicConversations(_clinicId!);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -628,12 +759,11 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             child: Row(
               children: [
                 const SizedBox(width: 48),
-                Expanded(
+                const Expanded(
                   child: Text(
                     'Messages',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
@@ -667,11 +797,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           ),
           Expanded(
             child: Obx(() {
-              if (_controller.isLoading.value) {
+              final conversations = _controller.conversations;
+
+              if (_controller.isLoading.value && conversations.isEmpty) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              if (_controller.conversations.isEmpty) {
+              if (conversations.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -689,119 +821,28 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               }
 
               return ListView.builder(
-                itemCount: _controller.conversations.length,
+                key: const PageStorageKey('conversations_list'),
+                itemCount: conversations.length,
                 itemBuilder: (context, index) {
-                  final conversation = _controller.conversations[index];
-                  return FutureBuilder<Map<String, dynamic>>(
-                    future: _getUserData(conversation.userId),
-                    builder: (context, snapshot) {
-                      final userData = snapshot.data ??
-                          {
-                            'name': 'Loading...',
-                            'email': '',
-                            'profilePictureUrl': '',
-                            'hasProfilePicture': false,
-                          };
-                      final isSelected = _selectedConversation?.documentId ==
-                          conversation.documentId;
-
-                      return _buildConversationTile(
-                          conversation, userData, isSelected);
-                    },
+                  final conversation = conversations[index];
+                  return _ConversationTileWidget(
+                    key: ValueKey(conversation.documentId),
+                    conversation: conversation,
+                    isSelected: _selectedConversation?.documentId ==
+                        conversation.documentId,
+                    onTap: () => _selectConversation(
+                      conversation,
+                      conversation.userId,
+                      'User',
+                    ),
+                    onGetUserData: _getUserData,
+                    controller: _controller,
                   );
                 },
               );
             }),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildConversationTile(Conversation conversation,
-      Map<String, dynamic> userData, bool isSelected) {
-    final hasUnread = conversation.clinicUnreadCount > 0;
-
-    return Material(
-      color: isSelected ? Colors.blue.shade100 : Colors.white,
-      child: InkWell(
-        onTap: () => _selectConversation(
-            conversation, conversation.userId, userData['name']),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-          ),
-          child: Row(
-            children: [
-              _buildUserAvatar(userData),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            userData['name'],
-                            style: TextStyle(
-                              fontWeight:
-                                  hasUnread ? FontWeight.bold : FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (conversation.lastMessageTime != null)
-                          Text(
-                            conversation.timeAgo,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[600]),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            conversation.conversationPreview,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color:
-                                  hasUnread ? Colors.black87 : Colors.grey[600],
-                              fontWeight: hasUnread
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (hasUnread)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: const BoxDecoration(
-                              color: Color.fromARGB(255, 81, 115, 153),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              conversation.clinicUnreadCount.toString(),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1071,6 +1112,200 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
               )),
         ],
       ),
+    );
+  }
+}
+
+// Separate widget for conversation tiles to prevent unnecessary rebuilds
+class _ConversationTileWidget extends StatefulWidget {
+  final Conversation conversation;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Future<Map<String, dynamic>> Function(String) onGetUserData;
+  final AdminMessagingController controller;
+
+  const _ConversationTileWidget({
+    Key? key,
+    required this.conversation,
+    required this.isSelected,
+    required this.onTap,
+    required this.onGetUserData,
+    required this.controller,
+  }) : super(key: key);
+
+  @override
+  State<_ConversationTileWidget> createState() =>
+      _ConversationTileWidgetState();
+}
+
+class _ConversationTileWidgetState extends State<_ConversationTileWidget> {
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final data = await widget.onGetUserData(widget.conversation.userId);
+    if (mounted) {
+      setState(() {
+        _userData = data;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return _buildTile({
+        'name': 'Loading...',
+        'email': '',
+        'profilePictureUrl': '',
+        'hasProfilePicture': false,
+      });
+    }
+
+    return _buildTile(_userData!);
+  }
+
+  Widget _buildTile(Map<String, dynamic> userData) {
+    final hasUnread = widget.conversation.clinicUnreadCount > 0;
+
+    return Material(
+      color: widget.isSelected ? Colors.blue.shade100 : Colors.white,
+      child: InkWell(
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+          ),
+          child: Row(
+            children: [
+              _buildUserAvatar(userData),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            userData['name'],
+                            style: TextStyle(
+                              fontWeight:
+                                  hasUnread ? FontWeight.bold : FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (widget.conversation.lastMessageTime != null)
+                          Text(
+                            widget.conversation.timeAgo,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.conversation.conversationPreview,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  hasUnread ? Colors.black87 : Colors.grey[600],
+                              fontWeight: hasUnread
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasUnread)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: const BoxDecoration(
+                              color: Color.fromARGB(255, 81, 115, 153),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              widget.conversation.clinicUnreadCount.toString(),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar(Map<String, dynamic> userData) {
+    final hasProfilePicture = userData['hasProfilePicture'] ?? false;
+    final profilePictureUrl = userData['profilePictureUrl'] ?? '';
+    final userName = userData['name'] ?? 'U';
+
+    return Stack(
+      children: [
+        if (hasProfilePicture && profilePictureUrl.isNotEmpty)
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: NetworkImage(profilePictureUrl),
+            onBackgroundImageError: (exception, stackTrace) {
+              print('Error loading profile picture: $exception');
+            },
+          )
+        else
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+            child: Text(
+              userName[0].toUpperCase(),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        Obx(() {
+          final status =
+              widget.controller.getUserStatus(userData['name'] ?? '');
+          if (status?.isOnline == true) {
+            return Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }),
+      ],
     );
   }
 }

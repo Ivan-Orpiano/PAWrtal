@@ -1142,21 +1142,16 @@ class AppWriteProvider {
   // ============= MESSAGE METHODS =============
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
-    // Ensure timestamp is always set to now if not provided
-    final timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
-    data['timestamp'] = timestamp;
-    data['createdAt'] = timestamp;
-
-    final messageDoc = await databases!.createDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.messagesCollectionID,
-      documentId: ID.unique(),
-      data: data,
-    );
+    print('>>> ============================================');
+    print('>>> CREATING MESSAGE');
+    print('>>> Input data: $data');
+    print('>>> ============================================');
 
     final conversationId = data['conversationId'];
-    final senderType = data['senderType'];
+    final senderId = data['senderId'];
+    final messageText = data['messageText'];
 
+    // Get conversation details to determine all required fields
     try {
       final conversation = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
@@ -1164,15 +1159,72 @@ class AppWriteProvider {
         documentId: conversationId,
       );
 
+      final conversationUserId = conversation.data['userId'];
+      final conversationClinicId = conversation.data['clinicId'];
+
+      // Determine senderType and receiverId
+      String senderType;
+      String receiverId;
+
+      if (senderId == conversationUserId) {
+        // User is sending to clinic
+        senderType = 'user';
+        receiverId = conversationClinicId;
+      } else {
+        // Clinic is sending to user
+        senderType = 'clinic';
+        receiverId = conversationUserId;
+      }
+
+      // Prepare complete message data with ALL required fields
+      final now = DateTime.now();
+      final timestamp = now.toIso8601String();
+
+      final completeMessageData = {
+        'conversationId': conversationId,
+        'senderId': senderId,
+        'senderType': senderType,
+        'receiverId': receiverId,
+        'messageText': messageText,
+        'messageType': data['messageType'] ?? 'text', // Default to 'text'
+        'timestamp': timestamp, // REQUIRED
+        'attachmentUrl': data['attachment'] ?? data['attachmentUrl'] ?? '',
+        'isRead': data['isRead'] ?? false,
+        'isDeleted': data['isDeleted'] ?? false,
+        'sentAt': data['sentAt'] ?? timestamp,
+        '\$createdAt': timestamp,
+        '\$updatedAt': timestamp,
+      };
+
+      print('>>> Complete message data:');
+      print('>>> - conversationId: $conversationId');
+      print('>>> - senderId: $senderId');
+      print('>>> - senderType: $senderType');
+      print('>>> - receiverId: $receiverId');
+      print('>>> - messageText: $messageText');
+      print('>>> - messageType: ${completeMessageData['messageType']}');
+      print('>>> - timestamp: $timestamp');
+
+      // Create message document
+      final messageDoc = await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        documentId: ID.unique(),
+        data: completeMessageData,
+      );
+
+      print('>>> Message created successfully: ${messageDoc.$id}');
+
+      // Update conversation
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
       final currentClinicUnreadCount =
           conversation.data['clinicUnreadCount'] ?? 0;
 
       Map<String, dynamic> updateData = {
         'lastMessageId': messageDoc.$id,
-        'lastMessageText': data['messageText'],
-        'lastMessageTime': timestamp, // Use the exact message timestamp
-        'updatedAt': DateTime.now().toIso8601String(),
+        'lastMessageText': messageText,
+        'lastMessageTime': timestamp,
+        'updatedAt': timestamp,
       };
 
       if (senderType == 'user') {
@@ -1192,11 +1244,18 @@ class AppWriteProvider {
         documentId: conversationId,
         data: updateData,
       );
-    } catch (e) {
-      print('Error updating conversation after message: $e');
-    }
 
-    return messageDoc;
+      print('>>> Conversation updated successfully');
+      print('>>> ============================================');
+
+      return messageDoc;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR CREATING MESSAGE: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      rethrow;
+    }
   }
 
   Future<List<Document>> getConversationMessages(String conversationId,
@@ -3565,17 +3624,17 @@ class AppWriteProvider {
       final scheduledDeletion = now.add(const Duration(days: 30));
 
       // Store ONLY essential data to avoid size limits
-        final Map<String, dynamic> essentialUserData = {
-      'userId': userDoc.data['userId'] ?? userId,
-      'name': userDoc.data['name'] ?? '',
-      'email': userDoc.data['email'] ?? '',
-      'role': userDoc.data['role'] ?? 'user',
-      'phone': userDoc.data['phone'] ?? '',
-      'profilePictureId': userDoc.data['profilePictureId'] ?? '',
-      'idVerified': userDoc.data['idVerified'] ?? false,
-      'idVerifiedAt': userDoc.data['idVerifiedAt'],
-      'verificationDocumentId': userDoc.data['verificationDocumentId'],
-    };
+      final Map<String, dynamic> essentialUserData = {
+        'userId': userDoc.data['userId'] ?? userId,
+        'name': userDoc.data['name'] ?? '',
+        'email': userDoc.data['email'] ?? '',
+        'role': userDoc.data['role'] ?? 'user',
+        'phone': userDoc.data['phone'] ?? '',
+        'profilePictureId': userDoc.data['profilePictureId'] ?? '',
+        'idVerified': userDoc.data['idVerified'] ?? false,
+        'idVerifiedAt': userDoc.data['idVerifiedAt'],
+        'verificationDocumentId': userDoc.data['verificationDocumentId'],
+      };
 
       // Convert to JSON string (Appwrite requires string for 65535 char limit)
       String originalUserDataJson;
@@ -3991,23 +4050,23 @@ class AppWriteProvider {
 
       // Recreate the user document with original data
       final restoredUserData = {
-      'userId': originalUserData['userId'] ?? userId,
-      'name': originalUserData['name'] ?? '',
-      'email': originalUserData['email'] ?? '',
-      'role': originalUserData['role'] ?? 'user',
-      'phone': originalUserData['phone'] ?? '',
-      'profilePictureId': originalUserData['profilePictureId'] ?? '',
-      // CRITICAL: Preserve verification status
-      'idVerified': originalUserData['idVerified'] ?? false,
-      'idVerifiedAt': originalUserData['idVerifiedAt'],
-      // Ensure no archive flags - user is fully active
-      'isArchived': false,
-      // Clear any archive-related fields
-      'archivedAt': null,
-      'archivedBy': null,
-      'archiveReason': null,
-      'archivedDocumentId': null,
-    };
+        'userId': originalUserData['userId'] ?? userId,
+        'name': originalUserData['name'] ?? '',
+        'email': originalUserData['email'] ?? '',
+        'role': originalUserData['role'] ?? 'user',
+        'phone': originalUserData['phone'] ?? '',
+        'profilePictureId': originalUserData['profilePictureId'] ?? '',
+        // CRITICAL: Preserve verification status
+        'idVerified': originalUserData['idVerified'] ?? false,
+        'idVerifiedAt': originalUserData['idVerifiedAt'],
+        // Ensure no archive flags - user is fully active
+        'isArchived': false,
+        // Clear any archive-related fields
+        'archivedAt': null,
+        'archivedBy': null,
+        'archiveReason': null,
+        'archivedDocumentId': null,
+      };
       // Try to create new user document with same ID
       Document restoredDoc;
       try {
@@ -4389,7 +4448,7 @@ class AppWriteProvider {
           print(
               '>>> WARNING: Clinic data too large, storing minimal data only');
           final minimalData = {
-          //  'clinicId': clinicId,
+            //  'clinicId': clinicId,
             'clinicName': clinicDoc.data['clinicName'] ?? '',
             'email': clinicDoc.data['email'] ?? '',
             'adminId': clinicDoc.data['adminId'] ?? '',
@@ -4694,106 +4753,108 @@ class AppWriteProvider {
   }
 
   /// Recover archived clinic (restore within 30 days)
-Future<Map<String, dynamic>> recoverArchivedClinic({
-  required String adminId,  // CHANGED: was clinicId
-  required String recoveredBy,
-}) async{
-  try {
-    print('>>> ============================================');
-    print('>>> RECOVERING ARCHIVED CLINIC');
-    print('>>> Admin ID: $adminId');  // CHANGED: was clinicId
-    print('>>> ============================================');
-
-    final archivedDoc = await getArchivedClinicByAdminId(adminId);  // CHANGED: method name and parameter
-    if (archivedDoc == null) {
-      return {'success': false, 'error': 'Archived clinic not found'};
-    }
-
-    if (archivedDoc.data['isPermanentlyDeleted'] == true) {
-      return {
-        'success': false,
-        'error':
-            'Clinic has been permanently deleted and cannot be recovered',
-      };
-    }
-
-    final originalDocId = archivedDoc.data['originalDocumentId'];
-    final archivedDocId = archivedDoc.$id;
-
-    final originalClinicDataString =
-        archivedDoc.data['originalClinicData'] as String?;
-
-    if (originalClinicDataString == null ||
-        originalClinicDataString.isEmpty) {
-      return {'success': false, 'error': 'Original clinic data not found'};
-    }
-
-    Map<String, dynamic> originalClinicData;
+  Future<Map<String, dynamic>> recoverArchivedClinic({
+    required String adminId, // CHANGED: was clinicId
+    required String recoveredBy,
+  }) async {
     try {
-      originalClinicData =
-          Map<String, dynamic>.from(jsonDecode(originalClinicDataString));
-    } catch (e) {
-      return {
-        'success': false,
-        'error': 'Failed to parse original clinic data'
+      print('>>> ============================================');
+      print('>>> RECOVERING ARCHIVED CLINIC');
+      print('>>> Admin ID: $adminId'); // CHANGED: was clinicId
+      print('>>> ============================================');
+
+      final archivedDoc = await getArchivedClinicByAdminId(
+          adminId); // CHANGED: method name and parameter
+      if (archivedDoc == null) {
+        return {'success': false, 'error': 'Archived clinic not found'};
+      }
+
+      if (archivedDoc.data['isPermanentlyDeleted'] == true) {
+        return {
+          'success': false,
+          'error':
+              'Clinic has been permanently deleted and cannot be recovered',
+        };
+      }
+
+      final originalDocId = archivedDoc.data['originalDocumentId'];
+      final archivedDocId = archivedDoc.$id;
+
+      final originalClinicDataString =
+          archivedDoc.data['originalClinicData'] as String?;
+
+      if (originalClinicDataString == null ||
+          originalClinicDataString.isEmpty) {
+        return {'success': false, 'error': 'Original clinic data not found'};
+      }
+
+      Map<String, dynamic> originalClinicData;
+      try {
+        originalClinicData =
+            Map<String, dynamic>.from(jsonDecode(originalClinicDataString));
+      } catch (e) {
+        return {
+          'success': false,
+          'error': 'Failed to parse original clinic data'
+        };
+      }
+
+      // Recreate the clinic document with original data
+      final restoredClinicData = {
+        'adminId':
+            originalClinicData['adminId'] ?? adminId, // CHANGED: was clinicId
+        'clinicName': originalClinicData['clinicName'] ?? '',
+        'address': originalClinicData['address'] ?? '',
+        'contact': originalClinicData['contact'] ?? '',
+        'email': originalClinicData['email'] ?? '',
+        'services': originalClinicData['services'] ?? '',
+        'image': originalClinicData['image'] ?? '',
+        'profilePictureId': originalClinicData['profilePictureId'] ?? '',
+        'createdAt':
+            originalClinicData['createdAt'] ?? DateTime.now().toIso8601String(),
+        'role': 'admin',
+        'createdBy': originalClinicData['createdBy'] ?? 'system',
       };
-    }
 
-    // Recreate the clinic document with original data
-    final restoredClinicData = {
-      'adminId': originalClinicData['adminId'] ?? adminId,  // CHANGED: was clinicId
-      'clinicName': originalClinicData['clinicName'] ?? '',
-      'address': originalClinicData['address'] ?? '',
-      'contact': originalClinicData['contact'] ?? '',
-      'email': originalClinicData['email'] ?? '',
-      'services': originalClinicData['services'] ?? '',
-      'image': originalClinicData['image'] ?? '',
-      'profilePictureId': originalClinicData['profilePictureId'] ?? '',
-      'createdAt':
-          originalClinicData['createdAt'] ?? DateTime.now().toIso8601String(),
-      'role': 'admin',
-      'createdBy': originalClinicData['createdBy'] ?? 'system',
-    };
-
-    Document restoredDoc;
-    try {
-      restoredDoc = await databases!.createDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicsCollectionID,
-        documentId: originalDocId,
-        data: restoredClinicData,
-      );
-    } catch (e) {
-      if (e.toString().contains('already exists')) {
-        restoredDoc = await databases!.updateDocument(
+      Document restoredDoc;
+      try {
+        restoredDoc = await databases!.createDocument(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.clinicsCollectionID,
           documentId: originalDocId,
           data: restoredClinicData,
         );
-      } else {
-        return {'success': false, 'error': 'Failed to recreate clinic: $e'};
+      } catch (e) {
+        if (e.toString().contains('already exists')) {
+          restoredDoc = await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.clinicsCollectionID,
+            documentId: originalDocId,
+            data: restoredClinicData,
+          );
+        } else {
+          return {'success': false, 'error': 'Failed to recreate clinic: $e'};
+        }
       }
+
+      // Delete the archived record
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.archivedClinicsCollectionID,
+        documentId: archivedDocId,
+      );
+
+      print('>>> CLINIC RECOVERED SUCCESSFULLY');
+      return {
+        'success': true,
+        'message': 'Clinic recovered successfully',
+        'restoredDocumentId': restoredDoc.$id,
+      };
+    } catch (e) {
+      print('>>> ERROR RECOVERING CLINIC: $e');
+      return {'success': false, 'error': e.toString()};
     }
-
-    // Delete the archived record
-    await databases!.deleteDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.archivedClinicsCollectionID,
-      documentId: archivedDocId,
-    );
-
-    print('>>> CLINIC RECOVERED SUCCESSFULLY');
-    return {
-      'success': true,
-      'message': 'Clinic recovered successfully',
-      'restoredDocumentId': restoredDoc.$id,
-    };
-  } catch (e) {
-    print('>>> ERROR RECOVERING CLINIC: $e');
-    return {'success': false, 'error': e.toString()};
   }
-}
 
   /// Process scheduled clinic deletions (background job)
   Future<Map<String, dynamic>> processScheduledClinicDeletions() async {

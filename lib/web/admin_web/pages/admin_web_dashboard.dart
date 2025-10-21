@@ -9,6 +9,19 @@ import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+// Helper class for pending conversation data - MUST BE OUTSIDE THE MAIN CLASS
+class PendingConversationData {
+  final String? conversationId;
+  final String userId;
+  final String userName;
+
+  PendingConversationData({
+    required this.conversationId,
+    required this.userId,
+    required this.userName,
+  });
+}
+
 class AdminWebDashboard extends StatefulWidget {
   const AdminWebDashboard({super.key});
 
@@ -295,109 +308,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  void _showContactAdminDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.help_outline, color: Colors.blue.shade700),
-            const SizedBox(width: 12),
-            const Text('Contact Administrator'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'To get access to dashboard features, please contact your clinic administrator.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade700,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'What to request:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPermissionOption(
-                      'Appointments', 'Manage and view appointments'),
-                  const SizedBox(height: 8),
-                  _buildPermissionOption('Messages', 'Chat with pet owners'),
-                  const SizedBox(height: 8),
-                  _buildPermissionOption('Clinic', 'Update clinic information'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPermissionOption(String title, String description) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.check_circle_outline,
-          size: 18,
-          color: Colors.green.shade600,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildHeader(AdminDashboardController controller, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 24),
@@ -641,7 +551,11 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     controller.navigateToAppointments(filter);
   }
 
-  void _handleNavigateToMessages() {
+  void _handleNavigateToMessagesWithConversation(
+    String? conversationId,
+    String userId,
+    String userName,
+  ) {
     if (!permissionController.canAccessFeature('messages')) {
       permissionController.showPermissionDeniedDialog('Messages');
       return;
@@ -655,8 +569,30 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       return;
     }
 
-    print('>>> Navigating to Messages at index $messagesIndex');
+    print('>>> ============================================');
+    print('>>> DASHBOARD: Navigating to Messages');
+    print('>>> Messages Index: $messagesIndex');
+    print('>>> User Name: $userName');
+    print('>>> User ID: $userId');
+    print('>>> Conversation ID: $conversationId');
+    print('>>> ============================================');
+
+    // Store the conversation data to be opened
+    Get.put(
+      PendingConversationData(
+        conversationId: conversationId,
+        userId: userId,
+        userName: userName,
+      ),
+      tag: 'pending_conversation',
+    );
+
+    print('>>> Pending conversation data stored successfully');
+
+    // Navigate to messages page
     permissionController.setSelectedIndex(messagesIndex);
+
+    print('>>> Navigation triggered');
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat) {
@@ -825,9 +761,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  // Rest of the widget methods remain the same...
-  // (Include all other methods from your original code)
-
   Widget _buildTodaySchedule(
       AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
@@ -965,8 +898,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  // Replace these methods in admin_web_dashboard.dart
-
   Widget _buildRecentMessages(
       AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
@@ -989,18 +920,33 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         );
       }),
       actionLabel: 'View All',
-      onAction: _handleNavigateToMessages,
+      onAction: () {
+        if (!permissionController.canAccessFeature('messages')) {
+          permissionController.showPermissionDeniedDialog('Messages');
+          return;
+        }
+
+        final messagesIndex =
+            permissionController.navigationLabels.indexOf('Messages');
+
+        if (messagesIndex == -1) {
+          print('>>> ERROR: Messages page not found in navigation');
+          return;
+        }
+
+        print('>>> Navigating to Messages at index $messagesIndex');
+        permissionController.setSelectedIndex(messagesIndex);
+      },
     );
   }
 
   Widget _buildMessageItem(Map<String, dynamic> message, bool isMobile) {
     final isUnread = (message['unreadCount'] ?? 0) > 0;
 
-    // Format the time - EXACTLY THE SAME LOGIC AS CONVERSATION_MODEL
+    // Format the time
     final messageTime = message['time'] as DateTime;
     final now = DateTime.now();
 
-    // Check if message is from today
     final isToday = messageTime.year == now.year &&
         messageTime.month == now.month &&
         messageTime.day == now.day;
@@ -1008,7 +954,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     String timeDisplay;
 
     if (isToday) {
-      // If today, show time in 12-hour format with AM/PM
       final hour = messageTime.hour == 0
           ? 12
           : messageTime.hour > 12
@@ -1018,32 +963,44 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       final period = messageTime.hour >= 12 ? 'PM' : 'AM';
       timeDisplay = '$hour:$minute $period';
     } else {
-      // If yesterday, show "Yesterday"
       final yesterday = now.subtract(const Duration(days: 1));
       if (messageTime.year == yesterday.year &&
           messageTime.month == yesterday.month &&
           messageTime.day == yesterday.day) {
         timeDisplay = 'Yesterday';
       } else {
-        // If within this week (last 7 days), show day name
         final difference = now.difference(messageTime);
         if (difference.inDays < 7) {
           final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
           timeDisplay = days[messageTime.weekday - 1];
         } else {
-          // If older, show date (M/D/YY format)
           timeDisplay =
               '${messageTime.month}/${messageTime.day}/${messageTime.year.toString().substring(2)}';
         }
       }
     }
 
+    // Extract conversation ID and user details
+    final conversationId = message['conversationId'] as String?;
+    final senderId = message['senderId'] as String;
+    final senderName = message['senderName'] as String;
+
+    print('>>> Dashboard Message Item:');
+    print('>>>   - Sender: $senderName');
+    print('>>>   - Sender ID: $senderId');
+    print('>>>   - Conversation ID: $conversationId');
+
     return InkWell(
       onTap: () {
+        print('>>> Message clicked on dashboard');
+        print('>>>   - Opening conversation for: $senderName');
+        print('>>>   - User ID: $senderId');
+        print('>>>   - Conversation ID: $conversationId');
+
         _handleNavigateToMessagesWithConversation(
-          message['conversationId'] as String?,
-          message['senderId'] as String,
-          message['senderName'] as String,
+          conversationId,
+          senderId,
+          senderName,
         );
       },
       borderRadius: BorderRadius.circular(8),
@@ -1062,7 +1019,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         ),
         child: Row(
           children: [
-            // Profile Picture Avatar
             _buildMessageUserAvatar(message),
             const SizedBox(width: 12),
             Expanded(
@@ -1073,7 +1029,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                     children: [
                       Expanded(
                         child: Text(
-                          message['senderName'] ?? 'Unknown User',
+                          senderName,
                           style: TextStyle(
                             fontWeight:
                                 isUnread ? FontWeight.bold : FontWeight.w600,
@@ -1083,7 +1039,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                         ),
                       ),
                       Text(
-                        timeDisplay, // ✅ NOW MATCHES MESSAGES PAGE FORMAT
+                        timeDisplay,
                         style: TextStyle(
                           color: isUnread ? Colors.blue[700] : Colors.grey[500],
                           fontSize: 12,
@@ -1124,7 +1080,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  /// Build user avatar with profile picture support
   Widget _buildMessageUserAvatar(Map<String, dynamic> messageData) {
     final hasProfilePicture = messageData['hasProfilePicture'] ?? false;
     final profilePictureUrl = messageData['profilePictureUrl'] ?? '';
@@ -1179,7 +1134,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               ),
             ),
           ),
-        // Online status indicator (currently showing offline/grey)
         Positioned(
           bottom: 0,
           right: 0,
@@ -1187,7 +1141,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: Colors.grey[400], // Could be made dynamic with user status
+              color: Colors.grey[400],
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
             ),
@@ -1195,35 +1149,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         ),
       ],
     );
-  }
-
-// Add this new helper method to handle navigation with conversation opening
-  void _handleNavigateToMessagesWithConversation(
-    String? conversationId,
-    String userId,
-    String userName,
-  ) {
-    if (!permissionController.canAccessFeature('messages')) {
-      permissionController.showPermissionDeniedDialog('Messages');
-      return;
-    }
-
-    final messagesIndex =
-        permissionController.navigationLabels.indexOf('Messages');
-
-    if (messagesIndex == -1) {
-      print('>>> ERROR: Messages page not found in navigation');
-      return;
-    }
-
-    print('>>> Navigating to Messages at index $messagesIndex');
-    print('>>> Will open conversation for user: $userName ($userId)');
-
-    // Navigate to messages page
-    permissionController.setSelectedIndex(messagesIndex);
-
-    // The messages controller will handle opening the specific conversation
-    // based on the conversation data passed
   }
 
   Widget _buildUpcomingAppointments(
