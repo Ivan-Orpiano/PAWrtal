@@ -9,6 +9,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterin
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
+import 'dart:async'; 
 
 class AdminFeedbackManagement extends StatefulWidget {
   const AdminFeedbackManagement({super.key});
@@ -25,15 +26,24 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggingOut = false;
 
-  @override
-  void initState() {
-    super.initState();
-    controller = Get.put(WebFeedbackController(
-      authRepository: Get.find<AuthRepository>(),
-      session: Get.find<UserSessionService>(),
-    ));
-    controller.loadAllFeedback();
-  }
+    Timer? _timeUpdateTimer; 
+
+    @override
+    void initState() {
+      super.initState();
+         _timeUpdateTimer?.cancel(); 
+      controller = Get.put(WebFeedbackController(
+        authRepository: Get.find<AuthRepository>(),
+        session: Get.find<UserSessionService>(),
+      ));
+      controller.loadAllFeedback();
+        _timeUpdateTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        setState(() {}); 
+      }
+    });
+    }
+
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +63,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
             Icon(Icons.feedback, color: Color(0xFF517399)),
             SizedBox(width: 8),
             Text(
-              'Feedback Management',
+              'System Reports',
               style: TextStyle(
                 color: Color(0xFF517399),
                 fontWeight: FontWeight.bold,
@@ -622,21 +632,37 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+String _formatDateTime(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+  if (difference.inDays > 0) {
+    if (difference.inDays == 1) {
+      return '1 day ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return weeks == 1 ? '1 week ago' : '$weeks weeks ago';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return months == 1 ? '1 month ago' : '$months months ago';
     } else {
-      return 'Just now';
+      final years = (difference.inDays / 365).floor();
+      return years == 1 ? '1 year ago' : '$years years ago';
     }
+  } else if (difference.inHours > 0) {
+    return difference.inHours == 1 
+        ? '1 hour ago' 
+        : '${difference.inHours} hours ago';
+  } else if (difference.inMinutes > 0) {
+    return difference.inMinutes == 1 
+        ? '1 minute ago' 
+        : '${difference.inMinutes} minutes ago';
+  } else {
+    return 'Just now';
   }
-
+}
   void _archiveFeedback(FeedbackAndReport feedback) {
     showDialog(
       context: context,

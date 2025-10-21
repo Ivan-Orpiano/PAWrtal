@@ -228,8 +228,8 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
                       await LogoutHelper.logout();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                      foregroundColor: Colors.white,
+                     backgroundColor: const Color.fromARGB(255, 248, 24, 24),
+                foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(
                         vertical: isTablet ? 16 : 14,
                       ),

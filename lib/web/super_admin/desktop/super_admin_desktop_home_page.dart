@@ -378,7 +378,7 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
                 await LogoutHelper.logout();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                backgroundColor: const Color.fromARGB(255, 248, 24, 24),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(
                   horizontal: isDesktop ? 24 : 20,

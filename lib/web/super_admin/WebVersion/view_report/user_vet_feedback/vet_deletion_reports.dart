@@ -643,7 +643,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
             Icon(Icons.delete_forever, color: Color.fromARGB(255, 81, 115, 153)),
             SizedBox(width: 8),
             Text(
-              'Vet Reports',
+              'Deletion Reports',
               style: TextStyle(
                 color: Color.fromARGB(255, 81, 115, 153),
                 fontWeight: FontWeight.bold,

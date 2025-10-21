@@ -4648,7 +4648,7 @@ class AppWriteProvider {
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.archivedClinicsCollectionID,
         queries: [
-          Query.equal('clinicId', adminId),
+          Query.equal('adminId', adminId),
           Query.equal('isPermanentlyDeleted', false),
           Query.orderDesc('archivedAt'),
           Query.limit(1),

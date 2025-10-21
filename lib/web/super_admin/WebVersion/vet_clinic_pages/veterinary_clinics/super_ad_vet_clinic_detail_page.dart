@@ -519,7 +519,7 @@ class _SuperAdminVetClinicDetailPageState
             icon: Icons.people,
             label: 'Manage Staff',
             subtitle: '$totalStaff Members',
-            color: const Color.fromRGBO(81, 115, 153, 1),
+            color: const Color.fromARGB(255, 74, 145, 101),
             onPressed: isDeleting
                 ? null
                 : () {
@@ -541,7 +541,7 @@ class _SuperAdminVetClinicDetailPageState
             icon: Icons.edit,
             label: 'Edit Clinic',
             subtitle: 'Modify Details',
-            color: Colors.orange[700]!,
+            color: const Color.fromARGB(255, 74, 108, 146),
             onPressed: isDeleting
                 ? null
                 : () async {
