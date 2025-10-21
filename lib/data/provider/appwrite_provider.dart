@@ -5532,64 +5532,70 @@ class AppWriteProvider {
       return '''
 <!DOCTYPE html>
 <html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-    .content { background: #f9f9f9; padding: 30px; }
-    .card { background: white; padding: 20px; border-left: 4px solid #4caf50; margin: 20px 0; }
-    .detail { margin: 10px 0; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>🎉 Appointment Confirmed!</h1>
-  </div>
-  <div class="content">
-    <p>Dear $userName,</p>
-    <p>Your appointment has been confirmed by <strong>$clinicName</strong>.</p>
-    <div class="card">
-      <h3>Appointment Details</h3>
-      <div class="detail"><strong>Pet:</strong> $petName</div>
-      <div class="detail"><strong>Service:</strong> $service</div>
-      <div class="detail"><strong>Date:</strong> $dateStr at $timeStr</div>
-      <div class="detail"><strong>Clinic:</strong> $clinicName</div>
-    </div>
-    <p>Please arrive 10 minutes early. See you soon!</p>
-    <p>The PAWrtal Team</p>
-  </div>
-</body>
+  <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f5f5f5; color:#333;">
+    <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
+      <tr>
+        <td align="center" style="padding:20px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" width="600" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+            <tr>
+              <td align="center" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff; padding:30px;">
+                <h1 style="margin:0; font-size:28px;">Appointment Confirmed!</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px; background:#fafafa;">
+                <p style="font-size:16px;">Dear $userName,</p>
+                <p style="font-size:16px;">Your appointment has been confirmed by <strong>$clinicName</strong>.</p>
+                <div style="background:#fff; border-left:4px solid #4caf50; padding:20px; margin:20px 0; border-radius:6px;">
+                  <h3 style="margin-top:0;">Appointment Details</h3>
+                  <p style="margin:6px 0;"><strong>Pet:</strong> $petName</p>
+                  <p style="margin:6px 0;"><strong>Service:</strong> $service</p>
+                  <p style="margin:6px 0;"><strong>Date:</strong> $dateStr at $timeStr</p>
+                  <p style="margin:6px 0;"><strong>Clinic:</strong> $clinicName</p>
+                </div>
+                <p style="font-size:16px;">Please arrive 10 minutes early. See you soon!</p>
+                <p style="font-size:16px;">🐾 The <strong>PAWrtal</strong> Team</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>
-    ''';
+''';
     } else {
       return '''
 <!DOCTYPE html>
 <html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
-    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; }
-    .content { background: #f9f9f9; padding: 30px; }
-    .card { background: white; padding: 20px; border-left: 4px solid #ff9800; margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Appointment Update</h1>
-  </div>
-  <div class="content">
-    <p>Dear $userName,</p>
-    <p>Your appointment at <strong>$clinicName</strong> could not be confirmed.</p>
-    <div class="card">
-      <p><strong>Reason:</strong> ${declineReason ?? 'Not specified'}</p>
-      <p><strong>Requested:</strong> $dateStr at $timeStr</p>
-    </div>
-    <p>You can try booking a different time slot.</p>
-    <p>The PAWrtal Team</p>
-  </div>
-</body>
+  <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f5f5f5; color:#333;">
+    <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
+      <tr>
+        <td align="center" style="padding:20px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" width="600" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+            <tr>
+              <td align="center" style="background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color:#fff; padding:30px;">
+                <h1 style="margin:0; font-size:28px;">Appointment Declined</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px; background:#fafafa;">
+                <p style="font-size:16px;">Dear $userName,</p>
+                <p style="font-size:16px;">Your appointment at <strong>$clinicName</strong> could not be confirmed.</p>
+                <div style="background:#fff; border-left:4px solid #ff9800; padding:20px; margin:20px 0; border-radius:6px;">
+                  <p style="margin:6px 0;"><strong>Reason:</strong> ${declineReason ?? 'Not specified'}</p>
+                  <p style="margin:6px 0;"><strong>Requested:</strong> $dateStr at $timeStr</p>
+                </div>
+                <p style="font-size:16px;">🐾 The <strong>PAWrtal</strong> Team</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>
-    ''';
+''';
     }
   }
 }
