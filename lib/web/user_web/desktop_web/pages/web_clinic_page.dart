@@ -34,9 +34,11 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final servicesKey = GlobalKey();
   final locationKey = GlobalKey();
   final reviewsKey = GlobalKey();
+  final leftContentKey = GlobalKey();
 
   bool _showNavbarOverlay = false;
   bool _isPanelSticky = false;
+  bool _isPanelAtEnd = false;  // New state for panel at end
   double _stickyPanelTop = 0;
   double _panelOriginalOffset = 0;
   double _stickyStartOffset = 0;
@@ -72,51 +74,42 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
         clinic: widget.clinic,
       ),
       tag: widget.clinic.documentId,
-      
     );
   }
 
-    void _calculateOffsets() {
-    // Get the initial position of the appointment panel
+  void _calculateOffsets() {
     final RenderBox? panelBox = _appointmentPanelKey.currentContext
         ?.findRenderObject() as RenderBox?;
     
-    if (panelBox != null) {
-      final position = panelBox.localToGlobal(Offset.zero);
-      _panelOriginalOffset = position.dy + _scrollController.offset;
+    final RenderBox? leftContentBox = leftContentKey.currentContext
+        ?.findRenderObject() as RenderBox?;
+    
+    if (panelBox != null && leftContentBox != null) {
+      final panelPosition = panelBox.localToGlobal(Offset.zero);
+      final leftContentPosition = leftContentBox.localToGlobal(Offset.zero);
       
-      // Define when sticky behavior starts (when navbar appears)
-      _stickyStartOffset = 600; // Adjust based on your navbar trigger point
+      _panelOriginalOffset = panelPosition.dy + _scrollController.offset;
       
-      // Define when sticky behavior ends (height of left content)
-      final leftContentHeight = _getLeftContentHeight();
-      _stickyEndOffset = _panelOriginalOffset + leftContentHeight - 
-          MediaQuery.of(context).size.height + 200; // Buffer
+      // When navbar appears
+      _stickyStartOffset = 600;
+      
+      // Calculate when panel should stop being sticky
+      // This is when the bottom of left content aligns with bottom of viewport
+      final leftContentHeight = leftContentBox.size.height;
+      final leftContentStart = leftContentPosition.dy + _scrollController.offset;
+      final screenHeight = MediaQuery.of(context).size.height;
+      final panelHeight = panelBox.size.height;
+      
+      // Panel stops being sticky when left content bottom - panel height reaches the sticky top position
+      _stickyEndOffset = leftContentStart + leftContentHeight - panelHeight - 100;
+      
+      print('Panel Original Offset: $_panelOriginalOffset');
+      print('Sticky Start: $_stickyStartOffset');
+      print('Sticky End: $_stickyEndOffset');
+      print('Left Content Height: $leftContentHeight');
+      print('Panel Height: $panelHeight');
       
       setState(() {});
-    }
-  }
-
-  double _getLeftContentHeight() {
-    // Calculate or estimate the height of your left content
-    // This should be the total height of all sections in _buildLeftContent
-    return 2000; // Adjust based on actual content
-  }
-
-    double _calculateStickyTop() {
-    final offset = _scrollController.offset;
-    
-    if (offset <= _stickyStartOffset) {
-      // Before sticky zone
-      return 100;
-    } else if (offset > _stickyStartOffset && offset <= _stickyEndOffset) {
-      // In sticky zone - fixed to top
-      return 100;
-    } else {
-      // After sticky zone - calculate position to "stick" with left content end
-      // As user scrolls past _stickyEndOffset, panel moves up with the content
-      final beyondEnd = offset - _stickyEndOffset;
-      return 100 - beyondEnd;
     }
   }
 
@@ -131,25 +124,32 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
       });
     }
     
-    // Update panel sticky state
+    // Three states: Normal (before) -> Sticky (during) -> At End (after)
     if (offset < _stickyStartOffset) {
-      // Before sticky zone - panel scrolls normally with content
-      if (_isPanelSticky) {
+      // State 1: Before sticky zone - panel scrolls normally
+      if (_isPanelSticky || _isPanelAtEnd) {
         setState(() {
           _isPanelSticky = false;
+          _isPanelAtEnd = false;
         });
       }
-    } else if (offset >= _stickyStartOffset && offset <= _stickyEndOffset) {
-      // In sticky zone - panel is fixed to viewport
-      if (!_isPanelSticky) {
+    } else if (offset >= _stickyStartOffset && offset < _stickyEndOffset) {
+      // State 2: In sticky zone - panel is fixed to viewport
+      if (!_isPanelSticky || _isPanelAtEnd) {
         setState(() {
           _isPanelSticky = true;
-          _stickyPanelTop = 100; // Distance from top when sticky (after navbar)
+          _isPanelAtEnd = false;
+        });
+      }
+    } else {
+      // State 3: Past sticky zone - panel returns to flow at end position
+      if (_isPanelSticky || !_isPanelAtEnd) {
+        setState(() {
+          _isPanelSticky = false;
+          _isPanelAtEnd = true;
         });
       }
     }
-    // After sticky zone (offset > _stickyEndOffset) - panel remains sticky
-    // but positioned at the end, effectively "sticking" with the left content
   }
 
   @override
@@ -159,7 +159,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     super.dispose();
   }
 
-    Widget _buildAppointmentPanel() {
+  Widget _buildAppointmentPanel({bool useKey = false}) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final panelWidth = getAppointmentPanelWidth(screenWidth);
@@ -167,7 +167,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     final compactMode = shouldUseCompactMode(screenHeight);
     
     return EnhancedWebAppointmentPanel(
-      key: _appointmentPanelKey,
+      key: useKey ? _appointmentPanelKey : null,
       clinic: widget.clinic,
       maxHeight: maxHeight,
       compact: compactMode,
@@ -251,98 +251,100 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
 
   Widget _buildLeftContent() {
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: widget.clinic.image.isNotEmpty
-                    ? Image.network(
-                        widget.clinic.image,
-                        height: 40,
-                        width: 40,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Image.asset(
-                            'lib/images/test_image.jpg',
-                            height: 40,
-                            width: 40,
-                            fit: BoxFit.cover,
-                          );
-                        },
-                      )
-                    : Image.asset(
-                        'lib/images/test_image.jpg',
-                        height: 40,
-                        width: 40,
-                        fit: BoxFit.cover,
-                      ),
+      key: leftContentKey,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: widget.clinic.image.isNotEmpty
+                  ? Image.network(
+                      widget.clinic.image,
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          'lib/images/test_image.jpg',
+                          height: 40,
+                          width: 40,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      'lib/images/test_image.jpg',
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                    ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                widget.clinic.clinicName,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 16),
               ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Text(
-                  widget.clinic.clinicName,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 16),
-                ),
+            )
+          ],
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        WebClinicDescriptionUpdated(clinic: widget.clinic),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Text(
+                'Services offered',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 22),
               )
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: SizedBox(
-              width: double.infinity,
-              child: Divider(
-                height: 1,
-                thickness: 0.5,
-                color: Colors.grey,
-              ),
+        ),
+        WebClinicServicesUpdated(
+          key: servicesKey,
+          clinic: widget.clinic,
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey,
             ),
           ),
-          WebClinicDescriptionUpdated(clinic: widget.clinic),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: SizedBox(
-              width: double.infinity,
-              child: Divider(
-                height: 1,
-                thickness: 0.5,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Text(
-                  'Services offered',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 22),
-                )
-              ],
-            ),
-          ),
-          WebClinicServicesUpdated(
-            key: servicesKey,
-            clinic: widget.clinic,
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: SizedBox(
-              width: double.infinity,
-              child: Divider(
-                height: 1,
-                thickness: 0.5,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          WebRatingsAndReviews(
-            key: reviewsKey,
-            clinicId: widget.clinic.documentId!,
-          ),
-        ]);
+        ),
+        WebRatingsAndReviews(
+          key: reviewsKey,
+          clinicId: widget.clinic.documentId!,
+        ),
+      ],
+    );
   }
 
   @override
@@ -379,16 +381,16 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                       
                       const SizedBox(width: 125),
                       
-                      // Right side - Appointment panel (only when not sticky)
-                      if (!_isPanelSticky)
-                        SizedBox(
-                          width: panelWidth,
-                          child: _buildAppointmentPanel(),
+                      // Right side - Appointment panel
+                      SizedBox(
+                        width: panelWidth,
+                        child: Column(
+                          children: [
+                            // Show panel in flow when NOT in sticky state
+                            if (!_isPanelSticky) _buildAppointmentPanel(useKey: true),
+                          ],
                         ),
-                      
-                      // Placeholder when sticky to maintain layout
-                      if (_isPanelSticky)
-                        SizedBox(width: panelWidth),
+                      ),
                     ],
                   ),
                 ),
@@ -399,14 +401,14 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
             ],
           ),
           
-          // Sticky appointment panel
+          // Sticky appointment panel (only when in sticky state)
           if (_isPanelSticky)
             Positioned(
-              top: _calculateStickyTop(),
+              top: 100,
               right: getResponsivePadding(screenWidth),
               child: SizedBox(
                 width: getAppointmentPanelWidth(screenWidth),
-                child: _buildAppointmentPanel(),
+                child: _buildAppointmentPanel(useKey: false),
               ),
             ),
           
@@ -474,7 +476,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     );
   }
 
-    Widget _buildClinicHeader(double horizontalPadding) {
+  Widget _buildClinicHeader(double horizontalPadding) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -508,6 +510,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
       ),
     );
   }
+
   Widget _buildNavbarOverlay(double horizontalPadding) {
     return Positioned(
       top: 0,
