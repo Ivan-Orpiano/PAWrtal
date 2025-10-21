@@ -5371,6 +5371,7 @@ class AppWriteProvider {
     required String to,
     required String subject,
     required String htmlContent,
+    String? userId, // Add optional userId
   }) async {
     try {
       print('>>> Sending email to: $to');
@@ -5383,8 +5384,9 @@ class AppWriteProvider {
           'to': to,
           'subject': subject,
           'htmlContent': htmlContent,
+          'userId': userId,
         }),
-        xasync: false, // Wait for completion
+        xasync: false,
       );
 
       print('>>> Email execution: ${execution.status}');
@@ -5471,6 +5473,7 @@ class AppWriteProvider {
             status: status,
             declineReason: declineReason,
           ),
+          userId: userId,
         );
       }
 
