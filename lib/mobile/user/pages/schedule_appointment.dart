@@ -10,7 +10,7 @@ import 'package:capstone_app/mobile/user/components/pets_components/pets_control
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_appointment_controller.dart';
 import 'dart:async';
 import 'package:appwrite/appwrite.dart';
-
+import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import '../../../data/models/appointment_model.dart';
 
 class ScheduleAppointment extends StatefulWidget {
@@ -89,9 +89,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
       final slots = await Get.find<AuthRepository>()
           .getOccupiedTimeSlots(clinicId, today);
-      
+
       print('Fetched occupied slots for ${today.toString()}: $slots');
-      
+
       setState(() {
         occupiedTimeSlots = slots;
       });
@@ -113,12 +113,18 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
   void _updateAvailableTimeSlots() {
     List<String> slots = [];
-    
+
     if (widget.clinicSettings != null) {
       slots = widget.clinicSettings!.getAvailableTimeSlots(today);
     } else {
       slots = [
-        '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
       ];
     }
 
@@ -176,7 +182,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     return widget.clinic.services.split(',').map((s) => s.trim()).toList();
   }
 
-
   bool _isDateSelectable(DateTime day) {
     // Check if date is in the past
     if (day.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
@@ -228,7 +233,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         return 'monday';
     }
   }
-
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
@@ -316,7 +320,12 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
             : 'pending',
       );
 
+      // Create appointment
       await Get.find<AuthRepository>().createAppointment(appointment);
+
+      // ============= NEW: Notify admin of new appointment =============
+      await _notifyAdminOfNewAppointment(appointment);
+      // ================================================================
 
       // Refresh appointments if controller exists
       if (Get.isRegistered<EnhancedUserAppointmentController>()) {
@@ -330,6 +339,48 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       setState(() {
         isBooking = false;
       });
+    }
+  }
+
+  Future<void> _notifyAdminOfNewAppointment(Appointment appointment) async {
+    try {
+      print('>>> Notifying admin of new appointment');
+
+      // Get clinic admin ID
+      final clinicDoc = await Get.find<AuthRepository>()
+          .getClinicById(widget.clinic.documentId ?? '');
+
+      if (clinicDoc == null) {
+        print('>>> Clinic not found, skipping admin notification');
+        return;
+      }
+
+      final adminId = clinicDoc.data['adminId'] as String?;
+      if (adminId == null || adminId.isEmpty) {
+        print('>>> Admin ID not found, skipping notification');
+        return;
+      }
+
+      // Get user details
+      final userName = Get.find<UserSessionService>().userName;
+      final petName = selectedPet ?? 'Unknown Pet';
+
+      // Use AppwriteProvider to send notification
+      final appwriteProvider = Get.find<AppWriteProvider>();
+
+      await appwriteProvider.notifyAdminNewAppointment(
+        adminId: adminId,
+        petName: petName,
+        ownerName: userName.isEmpty ? 'A user' : userName,
+        service: appointment.service,
+        appointmentDateTime: appointment.dateTime,
+        appointmentId: '', // Will be empty for new appointments
+      );
+
+      print('>>> Admin notification sent successfully');
+    } catch (e) {
+      print('>>> Error notifying admin: $e');
+      // Don't fail booking if notification fails
     }
   }
 
