@@ -37,6 +37,12 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
   static const double westLng = 121.0000;
   static const double eastLng = 121.1000;
 
+  // Define the bounds for map constraint
+  final LatLngBounds _sjdmBounds = LatLngBounds(
+    const LatLng(southLat, westLng),
+    const LatLng(northLat, eastLng),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -55,7 +61,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         await _fetchRoute();
         _fitMapToBounds();
       } else if (showWithoutUserLocation || userLocation == null) {
-        // Just show clinic location
         _centerOnClinic();
       }
     }
@@ -71,7 +76,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
       if (position != null) {
         LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
 
-        // Check if user is within San Jose Del Monte bounds
         if (!_isWithinBounds(fetchedLocation)) {
           print("User location outside San Jose Del Monte");
           setState(() {
@@ -107,7 +111,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         LatLng location =
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
-        // Verify clinic is within San Jose Del Monte bounds
         if (!_isWithinBounds(location)) {
           setState(() {
             error = "Clinic location is outside San Jose Del Monte, Bulacan";
@@ -254,82 +257,118 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
     return minPadding + t * (maxPadding - minPadding);
   }
 
-  void _openDirections() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Get Directions"),
-          content: Text("Opening directions to ${widget.clinic.clinicName}..."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            ),
-          ],
-        );
-      },
-    );
+  // Get responsive map height based on screen size
+  double getResponsiveMapHeight(double screenWidth) {
+    if (screenWidth < 600) {
+      return 300; // Mobile
+    } else if (screenWidth < 1100) {
+      return 500; // Tablet
+    } else {
+      return 700; // Desktop
+    }
   }
 
-  void _callClinic() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Call Clinic"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Call ${widget.clinic.clinicName}?"),
-              const SizedBox(height: 8),
-              Text(
-                widget.clinic.contact,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Call"),
-            ),
-          ],
-        );
-      },
-    );
+  // Get responsive marker sizes
+  double getResponsiveMarkerSize(double screenWidth, bool isUser) {
+    if (screenWidth < 600) {
+      return isUser ? 32 : 50; // Mobile
+    } else {
+      return isUser ? 40 : 70; // Desktop/Tablet
+    }
   }
 
-  Widget _buildLoadingState() {
+  // Get responsive icon sizes
+  double getResponsiveIconSize(double screenWidth, String type) {
+    if (screenWidth < 600) {
+      // Mobile sizes
+      if (type == 'user') return 18;
+      if (type == 'clinic') return 32;
+      if (type == 'overlay') return 16;
+      if (type == 'error') return 48;
+    }
+    // Desktop/Tablet sizes
+    if (type == 'user') return 24;
+    if (type == 'clinic') return 40;
+    if (type == 'overlay') return 18;
+    if (type == 'error') return 64;
+    return 20;
+  }
+
+  // Get responsive font sizes
+  double getResponsiveFontSize(double screenWidth, String type) {
+    if (screenWidth < 600) {
+      // Mobile sizes
+      if (type == 'title') return 18;
+      if (type == 'overlay_name') return 12;
+      if (type == 'overlay_distance') return 10;
+      if (type == 'clinic_label') return 8;
+      if (type == 'address') return 16;
+      if (type == 'address_subtitle') return 12;
+      if (type == 'dialog_title') return 16;
+      if (type == 'dialog_text') return 13;
+      if (type == 'dialog_button') return 14;
+    }
+    // Desktop/Tablet sizes
+    if (type == 'title') return 26;
+    if (type == 'overlay_name') return 14;
+    if (type == 'overlay_distance') return 12;
+    if (type == 'clinic_label') return 10;
+    if (type == 'address') return 18;
+    if (type == 'address_subtitle') return 14;
+    if (type == 'dialog_title') return 22;
+    if (type == 'dialog_text') return 16;
+    if (type == 'dialog_button') return 16;
+    return 14;
+  }
+
+  // Get responsive padding
+  double getResponsiveElementPadding(double screenWidth, String type) {
+    if (screenWidth < 600) {
+      // Mobile padding
+      if (type == 'overlay') return 10;
+      if (type == 'dialog') return 24;
+      if (type == 'address') return 16;
+    }
+    // Desktop/Tablet padding
+    if (type == 'overlay') return 12;
+    if (type == 'dialog') return 32;
+    if (type == 'address') return 20;
+    return 16;
+  }
+
+  Widget _buildLoadingState(double screenWidth) {
+    final mapHeight = getResponsiveMapHeight(screenWidth);
+
     return Container(
-      height: 700,
+      height: mapHeight,
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading map...'),
+            const CircularProgressIndicator(),
+            SizedBox(height: screenWidth < 600 ? 12 : 16),
+            Text(
+              'Loading map...',
+              style: TextStyle(
+                fontSize: screenWidth < 600 ? 14 : 16,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(double screenWidth) {
+    final mapHeight = getResponsiveMapHeight(screenWidth);
+    final iconSize = getResponsiveIconSize(screenWidth, 'error');
+
     return Container(
-      height: 700,
+      height: mapHeight,
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(20),
@@ -340,14 +379,14 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
           children: [
             Icon(
               Icons.error_outline,
-              size: 64,
+              size: iconSize,
               color: Colors.grey[400],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: screenWidth < 600 ? 12 : 16),
             Text(
               error ?? "Failed to load location",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: getResponsiveFontSize(screenWidth, 'dialog_text'),
                 color: Colors.grey[600],
               ),
             ),
@@ -357,17 +396,21 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
     );
   }
 
-  Widget _buildOutOfBoundsDialog() {
+  Widget _buildOutOfBoundsDialog(double screenWidth) {
+    final mapHeight = getResponsiveMapHeight(screenWidth);
+    final dialogPadding = getResponsiveElementPadding(screenWidth, 'dialog');
+    final iconSize = getResponsiveIconSize(screenWidth, 'error');
+
     return Container(
-      height: 700,
+      height: mapHeight,
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(32),
-          margin: const EdgeInsets.symmetric(horizontal: 40),
+          padding: EdgeInsets.all(dialogPadding),
+          margin: EdgeInsets.symmetric(horizontal: screenWidth < 600 ? 20 : 40),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -384,37 +427,38 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
             children: [
               Icon(
                 Icons.location_off,
-                size: 64,
+                size: iconSize,
                 color: Colors.orange.shade600,
               ),
-              const SizedBox(height: 24),
-              const Text(
+              SizedBox(height: screenWidth < 600 ? 16 : 24),
+              Text(
                 "Location Outside Service Area",
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: getResponsiveFontSize(screenWidth, 'dialog_title'),
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: screenWidth < 600 ? 8 : 12),
               Text(
                 "Your current location is outside San Jose Del Monte, Bulacan.",
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: getResponsiveFontSize(screenWidth, 'dialog_text'),
                   color: Colors.grey[600],
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: screenWidth < 600 ? 4 : 8),
               Text(
                 "You can still view the clinic location on the map.",
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize:
+                      getResponsiveFontSize(screenWidth, 'dialog_text') - 2,
                   color: Colors.grey[500],
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: screenWidth < 600 ? 16 : 32),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -422,15 +466,18 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenWidth < 600 ? 12 : 16,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     "Show Clinic Location",
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize:
+                          getResponsiveFontSize(screenWidth, 'dialog_button'),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -446,27 +493,35 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final mapHeight = getResponsiveMapHeight(screenWidth);
+    final userMarkerSize = getResponsiveMarkerSize(screenWidth, true);
+    final clinicMarkerSize = getResponsiveMarkerSize(screenWidth, false);
+    final overlayPadding = getResponsiveElementPadding(screenWidth, 'overlay');
+    final addressPadding = getResponsiveElementPadding(screenWidth, 'address');
 
     return Padding(
       padding:
           EdgeInsets.symmetric(horizontal: getResponsivePadding(screenWidth)),
       child: Column(
         children: [
-          const Row(
+          Row(
             children: [
               Text(
                 "Location",
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: getResponsiveFontSize(screenWidth, 'title'),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: screenWidth < 600 ? 10 : 14),
 
           // Address and contact information
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(20),
+            margin: EdgeInsets.only(bottom: screenWidth < 600 ? 12 : 16),
+            padding: EdgeInsets.all(addressPadding),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(15),
@@ -480,34 +535,36 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                     Icon(
                       Icons.location_on,
                       color: Colors.red.shade600,
-                      size: 24,
+                      size: screenWidth < 600 ? 20 : 24,
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: screenWidth < 600 ? 8 : 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             widget.clinic.address,
-                            style: const TextStyle(
-                              fontSize: 18,
+                            style: TextStyle(
+                              fontSize:
+                                  getResponsiveFontSize(screenWidth, 'address'),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: screenWidth < 600 ? 2 : 4),
                           Text(
                             "Full address of ${widget.clinic.clinicName}",
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: getResponsiveFontSize(
+                                  screenWidth, 'address_subtitle'),
                               color: Colors.grey.shade600,
                             ),
                           ),
                           if (distanceInKm > 0 && !showWithoutUserLocation) ...[
-                            const SizedBox(height: 8),
+                            SizedBox(height: screenWidth < 600 ? 6 : 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth < 600 ? 6 : 8,
+                                vertical: screenWidth < 600 ? 3 : 4,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.blue.shade50,
@@ -516,7 +573,8 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                               child: Text(
                                 "${distanceInKm.toStringAsFixed(2)} km away",
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: getResponsiveFontSize(
+                                      screenWidth, 'address_subtitle'),
                                   fontWeight: FontWeight.w600,
                                   color: Colors.blue.shade700,
                                 ),
@@ -528,45 +586,7 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 16),
-
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _openDirections,
-                        icon: const Icon(Icons.directions, size: 20),
-                        label: const Text("Get Directions"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _callClinic,
-                        icon: const Icon(Icons.phone, size: 20),
-                        label: const Text("Call"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.blue.shade600,
-                          side: BorderSide(color: Colors.blue.shade600),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                SizedBox(height: screenWidth < 600 ? 12 : 16),
               ],
             ),
           ),
@@ -574,7 +594,7 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
           // Map container
           Container(
             width: double.maxFinite,
-            height: 700,
+            height: mapHeight,
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(20),
@@ -583,13 +603,13 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: isLoading
-                  ? _buildLoadingState()
+                  ? _buildLoadingState(screenWidth)
                   : error != null
-                      ? _buildErrorState()
+                      ? _buildErrorState(screenWidth)
                       : userOutOfBounds
-                          ? _buildOutOfBoundsDialog()
+                          ? _buildOutOfBoundsDialog(screenWidth)
                           : (clinicLocation == null)
-                              ? _buildErrorState()
+                              ? _buildErrorState(screenWidth)
                               : Stack(
                                   children: [
                                     FlutterMap(
@@ -598,12 +618,10 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                         initialCenter: clinicLocation!,
                                         initialZoom: 15,
                                         maxZoom: 19,
+                                        minZoom: 12,
                                         cameraConstraint:
                                             CameraConstraint.contain(
-                                          bounds: LatLngBounds(
-                                            const LatLng(southLat, westLng),
-                                            const LatLng(northLat, eastLng),
-                                          ),
+                                          bounds: _sjdmBounds,
                                         ),
                                       ),
                                       children: [
@@ -617,7 +635,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                             'd'
                                           ],
                                         ),
-                                        // Route polyline (only if user location exists and not showing without location)
                                         if (routePoints.isNotEmpty &&
                                             !showWithoutUserLocation)
                                           PolylineLayer(
@@ -625,20 +642,20 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                               Polyline(
                                                 points: routePoints,
                                                 color: Colors.blue,
-                                                strokeWidth: 5.0,
+                                                strokeWidth: screenWidth < 600
+                                                    ? 4.0
+                                                    : 5.0,
                                               ),
                                             ],
                                           ),
-                                        // Markers
                                         MarkerLayer(
                                           markers: [
-                                            // User location marker (only if exists and not showing without location)
                                             if (userLocation != null &&
                                                 !showWithoutUserLocation)
                                               Marker(
                                                 point: userLocation!,
-                                                width: 40,
-                                                height: 40,
+                                                width: userMarkerSize,
+                                                height: userMarkerSize,
                                                 child: Container(
                                                   decoration: BoxDecoration(
                                                     color: Colors.blue,
@@ -648,29 +665,33 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                                       width: 2,
                                                     ),
                                                   ),
-                                                  child: const Icon(
+                                                  child: Icon(
                                                     Icons.my_location,
                                                     color: Colors.white,
-                                                    size: 24,
+                                                    size: getResponsiveIconSize(
+                                                        screenWidth, 'user'),
                                                   ),
                                                 ),
                                               ),
-                                            // Clinic location marker
                                             Marker(
                                               point: clinicLocation!,
-                                              width: 70,
-                                              height: 90,
+                                              width: clinicMarkerSize,
+                                              height: clinicMarkerSize + 20,
                                               child: Column(
                                                 children: [
                                                   Icon(
                                                     Icons.location_on,
                                                     color: Colors.red.shade600,
-                                                    size: 40,
+                                                    size: getResponsiveIconSize(
+                                                        screenWidth, 'clinic'),
                                                   ),
                                                   Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 5,
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                      horizontal:
+                                                          screenWidth < 600
+                                                              ? 4
+                                                              : 5,
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
@@ -690,8 +711,11 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                                     ),
                                                     child: Text(
                                                       widget.clinic.clinicName,
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
+                                                      style: TextStyle(
+                                                        fontSize:
+                                                            getResponsiveFontSize(
+                                                                screenWidth,
+                                                                'clinic_label'),
                                                         fontWeight:
                                                             FontWeight.bold,
                                                         color: Colors.black87,
@@ -708,14 +732,14 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                       ],
                                     ),
 
-                                    // Info overlay
+                                    // Info overlay with distance
                                     Positioned(
-                                      top: 20,
-                                      left: 20,
+                                      top: screenWidth < 600 ? 12 : 20,
+                                      left: screenWidth < 600 ? 12 : 20,
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: overlayPadding,
+                                          vertical: overlayPadding - 4,
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
@@ -736,16 +760,51 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
                                             Icon(
                                               Icons.location_on,
                                               color: Colors.red.shade600,
-                                              size: 18,
+                                              size: getResponsiveIconSize(
+                                                  screenWidth, 'overlay'),
                                             ),
-                                            const SizedBox(width: 6),
+                                            SizedBox(
+                                                width:
+                                                    screenWidth < 600 ? 4 : 6),
                                             Text(
                                               widget.clinic.clinicName,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontWeight: FontWeight.w600,
-                                                fontSize: 14,
+                                                fontSize: getResponsiveFontSize(
+                                                    screenWidth,
+                                                    'overlay_name'),
                                               ),
                                             ),
+                                            if (distanceInKm > 0 &&
+                                                !showWithoutUserLocation) ...[
+                                              SizedBox(
+                                                  width: screenWidth < 600
+                                                      ? 6
+                                                      : 8),
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal:
+                                                      screenWidth < 600 ? 4 : 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  "${distanceInKm.toStringAsFixed(2)} km",
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        getResponsiveFontSize(
+                                                            screenWidth,
+                                                            'overlay_distance'),
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.blue.shade700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ],
                                         ),
                                       ),
