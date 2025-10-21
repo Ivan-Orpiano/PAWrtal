@@ -10,7 +10,8 @@ class Message {
   final bool isRead;
   final bool isStarterMessage;
   final String? attachment;
-  final DateTime? sentAt; // Optional - can use createdAt instead
+  final DateTime? sentAt;
+  final String? receiverId; // REQUIRED in Appwrite
 
   Message({
     this.documentId,
@@ -23,6 +24,7 @@ class Message {
     this.isStarterMessage = false,
     this.attachment,
     this.sentAt,
+    this.receiverId,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -35,16 +37,21 @@ class Message {
       messageText: map['messageText'] ?? map['message'] ?? '',
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'] as String)
-          : DateTime.now(),
+          : (map['timestamp'] != null
+              ? DateTime.parse(map['timestamp'] as String)
+              : DateTime.now()),
       updatedAt: map['updatedAt'] != null
           ? DateTime.parse(map['updatedAt'] as String)
-          : DateTime.now(),
+          : (map['\$updatedAt'] != null
+              ? DateTime.parse(map['\$updatedAt'] as String)
+              : DateTime.now()),
       isRead: map['isRead'] ?? false,
       isStarterMessage: map['isStarterMessage'] ?? false,
-      attachment: map['attachment'],
+      attachment: map['attachment'] ?? map['attachmentUrl'],
       sentAt: map['sentAt'] != null
           ? DateTime.parse(map['sentAt'] as String)
           : null,
+      receiverId: map['receiverId'],
     );
   }
 
@@ -56,10 +63,13 @@ class Message {
       'messageText': messageText,
       'isRead': isRead,
       'isStarterMessage': isStarterMessage,
-      'attachment': attachment,
+      'timestamp': createdAt.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (sentAt != null) 'sentAt': sentAt!.toIso8601String(),
+      if (receiverId != null) 'receiverId': receiverId,
+      if (attachment != null) 'attachment': attachment,
+      if (attachment != null) 'attachmentUrl': attachment,
     };
   }
 
@@ -75,6 +85,7 @@ class Message {
     bool? isStarterMessage,
     String? attachment,
     DateTime? sentAt,
+    String? receiverId,
   }) {
     return Message(
       documentId: documentId ?? this.documentId,
@@ -87,6 +98,7 @@ class Message {
       isStarterMessage: isStarterMessage ?? this.isStarterMessage,
       attachment: attachment ?? this.attachment,
       sentAt: sentAt ?? this.sentAt,
+      receiverId: receiverId ?? this.receiverId,
     );
   }
 
@@ -250,7 +262,7 @@ class Message {
 
   @override
   String toString() =>
-      'Message(id: $documentId, from: $senderId, text: ${getPreview()}, sent: ${timeFormatted})';
+      'Message(id: $documentId, from: $senderId, text: ${getPreview()}, sent: $timeFormatted)';
 
   @override
   bool operator ==(Object other) =>

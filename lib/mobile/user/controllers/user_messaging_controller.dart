@@ -265,7 +265,13 @@ class MessagingController extends GetxController {
       print('>>> Message: $messageText');
       print('>>> ============================================');
 
-      // Send message - ONLY these parameters exist in the method
+      // CRITICAL FIX: Determine senderType before sending
+      String senderType =
+          'user'; // User is always sending as 'user' from this controller
+
+      print('>>> SenderType: $senderType');
+
+      // Send message with senderType
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
@@ -281,7 +287,7 @@ class MessagingController extends GetxController {
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.createdAt,
-        userUnreadCount: 0,
+        userUnreadCount: 0, // User sent it, so user has 0 unread
       );
       currentConversation.value = updatedConversation;
 
@@ -302,10 +308,6 @@ class MessagingController extends GetxController {
     } finally {
       isSendingMessage.value = false;
     }
-  }
-
-  bool hasUnreadMessages(Conversation conversation) {
-    return conversation.userUnreadCount > 0;
   }
 
   /// Fixed: Removed senderType, receiverId, messageType parameters

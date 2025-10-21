@@ -9,6 +9,7 @@ import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/appointment_model.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
@@ -340,43 +341,55 @@ class AuthRepository {
     String? attachment,
   }) async {
     try {
-      print('>>> REPOSITORY: Sending message to conversation: $conversationId');
-      print('>>> From: $senderId');
+      print('>>> ============================================');
+      print('>>> REPOSITORY: Sending message');
+      print('>>> Conversation: $conversationId');
+      print('>>> Sender: $senderId');
       print('>>> Text: $messageText');
-      print('>>> Is Starter Message: $isStarterMessage');
+      print('>>> ============================================');
 
-      // Create message object
-      final message = Message(
+      // Prepare message data with all required fields
+      final messageMap = {
+        'conversationId': conversationId,
+        'senderId': senderId,
+        'messageText': messageText,
+        'messageType': 'text', // Default message type
+        'attachment': attachment,
+        'attachmentUrl': attachment,
+        'isStarterMessage': isStarterMessage,
+        'isRead': false,
+        'isDeleted': false,
+        'timestamp': DateTime.now().toIso8601String(),
+        'sentAt': DateTime.now().toIso8601String(),
+      };
+
+      print('>>> Calling createMessage with complete data...');
+
+      // The createMessage method will add senderType and receiverId automatically
+      final messageDoc = await appWriteProvider.createMessage(messageMap);
+
+      print('>>> Message created: ${messageDoc.$id}');
+
+      // Create Message object for return
+      final createdMessage = Message(
+        documentId: messageDoc.$id,
         conversationId: conversationId,
         senderId: senderId,
         messageText: messageText,
         isStarterMessage: isStarterMessage,
         attachment: attachment,
-        createdAt: DateTime.now(),
+        receiverId: messageDoc.data['receiverId'], // Get from created doc
+        createdAt: DateTime.parse(messageDoc.data['timestamp']),
         updatedAt: DateTime.now(),
       );
 
-      // Save message to database
-      final messageDoc = await createMessage(message);
-      final createdMessage = message.copyWith(documentId: messageDoc.$id);
-
-      print('>>> REPOSITORY: Message created with ID: ${messageDoc.$id}');
-
-      // Update conversation with latest message info
-      await appWriteProvider.updateConversation(conversationId, {
-        'lastMessageId': messageDoc.$id,
-        'lastMessageText': messageText,
-        'lastMessageTime': DateTime.now().toIso8601String(),
-        'updatedAt': DateTime.now().toIso8601String(),
-        // Note: unreadCount is handled separately based on sender type
-      });
-
-      print('>>> REPOSITORY: Conversation updated successfully');
-
+      print('>>> ============================================');
       return createdMessage;
     } catch (e) {
-      print('>>> REPOSITORY: Error sending message: $e');
+      print('>>> ============================================');
+      print('>>> REPOSITORY ERROR: $e');
       print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
       rethrow;
     }
   }
@@ -1560,31 +1573,29 @@ class AuthRepository {
   Future<Document?> getFeedbackDeletionRequestById(String requestId) {
     return appWriteProvider.getFeedbackDeletionRequestById(requestId);
   }
-  
 
   Future<List<Object>> getClinicDeletionRequests(
-  String clinicId, {
-  String? status,
-})  async {
-  try {
-    final docs = await appWriteProvider.getClinicDeletionRequests(
-      clinicId,
-      status: status,
-    );
-    return docs.map((doc) {
-      final request = FeedbackDeletionRequest.fromMap(doc.data);
-      return request.copyWith(documentId: doc.$id);
-    }).toList();
-  } catch (e) {
-    print('Error getting clinic deletion requests: $e');
-    return [];
+    String clinicId, {
+    String? status,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getClinicDeletionRequests(
+        clinicId,
+        status: status,
+      );
+      return docs.map((doc) {
+        final request = FeedbackDeletionRequest.fromMap(doc.data);
+        return request.copyWith(documentId: doc.$id);
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic deletion requests: $e');
+      return [];
+    }
   }
-}
 
   Future<List<Document>> getPendingDeletionRequests(String clinicId) {
     return appWriteProvider.getPendingDeletionRequests(clinicId);
   }
-
 
   Future<Map<String, dynamic>> approveDeletionRequest(
     String requestId,
@@ -1615,19 +1626,4 @@ class AuthRepository {
   Future<Map<String, int>> getDeletionRequestStats(String clinicId) {
     return appWriteProvider.getDeletionRequestStats(clinicId);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
-
