@@ -1329,6 +1329,7 @@ Widget _buildProfileContent() {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<FeedbackCategory>(
+                  menuMaxHeight: 300,
                   dropdownColor: Colors.white,
                   value: feedbackController.selectedCategory.value,
                   decoration: InputDecoration(
