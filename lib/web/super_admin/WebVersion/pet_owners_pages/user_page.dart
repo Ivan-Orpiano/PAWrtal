@@ -10,7 +10,8 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterin
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
-import 'package:capstone_app/utils/image_helper.dart'; 
+import 'package:capstone_app/utils/image_helper.dart';
+
 /// ============================================
 /// SUPER ADMIN USER MANAGEMENT SCREEN
 /// ============================================
@@ -30,7 +31,6 @@ class _SuperAdminUserManagementScreenState
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggingOut = false;
 
-
   // Real-time subscription
   RealtimeSubscription? _userSubscription;
   RealtimeSubscription? _verificationSubscription;
@@ -42,6 +42,7 @@ class _SuperAdminUserManagementScreenState
 
   bool _isLoading = true;
   String _searchQuery = '';
+  String _selectedSort = "newest";
 
   // Colors
   static const Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
@@ -67,7 +68,7 @@ class _SuperAdminUserManagementScreenState
     _tabController.dispose();
     _userSubscription?.close();
     _verificationSubscription?.close();
-    _storageSubscription?.close(); 
+    _storageSubscription?.close();
     super.dispose();
   }
 
@@ -79,7 +80,8 @@ class _SuperAdminUserManagementScreenState
       print('>>> Loading all users...');
 
       // Get all users from database
-      final docs = await _authRepository.appWriteProvider.databases!.listDocuments(
+      final docs =
+          await _authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.usersCollectionID,
         queries: [
@@ -93,10 +95,12 @@ class _SuperAdminUserManagementScreenState
       _allUsers = docs.documents.map((doc) => User.fromMap(doc.data)).toList();
       // ADD IMMEDIATELY AFTER:
       // CRITICAL: Fetch verification status for each user from ID verification collection
-      print('>>> Fetching verification status for ${_allUsers.length} users...');
+      print(
+          '>>> Fetching verification status for ${_allUsers.length} users...');
       for (var user in _allUsers) {
         try {
-          final verificationDoc = await _authRepository.getIdVerificationByUserId(user.userId);
+          final verificationDoc =
+              await _authRepository.getIdVerificationByUserId(user.userId);
           if (verificationDoc != null && verificationDoc.status == 'approved') {
             // Update user's verification status from ID verification collection
             user.idVerified = true;
@@ -128,9 +132,192 @@ class _SuperAdminUserManagementScreenState
     _verifiedUsers = _allUsers.where((user) => user.idVerified).toList();
     _unverifiedUsers = _allUsers.where((user) => !user.idVerified).toList();
 
-    print('>>> Verified users: ${_verifiedUsers.length}');
-    print('>>> Unverified users: ${_unverifiedUsers.length}');
+    _sortUsers(_verifiedUsers);
+    _sortUsers(_unverifiedUsers);
+
+      print('>>> Verified users: ${_verifiedUsers.length}');
+      print('>>> Unverified users: ${_unverifiedUsers.length}');
+      print('>>> Sort applied: $_selectedSort');
   }
+  /// Show sort options modal
+void _showSortMenu() {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) => Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, backgroundColor],
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: primaryBlue.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryBlue.withOpacity(0.2), accentTeal.withOpacity(0.1)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.filter_list, color: primaryBlue, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Sort Users',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: deepBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSortOption(
+            'Newest First',
+            'Recently registered users',
+            Icons.arrow_downward_rounded,
+            'newest',
+            [accentTeal, primaryBlue],
+          ),
+          const SizedBox(height: 12),
+          _buildSortOption(
+            'Oldest First',
+            'Long-time registered users',
+            Icons.arrow_upward_rounded,
+            'oldest',
+            [vetOrange, primaryBlue],
+          ),
+          const SizedBox(height: 12),
+          _buildSortOption(
+            'Alphabetical (A-Z)',
+            'Sort by user name',
+            Icons.sort_by_alpha_rounded,
+            'alphabetical',
+            [primaryBlue, deepBlue],
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Build individual sort option
+Widget _buildSortOption(
+  String title,
+  String subtitle,
+  IconData icon,
+  String sortValue,
+  List<Color> colors,
+) {
+  final isSelected = _selectedSort == sortValue;
+
+  return InkWell(
+    onTap: () {
+      setState(() {
+        _selectedSort = sortValue;
+        _categorizeUsers(); // Re-categorize and sort
+      });
+      Navigator.pop(context);
+    },
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: isSelected
+            ? LinearGradient(colors: [colors[0].withOpacity(0.15), colors[1].withOpacity(0.1)])
+            : null,
+        color: isSelected ? null : Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? colors[0] : Colors.grey[300]!,
+          width: isSelected ? 2 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: colors),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: isSelected
+                  ? [BoxShadow(color: colors[0].withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
+                  : null,
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? colors[0] : deepBlue,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isSelected)
+            Icon(Icons.check_circle, color: colors[0], size: 24),
+        ],
+      ),
+    ),
+  );
+}
+
+    /// Sort users based on selected sort option
+    void _sortUsers(List<User> users) {
+      switch (_selectedSort) {
+        case 'alphabetical':
+          users.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+          break;
+        case 'oldest':
+          // Sort by user creation date (oldest first)
+          users.sort((a, b) {
+            // Using email as proxy for account age if no creation date available
+            return a.userId.compareTo(b.userId);
+          });
+          break;
+        case 'newest':
+        default:
+          // Sort by user creation date (newest first)
+          users.sort((a, b) {
+            return b.userId.compareTo(a.userId);
+          });
+          break;
+      }
+    }
 
   /// Setup real-time subscriptions for users and verifications
   void _setupRealtimeSubscriptions() {
@@ -164,42 +351,43 @@ class _SuperAdminUserManagementScreenState
           _loadUsers();
         }
       });
-       _storageSubscription = realtime.subscribe([
-      'buckets.${AppwriteConstants.imageBucketID}.files'
-    ]);
+      _storageSubscription = realtime
+          .subscribe(['buckets.${AppwriteConstants.imageBucketID}.files']);
 
-    _storageSubscription!.stream.listen((response) {
-      print('>>> Real-time storage event: ${response.events}');
+      _storageSubscription!.stream.listen((response) {
+        print('>>> Real-time storage event: ${response.events}');
 
-      // Check if it's a profile picture related event
-      if (response.events.contains('buckets.*.files.*')) {
-        print('>>> Profile picture changed, reloading users...');
-        _loadUsers();
-      }
-    });
-      
-        print('>>> Real-time subscriptions establishedfor archived users (including storage)');
-        // ADD BEFORE THE PRINT STATEMENT:
-        // Subscribe to ID verification changes
-           final verificationRealtimeSubscription = realtime.subscribe([
-          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
-        ]);
-
-        verificationRealtimeSubscription.stream.listen((response) {
-          print('>>> Real-time verification event: ${response.events}');
-          
-          // Check if it's a verification status update
-          if (response.events.contains('databases.*.collections.*.documents.*')) {
-            print('>>> Verification status changed, reloading users...');
-            _loadUsers();
-          }
-        });
-
-    _verificationSubscription = verificationRealtimeSubscription;
-        } catch (e) {
-          print('>>> Error setting up real-time subscriptions: $e');
+        // Check if it's a profile picture related event
+        if (response.events.contains('buckets.*.files.*')) {
+          print('>>> Profile picture changed, reloading users...');
+          _loadUsers();
         }
-      }
+      });
+
+      print(
+          '>>> Real-time subscriptions establishedfor archived users (including storage)');
+      // ADD BEFORE THE PRINT STATEMENT:
+      // Subscribe to ID verification changes
+      final verificationRealtimeSubscription = realtime.subscribe([
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
+      ]);
+
+      verificationRealtimeSubscription.stream.listen((response) {
+        print('>>> Real-time verification event: ${response.events}');
+
+        // Check if it's a verification status update
+        if (response.events.contains('databases.*.collections.*.documents.*')) {
+          print('>>> Verification status changed, reloading users...');
+          _loadUsers();
+        }
+      });
+
+      _verificationSubscription = verificationRealtimeSubscription;
+    } catch (e) {
+      print('>>> Error setting up real-time subscriptions: $e');
+    }
+  }
+
   /// Filter users based on search query
   List<User> _filterUsers(List<User> users) {
     if (_searchQuery.isEmpty) return users;
@@ -235,9 +423,9 @@ class _SuperAdminUserManagementScreenState
     final isTablet = screenWidth > 600 && screenWidth <= 1024;
 
     return Scaffold(
-      key: _scaffoldKey,  // ADD THIS LINE
-    backgroundColor: backgroundColor,
-      drawer: _buildDrawer(context),  
+      key: _scaffoldKey, // ADD THIS LINE
+      backgroundColor: backgroundColor,
+      drawer: _buildDrawer(context),
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         backgroundColor: backgroundColor,
@@ -283,448 +471,540 @@ class _SuperAdminUserManagementScreenState
           const SizedBox(width: 8),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
+          preferredSize: const Size.fromHeight(160),
           child: Column(
             children: [
-              // Search bar section remains the same
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isDesktop ? 32 : 16,
-                  vertical: 8,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryBlue.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: 'Search by name, email, or phone...',
-                      prefixIcon: const Icon(Icons.search, color: primaryBlue),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: mediumGray),
-                              onPressed: () =>
-                                  setState(() => _searchQuery = ''),
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
+              // Search bar section
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 32 : 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        // Search Bar
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryBlue.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              onChanged: (value) => setState(() => _searchQuery = value),
+                              decoration: InputDecoration(
+                                hintText: 'Search by name, email, or phone...',
+                                prefixIcon: const Icon(Icons.search, color: primaryBlue),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, color: mediumGray),
+                                        onPressed: () => setState(() => _searchQuery = ''),
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        
+                        // Sort Button
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [primaryBlue, accentTeal],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryBlue.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _showSortMenu,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                child: const Icon(
+                                  Icons.filter_list,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
+                  // Sort Indicator
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 32 : 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [primaryBlue.withOpacity(0.15), accentTeal.withOpacity(0.1)],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: primaryBlue.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _selectedSort == 'alphabetical'
+                                      ? Icons.sort_by_alpha
+                                      : _selectedSort == 'oldest'
+                                          ? Icons.arrow_upward
+                                          : Icons.arrow_downward,
+                                  size: 14,
+                                  color: primaryBlue,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _selectedSort == 'alphabetical'
+                                      ? 'A-Z'
+                                      : _selectedSort == 'oldest'
+                                          ? 'Oldest'
+                                          : 'Newest',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: primaryBlue,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
               // Tabs section remains the same
-            TabBar(
-            controller: _tabController,
-            indicatorColor: primaryBlue,
-            indicatorWeight: 3,
-            labelColor: primaryBlue,
-            unselectedLabelColor: mediumGray,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-            tabs: [
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.verified_user),
-                    const SizedBox(width: 8),
-                    Text('Verified (${_verifiedUsers.length})'),
-                  ],
+              TabBar(
+                controller: _tabController,
+                indicatorColor: primaryBlue,
+                indicatorWeight: 3,
+                labelColor: primaryBlue,
+                unselectedLabelColor: mediumGray,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.pending),
-                    const SizedBox(width: 8),
-                    Text('Unverified (${_unverifiedUsers.length})'),
-                  ],
-                ),
+                tabs: [
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified_user),
+                        const SizedBox(width: 8),
+                        Text('Verified (${_verifiedUsers.length})'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.pending),
+                        const SizedBox(width: 8),
+                        Text('Unverified (${_unverifiedUsers.length})'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-                      ],
           ),
         ),
       ),
-     body: RefreshIndicator(
-            onRefresh: () async {
-              await _loadUsers();
-            },
-            child: _isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: primaryBlue),
-                        SizedBox(height: 16),
-                        Text(
-                          'Loading users...',
-                          style: TextStyle(color: mediumGray, fontSize: 16),
-                        ),
-                      ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadUsers();
+        },
+        child: _isLoading
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: primaryBlue),
+                    SizedBox(height: 16),
+                    Text(
+                      'Loading users...',
+                      style: TextStyle(color: mediumGray, fontSize: 16),
                     ),
-                  )
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      // Verified users tab
-                      UserListView(
-                        users: _filterUsers(_verifiedUsers),
-                        isVerified: true,
-                        onUserTap: _showUserDetails,
-                      ),
-                      // Unverified users tab
-                      UserListView(
-                        users: _filterUsers(_unverifiedUsers),
-                        isVerified: false,
-                        onUserTap: _showUserDetails,
-                      ),
-                    ],
+                  ],
+                ),
+              )
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  // Verified users tab
+                  UserListView(
+                    users: _filterUsers(_verifiedUsers),
+                    isVerified: true,
+                    onUserTap: _showUserDetails,
                   ),
-               ),
-            );
-          }
-    Widget _buildDrawer(BuildContext context) {
-  return Drawer(
-    backgroundColor: backgroundColor,
-    child: Column(
-      children: [
-        // Header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                primaryBlue,
-                Color.fromRGBO(81, 115, 153, 0.8),
+                  // Unverified users tab
+                  UserListView(
+                    users: _filterUsers(_unverifiedUsers),
+                    isVerified: false,
+                    onUserTap: _showUserDetails,
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: backgroundColor,
+      child: Column(
+        children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  primaryBlue,
+                  Color.fromRGBO(81, 115, 153, 0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Developer',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Management Panel',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.admin_panel_settings_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Developer',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Management Panel',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
 
-        // Menu Items
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              _buildDrawerItem(
-                context,
-                icon: Icons.local_hospital_rounded,
-                title: 'Veterinary Clinics',
-                subtitle: 'Manage vet clinics',
-                onTap: () {
-                  Navigator.pop(context);
-                  // Navigate to SuperAdminVetClinicDashboard
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SuperAdminVetClinicDashboard(),
-                    ),
-                  );
-                },
-              ),
-              _buildDrawerItem(
-                context,
-                icon: Icons.feedback_rounded,
-                title: 'System Reports',
-                subtitle: 'User feedback & reports',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminFeedbackManagement(),
-                    ),
-                  );
-                },
-              ),
-              _buildDrawerItem(
-                context,
-                icon: Icons.delete_forever_rounded,
-                title: 'Vet Reports',
-                subtitle: 'Deletion requests',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const VeterinaryReport(),
-                    ),
-                  );
-                },
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Divider(),
-              ),   const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Divider(),
-              ),
+          // Menu Items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
                 _buildDrawerItem(
-                context,
-                icon: Icons.archive_rounded,
-                title: 'Archived Users',
-                subtitle: 'View & manage archives',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ArchivedUsersDashboard(),
-                    ),
-                  );
-                },
-              ),            
-            ],
-          ),
-        ),
-
-        // Logout Button
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: _isLoggingOut
-                ? Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(81, 115, 153, 0.7),
-                          Color.fromRGBO(81, 115, 153, 0.5),
-                        ],
+                  context,
+                  icon: Icons.local_hospital_rounded,
+                  title: 'Veterinary Clinics',
+                  subtitle: 'Manage vet clinics',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Navigate to SuperAdminVetClinicDashboard
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const SuperAdminVetClinicDashboard(),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Logging Out...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : InkWell(
-                    onTap: () async {
-                      setState(() => _isLoggingOut = true);
-                      try {
-                        await LogoutHelper.logout();
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() => _isLoggingOut = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Logout failed: ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.feedback_rounded,
+                  title: 'System Reports',
+                  subtitle: 'User feedback & reports',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminFeedbackManagement(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.delete_forever_rounded,
+                  title: 'Vet Reports',
+                  subtitle: 'Deletion requests',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VeterinaryReport(),
+                      ),
+                    );
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Divider(),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Divider(),
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.archive_rounded,
+                  title: 'Archived Users',
+                  subtitle: 'View & manage archives',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ArchivedUsersDashboard(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Logout Button
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: _isLoggingOut
+                  ? Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color.fromRGBO(220, 53, 69, 1),
-                            Color.fromRGBO(200, 35, 51, 1),
+                            Color.fromRGBO(81, 115, 153, 0.7),
+                            Color.fromRGBO(81, 115, 153, 0.5),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.logout_rounded,
-                            color: Colors.white,
-                            size: 20,
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
                           ),
                           SizedBox(width: 12),
                           Text(
-                            'Log Out',
+                            'Logging Out...',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-        Widget _buildDrawerItem(
-          BuildContext context, {
-          required IconData icon,
-          required String title,
-          required String subtitle,
-          required VoidCallback onTap,
-        }) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: primaryBlue.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            primaryBlue.withOpacity(0.2),
-                            primaryBlue.withOpacity(0.1),
+                    )
+                  : InkWell(
+                      onTap: () async {
+                        setState(() => _isLoggingOut = true);
+                        try {
+                          await LogoutHelper.logout();
+                        } catch (e) {
+                          if (mounted) {
+                            setState(() => _isLoggingOut = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Logout failed: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromRGBO(220, 53, 69, 1),
+                              Color.fromRGBO(200, 35, 51, 1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(10),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.logout_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Log Out',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Icon(
-                        icon,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: primaryBlue.withOpacity(0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      primaryBlue.withOpacity(0.2),
+                      primaryBlue.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: primaryBlue,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color: primaryBlue,
-                        size: 24,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: primaryBlue,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
-                      color: primaryBlue.withOpacity(0.5),
                     ),
                   ],
                 ),
               ),
-            ),
-          );
-        }
-
-
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: primaryBlue.withOpacity(0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// ============================================
@@ -834,7 +1114,6 @@ class UserCard extends StatefulWidget {
   State<UserCard> createState() => _UserCardState();
 }
 
-
 class _UserCardState extends State<UserCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -861,7 +1140,7 @@ class _UserCardState extends State<UserCard>
     );
   }
 
-    Widget _buildPlaceholderAvatar() {
+  Widget _buildPlaceholderAvatar() {
     return Container(
       width: 60,
       height: 60,
@@ -873,9 +1152,7 @@ class _UserCardState extends State<UserCard>
       ),
       child: Center(
         child: Text(
-          widget.user.name.isNotEmpty
-              ? widget.user.name[0].toUpperCase()
-              : '?',
+          widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 24,
@@ -958,53 +1235,58 @@ class _UserCardState extends State<UserCard>
                 child: Row(
                   children: [
                     // Avatar with Profile Picture
-          Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _isHovered ? vetGreen : accentTeal,
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryBlue.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                   child: widget.user.hasProfilePicture
-                  ? Image.network(
-                      '${getPetImageUrl(widget.user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
+                    Container(
                       width: 60,
                       height: 60,
-                      fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildPlaceholderAvatar();
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: Colors.grey[200],
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : _buildPlaceholderAvatar(),
-                  ),
-                ),
-                                        const SizedBox(width: 16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _isHovered ? vetGreen : accentTeal,
+                          width: 3,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryBlue.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: widget.user.hasProfilePicture
+                            ? Image.network(
+                                '${getPetImageUrl(widget.user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildPlaceholderAvatar();
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : _buildPlaceholderAvatar(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
                     // User info
                     Expanded(
                       child: Column(
@@ -1120,7 +1402,6 @@ class _UserCardState extends State<UserCard>
   }
 }
 
-
 /// ============================================
 /// USER DETAILS DIALOG
 /// ============================================
@@ -1163,7 +1444,7 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     }
   }
 
- Future<void> _handleArchive() async {
+  Future<void> _handleArchive() async {
     setState(() => _isDeleting = true);
 
     try {
@@ -1209,30 +1490,29 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
       setState(() => _isDeleting = false);
     }
   }
+
   Widget _buildDialogPlaceholderAvatar() {
-  return Container(
-    width: 100,
-    height: 100,
-    decoration: const BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: LinearGradient(
-        colors: [primaryBlue, accentTeal],
-      ),
-    ),
-    child: Center(
-      child: Text(
-        widget.user.name.isNotEmpty
-            ? widget.user.name[0].toUpperCase()
-            : '?',
-        style: const TextStyle(
-          fontSize: 42,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [primaryBlue, accentTeal],
         ),
       ),
-    ),
-  );
-}
+      child: Center(
+        child: Text(
+          widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
+          style: const TextStyle(
+            fontSize: 42,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1296,51 +1576,56 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
               ),
               child: Column(
                 children: [
-                 // Avatar with Profile Picture
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
+                  // Avatar with Profile Picture
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: ClipOval(
+                    child: ClipOval(
                       child: widget.user.hasProfilePicture
-                      ? Image.network(
-                          '${getPetImageUrl(widget.user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildDialogPlaceholderAvatar();
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  value: loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              ),
-                            );
-                          },
-                        )
-                      : _buildDialogPlaceholderAvatar(),
-                ),
-              ),
+                          ? Image.network(
+                              '${getPetImageUrl(widget.user.profilePictureId)}&cache=${DateTime.now().millisecondsSinceEpoch}',
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildDialogPlaceholderAvatar();
+                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : _buildDialogPlaceholderAvatar(),
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
                   // Name
@@ -1543,9 +1828,7 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
                   ],
                 ),
                 child: Icon(
-                  widget.user.idVerified
-                      ? Icons.verified_user
-                      : Icons.pending,
+                  widget.user.idVerified ? Icons.verified_user : Icons.pending,
                   color: Colors.white,
                   size: 28,
                 ),
@@ -1763,7 +2046,7 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     );
   }
 
-   Widget _buildActionButtons(bool isWide) {
+  Widget _buildActionButtons(bool isWide) {
     if (_isDeleting) {
       return const Center(
         child: CircularProgressIndicator(color: primaryBlue),

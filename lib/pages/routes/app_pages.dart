@@ -31,6 +31,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -101,5 +102,11 @@ class AppPages {
       name: '/super-admin/users',
       page: () => const SuperAdminUserManagementScreen(),
     ),
+    
+    GetPage(
+      name: '/super-admin/feedback',
+      page: () => const AdminFeedbackManagement(),
+    ),
+
   ];
 }

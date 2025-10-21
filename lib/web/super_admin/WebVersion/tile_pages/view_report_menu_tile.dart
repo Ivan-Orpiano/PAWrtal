@@ -1,4 +1,4 @@
-import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:flutter/material.dart';
 
 class ViewReportTile extends StatelessWidget {
@@ -33,7 +33,7 @@ class ViewReportTile extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const VeterinaryReport(),
+          builder: (context) => const AdminFeedbackManagement(),
         ),
       ),
       child: Padding(
