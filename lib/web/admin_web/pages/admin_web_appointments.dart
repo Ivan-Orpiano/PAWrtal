@@ -306,7 +306,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
               )),
           const SizedBox(height: 16),
           SizedBox(
-            height: 135,
+            height: 80,
             child: Obx(() {
               final stats = controller.appointmentStats;
               return ScrollConfiguration(
@@ -354,7 +354,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       String title, int value, IconData icon, Color color) {
     return Container(
       width: 110,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -370,36 +370,39 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, color: color, size: 16),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value.toString(),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, color: color, size: 16),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 8),
+              Text(
+                value.toString(),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -410,7 +413,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     final controller = Get.find<WebAppointmentController>();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -457,8 +460,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
               filled: true,
               fillColor: Colors.grey[100],
               contentPadding:
-                  const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               hintStyle: const TextStyle(fontSize: 12),
+              isDense: true,
             ),
             style: const TextStyle(fontSize: 12),
             onChanged: (value) => controller.setSearchQuery(value),
@@ -468,7 +472,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         InkWell(
           onTap: () => _showDatePicker(controller),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey[300]!),
               borderRadius: BorderRadius.circular(8),
@@ -480,7 +484,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         InkWell(
           onTap: () => controller.refreshAppointments(),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey[300]!),
               borderRadius: BorderRadius.circular(8),
@@ -501,10 +505,10 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
             controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Search by pet name, owner, or service...',
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.clear, size: 20),
                       onPressed: () {
                         _searchController.clear();
                         controller.setSearchQuery('');
@@ -517,7 +521,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
               ),
               filled: true,
               fillColor: Colors.grey[100],
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              isDense: true,
             ),
             onChanged: (value) => controller.setSearchQuery(value),
           ),
@@ -534,7 +540,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                 style: const TextStyle(fontSize: 10),
               )),
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 32),
           ),
         ),
         const SizedBox(width: 10),
@@ -543,7 +550,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           icon: const Icon(Icons.refresh, size: 14),
           label: const Text('Refresh', style: TextStyle(fontSize: 10)),
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 32),
           ),
         ),
         const SizedBox(width: 10),

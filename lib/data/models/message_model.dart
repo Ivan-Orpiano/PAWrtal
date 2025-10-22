@@ -116,7 +116,45 @@ class Message {
   /// Simple time format: "02:30 PM"
   String get timeFormatted {
     try {
-      return DateFormat('hh:mm a').format(messageTimestamp);
+      final now = DateTime.now();
+      final msgTime = messageTimestamp;
+
+      // Check if message is from today
+      final isToday = now.year == msgTime.year &&
+          now.month == msgTime.month &&
+          now.day == msgTime.day;
+
+      if (isToday) {
+        // If today, show only time (e.g., "02:30 PM")
+        return DateFormat('hh:mm a').format(msgTime);
+      }
+
+      // Check if message is from yesterday
+      final yesterday = now.subtract(const Duration(days: 1));
+      final isYesterday = yesterday.year == msgTime.year &&
+          yesterday.month == msgTime.month &&
+          yesterday.day == msgTime.day;
+
+      if (isYesterday) {
+        // If yesterday, show "Yesterday" and time (e.g., "Yesterday, 02:30 PM")
+        return 'Yesterday, ${DateFormat('hh:mm a').format(msgTime)}';
+      }
+
+      // Check if message is from this week (last 7 days)
+      final difference = now.difference(msgTime);
+      if (difference.inDays < 7) {
+        // Show day name and time (e.g., "Monday, 02:30 PM")
+        return DateFormat('EEEE, hh:mm a').format(msgTime);
+      }
+
+      // Check if message is from this year
+      if (msgTime.year == now.year) {
+        // Show month, day and time (e.g., "Jan 15, 02:30 PM")
+        return DateFormat('MMM dd, hh:mm a').format(msgTime);
+      }
+
+      // If older than this year, show full date and time (e.g., "Jan 15, 2024, 02:30 PM")
+      return DateFormat('MMM dd, yyyy, hh:mm a').format(msgTime);
     } catch (e) {
       print('Error formatting time: $e');
       return 'Unknown';
@@ -125,20 +163,53 @@ class Message {
 
   /// Detailed time with date: "Jan 15, 02:30 PM"
   String get detailedTimeFormatted {
+    // Use the same logic as timeFormatted for consistency
+    return timeFormatted;
+  }
+
+  String get compactTimeFormatted {
     try {
       final now = DateTime.now();
       final msgTime = messageTimestamp;
+
+      // Check if message is from today
       final isToday = now.year == msgTime.year &&
           now.month == msgTime.month &&
           now.day == msgTime.day;
 
       if (isToday) {
-        return DateFormat('hh:mm a').format(msgTime);
-      } else {
-        return DateFormat('MMM dd, hh:mm a').format(msgTime);
+        // If today, show only time (e.g., "2:30 PM")
+        return DateFormat('h:mm a').format(msgTime);
       }
+
+      // Check if message is from yesterday
+      final yesterday = now.subtract(const Duration(days: 1));
+      final isYesterday = yesterday.year == msgTime.year &&
+          yesterday.month == msgTime.month &&
+          yesterday.day == msgTime.day;
+
+      if (isYesterday) {
+        // If yesterday, show "Yesterday"
+        return 'Yesterday';
+      }
+
+      // Check if message is from this week (last 7 days)
+      final difference = now.difference(msgTime);
+      if (difference.inDays < 7) {
+        // Show day name (e.g., "Monday")
+        return DateFormat('EEEE').format(msgTime);
+      }
+
+      // Check if message is from this year
+      if (msgTime.year == now.year) {
+        // Show month and day (e.g., "Jan 15")
+        return DateFormat('MMM dd').format(msgTime);
+      }
+
+      // If older than this year, show date with year (e.g., "Jan 15, 2024")
+      return DateFormat('MMM dd, yyyy').format(msgTime);
     } catch (e) {
-      print('Error formatting detailed time: $e');
+      print('Error formatting compact time: $e');
       return 'Unknown';
     }
   }
@@ -219,6 +290,13 @@ class Message {
         msgTime.day == yesterday.day;
   }
 
+  bool get isSentThisWeek {
+    final now = DateTime.now();
+    final msgTime = messageTimestamp;
+    final difference = now.difference(msgTime);
+    return difference.inDays < 7;
+  }
+
   /// Check if message is recent (within last hour)
   bool get isRecent {
     return DateTime.now().difference(messageTimestamp).inMinutes < 60;
@@ -227,6 +305,79 @@ class Message {
   /// Check if message is old (older than 7 days)
   bool get isOld {
     return DateTime.now().difference(messageTimestamp).inDays >= 7;
+  }
+
+  String get dateSeparator {
+    try {
+      final now = DateTime.now();
+      final msgTime = messageTimestamp;
+
+      if (isSentToday) {
+        return 'Today';
+      }
+
+      if (isSentYesterday) {
+        return 'Yesterday';
+      }
+
+      if (isSentThisWeek) {
+        return DateFormat('EEEE').format(msgTime); // "Monday", "Tuesday", etc.
+      }
+
+      if (msgTime.year == now.year) {
+        return DateFormat('MMMM dd').format(msgTime); // "January 15"
+      }
+
+      return DateFormat('MMMM dd, yyyy').format(msgTime); // "January 15, 2024"
+    } catch (e) {
+      print('Error formatting date separator: $e');
+      return '';
+    }
+  }
+
+  String get conversationListTime {
+    try {
+      final now = DateTime.now();
+      final msgTime = messageTimestamp;
+
+      // Check if message is from today
+      final isToday = now.year == msgTime.year &&
+          now.month == msgTime.month &&
+          now.day == msgTime.day;
+
+      if (isToday) {
+        // If today, show only time (e.g., "2:30 PM")
+        return DateFormat('h:mm a').format(msgTime);
+      }
+
+      // Check if message is from yesterday
+      final yesterday = now.subtract(const Duration(days: 1));
+      final isYesterday = yesterday.year == msgTime.year &&
+          yesterday.month == msgTime.month &&
+          yesterday.day == msgTime.day;
+
+      if (isYesterday) {
+        return 'Yesterday';
+      }
+
+      // Check if message is from this week (last 7 days)
+      final difference = now.difference(msgTime);
+      if (difference.inDays < 7) {
+        // Show abbreviated day name (e.g., "Mon", "Tue")
+        final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        return days[msgTime.weekday - 1];
+      }
+
+      // Show date (e.g., "1/15" for this year, "1/15/24" for other years)
+      if (msgTime.year == now.year) {
+        return DateFormat('M/d').format(msgTime);
+      }
+
+      return DateFormat('M/d/yy').format(msgTime);
+    } catch (e) {
+      print('Error formatting conversation list time: $e');
+      return '';
+    }
   }
 
   // ============================================
