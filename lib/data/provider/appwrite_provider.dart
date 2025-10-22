@@ -4,6 +4,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
@@ -305,6 +306,15 @@ class AppWriteProvider {
         // Don't fail login if FCM registration fails
       }
 
+      // Initialize in-app notification service
+      try {
+        final notificationService = Get.find<InAppNotificationService>();
+        await notificationService.initialize();
+        print('>>> Notification service initialized after login');
+      } catch (e) {
+        print('>>> Warning: Could not initialize notifications: $e');
+      }
+
       print('>>> ============================================');
       print('>>> LOGIN COMPLETE');
       print('>>> ============================================');
@@ -514,12 +524,34 @@ class AppWriteProvider {
   }
 
   Future<dynamic> logout(String sessionId) async {
+    // Clear notification service before logout
+    try {
+      if (Get.isRegistered<InAppNotificationService>()) {
+        final notificationService = Get.find<InAppNotificationService>();
+        notificationService.clearOnLogout();
+        print('>>> Notification service cleared on logout');
+      }
+    } catch (e) {
+      print('>>> Warning: Could not clear notifications: $e');
+    }
+
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;
   }
 
   Future<bool> webLogout() async {
     try {
+      // Clear notification service before logout
+      try {
+        if (Get.isRegistered<InAppNotificationService>()) {
+          final notificationService = Get.find<InAppNotificationService>();
+          notificationService.clearOnLogout();
+          print('>>> Notification service cleared on logout');
+        }
+      } catch (e) {
+        print('>>> Warning: Could not clear notifications: $e');
+      }
+
       await account?.deleteSession(sessionId: 'current');
       return true;
     } catch (e) {

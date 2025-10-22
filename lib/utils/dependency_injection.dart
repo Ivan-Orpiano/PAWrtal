@@ -45,7 +45,7 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-  print('>>> ✓ In-App Notification Service initialized');
+  print('>>> ✓ In-App Notification Service registered (will initialize after login)');
 
   Get.put(DashboardController());
   Get.put(MessagingController());

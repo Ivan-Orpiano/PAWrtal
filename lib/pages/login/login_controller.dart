@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
@@ -324,6 +325,15 @@ class LoginController extends GetxController {
       } catch (e) {
         print('>>> ⚠ Warning: FCM registration failed (non-critical): $e');
         // Don't fail login if FCM registration fails
+      }
+
+      // Initialize in-app notification service
+      try {
+        final notificationService = Get.find<InAppNotificationService>();
+        await notificationService.initialize();
+        print('>>> Notification service initialized after login');
+      } catch (e) {
+        print('>>> Warning: Could not initialize notifications: $e');
       }
 
       print('>>> ==========================================');
