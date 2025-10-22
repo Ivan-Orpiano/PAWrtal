@@ -33,6 +33,23 @@ final Rxn<FeedbackCategory> categoryFilter = Rxn<FeedbackCategory>();
 final Rxn<Priority> priorityFilter = Rxn<Priority>();
 final RxString searchQuery = ''.obs;
 
+// Pinned feedback IDs
+final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
+
+// Toggle pin status
+void togglePin(String feedbackId) {
+  if (pinnedFeedbackIds.contains(feedbackId)) {
+    pinnedFeedbackIds.remove(feedbackId);
+  } else {
+    pinnedFeedbackIds.add(feedbackId);
+  }
+}
+
+// Check if feedback is pinned
+bool isPinned(String feedbackId) {
+  return pinnedFeedbackIds.contains(feedbackId);
+}
+
   // Statistics
   RxMap<String, int> feedbackStats = <String, int>{}.obs;
 
@@ -408,80 +425,76 @@ final RxString searchQuery = ''.obs;
 
   /// Filter feedback based on current filters
   void filterFeedback() {
-    var filtered = allFeedback.toList();
+  var filtered = allFeedback.toList();
 
-    // Apply search query
-    if (searchQuery.value.isNotEmpty) {
-      filtered = filtered.where((f) {
-        final query = searchQuery.value.toLowerCase();
+  // Apply search query
+  if (searchQuery.value.isNotEmpty) {
+    filtered = filtered.where((f) {
+      final query = searchQuery.value.toLowerCase();
 
-        final subjectMatch = f.subject.toLowerCase().contains(query);
-        final categoryMatch =
-            f.category.displayName.toLowerCase().contains(query);
-        final typeMatch =
-            f.feedbackType.displayName.toLowerCase().contains(query);
-        final nameMatch = f.userName.toLowerCase().contains(query);
-        final emailMatch = f.userEmail.toLowerCase().contains(query);
-        final descriptionMatch = f.description.toLowerCase().contains(query);
+      final subjectMatch = f.subject.toLowerCase().contains(query);
+      final categoryMatch = f.category.displayName.toLowerCase().contains(query);
+      final typeMatch = f.feedbackType.displayName.toLowerCase().contains(query);
+      final nameMatch = f.userName.toLowerCase().contains(query);
+      final emailMatch = f.userEmail.toLowerCase().contains(query);
+      final descriptionMatch = f.description.toLowerCase().contains(query);
 
-        return subjectMatch ||
-            categoryMatch ||
-            typeMatch ||
-            nameMatch ||
-            emailMatch ||
-            descriptionMatch;
-      }).toList();
-    }
-
-    // Apply status filter - Only filter if a specific status is selected (not null)
-    if (statusFilter.value != null) {
-      filtered = filtered.where((f) => f.status == statusFilter.value).toList();
-    }
-    // If statusFilter.value is null, show all statuses (no filtering)
-
-    // Apply priority filter - Only filter if a specific priority is selected (not null)
-    if (priorityFilter.value != null) {
-      filtered =
-          filtered.where((f) => f.priority == priorityFilter.value).toList();
-    }
-    // If priorityFilter.value is null, show all priorities (no filtering)
-
-    // Apply type filter - Only filter if a specific type is selected (not null)
-    if (typeFilter.value != null) {
-      filtered =
-          filtered.where((f) => f.feedbackType == typeFilter.value).toList();
-    }
-    // If typeFilter.value is null, show all types (no filtering)
-
-    // Apply category filter - Only filter if a specific category is selected (not null)
-    if (categoryFilter.value != null) {
-      filtered =
-          filtered.where((f) => f.category == categoryFilter.value).toList();
-    }
-    // If categoryFilter.value is null, show all categories (no filtering)
-
-    // Sort by priority and date
-    filtered.sort((a, b) {
-      final priorityOrder = {
-        Priority.critical: 0,
-        Priority.high: 1,
-        Priority.medium: 2,
-        Priority.low: 3,
-      };
-
-      final aPriority = priorityOrder[a.priority] ?? 999;
-      final bPriority = priorityOrder[b.priority] ?? 999;
-
-      if (aPriority != bPriority) {
-        return aPriority.compareTo(bPriority);
-      }
-
-      return b.submittedAt.compareTo(a.submittedAt);
-    });
-
-    filteredFeedback.value = filtered;
+      return subjectMatch ||
+          categoryMatch ||
+          typeMatch ||
+          nameMatch ||
+          emailMatch ||
+          descriptionMatch;
+    }).toList();
   }
 
+  // Apply filters
+  if (statusFilter.value != null) {
+    filtered = filtered.where((f) => f.status == statusFilter.value).toList();
+  }
+
+  if (priorityFilter.value != null) {
+    filtered = filtered.where((f) => f.priority == priorityFilter.value).toList();
+  }
+
+  if (typeFilter.value != null) {
+    filtered = filtered.where((f) => f.feedbackType == typeFilter.value).toList();
+  }
+
+  if (categoryFilter.value != null) {
+    filtered = filtered.where((f) => f.category == categoryFilter.value).toList();
+  }
+
+  // Sort: Pinned items first, then by priority and date
+  filtered.sort((a, b) {
+    // Primary sort: Pinned items first
+    final aPinned = pinnedFeedbackIds.contains(a.documentId);
+    final bPinned = pinnedFeedbackIds.contains(b.documentId);
+    
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+
+    // Secondary sort: Priority
+    final priorityOrder = {
+      Priority.critical: 0,
+      Priority.high: 1,
+      Priority.medium: 2,
+      Priority.low: 3,
+    };
+
+    final aPriority = priorityOrder[a.priority] ?? 999;
+    final bPriority = priorityOrder[b.priority] ?? 999;
+
+    if (aPriority != bPriority) {
+      return aPriority.compareTo(bPriority);
+    }
+
+    // Tertiary sort: Date
+    return b.submittedAt.compareTo(a.submittedAt);
+  });
+
+  filteredFeedback.value = filtered;
+}
   /// Update feedback statistics
   void updateStatistics() {
     feedbackStats.value = {

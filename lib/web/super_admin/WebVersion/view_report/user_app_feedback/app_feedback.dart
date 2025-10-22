@@ -374,12 +374,22 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     });
   }
 
-  Widget _buildFeedbackCard(FeedbackAndReport feedback) {
+ Widget _buildFeedbackCard(FeedbackAndReport feedback) {
+  return Obx(() {
+    final isPinned = controller.isPinned(feedback.documentId!);
+    
     return Card(
-      color: const Color.fromRGBO(242, 250, 252, 1),
+      color: isPinned 
+        ? const Color.fromRGBO(255, 248, 225, 1) // Light yellow for pinned
+        : const Color.fromRGBO(242, 250, 252, 1),
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: isPinned ? 8 : 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isPinned 
+          ? const BorderSide(color: Colors.amber, width: 2)
+          : BorderSide.none,
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => _showFeedbackDetails(feedback),
@@ -388,18 +398,64 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Badges Row
+              // Pin button and Badges Row
               Row(
                 children: [
-                  _buildPriorityBadge(feedback.priority),
+                  // Pin Button
+                  InkWell(
+                    onTap: () => controller.togglePin(feedback.documentId!),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isPinned 
+                          ? Colors.amber.withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        size: 18,
+                        color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 8),
+                  
+                  // Priority Badge - Clickable
+                  _buildClickablePriorityBadge(feedback),
+                  const SizedBox(width: 8),
+                  
                   _buildTypeBadge(feedback.feedbackType),
                   const SizedBox(width: 8),
+                  
                   _buildCategoryBadge(feedback.category),
                   const Spacer(),
-                  _buildStatusBadge(feedback.status),
+                  
+                  // Status Badge - Clickable
+                  _buildClickableStatusBadge(feedback),
                 ],
               ),
+              
+              // Pin indicator text
+              if (isPinned) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.push_pin, size: 12, color: Colors.amber[800]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Pinned',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              
               const SizedBox(height: 12),
 
               // Subject
@@ -461,17 +517,13 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   children: [
                     if (feedback.status == FeedbackStatus.closed)
                       ElevatedButton.icon(
-                        onPressed: () =>
-                            _archiveFeedback(feedback), // Now with confirmation
-                        icon: const Icon(Icons.archive,
-                            size: 16, color: Colors.white),
+                        onPressed: () => _archiveFeedback(feedback),
+                        icon: const Icon(Icons.archive, size: 16, color: Colors.white),
                         label: const Text('Archive'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[
-                              600], // Changed color for better visibility
+                          backgroundColor: Colors.orange[600],
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -485,13 +537,66 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         ),
       ),
     );
-  }
+  });
+}
+ Widget _buildClickablePriorityBadge(FeedbackAndReport feedback) {
+  Color color = _getPriorityColor(feedback.priority);
+  IconData icon = _getPriorityIcon(feedback.priority);
 
-  Widget _buildPriorityBadge(Priority priority) {
-    Color color = _getPriorityColor(priority);
-    IconData icon = _getPriorityIcon(priority);
+  return PopupMenuButton<Priority>(
+    color: const Color.fromRGBO(248, 253, 255, 1),
+    tooltip: 'Change Priority',
+    offset: const Offset(0, 40),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: Colors.grey[300]!),
+    ),
+    onSelected: (Priority newPriority) {
+      if (newPriority != feedback.priority) {
+        controller.updatePriority(feedback.documentId!, newPriority);
+      }
+    },
+    itemBuilder: (BuildContext context) {
+      return Priority.values.map((Priority priority) {
+        final isSelected = priority == feedback.priority;
+        final priorityColor = _getPriorityColor(priority);
+        final priorityIcon = _getPriorityIcon(priority);
 
-    return Container(
+        return PopupMenuItem<Priority>(
+          value: priority,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: priorityColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  priorityIcon,
+                  size: 16,
+                  color: priorityColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  priority.displayName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? priorityColor : Colors.grey[800],
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check, size: 18, color: priorityColor),
+            ],
+          ),
+        );
+      }).toList();
+    },
+    child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
@@ -504,17 +609,101 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
-            priority.displayName,
+            feedback.priority.displayName,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: color,
             ),
           ),
+          const SizedBox(width: 4),
+          Icon(Icons.arrow_drop_down, size: 16, color: color),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+Widget _buildClickableStatusBadge(FeedbackAndReport feedback) {
+  Color color = _getStatusColor(feedback.status);
+
+  return PopupMenuButton<FeedbackStatus>(
+    color: const Color.fromRGBO(248, 253, 255, 1),
+    tooltip: 'Change Status',
+    offset: const Offset(0, 40),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: Colors.grey[300]!),
+    ),
+    onSelected: (FeedbackStatus newStatus) {
+      if (newStatus != feedback.status) {
+        controller.updateStatus(feedback.documentId!, newStatus);
+      }
+    },
+    itemBuilder: (BuildContext context) {
+      return FeedbackStatus.values.map((FeedbackStatus status) {
+        final isSelected = status == feedback.status;
+        final statusColor = _getStatusColor(status);
+        final statusIcon = _getStatusIcon(status);
+
+        return PopupMenuItem<FeedbackStatus>(
+          value: status,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  statusIcon,
+                  size: 16,
+                  color: statusColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  status.displayName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? statusColor : Colors.grey[800],
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check, size: 18, color: statusColor),
+            ],
+          ),
+        );
+      }).toList();
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            feedback.status.displayName,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.arrow_drop_down, size: 16, color: color),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildTypeBadge(FeedbackType type) {
     Color color = _getTypeColor(type);
@@ -631,6 +820,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         return Colors.blueGrey;
     }
   }
+  
 
 String _formatDateTime(DateTime dateTime) {
   final now = DateTime.now();
@@ -1111,6 +1301,9 @@ String _formatDateTime(DateTime dateTime) {
       ),
     );
   }
+}
+
+_getStatusIcon(FeedbackStatus status) {
 }
 
 // Feedback Details Dialog
