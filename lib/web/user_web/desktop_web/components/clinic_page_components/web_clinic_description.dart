@@ -1,6 +1,9 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -41,7 +44,7 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
   }
 
   String get _truncatedDescription {
-    const int maxLength = 300; // Show first 300 characters
+    const int maxLength = 300;
     final description = widget.clinic.description;
     if (description.length <= maxLength) {
       return description;
@@ -138,6 +141,108 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
                 ],
               ],
             ),
+          ),
+          // Message button added here
+          OutlinedButton.icon(
+            onPressed: () => _startConversationWithClinic(context),
+            icon: const Icon(Icons.message_rounded, size: 18),
+            label: const Text('Message Clinic'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: statusColor,
+              side: BorderSide(color: statusColor),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _startConversationWithClinic(BuildContext context) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF5173B8)),
+        ),
+      );
+
+      final MessagingController messagingController = Get.find<MessagingController>();
+      final UserSessionService userSession = Get.find<UserSessionService>();
+
+      if (userSession.userId.isEmpty) {
+        Navigator.pop(context);
+        _showLoginRequiredDialog(context);
+        return;
+      }
+
+      final conversation = await messagingController.startConversationWithClinic(
+          widget.clinic.documentId!);
+
+      Navigator.pop(context);
+
+      if (conversation != null && context.mounted) {
+        await messagingController.openConversation(
+          conversation,
+          widget.clinic.documentId!,
+          'clinic',
+        );
+        
+        final homeController = Get.isRegistered<WebUserHomeController>()
+            ? Get.find<WebUserHomeController>()
+            : Get.put(WebUserHomeController());
+        
+        homeController.onItemSelected(2);
+        Navigator.pop(context);
+      } else {
+        if (context.mounted) {
+          _showErrorDialog(context, 'Failed to start conversation. Please try again.');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        _showErrorDialog(context, 'Error starting conversation: $e');
+      }
+    }
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Login Required'),
+        content: const Text('Please log in to start a conversation with this clinic.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5173B8),
+            ),
+            child: const Text('Login', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -337,7 +442,7 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
           ),
         ),
         
-        // Clinic status
+        // Clinic status with message button
         _buildClinicStatus(),
         
         // Contact Information Section
