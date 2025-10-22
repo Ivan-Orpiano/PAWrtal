@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/web_error_handler.dart';
 import 'package:capstone_app/utils/web_loading_helper.dart';
@@ -95,6 +96,14 @@ class WebLoginController extends GetxController {
         "email": emailOrUsername,
         "password": passwordController.text,
       });
+
+      try {
+        final notificationService = Get.find<InAppNotificationService>();
+        await notificationService.initialize();
+        print('>>> Notification service initialized after login');
+      } catch (e) {
+        print('>>> Warning: Could not initialize notifications: $e');
+      }
 
       print('>>> Login response received');
       print('>>> Response keys: ${value.keys}');
