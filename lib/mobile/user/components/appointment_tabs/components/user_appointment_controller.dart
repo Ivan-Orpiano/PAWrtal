@@ -3,6 +3,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
@@ -21,7 +22,7 @@ class EnhancedUserAppointmentController extends GetxController {
   var appointments = <Appointment>[].obs;
   var clinics = <String, Clinic>{}.obs;
   var pets = <String, Pet>{}.obs;
-  
+
   var appointmentReviews = <String, bool>{}.obs;
 
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
@@ -61,9 +62,8 @@ class EnhancedUserAppointmentController extends GetxController {
       final userId = session.userId;
       if (userId.isEmpty) return;
 
-      _reviewSubscription = authRepository
-          .subscribeToClinicReviews('')
-          .listen((message) {
+      _reviewSubscription =
+          authRepository.subscribeToClinicReviews('').listen((message) {
         _handleReviewUpdate(message);
       });
     } catch (e) {
@@ -130,7 +130,8 @@ class EnhancedUserAppointmentController extends GetxController {
 
   Future<void> _checkAppointmentReview(String appointmentId) async {
     try {
-      final hasReview = await authRepository.hasUserReviewedAppointment(appointmentId);
+      final hasReview =
+          await authRepository.hasUserReviewedAppointment(appointmentId);
       appointmentReviews[appointmentId] = hasReview;
     } catch (e) {
       print('Error checking appointment review: $e');
@@ -149,7 +150,7 @@ class EnhancedUserAppointmentController extends GetxController {
 
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
-      
+
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
     } catch (e) {
@@ -248,7 +249,7 @@ class EnhancedUserAppointmentController extends GetxController {
   List<Appointment> get completed {
     return appointments.where((a) {
       if (a.status != 'completed') return false;
-      
+
       final hasReview = appointmentReviews[a.documentId] ?? false;
       return !hasReview;
     }).toList()
@@ -257,17 +258,17 @@ class EnhancedUserAppointmentController extends GetxController {
 
   List<Appointment> get history {
     return appointments.where((a) {
-      if (a.status == 'cancelled' || 
-          a.status == 'declined' || 
+      if (a.status == 'cancelled' ||
+          a.status == 'declined' ||
           a.status == 'no_show') {
         return true;
       }
-      
+
       if (a.status == 'completed') {
         final hasReview = appointmentReviews[a.documentId] ?? false;
         return hasReview;
       }
-      
+
       return false;
     }).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -291,7 +292,7 @@ class EnhancedUserAppointmentController extends GetxController {
   Future<void> cancelPendingAppointment(String appointmentId) async {
     try {
       isLoading.value = true;
-      
+
       await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
 
       // Remove from local list immediately for better UX
@@ -327,6 +328,11 @@ class EnhancedUserAppointmentController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Get appointment details before cancelling
+      final appointment = appointments.firstWhere(
+        (a) => a.documentId == appointmentId,
+      );
+
       // Update appointment with cancellation details
       await authRepository.updateFullAppointment(appointmentId, {
         'status': 'cancelled',
@@ -335,6 +341,30 @@ class EnhancedUserAppointmentController extends GetxController {
         'cancelledAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
       });
+
+      try {
+        final clinicDoc =
+            await authRepository.getClinicById(appointment.clinicId);
+        if (clinicDoc != null) {
+          final adminId = clinicDoc.data['adminId'] as String?;
+
+          if (adminId != null && adminId.isNotEmpty) {
+            final notification = AppNotification.appointmentCancelled(
+              adminId: adminId,
+              appointmentId: appointmentId,
+              clinicId: appointment.clinicId,
+              petName: getPetNameForAppointment(appointment),
+              ownerName: session.userName,
+              cancellationReason: cancellationReason,
+            );
+
+            await authRepository.createNotification(notification);
+            print('>>> Cancellation notification sent to admin');
+          }
+        }
+      } catch (e) {
+        print('>>> Error creating notification: $e');
+      }
 
       Get.snackbar(
         "Appointment Cancelled",
@@ -399,8 +429,8 @@ class EnhancedUserAppointmentController extends GetxController {
       case 'declined':
         return 'Not approved by clinic';
       case 'cancelled':
-        return appointment.cancelledBy == 'user' 
-            ? 'Cancelled by you' 
+        return appointment.cancelledBy == 'user'
+            ? 'Cancelled by you'
             : 'Cancelled by clinic';
       default:
         return appointment.status;
@@ -434,13 +464,13 @@ class EnhancedUserAppointmentController extends GetxController {
     if (appointment.status == 'pending') {
       return true;
     }
-    
+
     // Can cancel accepted appointments if at least 2 hours before appointment time
     if (appointment.status == 'accepted') {
       return appointment.dateTime
           .isAfter(DateTime.now().add(const Duration(hours: 2)));
     }
-    
+
     return false;
   }
 
@@ -475,11 +505,11 @@ class EnhancedUserAppointmentController extends GetxController {
       'history': history.length,
     };
   }
-  
+
   bool hasReview(String appointmentId) {
     return appointmentReviews[appointmentId] ?? false;
   }
-  
+
   Future<void> refreshAfterReview(String appointmentId) async {
     await _checkAppointmentReview(appointmentId);
     appointments.refresh();

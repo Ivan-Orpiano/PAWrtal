@@ -5,6 +5,7 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -348,6 +349,31 @@ class WebAppointmentController extends GetxController {
       );
 
       await authRepository.createAppointment(appointment);
+
+      try {
+        final clinicDoc =
+            await authRepository.getClinicById(clinic.documentId ?? '');
+        if (clinicDoc != null) {
+          final adminId = clinicDoc.data['adminId'] as String?;
+
+          if (adminId != null && adminId.isNotEmpty) {
+            final notification = AppNotification.appointmentBooked(
+              adminId: adminId,
+              appointmentId: '', // Will be filled by backend
+              clinicId: clinic.documentId ?? '',
+              petName: selectedPet.value?.name ?? 'Unknown Pet',
+              ownerName: session.userName.isEmpty ? 'A user' : session.userName,
+              service: selectedService.value!,
+              appointmentDateTime: appointmentDateTime,
+            );
+
+            await authRepository.createNotification(notification);
+            print('>>> Booking notification sent to admin');
+          }
+        }
+      } catch (e) {
+        print('>>> Error creating notification: $e');
+      }
 
       await _notifyAdminOfNewAppointment(appointment);
 

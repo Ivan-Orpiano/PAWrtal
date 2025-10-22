@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
@@ -323,7 +324,34 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       // Create appointment
       await Get.find<AuthRepository>().createAppointment(appointment);
 
-      // ============= NEW: Notify admin of new appointment =============
+      // NEW: Create notification for admin
+      try {
+        final clinicDoc = await Get.find<AuthRepository>()
+            .getClinicById(widget.clinic.documentId ?? '');
+
+        if (clinicDoc != null) {
+          final adminId = clinicDoc.data['adminId'] as String?;
+
+          if (adminId != null && adminId.isNotEmpty) {
+            final notification = AppNotification.appointmentBooked(
+              adminId: adminId,
+              appointmentId: '', // Will be filled by backend
+              clinicId: widget.clinic.documentId ?? '',
+              petName: selectedPet!,
+              ownerName: Get.find<UserSessionService>().userName,
+              service: selectedService!,
+              appointmentDateTime: appointment.dateTime,
+            );
+
+            await Get.find<AuthRepository>().createNotification(notification);
+            print('>>> Booking notification sent to admin');
+          }
+        }
+      } catch (e) {
+        print('>>> Error creating notification: $e');
+      }
+
+      // ============= Notify admin of new appointment =============
       await _notifyAdminOfNewAppointment(appointment);
       // ================================================================
 

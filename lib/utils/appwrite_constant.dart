@@ -24,6 +24,7 @@ class AppwriteConstants {
   static const String feedbackDeletionRequestCollectionID = 'feedbackDeletionRequest';
   static String pushNotificationProviderID = "68f47697001c82e7ce64";
   static String emailAutomationProviderID = "68f47f4b002a327bba16";
+  static String notificationsCollectionID = "68f859fe000532ab827a";
 
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID !=

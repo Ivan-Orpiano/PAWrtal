@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -576,6 +577,24 @@ class WebAppointmentController extends GetxController {
 
     await _updateAppointmentStatus(appointment, 'accepted');
 
+    try {
+      final notification = AppNotification.appointmentAccepted(
+        userId: appointment.userId,
+        appointmentId: appointment.documentId!,
+        clinicId: appointment.clinicId,
+        clinicName: clinicData.value?.clinicName ?? 'Clinic',
+        petName: getPetName(appointment.petId),
+        service: appointment.service,
+        appointmentDateTime: appointment.dateTime,
+      );
+
+      await authRepository.createNotification(notification);
+      print('>>> Acceptance notification sent to user');
+    } catch (e) {
+      print('>>> Error creating notification: $e');
+      // Don't fail the operation if notification fails
+    }
+
     await _sendAppointmentStatusNotification(appointment, 'accepted');
     Get.snackbar(
         "Success", "Appointment accepted! Time slot has been reserved.");
@@ -592,6 +611,22 @@ class WebAppointmentController extends GetxController {
       );
 
       await updateFullAppointment(updatedAppointment);
+
+      try {
+        final notification = AppNotification.appointmentDeclined(
+          userId: appointment.userId,
+          appointmentId: appointment.documentId!,
+          clinicId: appointment.clinicId,
+          clinicName: clinicData.value?.clinicName ?? 'Clinic',
+          petName: getPetName(appointment.petId),
+          declineReason: notes,
+        );
+
+        await authRepository.createNotification(notification);
+        print('>>> Decline notification sent to user');
+      } catch (e) {
+        print('>>> Error creating notification: $e');
+      }
 
       await _sendAppointmentStatusNotification(updatedAppointment, 'declined',
           declineReason: notes);
@@ -701,6 +736,21 @@ class WebAppointmentController extends GetxController {
           colorText: Colors.white,
         );
         return;
+      }
+
+      try {
+        final notification = AppNotification.appointmentCompleted(
+          userId: appointment.userId,
+          appointmentId: appointment.documentId!,
+          clinicId: appointment.clinicId,
+          clinicName: clinicData.value?.clinicName ?? 'Clinic',
+          petName: getPetName(appointment.petId),
+        );
+
+        await authRepository.createNotification(notification);
+        print('>>> Completion notification sent to user');
+      } catch (e) {
+        print('>>> Error creating notification: $e');
       }
 
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
