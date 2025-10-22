@@ -46,6 +46,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   String? _selectedUserId;
   String? _selectedUserName;
   bool _isLoading = true;
+  StreamSubscription<RealtimeMessage>? _userStatusSubscription;
 
   @override
   void initState() {
@@ -139,7 +140,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         print('>>> Step 5: Setting up real-time conversation stream...');
         _setupRealtimeConversationStream(_clinicId!);
 
-        // NEW: Check for pending conversation after initialization
         print('>>> Step 6: Checking for pending conversation to open...');
         await _checkForPendingConversation();
 
@@ -170,7 +170,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   }
 
   Future<void> _checkForPendingConversation() async {
-    // Check if there's a pending conversation to open
     if (Get.isRegistered<PendingConversationData>(
         tag: 'pending_conversation')) {
       final pendingData =
@@ -183,16 +182,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       print('>>> Conversation ID: ${pendingData.conversationId}');
       print('>>> ============================================');
 
-      // Wait for conversations to be loaded and UI to be built
       await Future.delayed(const Duration(milliseconds: 800));
 
       print(
           '>>> Current conversations loaded: ${_controller.conversations.length}');
 
-      // Find the conversation in the loaded list
       Conversation? conversation;
 
-      // First try to find by conversationId
       if (pendingData.conversationId != null) {
         try {
           conversation = _controller.conversations.firstWhere(
@@ -204,7 +200,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         }
       }
 
-      // If not found, try to find by userId
       if (conversation == null) {
         try {
           conversation = _controller.conversations.firstWhere(
@@ -220,10 +215,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         print(
             '>>> Opening conversation automatically for: ${pendingData.userName}');
 
-        // Get user data first
         final userData = await _getUserData(pendingData.userId);
 
-        // For mobile layout, navigate to conversation page
         final screenWidth = MediaQuery.of(context).size.width;
         if (screenWidth < 600) {
           print('>>> Opening in MOBILE layout');
@@ -233,7 +226,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             userData['name'] ?? pendingData.userName,
           );
         } else {
-          // For desktop layout, select the conversation
           print('>>> Opening in DESKTOP layout');
           _selectConversation(
             conversation,
@@ -250,7 +242,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         }
       }
 
-      // Clean up the pending data
       Get.delete<PendingConversationData>(tag: 'pending_conversation');
       print('>>> Pending conversation data cleaned up');
       print('>>> ============================================');
@@ -283,8 +274,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       print('>>> Error setting up real-time stream: $e');
     }
   }
-
-  StreamSubscription<RealtimeMessage>? _userStatusSubscription;
 
   Future<void> _setCurrentUserOnline() async {
     try {
@@ -1014,7 +1003,53 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         itemBuilder: (context, index) {
           final reversedIndex = _controller.currentMessages.length - 1 - index;
           final message = _controller.currentMessages[reversedIndex];
-          return _buildMessageBubble(message);
+
+          // Check if we need to show a date separator
+          bool showDateSeparator = false;
+          if (reversedIndex == 0) {
+            showDateSeparator = true;
+          } else {
+            final previousMessage =
+                _controller.currentMessages[reversedIndex - 1];
+            final currentDate = DateTime(
+              message.messageTimestamp.year,
+              message.messageTimestamp.month,
+              message.messageTimestamp.day,
+            );
+            final previousDate = DateTime(
+              previousMessage.messageTimestamp.year,
+              previousMessage.messageTimestamp.month,
+              previousMessage.messageTimestamp.day,
+            );
+            showDateSeparator = !currentDate.isAtSameMomentAs(previousDate);
+          }
+
+          return Column(
+            children: [
+              if (showDateSeparator)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey[400])),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          message.dateSeparator,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey[400])),
+                    ],
+                  ),
+                ),
+              _buildMessageBubble(message),
+            ],
+          );
         },
       );
     });
@@ -1356,22 +1391,19 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
           profilePictureUrl = widget.authRepository
               .getUserProfilePictureUrl(user.profilePictureId!);
         }
-        setState(() {
-          _userProfileData = {
-            'name': user.name,
-            'profilePictureUrl': profilePictureUrl,
-            'hasProfilePicture': user.hasProfilePicture,
-          };
-        });
+        if (mounted) {
+          setState(() {
+            _userProfileData = {
+              'name': user.name,
+              'profilePictureUrl': profilePictureUrl,
+              'hasProfilePicture': user.hasProfilePicture,
+            };
+          });
+        }
       }
     } catch (e) {
       print('Error loading user profile: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override
@@ -1454,7 +1486,53 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
                       widget.controller.currentMessages.length - 1 - index;
                   final message =
                       widget.controller.currentMessages[reversedIndex];
-                  return _buildMessageBubble(message, userData);
+
+                  // Check if we need to show a date separator
+                  bool showDateSeparator = false;
+                  if (reversedIndex == 0) {
+                    showDateSeparator = true;
+                  } else {
+                    final previousMessage =
+                        widget.controller.currentMessages[reversedIndex - 1];
+                    final currentDate = DateTime(
+                      message.messageTimestamp.year,
+                      message.messageTimestamp.month,
+                      message.messageTimestamp.day,
+                    );
+                    final previousDate = DateTime(
+                      previousMessage.messageTimestamp.year,
+                      previousMessage.messageTimestamp.month,
+                      previousMessage.messageTimestamp.day,
+                    );
+                    showDateSeparator =
+                        !currentDate.isAtSameMomentAs(previousDate);
+                  }
+
+                  return Column(
+                    children: [
+                      if (showDateSeparator)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              message.dateSeparator,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      _buildMessageBubble(message, userData),
+                    ],
+                  );
                 },
               );
             }),
@@ -1550,107 +1628,46 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
 
   Widget _buildMessageBubble(Message message, Map<String, dynamic> userData) {
     final isCurrentUser = widget.controller.isCurrentUser(message.senderId);
-    final isStarterMessage = message.isStarterMessage;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isCurrentUser) ...[
-            CircleAvatar(
-              radius: 12,
-              backgroundImage: (userData['hasProfilePicture'] ?? false) &&
-                      (userData['profilePictureUrl'] ?? '').isNotEmpty
-                  ? NetworkImage(userData['profilePictureUrl'])
-                  : null,
-              backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-              child: (userData['hasProfilePicture'] ?? false) &&
-                      (userData['profilePictureUrl'] ?? '').isNotEmpty
-                  ? null
-                  : Text(
-                      (userData['name'] ?? 'U')[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isCurrentUser
-                    ? const Color.fromARGB(255, 81, 115, 153)
-                    : isStarterMessage
-                        ? Colors.blue[50]
-                        : Colors.grey[200],
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isCurrentUser ? 16 : 4),
-                  bottomRight: Radius.circular(isCurrentUser ? 4 : 16),
-                ),
-                border: isStarterMessage
-                    ? Border.all(color: Colors.blue[200]!, width: 1)
-                    : null,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isStarterMessage)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        "Auto-response",
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue[700],
-                        ),
-                      ),
-                    ),
-                  Text(
-                    message.messageText,
-                    style: TextStyle(
-                      color: isCurrentUser ? Colors.white : Colors.black87,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        message.timeFormatted,
-                        style: TextStyle(
-                          color: isCurrentUser
-                              ? Colors.white.withOpacity(0.8)
-                              : Colors.grey[600],
-                          fontSize: 11,
-                        ),
-                      ),
-                      if (isCurrentUser && message.isRead) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.done_all,
-                          size: 12,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
+    return Align(
+      alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        decoration: BoxDecoration(
+          color: isCurrentUser
+              ? const Color.fromARGB(255, 81, 115, 153)
+              : Colors.grey[200],
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isCurrentUser ? const Radius.circular(16) : Radius.zero,
+            bottomRight:
+                isCurrentUser ? Radius.zero : const Radius.circular(16),
           ),
-          if (isCurrentUser) const SizedBox(width: 8),
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message.messageText,
+              style: TextStyle(
+                color: isCurrentUser ? Colors.white : Colors.black87,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message.compactTimeFormatted,
+              style: TextStyle(
+                fontSize: 10,
+                color: isCurrentUser ? Colors.white70 : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

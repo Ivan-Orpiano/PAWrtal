@@ -1019,52 +1019,82 @@ class AdminDashboardController extends GetxController {
 
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
-      if (!petsCache.containsKey(appointment.petId) &&
-          appointment.petId.isNotEmpty) {
-        try {
-          // First try to fetch by name
-          final petByName =
-              await authRepository.getPetByName(appointment.petId);
-          if (petByName != null) {
-            final pet = Pet.fromMap(petByName.data);
-            pet.documentId = petByName.$id;
-            petsCache[appointment.petId] = pet;
-            continue;
-          }
+      // Skip if pet is already cached
+      if (petsCache.containsKey(appointment.petId)) {
+        continue;
+      }
 
-          // If name lookup failed and ID is valid, try by ID
-          if (_isValidDocumentId(appointment.petId)) {
+      // Skip empty petId
+      if (appointment.petId.isEmpty) {
+        print(
+            ">>> Skipping empty petId for appointment ${appointment.documentId}");
+        continue;
+      }
+
+      try {
+        print(">>> Fetching pet data for: ${appointment.petId}");
+
+        // Try to get pet by ID if it looks like a valid document ID
+        Pet? pet;
+
+        if (_isValidDocumentId(appointment.petId)) {
+          print(">>>   Trying to fetch by document ID...");
+          try {
             final petDoc = await authRepository.getPetById(appointment.petId);
             if (petDoc != null) {
-              final pet = Pet.fromMap(petDoc.data);
+              pet = Pet.fromMap(petDoc.data);
               pet.documentId = petDoc.$id;
-              petsCache[appointment.petId] = pet;
-              continue;
+              print(">>>   ✓ Found pet by ID: ${pet.name}");
             }
+          } catch (e) {
+            print(">>>   ✗ Pet not found by ID: $e");
           }
+        }
 
-          // If both lookups failed, create a fallback pet with the ID/name as the pet name
-          print("Creating fallback pet data for ID/Name: ${appointment.petId}");
-          petsCache[appointment.petId] = Pet(
+        // If not found by ID, try by name
+        if (pet == null) {
+          print(">>>   Trying to fetch by name...");
+          try {
+            final petByName =
+                await authRepository.getPetByName(appointment.petId);
+            if (petByName != null) {
+              pet = Pet.fromMap(petByName.data);
+              pet.documentId = petByName.$id;
+              print(">>>   ✓ Found pet by name: ${pet.name}");
+            }
+          } catch (e) {
+            print(">>>   ✗ Pet not found by name: $e");
+          }
+        }
+
+        // If still not found, create fallback
+        if (pet == null) {
+          print(">>>   Creating fallback pet data");
+          pet = Pet(
             petId: appointment.petId,
             userId: appointment.userId,
-            name: appointment.petId, // Use the ID/name as the pet name
-            type: 'Unknown',
-            breed: 'Unknown',
-          );
-        } catch (e) {
-          print("Error fetching pet ${appointment.petId}: $e");
-          // Create a more user-friendly fallback entry
-          petsCache[appointment.petId] = Pet(
-            petId: appointment.petId,
-            userId: appointment.userId,
-            name: _formatPetName(appointment.petId), // Format the name nicely
+            name: _formatPetName(appointment.petId),
             type: 'Unknown',
             breed: 'Unknown',
           );
         }
+
+        // Cache the pet
+        petsCache[appointment.petId] = pet;
+        print(">>>   ✓ Pet cached successfully");
+      } catch (e) {
+        print(">>> Error fetching pet ${appointment.petId}: $e");
+        // Create fallback pet
+        petsCache[appointment.petId] = Pet(
+          petId: appointment.petId,
+          userId: appointment.userId,
+          name: _formatPetName(appointment.petId),
+          type: 'Unknown',
+          breed: 'Unknown',
+        );
       }
 
+      // Fetch owner data
       if (!ownersCache.containsKey(appointment.userId)) {
         await _fetchOwnerData(appointment.userId);
       }
@@ -1072,23 +1102,51 @@ class AdminDashboardController extends GetxController {
   }
 
   String _formatPetName(String rawName) {
-    // Remove any special characters except spaces
-    final cleaned = rawName.replaceAll(RegExp(r'[^\w\s]'), '');
+    if (rawName.isEmpty) return 'Unknown Pet';
 
-    // Split by camelCase, underscores, or dashes
-    final words = cleaned.split(RegExp(r'(?=[A-Z])|[_-]'));
+    // If it looks like a document ID, create a generic name
+    if (_isValidDocumentId(rawName) && !rawName.contains(' ')) {
+      return 'Pet #${rawName.substring(0, 6)}';
+    }
+
+    // Remove any special characters except spaces
+    final cleaned = rawName.replaceAll(RegExp(r'[^\w\s]'), ' ');
+
+    // Split by camelCase, underscores, dashes, or multiple spaces
+    final words = cleaned.split(RegExp(r'(?=[A-Z])|[_\-\s]+'));
 
     // Capitalize each word and join with spaces
-    return words
+    final formatted = words
         .where((word) => word.isNotEmpty)
-        .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
-        .join(' ');
+        .map((word) {
+          if (word.length == 1) return word.toUpperCase();
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ')
+        .trim();
+
+    return formatted.isEmpty ? 'Unknown Pet' : formatted;
   }
 
   bool _isValidDocumentId(String id) {
-    if (id.isEmpty || id.length > 36) return false;
-    final validIdRegex = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$');
-    return validIdRegex.hasMatch(id);
+    // Basic checks
+    if (id.isEmpty) return false;
+
+    // Appwrite document IDs are typically 20-36 characters
+    if (id.length < 20 || id.length > 36) return false;
+
+    // Check if it contains only valid characters
+    // Appwrite IDs use alphanumeric characters and may include underscore, dot, dash
+    final validIdRegex = RegExp(r'^[a-zA-Z0-9_.-]+$');
+    if (!validIdRegex.hasMatch(id)) return false;
+
+    // Check if it doesn't look like a pet name (no spaces, not too many special chars)
+    if (id.contains(' ')) return false;
+
+    // If it has more than 2 consecutive special characters, it's likely not a valid ID
+    if (RegExp(r'[_.-]{3,}').hasMatch(id)) return false;
+
+    return true;
   }
 
   void _processTodayAppointments() {
@@ -1324,21 +1382,89 @@ class AdminDashboardController extends GetxController {
   }
 
   String getPetName(String petId) {
+    if (petId.isEmpty) return 'Unknown Pet';
+
     final pet = petsCache[petId];
     if (pet != null) {
-      if (pet.name.isNotEmpty) {
+      if (pet.name.isNotEmpty && pet.name != 'Unknown') {
         return pet.name;
       }
-      return _formatPetName(petId);
     }
+
+    // If pet not in cache or has no name, format the ID
     return _formatPetName(petId);
   }
 
   String getPetType(String petId) {
-    return petsCache[petId]?.type ?? 'Not Available';
+    if (petId.isEmpty) return 'Unknown';
+
+    final pet = petsCache[petId];
+    if (pet != null && pet.type.isNotEmpty && pet.type != 'Unknown') {
+      return pet.type;
+    }
+
+    return 'Not Available';
   }
 
-  Pet? getPetForAppointment(String petId) => petsCache[petId];
+  Pet? getPetForAppointment(String petId) {
+    if (petId.isEmpty) return null;
+    return petsCache[petId];
+  }
+
+  /// Force refresh pet data for a specific appointment
+  Future<void> refreshPetData(String petId) async {
+    if (petId.isEmpty) return;
+
+    try {
+      print(">>> Force refreshing pet data for: $petId");
+
+      Pet? pet;
+
+      // Try by ID first
+      if (_isValidDocumentId(petId)) {
+        try {
+          final petDoc = await authRepository.getPetById(petId);
+          if (petDoc != null) {
+            pet = Pet.fromMap(petDoc.data);
+            pet.documentId = petDoc.$id;
+          }
+        } catch (e) {
+          print(">>> Pet not found by ID: $e");
+        }
+      }
+
+      // Try by name if not found
+      if (pet == null) {
+        try {
+          final petByName = await authRepository.getPetByName(petId);
+          if (petByName != null) {
+            pet = Pet.fromMap(petByName.data);
+            pet.documentId = petByName.$id;
+          }
+        } catch (e) {
+          print(">>> Pet not found by name: $e");
+        }
+      }
+
+      // Update cache
+      if (pet != null) {
+        petsCache[petId] = pet;
+        petsCache.refresh();
+        print(">>> ✓ Pet data refreshed and cached");
+      } else {
+        print(">>> Could not refresh pet data - creating fallback");
+        petsCache[petId] = Pet(
+          petId: petId,
+          userId: '',
+          name: _formatPetName(petId),
+          type: 'Unknown',
+          breed: 'Unknown',
+        );
+      }
+    } catch (e) {
+      print(">>> Error refreshing pet data: $e");
+    }
+  }
 
   int get pendingCount => appointmentStats['pending'] ?? 0;
   int get acceptedCount => appointmentStats['accepted'] ?? 0;
