@@ -269,26 +269,26 @@ class InAppNotificationService extends GetxService {
     }
 
     // Navigate based on notification type
-    switch (notification.type) {
-      case NotificationType.appointmentBooked:
-      case NotificationType.appointmentAccepted:
-      case NotificationType.appointmentDeclined:
-      case NotificationType.appointmentCancelled:
-      case NotificationType.appointmentCompleted:
-        // Navigate to appointments page
-        // You can customize this based on your routing
-        Get.toNamed('/appointments');
-        break;
+    // switch (notification.type) {
+    //   case NotificationType.appointmentBooked:
+    //   case NotificationType.appointmentAccepted:
+    //   case NotificationType.appointmentDeclined:
+    //   case NotificationType.appointmentCancelled:
+    //   case NotificationType.appointmentCompleted:
+    //     // Navigate to appointments page
+    //     // You can customize this based on your routing
+    //     Get.toNamed('/appointments');
+    //     break;
 
-      case NotificationType.message:
-        // Navigate to messages
-        Get.toNamed('/messages');
-        break;
+    //   case NotificationType.message:
+    //     // Navigate to messages
+    //     Get.toNamed('/messages');
+    //     break;
 
-      default:
-        // Default action
-        break;
-    }
+    //   default:
+    //     // Default action
+    //     break;
+    // }
   }
 
   // Getters
