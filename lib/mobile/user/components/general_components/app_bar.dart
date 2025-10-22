@@ -1,4 +1,4 @@
-import 'package:capstone_app/mobile/user/components/general_components/notif_button.dart';
+import 'package:capstone_app/mobile/user/components/general_components/user_mobile_notif_button.dart';
 import 'package:flutter/material.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {

@@ -2,6 +2,7 @@
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
+import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -36,6 +37,15 @@ Future<void> initializeDependencies() async {
   await notificationService.initializeNotifications();
   Get.put(notificationService, permanent: true);
   print('>>> ✓ Notification Service initialized');
+
+  Get.put(
+    InAppNotificationService(
+      authRepository: Get.find<AuthRepository>(),
+      session: Get.find<UserSessionService>(),
+    ),
+    permanent: true,
+  );
+  print('>>> ✓ In-App Notification Service initialized');
 
   Get.put(DashboardController());
   Get.put(MessagingController());

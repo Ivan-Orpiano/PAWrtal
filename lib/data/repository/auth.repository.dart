@@ -4,6 +4,7 @@ import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
@@ -1636,6 +1637,83 @@ class AuthRepository {
       conversationId: conversationId,
       clinicId: clinicId,
       responseText: responseText,
+  // ============= IN-APP NOTIFICATION REPOSITORY METHODS =============
+
+  /// Create a notification
+  Future<Document> createNotification(AppNotification notification) {
+    return appWriteProvider.createNotification(notification.toMap());
+  }
+
+  /// Get all notifications for a user
+  Future<List<Document>> getUserNotifications(
+    String userId, {
+    int limit = 50,
+    bool unreadOnly = false,
+  }) {
+    return appWriteProvider.getUserNotifications(
+      userId,
+      limit: limit,
+      unreadOnly: unreadOnly,
+    );
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadNotificationCount(String userId) {
+    return appWriteProvider.getUnreadNotificationCount(userId);
+  }
+
+  /// Mark notification as read
+  Future<Document> markNotificationAsRead(String notificationId) {
+    return appWriteProvider.markNotificationAsRead(notificationId);
+  }
+
+  /// Mark all notifications as read for a user
+  Future<void> markAllNotificationsAsRead(String userId) {
+    return appWriteProvider.markAllNotificationsAsRead(userId);
+  }
+
+  /// Delete a notification
+  Future<void> deleteNotification(String notificationId) {
+    return appWriteProvider.deleteNotification(notificationId);
+  }
+
+  /// Delete all notifications for a user
+  Future<void> deleteAllNotifications(String userId) {
+    return appWriteProvider.deleteAllNotifications(userId);
+  }
+
+  /// Subscribe to user notifications (real-time)
+  Stream<RealtimeMessage> subscribeToUserNotifications(String userId) {
+    return appWriteProvider.subscribeToUserNotifications(userId);
+  }
+
+  /// Get notification statistics
+  Future<Map<String, int>> getNotificationStats(String userId) {
+    return appWriteProvider.getNotificationStats(userId);
+  }
+
+  /// Create appointment notification
+  Future<void> createAppointmentNotification({
+    required String recipientId,
+    required String title,
+    required String message,
+    required String type,
+    required String appointmentId,
+    String? clinicId,
+    String? petId,
+    String? senderId,
+    Map<String, dynamic>? metadata,
+  }) {
+    return appWriteProvider.createAppointmentNotification(
+      recipientId: recipientId,
+      title: title,
+      message: message,
+      type: type,
+      appointmentId: appointmentId,
+      clinicId: clinicId,
+      petId: petId,
+      senderId: senderId,
+      metadata: metadata,
     );
   }
 }
