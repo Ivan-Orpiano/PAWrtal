@@ -1637,6 +1637,9 @@ class AuthRepository {
       conversationId: conversationId,
       clinicId: clinicId,
       responseText: responseText,
+    );
+  }
+  
   // ============= IN-APP NOTIFICATION REPOSITORY METHODS =============
 
   /// Create a notification
