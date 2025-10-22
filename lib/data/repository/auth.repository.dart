@@ -337,7 +337,6 @@ class AuthRepository {
     required String conversationId,
     required String senderId,
     required String messageText,
-    bool isStarterMessage = false,
     String? attachment,
   }) async {
     try {
@@ -348,7 +347,7 @@ class AuthRepository {
       print('>>> Text: $messageText');
       print('>>> ============================================');
 
-      // Prepare message data with all required fields
+      // Prepare message data with all required fields (WITHOUT isStarterMessage)
       final messageMap = {
         'conversationId': conversationId,
         'senderId': senderId,
@@ -356,7 +355,7 @@ class AuthRepository {
         'messageType': 'text', // Default message type
         'attachment': attachment,
         'attachmentUrl': attachment,
-        'isStarterMessage': isStarterMessage,
+        // REMOVED: isStarterMessage field
         'isRead': false,
         'isDeleted': false,
         'timestamp': DateTime.now().toIso8601String(),
@@ -376,7 +375,7 @@ class AuthRepository {
         conversationId: conversationId,
         senderId: senderId,
         messageText: messageText,
-        isStarterMessage: isStarterMessage,
+        // REMOVED: isStarterMessage field
         attachment: attachment,
         receiverId: messageDoc.data['receiverId'], // Get from created doc
         createdAt: DateTime.parse(messageDoc.data['timestamp']),
@@ -1625,5 +1624,18 @@ class AuthRepository {
 
   Future<Map<String, int>> getDeletionRequestStats(String clinicId) {
     return appWriteProvider.getDeletionRequestStats(clinicId);
+  }
+
+  /// Send conversation starter response (from clinic/admin)
+  Future<Document> sendConversationStarterResponse({
+    required String conversationId,
+    required String clinicId,
+    required String responseText,
+  }) {
+    return appWriteProvider.sendConversationStarterResponse(
+      conversationId: conversationId,
+      clinicId: clinicId,
+      responseText: responseText,
+    );
   }
 }

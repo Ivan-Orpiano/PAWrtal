@@ -19,7 +19,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   late final MessagingController _controller;
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final Map<String, dynamic> _clinicCache = {};
-  
+
   bool _showStarters = false;
   bool _hasAutoSelectedConversation = false;
   final TextEditingController _searchController = TextEditingController();
@@ -43,9 +43,9 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     } else {
       _controller = Get.put(MessagingController());
     }
-    
+
     await _controller.loadUserConversations();
-    
+
     // Auto-select the first (latest) conversation after loading
     _autoSelectLatestConversation();
   }
@@ -54,10 +54,10 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     // Only auto-select once and if there are conversations
     if (!_hasAutoSelectedConversation && _controller.conversations.isNotEmpty) {
       _hasAutoSelectedConversation = true;
-      
+
       final latestConversation = _controller.conversations.first;
       final clinicData = await _getClinicData(latestConversation.clinicId);
-      
+
       // Use a post-frame callback to ensure the widget is fully built
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _selectConversation(
@@ -82,7 +82,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
       final clinicData = _clinicCache[conversation.clinicId];
       final clinicName = clinicData?['name']?.toString().toLowerCase() ?? '';
       final lastMessage = conversation.lastMessageText?.toLowerCase() ?? '';
-      
+
       return clinicName.contains(query) || lastMessage.contains(query);
     }).toList();
   }
@@ -109,15 +109,21 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
       print('Error loading clinic: $e');
     }
 
-    return {'name': 'Unknown Clinic', 'image': '', 'profilePictureId': '', 'address': ''};
+    return {
+      'name': 'Unknown Clinic',
+      'image': '',
+      'profilePictureId': '',
+      'address': ''
+    };
   }
 
-  void _selectConversation(Conversation conversation, String clinicId, String clinicName, String clinicImage, String profilePictureId) async {
+  void _selectConversation(Conversation conversation, String clinicId,
+      String clinicName, String clinicImage, String profilePictureId) async {
     setState(() {
       _showStarters = false;
     });
     await _controller.openConversation(conversation, clinicId, 'clinic');
-    
+
     // Load conversation starters for this clinic
     await _controller.loadConversationStarters(clinicId);
   }
@@ -137,7 +143,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
             width: 350,
             child: _buildConversationsList(),
           ),
-          
+
           // Right Panel - Messages
           Expanded(
             child: Obx(() {
@@ -179,7 +185,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
               ],
             ),
           ),
-          
+
           // Search
           Padding(
             padding: const EdgeInsets.all(16),
@@ -211,7 +217,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
               ),
             ),
           ),
-          
+
           // Conversations
           Expanded(
             child: Obx(() {
@@ -224,7 +230,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
+                      Icon(Icons.chat_bubble_outline,
+                          size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
                         'No conversations yet',
@@ -271,16 +278,20 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getClinicData(conversation.clinicId),
                     builder: (context, snapshot) {
-                      final clinicData = snapshot.data ?? {
-                        'name': 'Loading...',
-                        'image': '',
-                        'profilePictureId': '',
-                        'address': ''
-                      };
+                      final clinicData = snapshot.data ??
+                          {
+                            'name': 'Loading...',
+                            'image': '',
+                            'profilePictureId': '',
+                            'address': ''
+                          };
                       // Check if this conversation is selected using controller's state
-                      final isSelected = _controller.currentConversation.value?.documentId == conversation.documentId;
-                      
-                      return _buildConversationTile(conversation, clinicData, isSelected);
+                      final isSelected =
+                          _controller.currentConversation.value?.documentId ==
+                              conversation.documentId;
+
+                      return _buildConversationTile(
+                          conversation, clinicData, isSelected);
                     },
                   );
                 },
@@ -292,9 +303,10 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     );
   }
 
-  Widget _buildConversationTile(Conversation conversation, Map<String, dynamic> clinicData, bool isSelected) {
+  Widget _buildConversationTile(Conversation conversation,
+      Map<String, dynamic> clinicData, bool isSelected) {
     final hasUnread = conversation.userUnreadCount > 0;
-    
+
     return Material(
       color: isSelected ? Colors.blue.shade100 : Colors.white,
       child: InkWell(
@@ -324,7 +336,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                           child: Text(
                             clinicData['name'],
                             style: TextStyle(
-                              fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
+                              fontWeight:
+                                  hasUnread ? FontWeight.bold : FontWeight.w500,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -332,7 +345,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                         if (conversation.lastMessageTime != null)
                           Text(
                             conversation.timeAgo,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                           ),
                       ],
                     ),
@@ -344,8 +358,11 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                             conversation.conversationPreview,
                             style: TextStyle(
                               fontSize: 13,
-                              color: hasUnread ? Colors.black87 : Colors.grey[600],
-                              fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                              color:
+                                  hasUnread ? Colors.black87 : Colors.grey[600],
+                              fontWeight: hasUnread
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -353,7 +370,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                         ),
                         if (hasUnread)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: const BoxDecoration(
                               color: Color.fromARGB(255, 81, 115, 153),
                               shape: BoxShape.circle,
@@ -463,16 +481,17 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
       // Get current conversation data from controller
       final conversation = _controller.currentConversation.value;
       final clinicId = _controller.currentReceiverId.value;
-      
+
       return FutureBuilder<Map<String, dynamic>>(
         future: _getClinicData(clinicId),
         builder: (context, snapshot) {
-          final clinicData = snapshot.data ?? {
-            'name': 'Loading...',
-            'image': '',
-            'profilePictureId': '',
-          };
-          
+          final clinicData = snapshot.data ??
+              {
+                'name': 'Loading...',
+                'image': '',
+                'profilePictureId': '',
+              };
+
           return Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -493,7 +512,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     });
   }
 
-  Widget _buildMessagesHeader(String clinicName, Map<String, dynamic> clinicData) {
+  Widget _buildMessagesHeader(
+      String clinicName, Map<String, dynamic> clinicData) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -543,6 +563,9 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
       child: Obx(() {
+        // Check if sending
+        final isSending = _controller.isSendingMessage.value;
+
         if (_controller.conversationStarters.isEmpty) {
           return const Center(
             child: Text(
@@ -552,14 +575,51 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           );
         }
 
-        return ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: _controller.conversationStarters.length,
-          itemBuilder: (context, index) {
-            final starter = _controller.conversationStarters[index];
-            return _buildStarterChip(starter);
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Show info message when sending
+            if (isSending)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color.fromARGB(255, 81, 115, 153),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sending message...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // Starters list
+            Expanded(
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _controller.conversationStarters.length,
+                itemBuilder: (context, index) {
+                  final starter = _controller.conversationStarters[index];
+                  return _buildStarterChip(starter);
+                },
+              ),
+            ),
+          ],
         );
       }),
     );
@@ -568,57 +628,98 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   Widget _buildStarterChip(ConversationStarter starter) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: () {
-          _controller.sendStarterMessage(starter);
-          setState(() {
-            _showStarters = false;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          constraints: const BoxConstraints(maxWidth: 200),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color.fromARGB(255, 81, 115, 153),
-              width: 1,
+      child: Obx(() {
+        // ← WRAP WITH OBX TO OBSERVE isSendingMessage
+        // Check if currently sending a message
+        final isSending = _controller.isSendingMessage.value;
+
+        return InkWell(
+          // ← DISABLE onTap WHILE SENDING
+          onTap: isSending
+              ? null // Disable tap while sending
+              : () {
+                  // Send the starter message
+                  _controller.sendStarterMessage(starter);
+
+                  // Hide starters panel after sending
+                  setState(() {
+                    _showStarters = false;
+                  });
+                },
+          child: Opacity(
+            // ← ADD VISUAL FEEDBACK WHEN DISABLED
+            opacity: isSending ? 0.5 : 1.0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              constraints: const BoxConstraints(maxWidth: 200),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSending
+                      ? Colors.grey // Grey border when disabled
+                      : const Color.fromARGB(255, 81, 115, 153),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 81, 115, 153)
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      starter.categoryDisplayName,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Color.fromARGB(255, 81, 115, 153),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          starter.triggerText,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Show loading indicator when sending
+                      if (isSending) ...[
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  starter.categoryDisplayName,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color.fromARGB(255, 81, 115, 153),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                starter.triggerText,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -633,7 +734,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
+              Icon(Icons.chat_bubble_outline,
+                  size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               const Text('Start a conversation'),
               const SizedBox(height: 8),
@@ -663,21 +765,22 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   Widget _buildMessageBubble(Message message) {
     final isCurrentUser = _controller.isCurrentUser(message.senderId);
     final isStarterMessage = message.isStarterMessage;
-    
+
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
         decoration: BoxDecoration(
-          color: isCurrentUser 
+          color: isCurrentUser
               ? const Color.fromARGB(255, 81, 115, 153)
               : isStarterMessage
                   ? Colors.blue[50]
                   : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-          border: isStarterMessage 
+          border: isStarterMessage
               ? Border.all(color: Colors.blue[200]!, width: 1)
               : null,
         ),
@@ -750,7 +853,8 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               onSubmitted: (value) {
                 if (value.trim().isNotEmpty) {
@@ -761,22 +865,24 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           ),
           const SizedBox(width: 8),
           Obx(() => IconButton(
-            icon: _controller.isSendingMessage.value
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send),
-            color: const Color.fromARGB(255, 81, 115, 153),
-            onPressed: _controller.isSendingMessage.value
-                ? null
-                : () {
-                    if (_controller.messageController.text.trim().isNotEmpty) {
-                      _controller.sendMessage();
-                    }
-                  },
-          )),
+                icon: _controller.isSendingMessage.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                color: const Color.fromARGB(255, 81, 115, 153),
+                onPressed: _controller.isSendingMessage.value
+                    ? null
+                    : () {
+                        if (_controller.messageController.text
+                            .trim()
+                            .isNotEmpty) {
+                          _controller.sendMessage();
+                        }
+                      },
+              )),
         ],
       ),
     );

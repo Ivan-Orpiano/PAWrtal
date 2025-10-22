@@ -992,7 +992,25 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       }
 
       if (_controller.currentMessages.isEmpty) {
-        return const Center(child: Text('No messages yet'));
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.chat_bubble_outline,
+                  size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              const Text(
+                'No messages yet',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Start the conversation by sending a message',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        );
       }
 
       return ListView.builder(
@@ -1056,7 +1074,18 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   }
 
   Widget _buildMessageBubble(Message message) {
-    final isCurrentUser = _controller.isCurrentUser(message.senderId);
+    // CRITICAL FIX: Check if sender is EITHER admin user ID OR clinic ID
+    final isFromAdmin = message.senderId == _userSession.userId;
+    final isFromClinic = message.senderId == _clinicId;
+    final isCurrentUser = isFromAdmin || isFromClinic;
+
+    print('>>> Building message bubble:');
+    print('>>>   senderId: ${message.senderId}');
+    print('>>>   adminUserId: ${_userSession.userId}');
+    print('>>>   clinicId: $_clinicId');
+    print('>>>   isFromAdmin: $isFromAdmin');
+    print('>>>   isFromClinic: $isFromClinic');
+    print('>>>   isCurrentUser: $isCurrentUser');
 
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1627,7 +1656,15 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
   }
 
   Widget _buildMessageBubble(Message message, Map<String, dynamic> userData) {
-    final isCurrentUser = widget.controller.isCurrentUser(message.senderId);
+    // CRITICAL FIX: Check if sender is EITHER admin user ID OR clinic ID
+    final adminUserId = widget.authRepository; // Get from auth repository
+    final clinicId = widget.controller.currentClinicId.value;
+
+    final isFromAdmin =
+        message.senderId == widget.controller.currentClinicId.value ||
+            message.senderId == Get.find<UserSessionService>().userId;
+
+    final isCurrentUser = isFromAdmin;
 
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,

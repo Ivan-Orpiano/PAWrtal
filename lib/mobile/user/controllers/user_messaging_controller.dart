@@ -276,7 +276,6 @@ class MessagingController extends GetxController {
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
         messageText: messageText,
-        isStarterMessage: false,
         attachment: attachmentUrl,
       );
 
@@ -310,31 +309,155 @@ class MessagingController extends GetxController {
     }
   }
 
-  /// Fixed: Removed senderType, receiverId, messageType parameters
-  Future<void> sendStarterMessage(ConversationStarter starter) async {
-    if (currentConversation.value == null) return;
-
+  Future<void> handleConversationStarter(ConversationStarter starter) async {
     try {
-      // First send the user's trigger message
-      await sendMessage(text: starter.triggerText);
+      print('>>> ============================================');
+      print('>>> USER: Handling conversation starter');
+      print('>>> Trigger: ${starter.triggerText}');
+      print('>>> Response: ${starter.responseText}');
+      print('>>> ============================================');
 
-      // Wait a moment for better UX
-      await Future.delayed(const Duration(milliseconds: 500));
+      if (currentConversation.value == null) {
+        print('>>> ERROR: No conversation selected');
+        return;
+      }
 
-      // Then send the automated response
-      // Note: In a real app, this should be sent from a backend function
-      // For now, just send the response text as a regular message
-      await _authRepository.sendMessage(
+      isSendingMessage.value = true;
+
+      // Step 1: User sends the trigger text (WITHOUT isStarterMessage)
+      print('>>> Step 1: User sending trigger message...');
+      final userMessage = Message(
         conversationId: currentConversation.value!.documentId!,
-        senderId: currentReceiverId.value,
-        messageText: starter.responseText,
-        isStarterMessage: true,
+        senderId: _userSession.userId,
+        messageText: starter.triggerText,
+        // REMOVED: isStarterMessage field
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
-      print('>>> Starter message sent');
+      await _authRepository.createMessage(userMessage);
+      print('>>> User trigger message sent');
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Step 2: Clinic sends the auto-response (using clinic's ID)
+      print('>>> Step 2: Sending clinic auto-response...');
+      print('>>> Clinic ID: ${currentReceiverId.value}');
+
+      await _authRepository.sendConversationStarterResponse(
+        conversationId: currentConversation.value!.documentId!,
+        clinicId: currentReceiverId.value, // This is the clinic ID
+        responseText: starter.responseText,
+      );
+
+      print('>>> Clinic auto-response sent');
+
+      // Step 3: Reload messages
+      print('>>> Step 3: Reloading messages...');
+      await loadConversationMessages(currentConversation.value!.documentId!);
+
+      // Step 4: Scroll to bottom
+      _scrollToBottom();
+
+      print('>>> ============================================');
+      print('>>> CONVERSATION STARTER HANDLED SUCCESSFULLY');
+      print('>>> ============================================');
     } catch (e) {
-      Get.snackbar('Error', 'Failed to send starter message: $e',
-          backgroundColor: Colors.red, colorText: Colors.white);
+      print('>>> ============================================');
+      print('>>> ERROR handling conversation starter: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+
+      Get.snackbar(
+        'Error',
+        'Failed to send starter message',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isSendingMessage.value = false;
+    }
+  }
+
+  /// Fixed: Removed senderType, receiverId, messageType parameters
+  Future<void> sendStarterMessage(ConversationStarter starter) async {
+    print('>>> ═══════════════════════════════════════════════════════');
+    print('>>> SENDSTARTERMESSAGE CALLED');
+    print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
+    print('>>> Trigger: ${starter.triggerText}');
+    print('>>> isSendingMessage BEFORE: ${isSendingMessage.value}');
+    print('>>> Stack trace:');
+    print(StackTrace.current);
+    print('>>> ═══════════════════════════════════════════════════════');
+
+    if (currentConversation.value == null) {
+      print('>>> ERROR: No conversation selected');
+      return;
+    }
+
+    // CRITICAL: Check if already sending
+    if (isSendingMessage.value) {
+      print('>>> ⚠️ BLOCKED: Already sending a message!');
+      print('>>> This call will be ignored to prevent duplicates');
+      return;
+    }
+
+    try {
+      // Set flag IMMEDIATELY
+      isSendingMessage.value = true;
+      print('>>> ✓ isSendingMessage set to TRUE');
+
+      // Wait a tiny bit to ensure state propagates
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      print('>>> Step 1: User sending trigger message...');
+      await _authRepository.sendMessage(
+        conversationId: currentConversation.value!.documentId!,
+        senderId: _userSession.userId,
+        messageText: starter.triggerText,
+      );
+      print('>>> ✓ User trigger message sent');
+
+      // Wait for message to be delivered
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      print('>>> Step 2: Sending clinic auto-response...');
+      await _authRepository.sendConversationStarterResponse(
+        conversationId: currentConversation.value!.documentId!,
+        clinicId: currentReceiverId.value,
+        responseText: starter.responseText,
+      );
+      print('>>> ✓ Clinic auto-response sent');
+
+      // Wait before reloading
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      print('>>> Step 3: Reloading messages...');
+      await loadConversationMessages(currentConversation.value!.documentId!);
+      print('>>> ✓ Messages reloaded');
+
+      // Scroll to bottom
+      _scrollToBottom();
+
+      print('>>> ═══════════════════════════════════════════════════════');
+      print('>>> CONVERSATION STARTER COMPLETE');
+      print('>>> ═══════════════════════════════════════════════════════');
+    } catch (e) {
+      print('>>> ═══════════════════════════════════════════════════════');
+      print('>>> ERROR in sendStarterMessage: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ═══════════════════════════════════════════════════════');
+
+      Get.snackbar(
+        'Error',
+        'Failed to send starter message',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isSendingMessage.value = false;
+      print('>>> ✓ isSendingMessage set to FALSE');
     }
   }
 
@@ -467,10 +590,21 @@ class MessagingController extends GetxController {
   /// Fixed: Changed m.timestamp to m.messageTimestamp (getter from Message model)
   /// Removed m.receiverId reference - Message model doesn't have this field
   void subscribeToMessages(String conversationId) {
+    print('>>> ═══════════════════════════════════════════════════════');
+    print('>>> SUBSCRIBING TO MESSAGES');
+    print('>>> Conversation ID: $conversationId');
+    print('>>> ═══════════════════════════════════════════════════════');
+
     _messageSubscription?.cancel();
     _messageSubscription = _authRepository
         .subscribeToMessages(conversationId)
         .listen((realtimeMessage) {
+      print('>>> ═══════════════════════════════════════════════════════');
+      print('>>> REAL-TIME MESSAGE EVENT RECEIVED');
+      print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
+      print('>>> Events: ${realtimeMessage.events}');
+      print('>>> ═══════════════════════════════════════════════════════');
+
       if (realtimeMessage.events
           .contains('databases.*.collections.*.documents.*.create')) {
         try {
@@ -479,37 +613,69 @@ class MessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
-          // Check for duplicates by ID and content similarity
-          final existingIndex = currentMessages.indexWhere((m) =>
-              m.documentId == messageWithId.documentId ||
-              (m.messageText == messageWithId.messageText &&
-                  m.senderId == messageWithId.senderId &&
-                  m.messageTimestamp
-                          .difference(messageWithId.messageTimestamp)
-                          .abs()
-                          .inSeconds <
-                      2));
+          print('>>> New message from real-time:');
+          print('>>>   - Message ID: ${messageWithId.documentId}');
+          print('>>>   - Sender: ${messageWithId.senderId}');
+          print('>>>   - Text: ${messageWithId.messageText}');
+          print('>>>   - Timestamp: ${messageWithId.messageTimestamp}');
+
+          // CRITICAL: Check for duplicates in currentMessages
+          final existingIndex = currentMessages.indexWhere((m) {
+            // Check by ID first
+            if (m.documentId == messageWithId.documentId) {
+              print('>>>   ⚠️ Duplicate found by ID: ${m.documentId}');
+              return true;
+            }
+
+            // Check by content + sender + time (within 2 seconds)
+            if (m.messageText == messageWithId.messageText &&
+                m.senderId == messageWithId.senderId &&
+                m.messageTimestamp
+                        .difference(messageWithId.messageTimestamp)
+                        .abs()
+                        .inSeconds <
+                    2) {
+              print('>>>   ⚠️ Duplicate found by content');
+              print('>>>   - Existing ID: ${m.documentId}');
+              print(
+                  '>>>   - Time diff: ${m.messageTimestamp.difference(messageWithId.messageTimestamp).inSeconds}s');
+              return true;
+            }
+
+            return false;
+          });
 
           if (existingIndex == -1) {
-            print('>>> Adding new message to list');
+            print('>>>   ✓ No duplicate found, adding message to list');
+            print('>>>   - Current message count: ${currentMessages.length}');
+
             currentMessages.add(messageWithId);
             currentMessages.refresh();
+
+            print('>>>   - New message count: ${currentMessages.length}');
 
             // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
 
-            // If this is a message from the clinic and user is viewing conversation, mark as read
+            // If this is from clinic and user is viewing, mark as read
             if (messageWithId.senderId != _userSession.userId &&
                 currentConversation.value?.documentId == conversationId) {
-              print('>>> Auto-marking incoming message as read');
+              print('>>>   - Auto-marking incoming message as read');
               markConversationAsRead(conversationId);
             }
+          } else {
+            print(
+                '>>>   ⚠️ DUPLICATE BLOCKED - Message already exists at index $existingIndex');
           }
+
+          print('>>> ═══════════════════════════════════════════════════════');
         } catch (e) {
-          print('Error processing real-time message: $e');
-          print('Stack trace: ${StackTrace.current}');
+          print('>>> ═══════════════════════════════════════════════════════');
+          print('>>> ERROR processing real-time message: $e');
+          print('>>> Stack trace: ${StackTrace.current}');
+          print('>>> ═══════════════════════════════════════════════════════');
         }
       }
     });
