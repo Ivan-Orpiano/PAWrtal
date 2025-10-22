@@ -1202,17 +1202,47 @@ class AppWriteProvider {
   // ============= MESSAGE METHODS =============
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
-    print('>>> ============================================');
-    print('>>> CREATING MESSAGE');
-    print('>>> Input data: $data');
-    print('>>> ============================================');
-
-    final conversationId = data['conversationId'];
-    final senderId = data['senderId'];
-    final messageText = data['messageText'];
-
-    // Get conversation details to determine all required fields
     try {
+      print('>>> ═══════════════════════════════════════════════════════');
+      print('>>> CREATE MESSAGE CALLED');
+      print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
+      print('>>> Sender: ${data['senderId']}');
+      print('>>> Text: ${data['messageText']}');
+      print('>>> Conversation: ${data['conversationId']}');
+      print('>>> ═══════════════════════════════════════════════════════');
+
+      final conversationId = data['conversationId'];
+      final senderId = data['senderId'];
+      final messageText = data['messageText'];
+
+      // CRITICAL: Check for recent duplicates (within last 3 seconds)
+      print('>>> Checking for duplicate messages...');
+
+      final recentDuplicates = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        queries: [
+          Query.equal('conversationId', conversationId),
+          Query.equal('senderId', senderId),
+          Query.equal('messageText', messageText),
+          Query.greaterThan('timestamp',
+              DateTime.now().subtract(Duration(seconds: 3)).toIso8601String()),
+          Query.limit(1),
+        ],
+      );
+
+      if (recentDuplicates.documents.isNotEmpty) {
+        print('>>> ⚠️ DUPLICATE DETECTED!');
+        print(
+            '>>> Existing message ID: ${recentDuplicates.documents.first.$id}');
+        print('>>> Returning existing message instead of creating new one');
+        print('>>> ═══════════════════════════════════════════════════════');
+        return recentDuplicates.documents.first;
+      }
+
+      print('>>> ✓ No duplicate found, creating new message...');
+
+      // Get conversation details to determine receiver
       final conversation = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.conversationsCollectionID,
@@ -1227,16 +1257,14 @@ class AppWriteProvider {
       String receiverId;
 
       if (senderId == conversationUserId) {
-        // User is sending to clinic
         senderType = 'user';
         receiverId = conversationClinicId;
       } else {
-        // Clinic is sending to user
         senderType = 'clinic';
         receiverId = conversationUserId;
       }
 
-      // Prepare complete message data with ALL required fields
+      // Prepare complete message data
       final now = DateTime.now();
       final timestamp = now.toIso8601String();
 
@@ -1246,24 +1274,13 @@ class AppWriteProvider {
         'senderType': senderType,
         'receiverId': receiverId,
         'messageText': messageText,
-        'messageType': data['messageType'] ?? 'text', // Default to 'text'
-        'timestamp': timestamp, // REQUIRED
+        'messageType': data['messageType'] ?? 'text',
+        'timestamp': timestamp,
         'attachmentUrl': data['attachment'] ?? data['attachmentUrl'] ?? '',
         'isRead': data['isRead'] ?? false,
         'isDeleted': data['isDeleted'] ?? false,
         'sentAt': data['sentAt'] ?? timestamp,
-        '\$createdAt': timestamp,
-        '\$updatedAt': timestamp,
       };
-
-      print('>>> Complete message data:');
-      print('>>> - conversationId: $conversationId');
-      print('>>> - senderId: $senderId');
-      print('>>> - senderType: $senderType');
-      print('>>> - receiverId: $receiverId');
-      print('>>> - messageText: $messageText');
-      print('>>> - messageType: ${completeMessageData['messageType']}');
-      print('>>> - timestamp: $timestamp');
 
       // Create message document
       final messageDoc = await databases!.createDocument(
@@ -1273,7 +1290,7 @@ class AppWriteProvider {
         data: completeMessageData,
       );
 
-      print('>>> Message created successfully: ${messageDoc.$id}');
+      print('>>> ✓ Message created: ${messageDoc.$id}');
 
       // Update conversation
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
@@ -1305,15 +1322,15 @@ class AppWriteProvider {
         data: updateData,
       );
 
-      print('>>> Conversation updated successfully');
-      print('>>> ============================================');
+      print('>>> ✓ Conversation updated');
+      print('>>> ═══════════════════════════════════════════════════════');
 
       return messageDoc;
     } catch (e) {
-      print('>>> ============================================');
+      print('>>> ═══════════════════════════════════════════════════════');
       print('>>> ERROR CREATING MESSAGE: $e');
       print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
+      print('>>> ═══════════════════════════════════════════════════════');
       rethrow;
     }
   }
@@ -5659,6 +5676,116 @@ class AppWriteProvider {
     }
   }
 
+  /// Send conversation starter response (from clinic/admin)
+  Future<Document> sendConversationStarterResponse({
+    required String conversationId,
+    required String clinicId,
+    required String responseText,
+  }) async {
+    try {
+      print('>>> ═══════════════════════════════════════════════════════');
+      print('>>> SENDING CONVERSATION STARTER RESPONSE');
+      print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
+      print('>>> Conversation ID: $conversationId');
+      print('>>> Clinic ID: $clinicId');
+      print('>>> Response: $responseText');
+      print('>>> ═══════════════════════════════════════════════════════');
+
+      // CRITICAL: Check for recent duplicate responses (within last 5 seconds)
+      print('>>> Checking for duplicate starter responses...');
+
+      final recentResponses = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        queries: [
+          Query.equal('conversationId', conversationId),
+          Query.equal('senderId', clinicId),
+          Query.equal('messageText', responseText),
+          Query.greaterThan('timestamp',
+              DateTime.now().subtract(Duration(seconds: 5)).toIso8601String()),
+          Query.limit(1),
+        ],
+      );
+
+      if (recentResponses.documents.isNotEmpty) {
+        print('>>> ⚠️ DUPLICATE STARTER RESPONSE DETECTED!');
+        print(
+            '>>> Existing response ID: ${recentResponses.documents.first.$id}');
+        print('>>> Returning existing response instead of creating new one');
+        print('>>> ═══════════════════════════════════════════════════════');
+        return recentResponses.documents.first;
+      }
+
+      print('>>> ✓ No duplicate found, creating starter response...');
+
+      // Get conversation to determine userId
+      final conversation = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+      );
+
+      final conversationUserId = conversation.data['userId'];
+      final now = DateTime.now();
+      final timestamp = now.toIso8601String();
+
+      // Create the response message FROM clinic TO user
+      final messageData = {
+        'conversationId': conversationId,
+        'senderId': clinicId,
+        'senderType': 'clinic',
+        'receiverId': conversationUserId,
+        'messageText': responseText,
+        'messageType': 'text',
+        'timestamp': timestamp,
+        'attachmentUrl': '',
+        'isRead': false,
+        'isDeleted': false,
+        'sentAt': timestamp,
+      };
+
+      final messageDoc = await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        documentId: ID.unique(),
+        data: messageData,
+      );
+
+      print('>>> ✓ Starter response created: ${messageDoc.$id}');
+
+      // Update conversation
+      final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
+      final currentClinicUnreadCount =
+          conversation.data['clinicUnreadCount'] ?? 0;
+
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversationId,
+        data: {
+          'lastMessageId': messageDoc.$id,
+          'lastMessageText': responseText,
+          'lastMessageTime': timestamp,
+          'userUnreadCount': currentUserUnreadCount + 1,
+          'clinicUnreadCount': currentClinicUnreadCount,
+          'unreadCount':
+              (currentUserUnreadCount + 1) + currentClinicUnreadCount,
+          'updatedAt': timestamp,
+        },
+      );
+
+      print('>>> ✓ Conversation updated');
+      print('>>> ═══════════════════════════════════════════════════════');
+
+      return messageDoc;
+    } catch (e) {
+      print('>>> ═══════════════════════════════════════════════════════');
+      print('>>> ERROR: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ═══════════════════════════════════════════════════════');
+      rethrow;
+    }
+  }
   // ============= IN-APP NOTIFICATION METHODS =============
 
   /// Create a new notification

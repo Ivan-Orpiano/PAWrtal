@@ -480,7 +480,6 @@ class AdminDashboardController extends GetxController {
         conversationId: conversationId,
         senderId: session.userId,
         messageText: messageText,
-        isStarterMessage: isStarterMessage,
       );
 
       print('>>> Message sent successfully: ${message.documentId}');
@@ -732,16 +731,31 @@ class AdminDashboardController extends GetxController {
   /// Helper method to fetch user profile picture
   Future<Map<String, dynamic>> _fetchUserProfilePicture(String userId) async {
     try {
+      if (userId.isEmpty) {
+        return {
+          'url': '',
+          'hasProfilePicture': false,
+        };
+      }
+
       final userDoc = await authRepository.getUserById(userId);
       if (userDoc != null) {
         final user = User.fromMap(userDoc.data);
-        if (user.hasProfilePicture) {
-          final profilePictureUrl =
-              authRepository.getUserProfilePictureUrl(user.profilePictureId!);
-          return {
-            'url': profilePictureUrl,
-            'hasProfilePicture': true,
-          };
+        if (user.hasProfilePicture && user.profilePictureId != null) {
+          try {
+            final profilePictureUrl =
+                authRepository.getUserProfilePictureUrl(user.profilePictureId!);
+            return {
+              'url': profilePictureUrl,
+              'hasProfilePicture': true,
+            };
+          } catch (e) {
+            print('>>> Error generating profile picture URL: $e');
+            return {
+              'url': '',
+              'hasProfilePicture': false,
+            };
+          }
         }
       }
       return {
@@ -762,14 +776,17 @@ class AdminDashboardController extends GetxController {
     try {
       print('>>> Updating recent messages from real-time payload');
 
+      // Validate payload has required fields
       if (payload['lastMessageText'] == null ||
-          payload['lastMessageTime'] == null) {
-        print('>>> No message or time in payload - skipping');
+          payload['lastMessageTime'] == null ||
+          payload['\$id'] == null ||
+          payload['userId'] == null) {
+        print('>>> Missing required fields in payload - skipping');
         return;
       }
 
-      final conversationId = payload['\$id'];
-      final userId = payload['userId'];
+      final conversationId = payload['\$id'] as String;
+      final userId = payload['userId'] as String;
       final lastMessageText = payload['lastMessageText'] as String;
       final lastMessageTime =
           DateTime.parse(payload['lastMessageTime'] as String);
@@ -797,9 +814,12 @@ class AdminDashboardController extends GetxController {
             recentMessages[index]['senderName'] = name;
             recentMessages.refresh();
           }
+        }).catchError((e) {
+          print('>>> Error fetching user name: $e');
         });
-        senderName =
-            userId.length > 6 ? 'User #${userId.substring(0, 6)}' : userId;
+        senderName = userId.length > 6
+            ? 'User #${userId.substring(0, 6)}'
+            : 'Unknown User';
       }
 
       // Fetch profile picture asynchronously
@@ -809,9 +829,9 @@ class AdminDashboardController extends GetxController {
           (m) => m['senderId'] == userId,
         );
         if (index != -1) {
-          recentMessages[index]['profilePictureUrl'] = profileData['url'];
+          recentMessages[index]['profilePictureUrl'] = profileData['url'] ?? '';
           recentMessages[index]['hasProfilePicture'] =
-              profileData['hasProfilePicture'];
+              profileData['hasProfilePicture'] ?? false;
           recentMessages.refresh();
         }
       }).catchError((e) {
@@ -861,9 +881,9 @@ class AdminDashboardController extends GetxController {
 
       print('>>> Recent messages updated. Total: ${recentMessages.length}');
       recentMessages.refresh();
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('>>> Error updating recent messages from payload: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> Stack trace: $stackTrace');
     }
   }
 
@@ -1205,7 +1225,7 @@ class AdminDashboardController extends GetxController {
   }
 
   /// Enhanced fetchRecentMessages with logging
-  @override
+
   Future<void> fetchRecentMessages() async {
     if (clinicData.value?.documentId == null) {
       print('>>> ERROR: Cannot fetch messages - no clinic ID');
@@ -1233,16 +1253,32 @@ class AdminDashboardController extends GetxController {
         return;
       }
 
+      // Filter out conversations with null or invalid data
+      final validConversations = conversations.where((conversation) {
+        return conversation.documentId != null &&
+            conversation.lastMessageText != null &&
+            conversation.lastMessageText!.isNotEmpty &&
+            conversation.lastMessageTime != null &&
+            conversation.userId.isNotEmpty;
+      }).toList();
+
+      print('>>> Valid conversations: ${validConversations.length}');
+
+      if (validConversations.isEmpty) {
+        print('>>> No valid conversations with messages');
+        recentMessages.clear();
+        recentMessages.refresh();
+        print('>>> ============================================');
+        return;
+      }
+
       // Sort conversations by lastMessageTime (most recent first)
-      conversations.sort((a, b) {
-        if (a.lastMessageTime == null && b.lastMessageTime == null) return 0;
-        if (a.lastMessageTime == null) return 1;
-        if (b.lastMessageTime == null) return -1;
+      validConversations.sort((a, b) {
         return b.lastMessageTime!.compareTo(a.lastMessageTime!);
       });
 
       // Take only the 3 most recent conversations
-      final recentConversations = conversations.take(3).toList();
+      final recentConversations = validConversations.take(3).toList();
       print(
           '>>> Taking ${recentConversations.length} most recent conversations');
 
@@ -1251,14 +1287,6 @@ class AdminDashboardController extends GetxController {
 
       // Process each conversation and WAIT for profile pictures
       for (var conversation in recentConversations) {
-        // Skip if no message or time
-        if (conversation.lastMessageText == null ||
-            conversation.lastMessageTime == null) {
-          print(
-              '>>> Skipping conversation ${conversation.documentId} - no message or time');
-          continue;
-        }
-
         print('>>> Processing conversation ${conversation.documentId}...');
 
         // Fetch user data
@@ -1272,7 +1300,7 @@ class AdminDashboardController extends GetxController {
 
           if (userDoc != null) {
             final user = User.fromMap(userDoc.data);
-            senderName = user.name;
+            senderName = user.name.isNotEmpty ? user.name : 'Unknown User';
             print('>>>   ✓ Got user name: $senderName');
 
             // IMPORTANT: Check and fetch profile picture
@@ -1294,11 +1322,15 @@ class AdminDashboardController extends GetxController {
             }
           } else {
             print('>>>   ✗ User document not found');
-            senderName = 'User #${conversation.userId.substring(0, 6)}';
+            senderName = conversation.userId.length > 6
+                ? 'User #${conversation.userId.substring(0, 6)}'
+                : 'Unknown User';
           }
         } catch (e) {
           print('>>> Error fetching user ${conversation.userId}: $e');
-          senderName = 'User #${conversation.userId.substring(0, 6)}';
+          senderName = conversation.userId.length > 6
+              ? 'User #${conversation.userId.substring(0, 6)}'
+              : 'Unknown User';
           hasProfilePicture = false;
         }
 
@@ -1308,9 +1340,9 @@ class AdminDashboardController extends GetxController {
           'senderId': conversation.userId,
           'message': conversation.lastMessageText ?? '',
           'time': conversation.lastMessageTime!,
-          'isRead': conversation.clinicUnreadCount == 0,
-          'unreadCount': conversation.clinicUnreadCount,
-          'conversationId': conversation.documentId,
+          'isRead': (conversation.clinicUnreadCount ?? 0) == 0,
+          'unreadCount': conversation.clinicUnreadCount ?? 0,
+          'conversationId': conversation.documentId ?? '',
           'profilePictureUrl': profilePictureUrl,
           'hasProfilePicture': hasProfilePicture,
         };
@@ -1321,7 +1353,7 @@ class AdminDashboardController extends GetxController {
         print('>>>   - Conversation ID: ${conversation.documentId}');
         print('>>>   - Has Profile Picture: $hasProfilePicture');
         print('>>>   - Profile URL available: ${profilePictureUrl.isNotEmpty}');
-        print('>>>   - Unread: ${conversation.clinicUnreadCount}');
+        print('>>>   - Unread: ${conversation.clinicUnreadCount ?? 0}');
       }
 
       print('>>> Total messages processed: ${messages.length}');
@@ -1339,9 +1371,10 @@ class AdminDashboardController extends GetxController {
             '>>> Message $i: ${msg['senderName']} - HasPic: ${msg['hasProfilePicture']}');
       }
       print('>>> ============================================');
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('>>> ERROR fetching recent messages: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> Stack trace: $stackTrace');
+      // Clear messages on error instead of showing snackbar during initialization
       recentMessages.clear();
       recentMessages.refresh();
       print('>>> ============================================');
@@ -1352,6 +1385,10 @@ class AdminDashboardController extends GetxController {
   final Map<String, String> _userNamesCache = {};
 
   Future<String> _getUserName(String userId) async {
+    if (userId.isEmpty) {
+      return 'Unknown User';
+    }
+
     if (_userNamesCache.containsKey(userId)) {
       return _userNamesCache[userId]!;
     }
@@ -1360,14 +1397,16 @@ class AdminDashboardController extends GetxController {
       final userDoc = await authRepository.getUserById(userId);
       if (userDoc != null) {
         final user = User.fromMap(userDoc.data);
-        _userNamesCache[userId] = user.name;
-        return user.name;
+        final name = user.name.isNotEmpty ? user.name : 'Unknown User';
+        _userNamesCache[userId] = name;
+        return name;
       }
     } catch (e) {
       print('Error fetching user name for $userId: $e');
     }
 
-    final fallback = 'User #${userId.substring(0, 6)}';
+    final fallback =
+        userId.length > 6 ? 'User #${userId.substring(0, 6)}' : 'Unknown User';
     _userNamesCache[userId] = fallback;
     return fallback;
   }

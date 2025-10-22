@@ -369,7 +369,6 @@ class AdminMessagingController extends GetxController {
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
         messageText: messageText,
-        isStarterMessage: false,
         attachment: attachmentUrl,
       );
 
@@ -819,7 +818,22 @@ class AdminMessagingController extends GetxController {
   // ============= HELPER METHODS =============
 
   bool isCurrentUser(String senderId) {
-    return senderId == _userSession.userId;
+    // Admin can send messages as:
+    // 1. Their own user ID (admin user ID)
+    // 2. The clinic ID (when sending clinic responses)
+
+    final isAdminUserId = senderId == _userSession.userId;
+    final isClinicId = senderId == currentClinicId.value;
+
+    print('>>> Checking if current user:');
+    print('>>>   senderId: $senderId');
+    print('>>>   adminUserId: ${_userSession.userId}');
+    print('>>>   clinicId: ${currentClinicId.value}');
+    print('>>>   isAdminUserId: $isAdminUserId');
+    print('>>>   isClinicId: $isClinicId');
+    print('>>>   Result: ${isAdminUserId || isClinicId}');
+
+    return isAdminUserId || isClinicId;
   }
 
   UserStatus? getUserStatus(String userId) {
