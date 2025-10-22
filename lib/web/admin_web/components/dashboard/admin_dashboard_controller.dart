@@ -8,7 +8,7 @@ import 'package:capstone_app/data/models/user_status_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
-import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_controller.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:get/get.dart';

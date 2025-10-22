@@ -464,22 +464,51 @@ class AppWriteProvider {
 
   Future<List<Map<String, dynamic>>> getUserAppointments(String userId) async {
     try {
-      final res = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.appointmentCollectionID,
-        queries: [Query.equal("userId", userId)],
-      );
+      const int limit = 100; // Max per Appwrite request (adjust if needed)
+      int offset = 0;
+      bool hasMore = true;
 
-      return res.documents
-          .map((doc) => {
-                ...doc.data,
-                '\$id': doc.$id,
-                'createdAt': doc.$createdAt,
-                'updatedAt': doc.$updatedAt,
-              })
-          .toList();
-    } catch (e) {
-      print('Error in AppWriteProvider.getUserAppointments: $e');
+      final List<Map<String, dynamic>> allDocs = [];
+
+      while (hasMore) {
+        final res = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal("userId", userId),
+            Query.limit(limit),
+            Query.offset(offset),
+            Query.orderDesc("dateTime"), // sort by latest
+          ],
+        );
+
+        if (res.documents.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        final docs = res.documents.map((doc) {
+          final data = Map<String, dynamic>.from(doc.data);
+          data['\$id'] = doc.$id;
+          data['createdAt'] = doc.$createdAt;
+          data['updatedAt'] = doc.$updatedAt;
+          return data;
+        }).toList();
+
+        allDocs.addAll(docs);
+
+        // Stop if less than limit → no more pages
+        if (res.documents.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+
+      print('Fetched ${allDocs.length} appointments for user $userId');
+      return allDocs;
+    } catch (e, st) {
+      print('❌ Error in getUserAppointments: $e\n$st');
       return [];
     }
   }
@@ -532,24 +561,55 @@ class AppWriteProvider {
   }
 
   Future<List<Map<String, dynamic>>> getClinicAppointments(
-      String clinicId) async {
+    String clinicId,
+  ) async {
     try {
-      final res = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.appointmentCollectionID,
-        queries: [Query.equal("clinicId", clinicId)],
-      );
+      const int limit = 100; // max Appwrite allows per request
+      int offset = 0;
+      bool hasMore = true;
 
-      return res.documents
-          .map((doc) => {
-                ...doc.data,
-                '\$id': doc.$id,
-                'createdAt': doc.$createdAt,
-                'updatedAt': doc.$updatedAt,
-              })
-          .toList();
-    } catch (e) {
-      print('Error in AppWriteProvider.getClinicAppointments: $e');
+      final List<Map<String, dynamic>> allDocs = [];
+
+      while (hasMore) {
+        final res = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal("clinicId", clinicId),
+            Query.limit(limit),
+            Query.offset(offset),
+            Query.orderDesc("dateTime"), // newest first
+          ],
+        );
+
+        if (res.documents.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        final docs = res.documents.map((doc) {
+          final data = Map<String, dynamic>.from(doc.data);
+          // normalize meta fields
+          data['\$id'] = doc.$id;
+          data['createdAt'] = doc.$createdAt;
+          data['updatedAt'] = doc.$updatedAt;
+          return data;
+        }).toList();
+
+        allDocs.addAll(docs);
+
+        // If less than limit fetched, no more pages
+        if (res.documents.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+
+      print('Fetched ${allDocs.length} appointments for clinic $clinicId');
+      return allDocs;
+    } catch (e, st) {
+      print('❌ Error in getClinicAppointments: $e\n$st');
       return [];
     }
   }
@@ -5596,6 +5656,247 @@ class AppWriteProvider {
   </body>
 </html>
 ''';
+    }
+  }
+
+  // ============= IN-APP NOTIFICATION METHODS =============
+
+  /// Create a new notification
+  Future<models.Document> createNotification(Map<String, dynamic> data) async {
+    try {
+      print('>>> Creating notification for user: ${data['userId']}');
+      print('>>> Title: ${data['title']}');
+
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error creating notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all notifications for a user
+  Future<List<Document>> getUserNotifications(
+    String userId, {
+    int limit = 50,
+    bool unreadOnly = false,
+  }) async {
+    try {
+      List<String> queries = [
+        Query.equal('userId', userId),
+        Query.orderDesc('createdAt'),
+        Query.limit(limit),
+      ];
+
+      if (unreadOnly) {
+        queries.add(Query.equal('isRead', false));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('>>> Error getting user notifications: $e');
+      return [];
+    }
+  }
+
+  /// Get unread notification count for a user
+  Future<int> getUnreadNotificationCount(String userId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('isRead', false),
+          Query.limit(1000), // Get all unread
+        ],
+      );
+
+      return result.documents.length;
+    } catch (e) {
+      print('>>> Error getting unread count: $e');
+      return 0;
+    }
+  }
+
+  /// Mark a notification as read
+  Future<Document> markNotificationAsRead(String notificationId) async {
+    try {
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: notificationId,
+        data: {
+          'isRead': true,
+          'readAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('>>> Error marking notification as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark all notifications as read for a user
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      print('>>> Marking all notifications as read for user: $userId');
+
+      final unreadNotifications = await getUserNotifications(
+        userId,
+        unreadOnly: true,
+        limit: 1000,
+      );
+
+      for (var notification in unreadNotifications) {
+        try {
+          await markNotificationAsRead(notification.$id);
+        } catch (e) {
+          print(
+              '>>> Error marking notification ${notification.$id} as read: $e');
+        }
+      }
+
+      print('>>> Marked ${unreadNotifications.length} notifications as read');
+    } catch (e) {
+      print('>>> Error marking all notifications as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a notification
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.notificationsCollectionID,
+        documentId: notificationId,
+      );
+    } catch (e) {
+      print('>>> Error deleting notification: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete all notifications for a user
+  Future<void> deleteAllNotifications(String userId) async {
+    try {
+      final notifications = await getUserNotifications(userId, limit: 1000);
+
+      for (var notification in notifications) {
+        try {
+          await deleteNotification(notification.$id);
+        } catch (e) {
+          print('>>> Error deleting notification ${notification.$id}: $e');
+        }
+      }
+
+      print('>>> Deleted ${notifications.length} notifications');
+    } catch (e) {
+      print('>>> Error deleting all notifications: $e');
+      rethrow;
+    }
+  }
+
+  /// Subscribe to user notifications (real-time)
+  Stream<RealtimeMessage> subscribeToUserNotifications(String userId) {
+    print('>>> Setting up notification subscription for user: $userId');
+
+    final realtime = Realtime(client);
+    return realtime
+        .subscribe([
+          'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.notificationsCollectionID}.documents'
+        ])
+        .stream
+        .where((message) {
+          return message.payload['userId'] == userId;
+        });
+  }
+
+  /// Get notification statistics for a user
+  Future<Map<String, int>> getNotificationStats(String userId) async {
+    try {
+      final allNotifications = await getUserNotifications(userId, limit: 1000);
+
+      int unreadCount = 0;
+      int todayCount = 0;
+
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+
+      for (var doc in allNotifications) {
+        if (doc.data['isRead'] == false) {
+          unreadCount++;
+        }
+
+        final createdAt = DateTime.parse(doc.data['createdAt']);
+        if (createdAt.isAfter(startOfDay)) {
+          todayCount++;
+        }
+      }
+
+      return {
+        'total': allNotifications.length,
+        'unread': unreadCount,
+        'today': todayCount,
+      };
+    } catch (e) {
+      print('>>> Error getting notification stats: $e');
+      return {
+        'total': 0,
+        'unread': 0,
+        'today': 0,
+      };
+    }
+  }
+
+  /// Create appointment notification (helper method)
+  Future<void> createAppointmentNotification({
+    required String recipientId,
+    required String title,
+    required String message,
+    required String type,
+    required String appointmentId,
+    String? clinicId,
+    String? petId,
+    String? senderId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      print('>>> Creating appointment notification');
+      print('>>> Recipient: $recipientId');
+      print('>>> Type: $type');
+
+      final notificationData = {
+        'userId': recipientId,
+        'title': title,
+        'message': message,
+        'type': type,
+        'priority': 'high',
+        'isRead': false,
+        'createdAt': DateTime.now().toIso8601String(),
+        'appointmentId': appointmentId,
+        'clinicId': clinicId,
+        'petId': petId,
+        'senderId': senderId,
+        'metadata': metadata,
+      };
+
+      await createNotification(notificationData);
+      print('>>> Notification created successfully');
+    } catch (e) {
+      print('>>> Error creating appointment notification: $e');
+      // Don't rethrow - notification failure shouldn't break the main flow
     }
   }
 }

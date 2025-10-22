@@ -1,5 +1,5 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
-import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_controller.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
