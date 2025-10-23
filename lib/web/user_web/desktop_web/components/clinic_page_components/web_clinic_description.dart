@@ -158,55 +158,60 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
     );
   }
 
-  Future<void> _startConversationWithClinic(BuildContext context) async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF5173B8)),
-        ),
-      );
+Future<void> _startConversationWithClinic(BuildContext context) async {
+  try {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF5173B8)),
+      ),
+    );
 
-      final MessagingController messagingController = Get.find<MessagingController>();
-      final UserSessionService userSession = Get.find<UserSessionService>();
+    final MessagingController messagingController = Get.find<MessagingController>();
+    final UserSessionService userSession = Get.find<UserSessionService>();
 
-      if (userSession.userId.isEmpty) {
-        Navigator.pop(context);
-        _showLoginRequiredDialog(context);
-        return;
-      }
-
-      final conversation = await messagingController.startConversationWithClinic(
-          widget.clinic.documentId!);
-
+    if (userSession.userId.isEmpty) {
       Navigator.pop(context);
+      _showLoginRequiredDialog(context);
+      return;
+    }
 
-      if (conversation != null && context.mounted) {
-        await messagingController.openConversation(
-          conversation,
-          widget.clinic.documentId!,
-          'clinic',
-        );
-        
-        final homeController = Get.isRegistered<WebUserHomeController>()
-            ? Get.find<WebUserHomeController>()
-            : Get.put(WebUserHomeController());
-        
-        homeController.onItemSelected(2);
-        Navigator.pop(context);
-      } else {
-        if (context.mounted) {
-          _showErrorDialog(context, 'Failed to start conversation. Please try again.');
-        }
-      }
-    } catch (e) {
+    // Start or get existing conversation
+    final conversation = await messagingController.startConversationWithClinic(
+        widget.clinic.documentId!);
+
+    Navigator.pop(context);
+
+    if (conversation != null && context.mounted) {
+      // Open the conversation - this will set it as current
+      await messagingController.openConversation(
+        conversation,
+        widget.clinic.documentId!,
+        'clinic',
+      );
+      
+      // Navigate to messages page using the home controller
+      final homeController = Get.isRegistered<WebUserHomeController>()
+          ? Get.find<WebUserHomeController>()
+          : Get.put(WebUserHomeController());
+      
+      homeController.onItemSelected(2); // Navigate to Messages tab
+      
+      // Close the clinic page
+      Navigator.pop(context);
+    } else {
       if (context.mounted) {
-        Navigator.pop(context);
-        _showErrorDialog(context, 'Error starting conversation: $e');
+        _showErrorDialog(context, 'Failed to start conversation. Please try again.');
       }
     }
+  } catch (e) {
+    if (context.mounted) {
+      Navigator.pop(context);
+      _showErrorDialog(context, 'Error starting conversation: $e');
+    }
   }
+}
 
   void _showLoginRequiredDialog(BuildContext context) {
     showDialog(

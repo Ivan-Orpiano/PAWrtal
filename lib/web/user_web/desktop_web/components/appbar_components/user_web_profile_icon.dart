@@ -469,6 +469,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                           ),
                           _popupItem(Icons.logout_rounded, "Sign out", () {
                             _showLogoutDialog(context);
+                            _closePopup();
                           }, isLogout: true),
                         ],
                       ),

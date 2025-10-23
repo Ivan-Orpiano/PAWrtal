@@ -1065,22 +1065,6 @@ class _EnhancedWebAppointmentsPageState
               ),
             if (appointmentController.canCancelAppointment(appointment))
               const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _showContactOptions(appointment),
-                icon: const Icon(Icons.phone),
-                label: const Text('Contact Clinic'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
           ],
         );
       },
