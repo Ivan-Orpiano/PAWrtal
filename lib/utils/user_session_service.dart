@@ -19,7 +19,9 @@ class UserSessionService {
 
   void saveUserId(String id) => _storage.write('userId', id);
 
-  void clearSession() => _storage.erase();
+  Future<void> clearSession() async {
+    await _storage.erase();
+  }
 
   // Add debugging method
   void debugSession() {
