@@ -14,7 +14,7 @@ class SuperAdminHomeController extends GetxController {
 
   static SuperAdminHomeController get instance {
     if (!Get.isRegistered<SuperAdminHomeController>()) {
-      Get.put(SuperAdminHomeController(Get.find<AuthRepository>()));
+      Get.put(SuperAdminHomeController(Get.find<AuthRepository>()));  
     }
     return Get.find<SuperAdminHomeController>();
   }
