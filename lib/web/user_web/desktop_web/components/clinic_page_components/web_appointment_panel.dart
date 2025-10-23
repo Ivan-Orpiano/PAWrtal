@@ -100,7 +100,8 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
             ),
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: const Color(0xFF5173B8).withOpacity(0.3),
+                color: const Color(0xFF5173B8).withOpacity(0.6),
+                border: Border.all(color: Color(0xFF5173B8)),
                 shape: BoxShape.circle,
               ),
               selectedDecoration: const BoxDecoration(

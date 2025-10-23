@@ -29,6 +29,7 @@ class WebClinicPageUpdated extends StatefulWidget {
 class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final ScrollController _scrollController = ScrollController();
   bool _showWidget = false;
+  bool _showAppointmentPanel = false;
 
   final galleryKey = GlobalKey();
   final servicesKey = GlobalKey();
@@ -48,6 +49,12 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
         alignment: 0.6,
       );
     }
+  }
+
+  void _toggleAppointmentPanel() {
+    setState(() {
+      _showAppointmentPanel = !_showAppointmentPanel;
+    });
   }
 
   @override
@@ -216,27 +223,6 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
             ),
           ),
         ),
-        // Appointment Panel Section
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Text(
-                'Book an Appointment',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 22),
-              )
-            ],
-          ),
-        ),
-        Center(
-          child: EnhancedWebAppointmentPanel(
-            key: appointmentKey,
-            clinic: widget.clinic,
-            maxHeight: getAppointmentPanelMaxHeight(
-                MediaQuery.of(context).size.height),
-            compact: shouldUseCompactMode(MediaQuery.of(context).size.height),
-          ),
-        ),
       ],
     );
   }
@@ -244,6 +230,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final horizontalPadding = getResponsivePadding(screenWidth);
 
     double iconRight = responsiveRight(
@@ -371,6 +358,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
               ),
             ],
           ),
+
           // Navigation bar overlay
           if (_showWidget)
             Positioned(
@@ -400,19 +388,110 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                         onTap: () => _scrollToSection(reviewsKey),
                       ),
                       WebHoverUnderlineText(
-                        text: "Appointment",
-                        onTap: () => _scrollToSection(appointmentKey),
-                      ),
-                      WebHoverUnderlineText(
                         text: "Location",
                         onTap: () => _scrollToSection(locationKey),
                       )
                     ],
                   ),
                 )),
+
+          // Floating Appointment Panel (Chat-style)
+          if (_showAppointmentPanel)
+            Positioned(
+              right: 24,
+              bottom: 24,
+              child: Container(
+                width: 420,
+                height: screenHeight * 0.75,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 20,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Header
+                    InkWell(
+                      onTap: _toggleAppointmentPanel,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5173B8),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Book Appointment',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: _toggleAppointmentPanel,
+                              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                              tooltip: 'Close',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Scrollable content
+                    Expanded(
+                      child: Container(
+                        color: Colors.grey.shade50,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: EnhancedWebAppointmentPanel(
+                            key: appointmentKey,
+                            clinic: widget.clinic,
+                            maxHeight: getAppointmentPanelMaxHeight(screenHeight),
+                            compact: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
+      floatingActionButton: !_showAppointmentPanel
+          ? FloatingActionButton.extended(
+              onPressed: _toggleAppointmentPanel,
+              backgroundColor: const Color(0xFF5173B8),
+              icon: const Icon(Icons.calendar_today, color: Colors.white),
+              label: const Text(
+                'Book Appointment',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          : null,
     );
   }
-  
 }
