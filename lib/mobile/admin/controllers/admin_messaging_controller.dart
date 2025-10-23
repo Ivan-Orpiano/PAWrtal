@@ -221,6 +221,13 @@ class AdminMessagingController extends GetxController {
 
       print('Loading conversation starters for clinic: $clinicId');
 
+      // ADDED: Run migration for existing starters
+      try {
+        await _authRepository.migrateConversationStarters();
+      } catch (e) {
+        print('Warning: Migration failed (non-critical): $e');
+      }
+
       final starters =
           await _authRepository.getClinicConversationStarters(clinicId);
       conversationStarters.value = starters;
@@ -536,6 +543,196 @@ class AdminMessagingController extends GetxController {
     await updateConversationStarter(updatedStarter);
   }
 
+  /// Set a conversation starter as the auto-reply for first messages
+  Future<void> setAutoReplyStarter(String starterId) async {
+    try {
+      print('>>> Setting auto-reply starter: $starterId');
+
+      // First, unset any existing auto-reply starter
+      final currentAutoReply = conversationStarters.firstWhereOrNull(
+        (s) => s.isAutoReply == true,
+      );
+
+      if (currentAutoReply != null &&
+          currentAutoReply.documentId != starterId) {
+        print(
+            '>>> Unsetting previous auto-reply: ${currentAutoReply.documentId}');
+        final unsetStarter = currentAutoReply.copyWith(isAutoReply: false);
+        await _authRepository.updateConversationStarter(unsetStarter);
+
+        // Update local list
+        final index = conversationStarters.indexWhere(
+          (s) => s.documentId == currentAutoReply.documentId,
+        );
+        if (index != -1) {
+          conversationStarters[index] = unsetStarter;
+        }
+      }
+
+      // Set the new auto-reply starter
+      final starterIndex = conversationStarters.indexWhere(
+        (s) => s.documentId == starterId,
+      );
+
+      if (starterIndex != -1) {
+        final updatedStarter = conversationStarters[starterIndex].copyWith(
+          isAutoReply: true,
+          isActive: true, // Ensure it's active
+        );
+
+        await _authRepository.updateConversationStarter(updatedStarter);
+        conversationStarters[starterIndex] = updatedStarter;
+        conversationStarters.refresh();
+
+        print('>>> Auto-reply starter set successfully');
+        Get.snackbar(
+          'Success',
+          'Auto-reply message configured',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print('Error setting auto-reply starter: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to set auto-reply: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  /// Unset auto-reply for a starter
+  Future<void> unsetAutoReplyStarter(String starterId) async {
+    try {
+      final starterIndex = conversationStarters.indexWhere(
+        (s) => s.documentId == starterId,
+      );
+
+      if (starterIndex != -1) {
+        final updatedStarter = conversationStarters[starterIndex].copyWith(
+          isAutoReply: false,
+        );
+
+        await _authRepository.updateConversationStarter(updatedStarter);
+        conversationStarters[starterIndex] = updatedStarter;
+        conversationStarters.refresh();
+
+        Get.snackbar(
+          'Success',
+          'Auto-reply disabled',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print('Error unsetting auto-reply: $e');
+    }
+  }
+
+  /// Get the current auto-reply starter
+  ConversationStarter? getAutoReplyStarter() {
+    try {
+      print('>>> 🔍 CHECKING AUTO-REPLY CONFIGURATION');
+      print('>>> Total starters: ${conversationStarters.length}');
+
+      for (var starter in conversationStarters) {
+        print('>>> Starter: "${starter.triggerText}"');
+        print('>>>   - isActive: ${starter.isActive}');
+        print('>>>   - isAutoReply: ${starter.isAutoReply}');
+        print('>>>   - category: ${starter.category}');
+      }
+
+      final autoReply = conversationStarters.firstWhereOrNull(
+        (s) => (s.isAutoReply == true) && (s.isActive == true),
+      );
+
+      if (autoReply != null) {
+        print('>>> ✅ AUTO-REPLY FOUND: "${autoReply.triggerText}"');
+        print('>>> Response: "${autoReply.responseText}"');
+      } else {
+        print('>>> ❌ NO AUTO-REPLY CONFIGURED');
+      }
+
+      return autoReply;
+    } catch (e) {
+      print('>>> ❌ ERROR getting auto-reply starter: $e');
+      return null;
+    }
+  }
+
+  /// Check if a conversation is new (first message from user)
+  Future<bool> isFirstUserMessage(String conversationId) async {
+    try {
+      print('>>> 🔍 Checking if first user message...');
+      print('>>> Getting messages for conversation: $conversationId');
+
+      final messages = await _authRepository.getConversationMessages(
+        conversationId,
+        limit: 100,
+      );
+
+      print('>>> Total messages in conversation: ${messages.length}');
+      print('>>>');
+      print('>>> 📋 Analyzing each message:');
+
+      int userMessageCount = 0;
+      int clinicMessageCount = 0;
+
+      for (int i = 0; i < messages.length; i++) {
+        final msg = messages[i];
+        final isFromClinic = msg.senderId == currentClinicId.value;
+        final isFromAdmin = msg.senderId == _userSession.userId;
+        final isFromUser = !isFromClinic && !isFromAdmin;
+
+        print('>>> Message ${i + 1}:');
+        print('>>>   - Sender ID: ${msg.senderId}');
+        print(
+            '>>>   - Text: "${msg.messageText.substring(0, msg.messageText.length > 30 ? 30 : msg.messageText.length)}..."');
+        print('>>>   - From Clinic: $isFromClinic');
+        print('>>>   - From Admin: $isFromAdmin');
+        print('>>>   - From User: $isFromUser');
+
+        if (isFromClinic || isFromAdmin) {
+          clinicMessageCount++;
+        } else if (isFromUser) {
+          userMessageCount++;
+        }
+      }
+
+      print('>>>');
+      print('>>> 📊 SUMMARY:');
+      print('>>> Total messages: ${messages.length}');
+      print('>>> User messages: $userMessageCount');
+      print('>>> Clinic/Admin messages: $clinicMessageCount');
+      print('>>>');
+
+      // If clinic has NEVER replied = first user message
+      final isFirst = clinicMessageCount == 0;
+
+      if (isFirst) {
+        print('>>> ✅ RESULT: This IS the first user message!');
+        print('>>> (Clinic has never replied yet)');
+      } else {
+        print('>>> ❌ RESULT: NOT the first user message');
+        print('>>> (Clinic has already replied $clinicMessageCount time(s))');
+      }
+
+      return isFirst;
+    } catch (e) {
+      print('>>> ❌ ERROR checking first message: $e');
+      return false;
+    }
+  }
+
+  /// Send auto-reply if it's the first user message
+  Future<void> sendAutoReplyIfFirstMessage(String conversationId) async {
+    // This method is now mainly for manual/UI triggers
+    // Background auto-reply is handled by _checkAndSendAutoReply
+    await _checkAndSendAutoReply(conversationId);
+  }
+
   // ============= USER STATUS METHODS =============
 
   Future<void> setUserOnline() async {
@@ -586,7 +783,7 @@ class AdminMessagingController extends GetxController {
           _authRepository.subscribeToConversations(clinicId).listen(
         (realtimeMessage) {
           print('>>> ============================================');
-          print('>>> REAL-TIME EVENT RECEIVED');
+          print('>>> REAL-TIME CONVERSATION EVENT');
           print('>>> Event: ${realtimeMessage.events}');
           print('>>> ============================================');
 
@@ -599,44 +796,41 @@ class AdminMessagingController extends GetxController {
 
             print('>>> Conversation ID: ${conversationWithId.documentId}');
             print('>>> Clinic ID: ${conversationWithId.clinicId}');
-            print('>>> User Unread: ${conversationWithId.userUnreadCount}');
-            print('>>> Clinic Unread: ${conversationWithId.clinicUnreadCount}');
 
             if (conversationWithId.clinicId == clinicId) {
-              print(
-                  '>>> âœ" Conversation belongs to this clinic - processing...');
+              print('>>> ✅ Conversation belongs to this clinic');
 
               if (realtimeMessage.events
                   .contains('databases.*.collections.*.documents.*.update')) {
-                print('>>> Update event detected');
+                print('>>> UPDATE event');
                 _handleConversationUpdate(conversationWithId);
+
+                // CRITICAL FIX: Check for auto-reply on conversation UPDATE
+                // This catches when user sends a message (conversation gets updated)
+                if (conversationWithId.lastMessageId != null) {
+                  print('>>> 🤖 Checking auto-reply on conversation UPDATE...');
+                  _checkAndSendAutoReply(conversationWithId.documentId!);
+                }
               } else if (realtimeMessage.events
                   .contains('databases.*.collections.*.documents.*.create')) {
-                print('>>> Create event detected');
+                print('>>> CREATE event - NEW CONVERSATION');
                 _handleNewConversation(conversationWithId);
-              }
 
-              print('>>> âœ" Conversation list updated successfully');
-              print('>>> Total conversations: ${conversations.length}');
+                // CRITICAL: Check for auto-reply on NEW conversation
+                if (conversationWithId.lastMessageId != null) {
+                  print('>>> 🤖 Checking auto-reply on NEW CONVERSATION...');
+                  _checkAndSendAutoReply(conversationWithId.documentId!);
+                }
+              }
             } else {
-              print(
-                  '>>> âœ— Conversation does not belong to this clinic - skipping');
+              print('>>> ✗ Conversation does not belong to this clinic');
             }
           } catch (e) {
-            print('>>> ============================================');
             print('>>> ERROR processing conversation update: $e');
-            print('>>> Stack trace: ${StackTrace.current}');
-            print('>>> ============================================');
           }
-
-          print('>>> ============================================');
         },
         onError: (error) {
-          print('>>> ============================================');
           print('>>> SUBSCRIPTION ERROR: $error');
-          print('>>> Attempting to resubscribe...');
-          print('>>> ============================================');
-
           Future.delayed(const Duration(seconds: 2), () {
             if (_activeClinicId == clinicId) {
               subscribeToClinicConversationUpdates(clinicId);
@@ -650,13 +844,9 @@ class AdminMessagingController extends GetxController {
       );
 
       _activeClinicId = clinicId;
-
-      print('>>> Real-time subscription established successfully');
-      print('>>> Listening for conversation updates...');
-      print('>>> ============================================');
+      print('>>> Real-time subscription established');
     } catch (e) {
-      print('>>> ERROR setting up real-time subscription: $e');
-      print('>>> ============================================');
+      print('>>> ERROR setting up subscription: $e');
     }
   }
 
@@ -695,6 +885,12 @@ class AdminMessagingController extends GetxController {
         conversations.insert(0, conv);
       }
 
+      // CRITICAL: Trigger auto-reply check when conversation is updated with new message
+      if (updatedConversation.lastMessageId != null) {
+        print('>>> Checking for auto-reply trigger (UPDATE)...');
+        sendAutoReplyIfFirstMessage(updatedConversation.documentId!);
+      }
+
       print('>>> Conversation updated successfully');
     } else {
       print('>>> Conversation not found in list - adding as new');
@@ -714,6 +910,12 @@ class AdminMessagingController extends GetxController {
       conversations.insert(0, newConversation);
       print('>>> New conversation added successfully');
       print('>>> Total conversations: ${conversations.length}');
+
+      // CRITICAL: Trigger auto-reply for NEW conversations
+      if (newConversation.lastMessageId != null) {
+        print('>>> Checking for auto-reply trigger (NEW CONVERSATION)...');
+        sendAutoReplyIfFirstMessage(newConversation.documentId!);
+      }
     } else {
       print('>>> Conversation already exists - skipping');
     }
@@ -727,8 +929,7 @@ class AdminMessagingController extends GetxController {
 
     if (_activeConversationId == conversationId &&
         _messageSubscription != null) {
-      print('>>> Already subscribed to messages for this conversation');
-      print('>>> ============================================');
+      print('>>> Already subscribed - skipping');
       return;
     }
 
@@ -740,10 +941,10 @@ class AdminMessagingController extends GetxController {
       _messageSubscription = _authRepository
           .subscribeToMessages(conversationId)
           .listen((realtimeMessage) {
-        print('>>> ============================================');
-        print('>>> REAL-TIME MESSAGE EVENT');
+        print('>>> ════════════════════════════════════════');
+        print('>>> REAL-TIME MESSAGE EVENT RECEIVED');
         print('>>> Events: ${realtimeMessage.events}');
-        print('>>> ============================================');
+        print('>>> Time: ${DateTime.now()}');
 
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.create')) {
@@ -753,12 +954,12 @@ class AdminMessagingController extends GetxController {
             final messageWithId =
                 message.copyWith(documentId: messageData['\$id']);
 
-            print('>>> New message received:');
-            print('>>>   - ID: ${messageWithId.documentId}');
-            print('>>>   - From: ${messageWithId.senderId}');
-            print('>>>   - Text: ${messageWithId.messageText}');
+            print('>>> 📨 NEW MESSAGE DETAILS:');
+            print('>>>   - Message ID: ${messageWithId.documentId}');
+            print('>>>   - Sender ID: ${messageWithId.senderId}');
+            print('>>>   - Message Text: "${messageWithId.messageText}"');
 
-            // Check for duplicates by ID and content
+            // Check for duplicates
             final existingIndex = currentMessages.indexWhere((m) =>
                 m.documentId == messageWithId.documentId ||
                 (m.messageText == messageWithId.messageText &&
@@ -770,7 +971,7 @@ class AdminMessagingController extends GetxController {
                         2));
 
             if (existingIndex == -1) {
-              print('>>> Adding new message to list');
+              print('>>> ✅ Adding message to list');
               currentMessages.add(messageWithId);
               currentMessages.refresh();
 
@@ -778,40 +979,86 @@ class AdminMessagingController extends GetxController {
                 _scrollToBottom();
               });
 
-              // Auto-mark as read if it's from the user and we're viewing the conversation
               if (messageWithId.senderId != _userSession.userId &&
                   currentConversation.value?.documentId == conversationId) {
-                print('>>> Auto-marking incoming message as read');
                 markConversationAsRead(conversationId);
               }
-            } else {
-              print(
-                  '>>> Message already exists - skipping (index: $existingIndex)');
-            }
 
-            print('>>> ============================================');
+              // REMOVED: Auto-reply check from here
+              // It's now handled in subscribeToClinicConversationUpdates
+            } else {
+              print('>>> ⚠️ Duplicate message detected - skipping');
+            }
           } catch (e) {
-            print('>>> Error processing real-time message: $e');
-            print('>>> Stack trace: ${StackTrace.current}');
-            print('>>> ============================================');
+            print('>>> ❌ ERROR processing message: $e');
+            print('>>> Stack: ${StackTrace.current}');
           }
+        } else {
+          print('>>> ℹ️ Not a create event - ignoring');
         }
+        print('>>> ────────────────────────────────────────');
       }, onError: (error) {
-        print('>>> ============================================');
-        print('>>> MESSAGE SUBSCRIPTION ERROR: $error');
-        print('>>> ============================================');
-        _activeConversationId = null;
-      }, onDone: () {
-        print('>>> Message subscription closed');
+        print('>>> ❌ SUBSCRIPTION ERROR: $error');
         _activeConversationId = null;
       });
 
-      print('>>> Message subscription established successfully');
-      print('>>> ============================================');
+      print('>>> ✅ Message subscription established');
     } catch (e) {
-      print('>>> Error setting up message subscription: $e');
-      print('>>> ============================================');
+      print('>>> ❌ Error setting up subscription: $e');
       _activeConversationId = null;
+    }
+  }
+
+  Future<void> _checkAndSendAutoReply(String conversationId) async {
+    try {
+      print('>>> ═══════════════════════════════════════════');
+      print('>>> 🔍 AUTO-REPLY CHECK (BACKGROUND)');
+      print('>>> Conversation ID: $conversationId');
+      print('>>> ═══════════════════════════════════════════');
+
+      // Get auto-reply starter
+      final autoReplyStarter = getAutoReplyStarter();
+
+      if (autoReplyStarter == null) {
+        print('>>> ❌ No auto-reply configured - skipping');
+        return;
+      }
+
+      print(
+          '>>> ✅ Auto-reply starter found: "${autoReplyStarter.triggerText}"');
+
+      // Check if this is the first user message
+      final isFirst = await isFirstUserMessage(conversationId);
+
+      if (!isFirst) {
+        print('>>> ❌ Not first message - clinic already replied');
+        return;
+      }
+
+      print('>>> ✅ This IS the first user message!');
+      print('>>> 📤 Sending auto-reply...');
+
+      // Send the auto-reply
+      await _authRepository.sendConversationStarterResponse(
+        conversationId: conversationId,
+        clinicId: currentClinicId.value,
+        responseText: autoReplyStarter.responseText,
+      );
+
+      print('>>> ✅ AUTO-REPLY SENT SUCCESSFULLY');
+      print('>>> ═══════════════════════════════════════════');
+
+      // If the conversation is currently open, reload messages
+      if (currentConversation.value?.documentId == conversationId) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await loadConversationMessages(conversationId);
+        print('>>> ✅ Messages reloaded for current conversation');
+      }
+    } catch (e) {
+      print('>>> ═══════════════════════════════════════════');
+      print('>>> ❌ AUTO-REPLY ERROR: $e');
+      print('>>> Stack: ${StackTrace.current}');
+      print('>>> ═══════════════════════════════════════════');
     }
   }
 
