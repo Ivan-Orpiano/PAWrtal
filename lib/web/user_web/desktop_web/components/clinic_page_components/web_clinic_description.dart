@@ -168,7 +168,11 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
       ),
     );
 
-    final MessagingController messagingController = Get.find<MessagingController>();
+    // Check if controller exists, if not create it
+    final MessagingController messagingController = Get.isRegistered<MessagingController>()
+        ? Get.find<MessagingController>()
+        : Get.put(MessagingController());
+    
     final UserSessionService userSession = Get.find<UserSessionService>();
 
     if (userSession.userId.isEmpty) {
@@ -177,35 +181,50 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
       return;
     }
 
+    print('=== Starting conversation with clinic ===');
+    
     // Start or get existing conversation
     final conversation = await messagingController.startConversationWithClinic(
         widget.clinic.documentId!);
 
+    if (conversation == null) {
+      Navigator.pop(context);
+      if (context.mounted) {
+        _showErrorDialog(context, 'Failed to start conversation. Please try again.');
+      }
+      return;
+    }
+
+    print('Conversation created/found: ${conversation.documentId}');
+
+    // CRITICAL: Ensure conversation is set as current and data is loaded
+    // The startConversationWithClinic already does this, but we wait a bit
+    // to ensure real-time subscriptions are set up
+    await Future.delayed(const Duration(milliseconds: 300));
+
     Navigator.pop(context);
 
-    if (conversation != null && context.mounted) {
-      // Open the conversation - this will set it as current
-      await messagingController.openConversation(
-        conversation,
-        widget.clinic.documentId!,
-        'clinic',
-      );
+    if (context.mounted) {
+      print('Navigating to messages tab...');
       
       // Navigate to messages page using the home controller
       final homeController = Get.isRegistered<WebUserHomeController>()
           ? Get.find<WebUserHomeController>()
           : Get.put(WebUserHomeController());
       
-      homeController.onItemSelected(2); // Navigate to Messages tab
+      // Switch to Messages tab (index 2)
+      homeController.onItemSelected(2);
+      
+      // Wait a bit for tab to switch
+      await Future.delayed(const Duration(milliseconds: 200));
       
       // Close the clinic page
       Navigator.pop(context);
-    } else {
-      if (context.mounted) {
-        _showErrorDialog(context, 'Failed to start conversation. Please try again.');
-      }
+      
+      print('Navigation complete');
     }
   } catch (e) {
+    print('Error in _startConversationWithClinic: $e');
     if (context.mounted) {
       Navigator.pop(context);
       _showErrorDialog(context, 'Error starting conversation: $e');

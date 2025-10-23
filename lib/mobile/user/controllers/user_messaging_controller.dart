@@ -134,108 +134,117 @@ class MessagingController extends GetxController {
     }
   }
 
-  Future<Conversation?> startConversationWithClinic(String clinicId) async {
-    try {
-      isLoading.value = true;
+Future<Conversation?> startConversationWithClinic(String clinicId) async {
+  try {
+    isLoading.value = true;
 
-      print('=== DEBUG: User Starting conversation ===');
-      print('User ID: ${_userSession.userId}');
-      print('Clinic ID: $clinicId');
+    print('=== DEBUG: User Starting conversation ===');
+    print('User ID: ${_userSession.userId}');
+    print('Clinic ID: $clinicId');
 
-      if (!AppwriteConstants.messagingCollectionsConfigured) {
-        Get.snackbar(
-          'Setup Required',
-          'Messaging collections need to be created in AppWrite database first.',
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 5),
-        );
-        return null;
-      }
-
-      if (_userSession.userId.isEmpty) {
-        print('ERROR: User ID is empty');
-        Get.snackbar(
-          'Login Required',
-          'Please log in first to start a conversation.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return null;
-      }
-
-      if (clinicId.isEmpty) {
-        print('ERROR: Clinic ID is empty');
-        Get.snackbar(
-          'Error',
-          'Invalid clinic information.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return null;
-      }
-
-      // Get or create conversation
-      print('Creating/getting conversation...');
-      final conversation = await _authRepository.getOrCreateConversation(
-          _userSession.userId, clinicId);
-
-      if (conversation != null) {
-        print('SUCCESS: Conversation created/found: ${conversation.documentId}');
-        
-        // FIXED: Add new conversation to the TOP of the list
-        final existingIndex = conversations.indexWhere(
-          (c) => c.documentId == conversation.documentId
-        );
-        
-        if (existingIndex != -1) {
-          // Remove existing and add to top
-          conversations.removeAt(existingIndex);
-        }
-        conversations.insert(0, conversation);
-        
-        // Set as current conversation
-        currentConversation.value = conversation;
-        currentReceiverId.value = clinicId;
-        currentReceiverType.value = 'clinic';
-
-        print('Loading conversation data...');
-        // Load conversation messages and starters
-        await Future.wait([
-          loadConversationMessages(conversation.documentId!),
-          loadConversationStarters(clinicId),
-        ]);
-
-        // Subscribe to real-time messages for this conversation
-        subscribeToMessages(conversation.documentId!);
-
-        print('SUCCESS: Conversation setup complete');
-        return conversation;
-      } else {
-        print('ERROR: Failed to create/get conversation - conversation is null');
-        Get.snackbar(
-          'Error',
-          'Failed to create conversation. Please check your internet connection and try again.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 5),
-        );
-        return null;
-      }
-    } catch (e) {
-      print('ERROR: Exception in startConversationWithClinic: $e');
+    if (!AppwriteConstants.messagingCollectionsConfigured) {
       Get.snackbar(
-        'Debug Error',
-        'Detailed error: $e',
-        backgroundColor: Colors.red,
+        'Setup Required',
+        'Messaging collections need to be created in AppWrite database first.',
+        backgroundColor: Colors.orange,
         colorText: Colors.white,
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 5),
       );
       return null;
-    } finally {
-      isLoading.value = false;
     }
+
+    if (_userSession.userId.isEmpty) {
+      print('ERROR: User ID is empty');
+      Get.snackbar(
+        'Login Required',
+        'Please log in first to start a conversation.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return null;
+    }
+
+    if (clinicId.isEmpty) {
+      print('ERROR: Clinic ID is empty');
+      Get.snackbar(
+        'Error',
+        'Invalid clinic information.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return null;
+    }
+
+    // Get or create conversation
+    print('Creating/getting conversation...');
+    final conversation = await _authRepository.getOrCreateConversation(
+        _userSession.userId, clinicId);
+
+    if (conversation == null) {
+      print('ERROR: Failed to create/get conversation - conversation is null');
+      Get.snackbar(
+        'Error',
+        'Failed to create conversation. Please check your internet connection and try again.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+      return null;
+    }
+
+    print('SUCCESS: Conversation created/found: ${conversation.documentId}');
+    
+    // Update conversations list - add to TOP or move existing to TOP
+    final existingIndex = conversations.indexWhere(
+      (c) => c.documentId == conversation.documentId
+    );
+    
+    if (existingIndex != -1) {
+      print('Conversation exists, moving to top');
+      conversations.removeAt(existingIndex);
+    } else {
+      print('New conversation, adding to top');
+    }
+    conversations.insert(0, conversation);
+    
+    // CRITICAL: Set as current conversation IMMEDIATELY
+    currentConversation.value = conversation;
+    currentReceiverId.value = clinicId;
+    currentReceiverType.value = 'clinic';
+    
+    print('Current conversation set: ${currentConversation.value?.documentId}');
+
+    // Subscribe to real-time messages FIRST (so we catch any incoming messages)
+    print('Subscribing to messages...');
+    subscribeToMessages(conversation.documentId!);
+
+    // Load conversation data
+    print('Loading conversation data...');
+    await Future.wait([
+      loadConversationMessages(conversation.documentId!),
+      loadConversationStarters(clinicId),
+    ]);
+
+    print('SUCCESS: Conversation setup complete');
+    print('Messages loaded: ${currentMessages.length}');
+    print('Starters loaded: ${conversationStarters.length}');
+    
+    return conversation;
+  } catch (e) {
+    print('ERROR: Exception in startConversationWithClinic: $e');
+    print('Stack trace: ${StackTrace.current}');
+    Get.snackbar(
+      'Error',
+      'Failed to start conversation: $e',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 5),
+    );
+    return null;
+  } finally {
+    isLoading.value = false;
   }
+}
 
   Future<void> openConversation(
       Conversation conversation, String receiverId, String receiverType) async {
