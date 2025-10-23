@@ -49,6 +49,8 @@ class WebAppointmentController extends GetxController {
   var viewMode = AppointmentViewMode.today.obs;
   var selectedCalendarDate = Rxn<DateTime>();
 
+  var pendingVitals = <String, Map<String, dynamic>>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -259,12 +261,11 @@ class WebAppointmentController extends GetxController {
       try {
         final ownerDoc = await authRepository.getUserById(userId);
         if (ownerDoc != null) {
-          // Create a proper User object
-          final user = User.fromMap(ownerDoc.data);
+          // Store the raw data instead of trying to create a User object
           ownersCache[userId] = {
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
+            'name': ownerDoc.data['name'] ?? 'User #${userId.substring(0, 6)}',
+            'email': ownerDoc.data['email'] ?? 'N/A',
+            'phone': ownerDoc.data['phone'] ?? 'N/A',
           };
         } else {
           // Add fallback data to prevent repeated fetching
@@ -288,6 +289,7 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
+      // Fetch pet data
       if (!petsCache.containsKey(appointment.petId) &&
           appointment.petId.isNotEmpty) {
         try {
@@ -298,7 +300,7 @@ class WebAppointmentController extends GetxController {
             final pet = Pet.fromMap(petByName.data);
             pet.documentId = petByName.$id;
             petsCache[appointment.petId] = pet;
-            continue; // Skip to next iteration if found by name
+            continue;
           }
 
           // If not found by name and ID is valid, try fetching by ID
@@ -325,7 +327,6 @@ class WebAppointmentController extends GetxController {
           );
         } catch (e) {
           print("Error fetching pet ${appointment.petId}: $e");
-          // Add fallback data to prevent repeated failed requests
           petsCache[appointment.petId] = Pet(
             petId: appointment.petId,
             userId: appointment.userId,
@@ -338,17 +339,7 @@ class WebAppointmentController extends GetxController {
         }
       }
 
-      if (!ownersCache.containsKey(appointment.userId)) {
-        try {
-          final ownerDoc = await authRepository.getUserById(appointment.userId);
-          if (ownerDoc != null) {
-            ownersCache[appointment.userId] = ownerDoc.data;
-          }
-        } catch (e) {
-          print("Error fetching owner ${appointment.userId}: $e");
-        }
-      }
-
+      // Fetch owner data
       if (!ownersCache.containsKey(appointment.userId)) {
         await _fetchOwnerData(appointment.userId);
       }
@@ -592,12 +583,16 @@ class WebAppointmentController extends GetxController {
       print('>>> Acceptance notification sent to user');
     } catch (e) {
       print('>>> Error creating notification: $e');
-      // Don't fail the operation if notification fails
     }
 
     await _sendAppointmentStatusNotification(appointment, 'accepted');
+
     Get.snackbar(
-        "Success", "Appointment accepted! Time slot has been reserved.");
+      "Success",
+      "Appointment accepted! Time slot has been reserved.",
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+    );
   }
 
   Future<void> declineAppointment(Appointment appointment, String notes) async {
@@ -628,10 +623,18 @@ class WebAppointmentController extends GetxController {
         print('>>> Error creating notification: $e');
       }
 
-      await _sendAppointmentStatusNotification(updatedAppointment, 'declined',
-          declineReason: notes);
+      await _sendAppointmentStatusNotification(
+        updatedAppointment,
+        'declined',
+        declineReason: notes,
+      );
+
       Get.snackbar(
-          "Success", "Appointment declined. Patient will be notified.");
+        "Success",
+        "Appointment declined. Patient will be notified.",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
     } catch (e) {
       Get.snackbar("Error", "Failed to decline appointment: $e");
     }
@@ -652,8 +655,13 @@ class WebAppointmentController extends GetxController {
     await updateFullAppointment(updatedAppointment);
 
     await _sendAppointmentStatusNotification(updatedAppointment, 'in_progress');
+
     Get.snackbar(
-        "Success", "${getPetName(appointment.petId)} has been checked in!");
+      "Success",
+      "${getPetName(appointment.petId)} has been checked in!",
+      backgroundColor: Colors.blue,
+      colorText: Colors.white,
+    );
   }
 
   Future<void> startService(Appointment appointment) async {
@@ -678,9 +686,29 @@ class WebAppointmentController extends GetxController {
     DateTime? nextAppointmentDate,
   }) async {
     try {
-      print('>>> Starting service completion...');
+      print('>>> ============================================');
+      print('>>> CONTROLLER: Starting service completion');
+      print('>>> ============================================');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> Pet ID: ${appointment.petId}');
+      print('>>> Service: ${appointment.service}');
 
-      // CRITICAL FIX: Ensure we have minimum required data
+      // CRITICAL: Check if we have pending vitals stored locally
+      Map<String, dynamic>? finalVitals = vitals;
+      if (pendingVitals.containsKey(appointment.documentId)) {
+        print('>>> Found pending vitals in local storage!');
+        finalVitals = pendingVitals[appointment.documentId];
+        print('>>> Using locally stored vitals: $finalVitals');
+      } else if (vitals != null) {
+        print('>>> Using vitals passed as parameter: $vitals');
+      } else {
+        print('>>> No vitals data available');
+      }
+
+      print('>>> Final vitals to be saved: $finalVitals');
+      print('>>> ============================================');
+
+      // Ensure we have minimum required data
       final finalDiagnosis = diagnosis?.trim().isNotEmpty == true
           ? diagnosis!.trim()
           : 'Service completed - ${appointment.service}';
@@ -689,6 +717,76 @@ class WebAppointmentController extends GetxController {
           ? treatment!.trim()
           : appointment.service;
 
+      // CRITICAL: Extract and validate individual vital values
+      double? temperature;
+      double? weight;
+      String? bloodPressure;
+      int? heartRate;
+
+      if (finalVitals != null && finalVitals.isNotEmpty) {
+        print('>>> Processing vitals data...');
+
+        // Extract temperature
+        if (finalVitals.containsKey('temperature') &&
+            finalVitals['temperature'] != null) {
+          try {
+            final tempValue = finalVitals['temperature'];
+            temperature = tempValue is double
+                ? tempValue
+                : double.parse(tempValue.toString());
+            print('>>> ✓ Temperature: $temperature°C');
+          } catch (e) {
+            print('>>> ✗ Error parsing temperature: $e');
+          }
+        }
+
+        // Extract weight
+        if (finalVitals.containsKey('weight') &&
+            finalVitals['weight'] != null) {
+          try {
+            final weightValue = finalVitals['weight'];
+            weight = weightValue is double
+                ? weightValue
+                : double.parse(weightValue.toString());
+            print('>>> ✓ Weight: ${weight}kg');
+          } catch (e) {
+            print('>>> ✗ Error parsing weight: $e');
+          }
+        }
+
+        // Extract blood pressure
+        if (finalVitals.containsKey('bloodPressure') &&
+            finalVitals['bloodPressure'] != null) {
+          bloodPressure = finalVitals['bloodPressure'].toString();
+          print('>>> ✓ Blood Pressure: $bloodPressure');
+        }
+
+        // Extract heart rate
+        if (finalVitals.containsKey('heartRate') &&
+            finalVitals['heartRate'] != null) {
+          try {
+            final hrValue = finalVitals['heartRate'];
+            heartRate =
+                hrValue is int ? hrValue : int.parse(hrValue.toString());
+            print('>>> ✓ Heart Rate: $heartRate bpm');
+          } catch (e) {
+            print('>>> ✗ Error parsing heart rate: $e');
+          }
+        }
+
+        print('>>> ============================================');
+        print('>>> EXTRACTED VITALS SUMMARY:');
+        print('>>>   Temperature: $temperature');
+        print('>>>   Weight: $weight');
+        print('>>>   Blood Pressure: $bloodPressure');
+        print('>>>   Heart Rate: $heartRate');
+        print('>>> ============================================');
+      } else {
+        print('>>> ⚠️ No vitals data provided');
+      }
+
+      // STEP 1: Update appointment with ALL data including vitals
+      print('>>> STEP 1: Updating appointment...');
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
         serviceCompletedAt: DateTime.now(),
@@ -697,30 +795,68 @@ class WebAppointmentController extends GetxController {
         prescription:
             prescription?.trim().isNotEmpty == true ? prescription : null,
         vetNotes: vetNotes?.trim().isNotEmpty == true ? vetNotes : null,
-        vitals: vitals,
+        vitals: finalVitals, // Store the complete vitals map
         followUpInstructions: followUpInstructions,
         nextAppointmentDate: nextAppointmentDate,
         updatedAt: DateTime.now(),
       );
 
+      print(
+          '>>> Appointment vitals before update: ${updatedAppointment.vitals}');
       await updateFullAppointment(updatedAppointment);
-      print('>>> Appointment updated to completed');
+      print('>>> ✓ Appointment updated successfully');
+      print('>>> ============================================');
 
-      // Create medical record - ALWAYS create one for completed appointments
+      // STEP 2: Create medical record with individual vital fields
+      print('>>> STEP 2: Creating medical record...');
       final user = await authRepository.getUser();
       if (user != null) {
-        final medicalRecord =
-            MedicalRecord.fromAppointment(updatedAppointment, user.$id);
-
         try {
+          final medicalRecord = MedicalRecord(
+            petId: appointment.petId,
+            clinicId: appointment.clinicId,
+            vetId: user.$id,
+            appointmentId: appointment.documentId!,
+            visitDate: appointment.serviceCompletedAt ?? DateTime.now(),
+            service: appointment.service,
+            diagnosis: finalDiagnosis,
+            treatment: finalTreatment,
+            prescription:
+                prescription?.trim().isNotEmpty == true ? prescription : null,
+            notes: vetNotes?.trim().isNotEmpty == true ? vetNotes : null,
+            // CRITICAL: Pass individual vital fields
+            temperature: temperature,
+            weight: weight,
+            bloodPressure: bloodPressure,
+            heartRate: heartRate,
+            vitals: finalVitals, // Also keep the full vitals map
+            attachments: appointment.attachments,
+          );
+
+          print('>>> Medical record vitals before creation:');
+          print('>>>   - temperature: ${medicalRecord.temperature}');
+          print('>>>   - weight: ${medicalRecord.weight}');
+          print('>>>   - bloodPressure: ${medicalRecord.bloodPressure}');
+          print('>>>   - heartRate: ${medicalRecord.heartRate}');
+          print('>>>   - vitals map: ${medicalRecord.vitals}');
+          print('>>> ============================================');
+
           await authRepository.createMedicalRecord(medicalRecord);
-          print('>>> Medical record created successfully');
+          print('>>> ✓ Medical record created successfully');
+
+          // CRITICAL: Clear pending vitals after successful save
+          if (pendingVitals.containsKey(appointment.documentId)) {
+            pendingVitals.remove(appointment.documentId);
+            print('>>> ✓ Cleared pending vitals from local storage');
+          }
+
+          print('>>> ============================================');
         } catch (e) {
-          print('>>> ERROR: Failed to create medical record: $e');
-          // Still show success for appointment but warn about medical record
+          print('>>> ✗ ERROR: Failed to create medical record: $e');
+          print('>>> ============================================');
           Get.snackbar(
             "Warning",
-            "Appointment completed but medical record creation failed. Please contact support.",
+            "Appointment completed but medical record creation failed: $e",
             backgroundColor: Colors.orange,
             colorText: Colors.white,
             duration: const Duration(seconds: 5),
@@ -728,16 +864,18 @@ class WebAppointmentController extends GetxController {
           return;
         }
       } else {
-        print('>>> ERROR: Cannot create medical record - user not found');
+        print('>>> ✗ ERROR: Cannot create medical record - user not found');
         Get.snackbar(
           "Warning",
-          "Appointment completed but medical record requires user authentication.",
+          "Appointment completed but medical record requires authentication.",
           backgroundColor: Colors.orange,
           colorText: Colors.white,
         );
         return;
       }
 
+      // STEP 3: Create notification
+      print('>>> STEP 3: Creating notification...');
       try {
         final notification = AppNotification.appointmentCompleted(
           userId: appointment.userId,
@@ -748,23 +886,80 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-        print('>>> Completion notification sent to user');
+        print('>>> ✓ Completion notification sent to user');
       } catch (e) {
-        print('>>> Error creating notification: $e');
+        print('>>> ⚠️ Error creating notification: $e');
       }
 
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
 
+      print('>>> ============================================');
+      print('>>> SERVICE COMPLETION SUCCESSFUL');
+      print('>>> ============================================');
+
       Get.snackbar(
         "Success",
-        "Service completed and medical record created!",
+        finalVitals != null
+            ? "Service completed and medical record created with vitals!"
+            : "Service completed and medical record created!",
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
     } catch (e) {
-      print('>>> Error in completeServiceWithRecord: $e');
+      print('>>> ============================================');
+      print('>>> ✗ ERROR in completeServiceWithRecord: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
       Get.snackbar("Error", "Failed to complete service: $e");
       rethrow;
+    }
+  }
+
+  // NEW: Check if appointment has pending vitals
+  bool hasPendingVitals(String appointmentId) {
+    return pendingVitals.containsKey(appointmentId);
+  }
+
+  // NEW: Get pending vitals for display
+  Map<String, dynamic>? getPendingVitals(String appointmentId) {
+    return pendingVitals[appointmentId];
+  }
+
+  // NEW: Clear pending vitals (if user cancels)
+  void clearPendingVitals(String appointmentId) {
+    pendingVitals.remove(appointmentId);
+    print('>>> Cleared pending vitals for appointment: $appointmentId');
+  }
+
+  Future<void> recordVitalsLocally(
+    Appointment appointment,
+    Map<String, dynamic> vitals,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> RECORDING VITALS LOCALLY (NOT SAVED YET)');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> Vitals: $vitals');
+      print('>>> ============================================');
+
+      // Store vitals in memory with appointment ID as key
+      pendingVitals[appointment.documentId!] = vitals;
+
+      print(
+          '>>> Vitals stored locally for appointment: ${appointment.documentId}');
+      print('>>> Will be saved when service is completed');
+      print('>>> ============================================');
+
+      Get.snackbar(
+        "Vitals Recorded",
+        "Vital signs recorded. They will be saved when you complete the service.",
+        backgroundColor: Colors.blue,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    } catch (e) {
+      print('>>> Error recording vitals locally: $e');
+      Get.snackbar("Error", "Failed to record vitals: $e");
     }
   }
 
@@ -1518,6 +1713,12 @@ class WebAppointmentController extends GetxController {
 
       // Get clinic name
       final clinicName = clinicData.value?.clinicName ?? 'Unknown Clinic';
+
+      // Check if AppwriteProvider is registered
+      if (!Get.isRegistered<AppWriteProvider>()) {
+        print('>>> AppwriteProvider not registered, skipping notification');
+        return;
+      }
 
       // Use AppwriteProvider to send notifications
       final appwriteProvider = Get.find<AppWriteProvider>();
