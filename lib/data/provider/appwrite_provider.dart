@@ -6058,4 +6058,50 @@ class AppWriteProvider {
       // Don't rethrow - notification failure shouldn't break the main flow
     }
   }
+
+  /// Fix existing conversation starters that don't have isAutoReply field
+  Future<void> migrateConversationStarters() async {
+    try {
+      print('>>> ============================================');
+      print('>>> MIGRATING CONVERSATION STARTERS');
+      print('>>> Adding isAutoReply field to existing records');
+      print('>>> ============================================');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationStartersCollectionID,
+      );
+
+      print('>>> Found ${result.documents.length} conversation starters');
+
+      for (var doc in result.documents) {
+        try {
+          // Check if isAutoReply field exists
+          if (!doc.data.containsKey('isAutoReply')) {
+            print('>>> Updating starter: ${doc.data['triggerText']}');
+
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.conversationStartersCollectionID,
+              documentId: doc.$id,
+              data: {
+                'isAutoReply': false,
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
+
+            print('>>>   ✓ Migration successful');
+          }
+        } catch (e) {
+          print('>>> Error updating starter ${doc.$id}: $e');
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> MIGRATION COMPLETE');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Migration error: $e');
+    }
+  }
 }

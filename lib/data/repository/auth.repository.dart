@@ -1639,7 +1639,7 @@ class AuthRepository {
       responseText: responseText,
     );
   }
-  
+
   // ============= IN-APP NOTIFICATION REPOSITORY METHODS =============
 
   /// Create a notification
@@ -1718,5 +1718,10 @@ class AuthRepository {
       senderId: senderId,
       metadata: metadata,
     );
+  }
+
+  // Add this method to the AuthRepository class
+  Future<void> migrateConversationStarters() {
+    return appWriteProvider.migrateConversationStarters();
   }
 }
