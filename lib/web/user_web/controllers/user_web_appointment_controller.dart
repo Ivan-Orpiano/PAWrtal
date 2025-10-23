@@ -68,7 +68,6 @@ class WebAppointmentController extends GetxController {
     }
   }
 
-  // ADD THIS METHOD
   Future<void> _fetchOccupiedSlots() async {
     if (selectedDateTime.value == null) return;
 
@@ -311,12 +310,11 @@ class WebAppointmentController extends GetxController {
 
     final userId = session.userId;
     if (userId.isEmpty) {
-      Get.snackbar(
-        "Error",
+      _showCompactNotification(
         "User not logged in",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        bgColor: Colors.red[600]!,
+        icon: Icons.error_outline,
+        iconColor: Colors.white,
       );
       return;
     }
@@ -378,15 +376,13 @@ class WebAppointmentController extends GetxController {
       await _notifyAdminOfNewAppointment(appointment);
 
       // Show success message
-      Get.snackbar(
-        "Success",
+      _showCompactNotification(
         clinicSettings.value?.autoAcceptAppointments == true
             ? "Appointment automatically confirmed!"
-            : "Appointment booked successfully! You will receive confirmation once the clinic reviews your request.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
+            : "Appointment booked! Awaiting clinic confirmation.",
+        bgColor: Colors.green[600]!,
+        icon: Icons.check_circle_outline,
+        iconColor: Colors.white,
       );
 
       // Reset form
@@ -396,12 +392,11 @@ class WebAppointmentController extends GetxController {
       selectedPet.value = null;
       availableTimes.clear();
     } catch (e) {
-      Get.snackbar(
-        "Error",
+      _showCompactNotification(
         "Failed to book appointment: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        bgColor: Colors.red[600]!,
+        icon: Icons.error_outline,
+        iconColor: Colors.white,
       );
     } finally {
       isBooking.value = false;
@@ -447,5 +442,41 @@ class WebAppointmentController extends GetxController {
       print('>>> Error notifying admin: $e');
       // Don't fail booking if notification fails
     }
+  }
+
+  void _showCompactNotification(String message,
+      {required Color bgColor,
+      required IconData icon,
+      required Color iconColor}) {
+    Get.rawSnackbar(
+      messageText: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: iconColor, size: 16),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: bgColor,
+      snackPosition: SnackPosition.TOP,
+      borderRadius: 4,
+      margin: const EdgeInsets.only(top: 16, right: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      duration: const Duration(seconds: 2),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+      maxWidth: 300,
+    );
   }
 }
