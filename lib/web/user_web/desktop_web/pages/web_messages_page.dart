@@ -21,7 +21,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   final Map<String, dynamic> _clinicCache = {};
 
   bool _showStarters = false;
-  bool _hasAutoSelectedConversation = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -46,15 +45,18 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
 
     await _controller.loadUserConversations();
 
-    // Auto-select the first (latest) conversation after loading
-    _autoSelectLatestConversation();
+    // FIXED: Only auto-select if no conversation is currently open
+    // This prevents auto-selection when coming from clinic page
+    _autoSelectLatestConversationIfNeeded();
   }
 
-  void _autoSelectLatestConversation() async {
-    // Only auto-select once and if there are conversations
-    if (!_hasAutoSelectedConversation && _controller.conversations.isNotEmpty) {
-      _hasAutoSelectedConversation = true;
-
+  void _autoSelectLatestConversationIfNeeded() async {
+    // Only auto-select if:
+    // 1. There are conversations
+    // 2. No conversation is currently selected
+    if (_controller.conversations.isNotEmpty && 
+        _controller.currentConversation.value == null) {
+      
       final latestConversation = _controller.conversations.first;
       final clinicData = await _getClinicData(latestConversation.clinicId);
 
@@ -78,7 +80,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
 
     final query = _searchQuery.toLowerCase();
     return _controller.conversations.where((conversation) {
-      // Get clinic data from cache if available
       final clinicData = _clinicCache[conversation.clinicId];
       final clinicName = clinicData?['name']?.toString().toLowerCase() ?? '';
       final lastMessage = conversation.lastMessageText?.toLowerCase() ?? '';
@@ -147,7 +148,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
           // Right Panel - Messages
           Expanded(
             child: Obx(() {
-              // Use controller's currentConversation instead of local state
               return _controller.currentConversation.value == null
                   ? _buildEmptyState()
                   : _buildMessagesPanel();
@@ -285,7 +285,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                             'profilePictureId': '',
                             'address': ''
                           };
-                      // Check if this conversation is selected using controller's state
                       final isSelected =
                           _controller.currentConversation.value?.documentId ==
                               conversation.documentId;
@@ -411,7 +410,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
               height: size,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                // Fallback to regular image if profile picture fails
                 return fallbackImage.isNotEmpty
                     ? Image.network(
                         fallbackImage,
@@ -478,7 +476,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
 
   Widget _buildMessagesPanel() {
     return Obx(() {
-      // Get current conversation data from controller
       final conversation = _controller.currentConversation.value;
       final clinicId = _controller.currentReceiverId.value;
 
@@ -563,7 +560,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
       child: Obx(() {
-        // Check if sending
         final isSending = _controller.isSendingMessage.value;
 
         if (_controller.conversationStarters.isEmpty) {
@@ -578,7 +574,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Show info message when sending
             if (isSending)
               Padding(
                 padding:
@@ -607,7 +602,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                   ],
                 ),
               ),
-            // Starters list
             Expanded(
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -629,25 +623,18 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     return Container(
       margin: const EdgeInsets.only(right: 8),
       child: Obx(() {
-        // ← WRAP WITH OBX TO OBSERVE isSendingMessage
-        // Check if currently sending a message
         final isSending = _controller.isSendingMessage.value;
 
         return InkWell(
-          // ← DISABLE onTap WHILE SENDING
           onTap: isSending
-              ? null // Disable tap while sending
+              ? null
               : () {
-                  // Send the starter message
                   _controller.sendStarterMessage(starter);
-
-                  // Hide starters panel after sending
                   setState(() {
                     _showStarters = false;
                   });
                 },
           child: Opacity(
-            // ← ADD VISUAL FEEDBACK WHEN DISABLED
             opacity: isSending ? 0.5 : 1.0,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -657,7 +644,7 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSending
-                      ? Colors.grey // Grey border when disabled
+                      ? Colors.grey
                       : const Color.fromARGB(255, 81, 115, 153),
                   width: 1,
                 ),
@@ -698,7 +685,6 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Show loading indicator when sending
                       if (isSending) ...[
                         const SizedBox(width: 8),
                         const SizedBox(

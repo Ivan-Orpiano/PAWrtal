@@ -310,9 +310,6 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                                     fontSize: 24, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            const WebShareButton(),
-                            const SizedBox(width: 12),
-                            const WebLike(),
                           ],
                         ),
                         WebPictureGalleryUpdated(

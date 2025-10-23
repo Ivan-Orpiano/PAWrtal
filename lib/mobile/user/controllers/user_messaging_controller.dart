@@ -28,7 +28,7 @@ class MessagingController extends GetxController {
   // Current conversation data
   final currentConversation = Rxn<Conversation>();
   final currentReceiverId = ''.obs;
-  final currentReceiverType = ''.obs; // 'clinic' or 'user'
+  final currentReceiverType = ''.obs;
 
   // Text controller for message input
   final messageController = TextEditingController();
@@ -71,6 +71,11 @@ class MessagingController extends GetxController {
     conversationStarters.clear();
     userStatuses.clear();
 
+    // Clear current conversation
+    currentConversation.value = null;
+    currentReceiverId.value = '';
+    currentReceiverType.value = '';
+
     // Set user offline
     setUserOffline().then((_) {
       print('User status set to offline');
@@ -82,6 +87,35 @@ class MessagingController extends GetxController {
     print('MessagingController cleanup complete');
   }
 
+  // ADDED: Method to clear all data (call this on logout)
+  void clearAllData() {
+    print('=== Clearing MessagingController data ===');
+    
+    // Cancel subscriptions
+    _messageSubscription?.cancel();
+    _messageSubscription = null;
+    _conversationSubscription?.cancel();
+    _conversationSubscription = null;
+    _statusSubscription?.cancel();
+    _statusSubscription = null;
+
+    // Clear all observable data
+    conversations.clear();
+    currentMessages.clear();
+    conversationStarters.clear();
+    userStatuses.clear();
+    
+    // Clear current conversation state
+    currentConversation.value = null;
+    currentReceiverId.value = '';
+    currentReceiverType.value = '';
+    
+    // Clear text input
+    messageController.clear();
+    
+    print('MessagingController data cleared');
+  }
+
   // ============= CONVERSATION METHODS =============
 
   Future<void> loadUserConversations() async {
@@ -90,7 +124,6 @@ class MessagingController extends GetxController {
       final userConversations =
           await _authRepository.getUserConversations(_userSession.userId);
 
-      // Only update conversations list, don't mark anything as read
       conversations.value = userConversations;
       print('Loaded ${userConversations.length} conversations');
     } catch (e) {
@@ -148,8 +181,20 @@ class MessagingController extends GetxController {
           _userSession.userId, clinicId);
 
       if (conversation != null) {
-        print(
-            'SUCCESS: Conversation created/found: ${conversation.documentId}');
+        print('SUCCESS: Conversation created/found: ${conversation.documentId}');
+        
+        // FIXED: Add new conversation to the TOP of the list
+        final existingIndex = conversations.indexWhere(
+          (c) => c.documentId == conversation.documentId
+        );
+        
+        if (existingIndex != -1) {
+          // Remove existing and add to top
+          conversations.removeAt(existingIndex);
+        }
+        conversations.insert(0, conversation);
+        
+        // Set as current conversation
         currentConversation.value = conversation;
         currentReceiverId.value = clinicId;
         currentReceiverType.value = 'clinic';
@@ -167,8 +212,7 @@ class MessagingController extends GetxController {
         print('SUCCESS: Conversation setup complete');
         return conversation;
       } else {
-        print(
-            'ERROR: Failed to create/get conversation - conversation is null');
+        print('ERROR: Failed to create/get conversation - conversation is null');
         Get.snackbar(
           'Error',
           'Failed to create conversation. Please check your internet connection and try again.',
@@ -244,8 +288,6 @@ class MessagingController extends GetxController {
     }
   }
 
-  /// Fixed: Removed senderType, receiverId, messageType, attachmentUrl parameters
-  /// These don't exist in AuthRepository.sendMessage()
   Future<void> sendMessage({String? text, String? attachmentUrl}) async {
     final messageText = text ?? messageController.text.trim();
     if (messageText.isEmpty && attachmentUrl == null) return;
@@ -265,13 +307,11 @@ class MessagingController extends GetxController {
       print('>>> Message: $messageText');
       print('>>> ============================================');
 
-      // CRITICAL FIX: Determine senderType before sending
-      String senderType =
-          'user'; // User is always sending as 'user' from this controller
+      String senderType = 'user';
 
       print('>>> SenderType: $senderType');
 
-      // Send message with senderType
+      // Send message
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
@@ -286,17 +326,17 @@ class MessagingController extends GetxController {
         lastMessageId: sentMessage.documentId,
         lastMessageText: messageText,
         lastMessageTime: sentMessage.createdAt,
-        userUnreadCount: 0, // User sent it, so user has 0 unread
+        userUnreadCount: 0,
       );
       currentConversation.value = updatedConversation;
 
-      // Update in conversations list and move to top
+      // FIXED: Update in conversations list and move to top
       final index = conversations
           .indexWhere((c) => c.documentId == updatedConversation.documentId);
       if (index != -1) {
         conversations.removeAt(index);
-        conversations.insert(0, updatedConversation);
       }
+      conversations.insert(0, updatedConversation);
 
       print('>>> ============================================');
     } catch (e) {
@@ -309,86 +349,12 @@ class MessagingController extends GetxController {
     }
   }
 
-  Future<void> handleConversationStarter(ConversationStarter starter) async {
-    try {
-      print('>>> ============================================');
-      print('>>> USER: Handling conversation starter');
-      print('>>> Trigger: ${starter.triggerText}');
-      print('>>> Response: ${starter.responseText}');
-      print('>>> ============================================');
-
-      if (currentConversation.value == null) {
-        print('>>> ERROR: No conversation selected');
-        return;
-      }
-
-      isSendingMessage.value = true;
-
-      // Step 1: User sends the trigger text (WITHOUT isStarterMessage)
-      print('>>> Step 1: User sending trigger message...');
-      final userMessage = Message(
-        conversationId: currentConversation.value!.documentId!,
-        senderId: _userSession.userId,
-        messageText: starter.triggerText,
-        // REMOVED: isStarterMessage field
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await _authRepository.createMessage(userMessage);
-      print('>>> User trigger message sent');
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      // Step 2: Clinic sends the auto-response (using clinic's ID)
-      print('>>> Step 2: Sending clinic auto-response...');
-      print('>>> Clinic ID: ${currentReceiverId.value}');
-
-      await _authRepository.sendConversationStarterResponse(
-        conversationId: currentConversation.value!.documentId!,
-        clinicId: currentReceiverId.value, // This is the clinic ID
-        responseText: starter.responseText,
-      );
-
-      print('>>> Clinic auto-response sent');
-
-      // Step 3: Reload messages
-      print('>>> Step 3: Reloading messages...');
-      await loadConversationMessages(currentConversation.value!.documentId!);
-
-      // Step 4: Scroll to bottom
-      _scrollToBottom();
-
-      print('>>> ============================================');
-      print('>>> CONVERSATION STARTER HANDLED SUCCESSFULLY');
-      print('>>> ============================================');
-    } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR handling conversation starter: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
-
-      Get.snackbar(
-        'Error',
-        'Failed to send starter message',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isSendingMessage.value = false;
-    }
-  }
-
-  /// Fixed: Removed senderType, receiverId, messageType parameters
   Future<void> sendStarterMessage(ConversationStarter starter) async {
     print('>>> ═══════════════════════════════════════════════════════');
     print('>>> SENDSTARTERMESSAGE CALLED');
     print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
     print('>>> Trigger: ${starter.triggerText}');
     print('>>> isSendingMessage BEFORE: ${isSendingMessage.value}');
-    print('>>> Stack trace:');
-    print(StackTrace.current);
     print('>>> ═══════════════════════════════════════════════════════');
 
     if (currentConversation.value == null) {
@@ -566,15 +532,13 @@ class MessagingController extends GetxController {
       if (isCurrentConversation) {
         final resetUserUnread =
             updatedConversation.copyWith(userUnreadCount: 0);
-        conversations[index] = resetUserUnread;
+        conversations.removeAt(index);
+        conversations.insert(0, resetUserUnread);
         currentConversation.value = resetUserUnread;
       } else {
-        conversations[index] = updatedConversation;
-      }
-
-      if (updatedConversation.userUnreadCount > 0 && index != 0) {
-        final conv = conversations.removeAt(index);
-        conversations.insert(0, conv);
+        conversations.removeAt(index);
+        // FIXED: Always move updated conversations to top
+        conversations.insert(0, updatedConversation);
       }
     }
   }
@@ -583,12 +547,11 @@ class MessagingController extends GetxController {
     final exists =
         conversations.any((c) => c.documentId == newConversation.documentId);
     if (!exists) {
+      // FIXED: Add new conversations to the TOP
       conversations.insert(0, newConversation);
     }
   }
 
-  /// Fixed: Changed m.timestamp to m.messageTimestamp (getter from Message model)
-  /// Removed m.receiverId reference - Message model doesn't have this field
   void subscribeToMessages(String conversationId) {
     print('>>> ═══════════════════════════════════════════════════════');
     print('>>> SUBSCRIBING TO MESSAGES');
