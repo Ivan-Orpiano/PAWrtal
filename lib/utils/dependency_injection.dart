@@ -25,6 +25,8 @@ Future<void> initializeDependencies() async {
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
+  
+  
   print('>>> ✓ Archive Service initialized and running');
 
   Get.put(
@@ -50,4 +52,5 @@ Future<void> initializeDependencies() async {
   Get.put(DashboardController());
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
+  
 }

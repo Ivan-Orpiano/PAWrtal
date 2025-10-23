@@ -1216,6 +1216,15 @@ class AuthRepository {
   Future<void> updateFeedbackPriority(String documentId, Priority priority) {
     return appWriteProvider.updateFeedbackPriority(documentId, priority);
   }
+  
+  /// Toggle pin status of feedback
+  Future<Document> toggleFeedbackPin(
+    String documentId,
+    bool isPinned,
+    String pinnedBy,
+  ) {
+    return appWriteProvider.toggleFeedbackPin(documentId, isPinned, pinnedBy);
+  }
 
   Future<void> addFeedbackReply(
     String documentId,

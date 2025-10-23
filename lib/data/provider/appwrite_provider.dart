@@ -2871,7 +2871,7 @@ class AppWriteProvider {
       }
 
       // If verified, update user's verification status in users collection
-      if (mappedStatus == 'approved') {
+          if (mappedStatus == 'approved') {
         print('>>> Updating user verification status...');
         final userDoc = await getUserById(userId);
         if (userDoc != null) {
@@ -2882,9 +2882,11 @@ class AppWriteProvider {
             data: {
               'idVerified': true,
               'idVerifiedAt': DateTime.now().toIso8601String(),
+              // NEW: Link to verification document
+              'verificationDocumentId': updatedDoc.$id,
             },
           );
-          print('>>> User verification status updated');
+          print('>>> User verification status updated with document link');
         }
       }
 
@@ -3460,6 +3462,34 @@ class AppWriteProvider {
       rethrow;
     }
   }
+  /// Toggle pin status of feedback
+Future<Document> toggleFeedbackPin(
+  String documentId,
+  bool isPinned,
+  String pinnedBy,
+) async {
+  try {
+    print('>>> Toggling feedback pin: $documentId to $isPinned');
+    
+    final data = {
+      'isPinned': isPinned,
+      'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
+      'pinnedBy': isPinned ? pinnedBy : null,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+      documentId: documentId,
+      data: data,
+    );
+  } catch (e) {
+    print('>>> Error toggling feedback pin: $e');
+    rethrow;
+  }
+}
+
 
   /// Update feedback status
   Future<void> updateFeedbackStatus(
@@ -3740,8 +3770,10 @@ class AppWriteProvider {
         'role': userDoc.data['role'] ?? 'user',
         'phone': userDoc.data['phone'] ?? '',
         'profilePictureId': userDoc.data['profilePictureId'] ?? '',
+        // CRITICAL: Store verification status
         'idVerified': userDoc.data['idVerified'] ?? false,
         'idVerifiedAt': userDoc.data['idVerifiedAt'],
+        // NEW: Store verification document ID if exists
         'verificationDocumentId': userDoc.data['verificationDocumentId'],
       };
 
@@ -4168,9 +4200,9 @@ class AppWriteProvider {
         // CRITICAL: Preserve verification status
         'idVerified': originalUserData['idVerified'] ?? false,
         'idVerifiedAt': originalUserData['idVerifiedAt'],
-        // Ensure no archive flags - user is fully active
+        // CRITICAL: Ensure no archive flags - user is fully active
         'isArchived': false,
-        // Clear any archive-related fields
+        // CRITICAL: Clear any archive-related fields
         'archivedAt': null,
         'archivedBy': null,
         'archiveReason': null,
@@ -6104,4 +6136,57 @@ class AppWriteProvider {
       print('>>> Migration error: $e');
     }
   }
+
+
+  /// Migrate existing feedback to add pin fields
+Future<void> migrateFeedbackPinFields() async {
+  try {
+    print('>>> ============================================');
+    print('>>> MIGRATING FEEDBACK PIN FIELDS');
+    print('>>> Adding isPinned, pinnedAt, pinnedBy fields');
+    print('>>> ============================================');
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+      queries: [Query.limit(500)],
+    );
+
+    print('>>> Found ${result.documents.length} feedback records');
+
+    int updated = 0;
+    for (var doc in result.documents) {
+      try {
+        // Check if pin fields exist
+        if (!doc.data.containsKey('isPinned')) {
+          print('>>> Updating feedback: ${doc.$id}');
+
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+            documentId: doc.$id,
+            data: {
+              'isPinned': false,
+              'pinnedAt': null,
+              'pinnedBy': null,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+          );
+
+          updated++;
+          print('>>>   ✓ Migration successful');
+        }
+      } catch (e) {
+        print('>>> Error updating feedback ${doc.$id}: $e');
+      }
+    }
+
+    print('>>> ============================================');
+    print('>>> MIGRATION COMPLETE');
+    print('>>> Updated $updated feedback records');
+    print('>>> ============================================');
+  } catch (e) {
+    print('>>> Migration error: $e');
+  }
+}
 }
