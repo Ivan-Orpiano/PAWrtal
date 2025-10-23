@@ -10,6 +10,7 @@ class User {
   // ID verification fields
   bool idVerified;
   String? idVerifiedAt;
+  String? verificationDocumentId; 
 
   // Archive/Soft Delete fields
   bool isArchived;
@@ -21,6 +22,7 @@ class User {
   User.fromMap(Map<String, dynamic> map)
       : idVerified = map["idVerified"] as bool? ?? false,
         idVerifiedAt = map["idVerifiedAt"] as String?,
+        verificationDocumentId = map["verificationDocumentId"] as String?,
         isArchived = map["isArchived"] as bool? ?? false,
         archivedAt = map["archivedAt"] as String?,
         archivedBy = map["archivedBy"] as String?,
@@ -42,9 +44,10 @@ class User {
       'phone': phone,
       'email': email,
       'role': role,
-      'profilePictureId': profilePictureId, // NEW
+      'profilePictureId': profilePictureId, 
       'idVerified': idVerified,
       'idVerifiedAt': idVerifiedAt,
+      'verificationDocumentId': verificationDocumentId,
       'isArchived': isArchived,
       'archivedAt': archivedAt,
       'archivedBy': archivedBy,

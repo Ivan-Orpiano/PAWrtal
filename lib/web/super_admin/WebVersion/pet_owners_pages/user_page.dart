@@ -40,6 +40,8 @@ class _SuperAdminUserManagementScreenState
   List<User> _verifiedUsers = [];
   List<User> _unverifiedUsers = [];
 
+  
+
   bool _isLoading = true;
   String _searchQuery = '';
   String _selectedSort = "newest";
@@ -73,59 +75,62 @@ class _SuperAdminUserManagementScreenState
   }
 
   /// Load all users from database
-  Future<void> _loadUsers() async {
-    setState(() => _isLoading = true);
+Future<void> _loadUsers() async {
+  setState(() => _isLoading = true);
 
-    try {
-      print('>>> Loading all users...');
+  try {
+    print('>>> Loading all users...');
 
-      // Get all users from database
-      final docs =
-          await _authRepository.appWriteProvider.databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.usersCollectionID,
-        queries: [
-          Query.equal('role', ['customer', 'user']), // Only get regular users
-          Query.orderDesc('\$createdAt'),
-          Query.limit(1000),
-        ],
-      );
-      print('>>> Found ${docs.documents.length} users');
-      // Convert to User models
-      _allUsers = docs.documents.map((doc) => User.fromMap(doc.data)).toList();
-      // ADD IMMEDIATELY AFTER:
-      // CRITICAL: Fetch verification status for each user from ID verification collection
-      print(
-          '>>> Fetching verification status for ${_allUsers.length} users...');
-      for (var user in _allUsers) {
-        try {
-          final verificationDoc =
-              await _authRepository.getIdVerificationByUserId(user.userId);
-          if (verificationDoc != null && verificationDoc.status == 'approved') {
-            // Update user's verification status from ID verification collection
-            user.idVerified = true;
-            user.idVerifiedAt = verificationDoc.verifiedAt?.toIso8601String();
-            print('>>> User ${user.name} verified from ID collection');
-          }
-        } catch (e) {
-          print('>>> Error fetching verification for ${user.userId}: $e');
+    // Get all users from database
+    final docs = await _authRepository.appWriteProvider.databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.usersCollectionID,
+      queries: [
+        Query.equal('role', ['customer', 'user']),
+        Query.orderDesc('\$createdAt'),
+        Query.limit(1000),
+      ],
+    );
+    
+    print('>>> Found ${docs.documents.length} users');
+    
+    // Convert to User models
+    _allUsers = docs.documents.map((doc) => User.fromMap(doc.data)).toList();
+    
+    // CRITICAL: Fetch verification status for each user from ID verification collection
+    print('>>> Fetching verification status for ${_allUsers.length} users...');
+    
+    for (var user in _allUsers) {
+      try {
+        final verificationDoc = await _authRepository.getIdVerificationByUserId(user.userId);
+        
+        if (verificationDoc != null && verificationDoc.status == 'approved') {
+          // Update user's verification status from ID verification collection
+          user.idVerified = true;
+          user.idVerifiedAt = verificationDoc.verifiedAt?.toIso8601String();
+          print('>>> User ${user.name} verified from ID collection');
         }
+      } catch (e) {
+        print('>>> Error fetching verification for ${user.userId}: $e');
       }
-      // Split into verified and unverified
-      _categorizeUsers();
-      setState(() => _isLoading = false);
-    } catch (e) {
-      print('>>> Error loading users: $e');
-      setState(() => _isLoading = false);
-
-      Get.snackbar(
-        'Error',
-        'Failed to load users: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
     }
+    
+    // Split into verified and unverified
+    _categorizeUsers();
+    
+    setState(() => _isLoading = false);
+  } catch (e) {
+    print('>>> Error loading users: $e');
+    setState(() => _isLoading = false);
+
+    Get.snackbar(
+      'Error',
+      'Failed to load users: $e',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
   }
+}
 
   /// Categorize users into verified and unverified
   void _categorizeUsers() {
@@ -320,73 +325,94 @@ Widget _buildSortOption(
     }
 
   /// Setup real-time subscriptions for users and verifications
-  void _setupRealtimeSubscriptions() {
-    try {
-      final realtime = Realtime(_authRepository.appWriteProvider.client);
+  // AFTER line 120 (after existing _setupRealtimeSubscriptions method)
+// ADD this enhanced version:
 
-      // Subscribe to users collection changes
-      _userSubscription = realtime.subscribe([
-        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.usersCollectionID}.documents'
-      ]);
+void _setupRealtimeSubscriptions() {
+  try {
+    final realtime = Realtime(_authRepository.appWriteProvider.client);
 
-      _userSubscription!.stream.listen((response) {
-        print('>>> Real-time user event: ${response.events}');
+    // Subscribe to users collection changes
+    _userSubscription = realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.usersCollectionID}.documents'
+    ]);
 
-        if (response.events.contains('databases.*.collections.*.documents.*')) {
-          // Reload users when any user document changes
-          _loadUsers();
+    _userSubscription!.stream.listen((response) {
+      print('>>> Real-time user event: ${response.events}');
+
+      if (response.events.contains('databases.*.collections.*.documents.*')) {
+        // Reload users when any user document changes
+        _loadUsers();
+      }
+    });
+
+    // Subscribe to verification collection changes
+    _verificationSubscription = realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
+    ]);
+
+    _verificationSubscription!.stream.listen((response) {
+      print('>>> Real-time verification event: ${response.events}');
+
+      if (response.events.contains('databases.*.collections.*.documents.*')) {
+        // CRITICAL: Get the payload to check if verification was approved
+        final payload = response.payload;
+        
+        if (payload['status'] == 'approved') {
+          final userId = payload['userId'] as String?;
+          
+          if (userId != null) {
+            print('>>> User $userId was verified, updating UI...');
+            
+            // Update the specific user in the list
+            _updateUserVerificationStatus(userId, true);
+          }
         }
-      });
+        
+        // Also reload users to ensure sync
+        _loadUsers();
+      }
+    });
 
-      // Subscribe to verification collection changes
-      _verificationSubscription = realtime.subscribe([
-        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
-      ]);
+    // ADD: Storage subscription for profile picture changes
+    _storageSubscription = realtime
+        .subscribe(['buckets.${AppwriteConstants.imageBucketID}.files']);
 
-      _verificationSubscription!.stream.listen((response) {
-        print('>>> Real-time verification event: ${response.events}');
+    _storageSubscription!.stream.listen((response) {
+      print('>>> Real-time storage event: ${response.events}');
 
-        if (response.events.contains('databases.*.collections.*.documents.*')) {
-          // Reload users when verification status changes
-          _loadUsers();
-        }
-      });
-      _storageSubscription = realtime
-          .subscribe(['buckets.${AppwriteConstants.imageBucketID}.files']);
+      if (response.events.contains('buckets.*.files.*')) {
+        print('>>> Profile picture changed, reloading users...');
+        _loadUsers();
+      }
+    });
 
-      _storageSubscription!.stream.listen((response) {
-        print('>>> Real-time storage event: ${response.events}');
-
-        // Check if it's a profile picture related event
-        if (response.events.contains('buckets.*.files.*')) {
-          print('>>> Profile picture changed, reloading users...');
-          _loadUsers();
-        }
-      });
-
-      print(
-          '>>> Real-time subscriptions establishedfor archived users (including storage)');
-      // ADD BEFORE THE PRINT STATEMENT:
-      // Subscribe to ID verification changes
-      final verificationRealtimeSubscription = realtime.subscribe([
-        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
-      ]);
-
-      verificationRealtimeSubscription.stream.listen((response) {
-        print('>>> Real-time verification event: ${response.events}');
-
-        // Check if it's a verification status update
-        if (response.events.contains('databases.*.collections.*.documents.*')) {
-          print('>>> Verification status changed, reloading users...');
-          _loadUsers();
-        }
-      });
-
-      _verificationSubscription = verificationRealtimeSubscription;
-    } catch (e) {
-      print('>>> Error setting up real-time subscriptions: $e');
-    }
+    print('>>> Real-time subscriptions established for users (including storage)');
+  } catch (e) {
+    print('>>> Error setting up real-time subscriptions: $e');
   }
+}
+
+// ADD this NEW method after _setupRealtimeSubscriptions:
+void _updateUserVerificationStatus(String userId, bool isVerified) {
+  setState(() {
+    // Find the user in all users list
+    final userIndex = _allUsers.indexWhere((u) => u.userId == userId);
+    
+    if (userIndex != -1) {
+      print('>>> Updating user ${_allUsers[userIndex].name} verification status');
+      
+      // Update the user object
+      _allUsers[userIndex].idVerified = isVerified;
+      _allUsers[userIndex].idVerifiedAt = DateTime.now().toIso8601String();
+      
+      // Re-categorize users to move between verified/unverified lists
+      _categorizeUsers();
+      
+      print('>>> User moved to ${isVerified ? "verified" : "unverified"} list');
+    }
+  });
+}
 
   /// Filter users based on search query
   List<User> _filterUsers(List<User> users) {

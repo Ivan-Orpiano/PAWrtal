@@ -11,6 +11,9 @@ class FeedbackAndReport {
   final Priority priority;
   final FeedbackStatus status;
   final String appVersion;
+  final bool isPinned; 
+final DateTime? pinnedAt; 
+final String? pinnedBy; 
   final String deviceInfo;
   final String platform;
   final DateTime submittedAt;
@@ -36,6 +39,9 @@ class FeedbackAndReport {
     this.priority = Priority.medium,
     this.status = FeedbackStatus.pending,
     required this.appVersion,
+    this.isPinned = false, 
+    this.pinnedAt,
+    this.pinnedBy,
     required this.deviceInfo,
     required this.platform,
     DateTime? submittedAt,
@@ -73,6 +79,9 @@ class FeedbackAndReport {
         orElse: () => FeedbackStatus.pending,
       ),
       appVersion: map['appVersion'] ?? '',
+      isPinned: map['isPinned'] ?? false,
+      pinnedAt: map['pinnedAt'] != null ? DateTime.parse(map['pinnedAt']) : null,
+      pinnedBy: map['pinnedBy'], 
       deviceInfo: map['deviceInfo'] ?? '',
       platform: map['platform'] ?? 'web',
       submittedAt: map['submittedAt'] != null
@@ -109,6 +118,9 @@ class FeedbackAndReport {
       'archivedAt': archivedAt?.toIso8601String(),
       'archivedBy': archivedBy,
       'reportedBy': reportedBy,
+      'isPinned': isPinned, 
+      'pinnedAt': pinnedAt?.toIso8601String(), 
+      'pinnedBy': pinnedBy, 
       'adminId': adminId,
       'staffId': staffId,
       'clinicId': clinicId,
@@ -137,6 +149,9 @@ class FeedbackAndReport {
     String? adminId,
     String? staffId,
     String? clinicId,
+    bool? isPinned, 
+    DateTime? pinnedAt, 
+    String? pinnedBy,
   }) {
     return FeedbackAndReport(
       documentId: documentId ?? this.documentId,
@@ -160,6 +175,9 @@ class FeedbackAndReport {
       adminId: adminId ?? this.adminId,
       staffId: staffId ?? this.staffId,
       clinicId: clinicId ?? this.clinicId,
+      isPinned: isPinned ?? this.isPinned, 
+      pinnedAt: pinnedAt ?? this.pinnedAt,
+      pinnedBy: pinnedBy ?? this.pinnedBy,
     );
   }
 }
