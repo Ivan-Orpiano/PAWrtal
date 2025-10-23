@@ -717,52 +717,142 @@ class AppWriteProvider {
 
   Future<void> updateFullAppointment(
       String documentId, Map<String, dynamic> data) async {
-    await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.appointmentCollectionID,
-      documentId: documentId,
-      data: data,
-    );
+    print('>>> ============================================');
+    print('>>> UPDATING APPOINTMENT IN APPWRITE');
+    print('>>> Document ID: $documentId');
+    print('>>> ============================================');
+    print('>>> Update data: $data');
+
+    // Log vitals specifically
+    if (data.containsKey('vitals')) {
+      print('>>> Vitals in update: ${data['vitals']}');
+    }
+    print('>>> ============================================');
+
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        documentId: documentId,
+        data: data,
+      );
+
+      print('>>> âœ" Appointment updated successfully');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> âœ— ERROR updating appointment: $e');
+      print('>>> ============================================');
+      rethrow;
+    }
   }
 
   Future<models.Document> createMedicalRecord(Map<String, dynamic> data) async {
-    return await databases!.createDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.medicalRecordsCollectionID,
-      documentId: ID.unique(),
-      data: data,
-    );
-  }
+    print('>>> ============================================');
+    print('>>> CREATING MEDICAL RECORD IN APPWRITE');
+    print('>>> ============================================');
+    print('>>> Full data received: $data');
 
-  Future<List<Map<String, dynamic>>> getPetMedicalRecords(String petId) async {
-    final res = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.medicalRecordsCollectionID,
-      queries: [Query.equal("petId", petId)],
-    );
+    // Log vitals data specifically
+    print('>>> Individual Vitals:');
+    print('>>>   - temperature: ${data['temperature']}');
+    print('>>>   - weight: ${data['weight']}');
+    print('>>>   - bloodPressure: ${data['bloodPressure']}');
+    print('>>>   - heartRate: ${data['heartRate']}');
+    print('>>>   - vitals map: ${data['vitals']}');
+    print('>>> ============================================');
 
-    return res.documents
-        .map((doc) => {
-              ...doc.data,
-              '\$id': doc.$id,
-            })
-        .toList();
+    // Ensure all required fields are present
+    if (data['diagnosis'] == null || data['diagnosis'].toString().isEmpty) {
+      throw Exception('Diagnosis is required for medical records');
+    }
+    if (data['treatment'] == null || data['treatment'].toString().isEmpty) {
+      throw Exception('Treatment is required for medical records');
+    }
+
+    // CRITICAL: Ensure vitals data is properly formatted
+    final Map<String, dynamic> cleanedData = {
+      'petId': data['petId'],
+      'clinicId': data['clinicId'],
+      'vetId': data['vetId'],
+      'appointmentId': data['appointmentId'],
+      'visitDate': data['visitDate'],
+      'service': data['service'],
+      'diagnosis': data['diagnosis'],
+      'treatment': data['treatment'],
+      'prescription': data['prescription'],
+      'notes': data['notes'],
+      // CRITICAL: Individual vital fields with proper null handling
+      'temperature': data['temperature'],
+      'weight': data['weight'],
+      'bloodPressure': data['bloodPressure'],
+      'heartRate': data['heartRate'],
+      // CRITICAL: Keep the full vitals map for backward compatibility
+      'vitals': data['vitals'],
+      'attachments': data['attachments'],
+      'createdAt': data['createdAt'],
+      'updatedAt': data['updatedAt'],
+    };
+
+    print('>>> Cleaned data for Appwrite:');
+    print('>>>   - temperature: ${cleanedData['temperature']}');
+    print('>>>   - weight: ${cleanedData['weight']}');
+    print('>>>   - bloodPressure: ${cleanedData['bloodPressure']}');
+    print('>>>   - heartRate: ${cleanedData['heartRate']}');
+    print('>>>   - vitals: ${cleanedData['vitals']}');
+    print('>>> ============================================');
+
+    try {
+      final doc = await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.medicalRecordsCollectionID,
+        documentId: ID.unique(),
+        data: cleanedData,
+      );
+
+      print('>>> âœ" Medical record created successfully: ${doc.$id}');
+      print('>>> ============================================');
+
+      return doc;
+    } catch (e) {
+      print('>>> âœ— ERROR creating medical record: $e');
+      print('>>> ============================================');
+      rethrow;
+    }
   }
 
   Future<List<Map<String, dynamic>>> getClinicMedicalRecords(
       String clinicId) async {
-    final res = await databases!.listDocuments(
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.medicalRecordsCollectionID,
+        queries: [
+          Query.equal("clinicId", clinicId),
+          Query.orderDesc("visitDate"),
+        ],
+      );
+
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getClinicMedicalRecords: $e');
+      return [];
+    }
+  }
+
+  Future<Document> updateMedicalRecord(
+      String documentId, Map<String, dynamic> data) async {
+    data['updatedAt'] = DateTime.now().toIso8601String();
+    return await databases!.updateDocument(
       databaseId: AppwriteConstants.dbID,
       collectionId: AppwriteConstants.medicalRecordsCollectionID,
-      queries: [Query.equal("clinicId", clinicId)],
+      documentId: documentId,
+      data: data,
     );
-
-    return res.documents
-        .map((doc) => {
-              ...doc.data,
-              '\$id': doc.$id,
-            })
-        .toList();
   }
 
   Future<Document> updateClinic(
@@ -6102,6 +6192,29 @@ class AppWriteProvider {
       print('>>> ============================================');
     } catch (e) {
       print('>>> Migration error: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPetMedicalRecords(String petId) async {
+    try {
+      final res = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.medicalRecordsCollectionID,
+        queries: [
+          Query.equal("petId", petId),
+          Query.orderDesc("visitDate"),
+        ],
+      );
+
+      return res.documents
+          .map((doc) => {
+                ...doc.data,
+                '\$id': doc.$id,
+              })
+          .toList();
+    } catch (e) {
+      print('Error in AppWriteProvider.getPetMedicalRecords: $e');
+      return [];
     }
   }
 }

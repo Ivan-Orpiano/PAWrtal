@@ -680,8 +680,24 @@ class WebAppointmentTile extends StatelessWidget {
     final weightController = TextEditingController();
     final bpController = TextEditingController();
     final hrController = TextEditingController();
-    final notesController = TextEditingController();
     bool hasChanges = false;
+
+    // Pre-fill with pending vitals if they exist
+    final pendingVitals = controller.getPendingVitals(appointment.documentId!);
+    if (pendingVitals != null) {
+      if (pendingVitals['temperature'] != null) {
+        tempController.text = pendingVitals['temperature'].toString();
+      }
+      if (pendingVitals['weight'] != null) {
+        weightController.text = pendingVitals['weight'].toString();
+      }
+      if (pendingVitals['bloodPressure'] != null) {
+        bpController.text = pendingVitals['bloodPressure'].toString();
+      }
+      if (pendingVitals['heartRate'] != null) {
+        hrController.text = pendingVitals['heartRate'].toString();
+      }
+    }
 
     Get.dialog(
       Dialog(
@@ -703,15 +719,59 @@ class WebAppointmentTile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Record Vital Signs',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color.fromARGB(255, 81, 115, 153),
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.favorite,
+                                color: Colors.red, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Record Vital Signs',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 81, 115, 153),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.blue[700], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Vitals will be saved when you complete the service. They won\'t be saved to the database yet.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue[700],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Temperature and Weight
                       Row(
                         children: [
                           Expanded(
@@ -720,8 +780,11 @@ class WebAppointmentTile extends StatelessWidget {
                               decoration: const InputDecoration(
                                 labelText: 'Temperature (°C)',
                                 border: OutlineInputBorder(),
+                                hintText: 'e.g., 38.5',
                               ),
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               onChanged: (value) {
                                 if (value.isNotEmpty) hasChanges = true;
                               },
@@ -734,8 +797,11 @@ class WebAppointmentTile extends StatelessWidget {
                               decoration: const InputDecoration(
                                 labelText: 'Weight (kg)',
                                 border: OutlineInputBorder(),
+                                hintText: 'e.g., 25.5',
                               ),
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               onChanged: (value) {
                                 if (value.isNotEmpty) hasChanges = true;
                               },
@@ -744,6 +810,8 @@ class WebAppointmentTile extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
+
+                      // Blood Pressure and Heart Rate
                       Row(
                         children: [
                           Expanded(
@@ -752,6 +820,7 @@ class WebAppointmentTile extends StatelessWidget {
                               decoration: const InputDecoration(
                                 labelText: 'Blood Pressure',
                                 border: OutlineInputBorder(),
+                                hintText: 'e.g., 120/80',
                               ),
                               onChanged: (value) {
                                 if (value.isNotEmpty) hasChanges = true;
@@ -765,6 +834,7 @@ class WebAppointmentTile extends StatelessWidget {
                               decoration: const InputDecoration(
                                 labelText: 'Heart Rate (bpm)',
                                 border: OutlineInputBorder(),
+                                hintText: 'e.g., 72',
                               ),
                               keyboardType: TextInputType.number,
                               onChanged: (value) {
@@ -774,19 +844,10 @@ class WebAppointmentTile extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'Additional Notes',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 3,
-                        onChanged: (value) {
-                          if (value.isNotEmpty) hasChanges = true;
-                        },
-                      ),
+
                       const SizedBox(height: 24),
+
+                      // Action Buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -800,7 +861,6 @@ class WebAppointmentTile extends StatelessWidget {
                                     weightController.dispose();
                                     bpController.dispose();
                                     hrController.dispose();
-                                    notesController.dispose();
                                     Get.back();
                                   }
                                 });
@@ -809,7 +869,6 @@ class WebAppointmentTile extends StatelessWidget {
                                 weightController.dispose();
                                 bpController.dispose();
                                 hrController.dispose();
-                                notesController.dispose();
                                 Get.back();
                               }
                             },
@@ -818,52 +877,67 @@ class WebAppointmentTile extends StatelessWidget {
                           const SizedBox(width: 16),
                           ElevatedButton(
                             onPressed: () {
-                              if (tempController.text.isNotEmpty &&
-                                  weightController.text.isNotEmpty) {
-                                final vitals = {
-                                  'temperature':
-                                      double.tryParse(tempController.text) ??
-                                          0.0,
-                                  'weight':
-                                      double.tryParse(weightController.text) ??
-                                          0.0,
-                                  'bloodPressure': bpController.text.isNotEmpty
-                                      ? bpController.text
-                                      : null,
-                                  'heartRate': hrController.text.isNotEmpty
-                                      ? int.tryParse(hrController.text)
-                                      : null,
-                                  'additionalNotes':
-                                      notesController.text.isNotEmpty
-                                          ? notesController.text
-                                          : null,
-                                  'recordedAt':
-                                      DateTime.now().toIso8601String(),
-                                };
-
-                                final updatedAppointment = appointment.copyWith(
-                                  vitals: vitals,
-                                  updatedAt: DateTime.now(),
-                                );
-
-                                tempController.dispose();
-                                weightController.dispose();
-                                bpController.dispose();
-                                hrController.dispose();
-                                notesController.dispose();
-
-                                controller
-                                    .updateFullAppointment(updatedAppointment);
-                                Get.back();
+                              // Validate that at least one field is filled
+                              if (tempController.text.isEmpty &&
+                                  weightController.text.isEmpty &&
+                                  bpController.text.isEmpty &&
+                                  hrController.text.isEmpty) {
                                 Get.snackbar(
-                                    "Success", "Vital signs recorded!");
+                                  "Required",
+                                  "Please enter at least one vital sign",
+                                  backgroundColor: Colors.orange,
+                                  colorText: Colors.white,
+                                );
+                                return;
                               }
+
+                              final vitals = <String, dynamic>{};
+
+                              if (tempController.text.isNotEmpty) {
+                                final temp =
+                                    double.tryParse(tempController.text);
+                                if (temp != null) {
+                                  vitals['temperature'] = temp;
+                                }
+                              }
+
+                              if (weightController.text.isNotEmpty) {
+                                final weight =
+                                    double.tryParse(weightController.text);
+                                if (weight != null) {
+                                  vitals['weight'] = weight;
+                                }
+                              }
+
+                              if (bpController.text.isNotEmpty) {
+                                vitals['bloodPressure'] = bpController.text;
+                              }
+
+                              if (hrController.text.isNotEmpty) {
+                                final hr = int.tryParse(hrController.text);
+                                if (hr != null) {
+                                  vitals['heartRate'] = hr;
+                                }
+                              }
+
+                              vitals['recordedAt'] =
+                                  DateTime.now().toIso8601String();
+
+                              // MODIFIED: Store locally instead of saving to database
+                              controller.recordVitalsLocally(
+                                  appointment, vitals);
+
+                              tempController.dispose();
+                              weightController.dispose();
+                              bpController.dispose();
+                              hrController.dispose();
+                              Get.back();
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
                                   const Color.fromARGB(255, 81, 115, 153),
                             ),
-                            child: const Text('Save',
+                            child: const Text('Record Vitals',
                                 style: TextStyle(color: Colors.white)),
                           ),
                         ],
