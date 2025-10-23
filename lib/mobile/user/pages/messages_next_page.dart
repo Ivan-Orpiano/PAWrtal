@@ -122,11 +122,15 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: Padding(
           padding: const EdgeInsets.only(top: 5),
           child: AppBar(
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            backgroundColor: Colors.white,
             leading: IconButton(
               icon: const Icon(
                 Icons.keyboard_arrow_left_rounded,
