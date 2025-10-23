@@ -9,12 +9,12 @@ class Appointment {
   final String? notes; // User's original booking notes
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // NEW: Cancellation/rejection tracking
   final String? cancellationReason; // Why was it cancelled/declined
   final String? cancelledBy; // 'user' or 'clinic'
   final DateTime? cancelledAt; // When was it cancelled
-  
+
   // Medical record fields
   final DateTime? checkedInAt;
   final DateTime? serviceStartedAt;
@@ -76,25 +76,42 @@ class Appointment {
       updatedAt: DateTime.parse(map['updatedAt']),
       cancellationReason: map['cancellationReason'],
       cancelledBy: map['cancelledBy'],
-      cancelledAt: map['cancelledAt'] != null ? DateTime.parse(map['cancelledAt']) : null,
-      checkedInAt: map['checkedInAt'] != null ? DateTime.parse(map['checkedInAt']) : null,
-      serviceStartedAt: map['serviceStartedAt'] != null ? DateTime.parse(map['serviceStartedAt']) : null,
-      serviceCompletedAt: map['serviceCompletedAt'] != null ? DateTime.parse(map['serviceCompletedAt']) : null,
+      cancelledAt: map['cancelledAt'] != null
+          ? DateTime.parse(map['cancelledAt'])
+          : null,
+      checkedInAt: map['checkedInAt'] != null
+          ? DateTime.parse(map['checkedInAt'])
+          : null,
+      serviceStartedAt: map['serviceStartedAt'] != null
+          ? DateTime.parse(map['serviceStartedAt'])
+          : null,
+      serviceCompletedAt: map['serviceCompletedAt'] != null
+          ? DateTime.parse(map['serviceCompletedAt'])
+          : null,
       diagnosis: map['diagnosis'],
       treatment: map['treatment'],
       prescription: map['prescription'],
       vetNotes: map['vetNotes'],
-      attachments: map['attachments'] != null ? List<String>.from(map['attachments']) : null,
+      attachments: map['attachments'] != null
+          ? List<String>.from(map['attachments'])
+          : null,
       totalCost: map['totalCost']?.toDouble(),
       isPaid: map['isPaid'] ?? false,
       paymentMethod: map['paymentMethod'],
       followUpInstructions: map['followUpInstructions'],
-      nextAppointmentDate: map['nextAppointmentDate'] != null ? DateTime.parse(map['nextAppointmentDate']) : null,
+      nextAppointmentDate: map['nextAppointmentDate'] != null
+          ? DateTime.parse(map['nextAppointmentDate'])
+          : null,
       vitals: map['vitals'],
     );
   }
 
   Map<String, dynamic> toMap() {
+    print('>>> Appointment toMap() called');
+    if (vitals != null) {
+      print('>>>   - vitals in appointment: $vitals');
+    }
+
     return {
       'userId': userId,
       'clinicId': clinicId,
@@ -121,6 +138,7 @@ class Appointment {
       'paymentMethod': paymentMethod,
       'followUpInstructions': followUpInstructions,
       'nextAppointmentDate': nextAppointmentDate?.toIso8601String(),
+      // CRITICAL: Vitals map must be included
       'vitals': vitals,
     };
   }
@@ -195,22 +213,25 @@ class Appointment {
   bool get hasArrived => checkedInAt != null;
   bool get hasServiceStarted => serviceStartedAt != null;
   bool get hasServiceCompleted => serviceCompletedAt != null;
-  bool get hasMedicalRecord => diagnosis != null || treatment != null || prescription != null;
+  bool get hasMedicalRecord =>
+      diagnosis != null || treatment != null || prescription != null;
 
   // NEW: Check if cancelled by user
   bool get isCancelledByUser => isCancelled && cancelledBy == 'user';
-  bool get isCancelledByClinic => (isCancelled || isDeclined) && cancelledBy == 'clinic';
+  bool get isCancelledByClinic =>
+      (isCancelled || isDeclined) && cancelledBy == 'clinic';
 
   bool get isToday {
     final now = DateTime.now();
     return dateTime.year == now.year &&
-           dateTime.month == now.month &&
-           dateTime.day == now.day;
+        dateTime.month == now.month &&
+        dateTime.day == now.day;
   }
 
   bool get isPast {
     final now = DateTime.now();
-    final appointmentDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final appointmentDate =
+        DateTime(dateTime.year, dateTime.month, dateTime.day);
     final today = DateTime(now.year, now.month, now.day);
     return appointmentDate.isBefore(today);
   }

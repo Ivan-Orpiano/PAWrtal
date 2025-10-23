@@ -133,6 +133,18 @@ class AuthRepository {
 
   Future<void> updateFullAppointment(
       String documentId, Map<String, dynamic> data) {
+    print('>>> ============================================');
+    print('>>> REPOSITORY: Updating appointment');
+    print('>>> Document ID: $documentId');
+    print('>>> ============================================');
+
+    if (data.containsKey('vitals')) {
+      print('>>> Vitals data in appointment update: ${data['vitals']}');
+    }
+
+    print('>>> Full update data: $data');
+    print('>>> ============================================');
+
     return appWriteProvider.updateFullAppointment(documentId, data);
   }
 
@@ -183,7 +195,25 @@ class AuthRepository {
   }
 
   Future<models.Document> createMedicalRecord(MedicalRecord medicalRecord) {
-    return appWriteProvider.createMedicalRecord(medicalRecord.toMap());
+    print('>>> ============================================');
+    print('>>> REPOSITORY: Creating medical record');
+    print('>>> ============================================');
+
+    final recordMap = medicalRecord.toMap();
+
+    print('>>> Medical record data:');
+    print('>>>   - petId: ${recordMap['petId']}');
+    print('>>>   - service: ${recordMap['service']}');
+    print('>>>   - diagnosis: ${recordMap['diagnosis']}');
+    print('>>>   - treatment: ${recordMap['treatment']}');
+    print('>>>   - temperature: ${recordMap['temperature']}');
+    print('>>>   - weight: ${recordMap['weight']}');
+    print('>>>   - bloodPressure: ${recordMap['bloodPressure']}');
+    print('>>>   - heartRate: ${recordMap['heartRate']}');
+    print('>>>   - vitals map: ${recordMap['vitals']}');
+    print('>>> ============================================');
+
+    return appWriteProvider.createMedicalRecord(recordMap);
   }
 
   Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
