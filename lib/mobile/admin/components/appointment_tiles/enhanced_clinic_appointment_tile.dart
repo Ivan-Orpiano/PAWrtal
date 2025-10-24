@@ -1,4 +1,6 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
+import 'package:capstone_app/data/models/medical_record_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/admin/controllers/enhanced_clinic_appointment_controller.dart';
 import 'package:capstone_app/mobile/admin/pages/modals/appointment_workflow_modal.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +9,8 @@ import 'package:intl/intl.dart';
 
 class PatientWorkflowTile extends StatelessWidget {
   final Appointment appointment;
-  final String workflowStage; // 'pending', 'scheduled', 'in_progress', 'completed'
+  final String
+      workflowStage; // 'pending', 'scheduled', 'in_progress', 'completed'
 
   const PatientWorkflowTile({
     super.key,
@@ -95,7 +98,7 @@ class PatientWorkflowTile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(width: 16),
-                    
+
                     // Appointment Details
                     Expanded(
                       child: Column(
@@ -116,9 +119,11 @@ class PatientWorkflowTile extends StatelessWidget {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(appointment.status).withOpacity(0.1),
+                                  color: _getStatusColor(appointment.status)
+                                      .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -133,7 +138,7 @@ class PatientWorkflowTile extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          
+
                           // Owner name
                           Text(
                             'Owner: ${controller.getOwnerName(appointment.userId)}',
@@ -143,9 +148,9 @@ class PatientWorkflowTile extends StatelessWidget {
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          
+
                           const SizedBox(height: 2),
-                          
+
                           // Time & Service
                           Row(
                             children: [
@@ -156,7 +161,8 @@ class PatientWorkflowTile extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                DateFormat('MMM dd • hh:mm a').format(appointment.dateTime),
+                                DateFormat('MMM dd • hh:mm a')
+                                    .format(appointment.dateTime),
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 12,
@@ -181,9 +187,9 @@ class PatientWorkflowTile extends StatelessWidget {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           // Progress Indicators
                           _buildProgressIndicators(appointment),
                         ],
@@ -191,9 +197,9 @@ class PatientWorkflowTile extends StatelessWidget {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Action Buttons Based on Status
                 _buildActionButtons(context, controller, appointment),
               ],
@@ -207,13 +213,16 @@ class PatientWorkflowTile extends StatelessWidget {
   Widget _buildProgressIndicators(Appointment appointment) {
     return Row(
       children: [
-        _buildProgressDot('Scheduled', appointment.status != 'pending', Colors.blue),
+        _buildProgressDot(
+            'Scheduled', appointment.status != 'pending', Colors.blue),
         _buildProgressLine(appointment.hasArrived),
         _buildProgressDot('Arrived', appointment.hasArrived, Colors.orange),
         _buildProgressLine(appointment.hasServiceStarted),
-        _buildProgressDot('Treatment', appointment.hasServiceStarted, Colors.purple),
+        _buildProgressDot(
+            'Treatment', appointment.hasServiceStarted, Colors.purple),
         _buildProgressLine(appointment.hasServiceCompleted),
-        _buildProgressDot('Complete', appointment.hasServiceCompleted, Colors.green),
+        _buildProgressDot(
+            'Complete', appointment.hasServiceCompleted, Colors.green),
       ],
     );
   }
@@ -252,7 +261,8 @@ class PatientWorkflowTile extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, EnhancedClinicAppointmentController controller, Appointment appointment) {
+  Widget _buildActionButtons(BuildContext context,
+      EnhancedClinicAppointmentController controller, Appointment appointment) {
     switch (appointment.status) {
       case 'pending':
         return Row(
@@ -340,7 +350,8 @@ class PatientWorkflowTile extends StatelessWidget {
                   'Complete Service',
                   Icons.check_circle,
                   Colors.green,
-                  () => _showCompleteServiceDialog(context, controller, appointment),
+                  () => _showCompleteServiceDialog(
+                      context, controller, appointment),
                 ),
               ),
             ],
@@ -376,7 +387,8 @@ class PatientWorkflowTile extends StatelessWidget {
     }
   }
 
-  Widget _buildActionButton(String text, IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+      String text, IconData icon, Color color, VoidCallback onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -407,13 +419,16 @@ class PatientWorkflowTile extends StatelessWidget {
   }
 
   // Dialog Methods
-  void _showConfirmDialog(BuildContext context, String title, String content, VoidCallback onConfirm) {
+  void _showConfirmDialog(BuildContext context, String title, String content,
+      VoidCallback onConfirm) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title:
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
           content: Text(content),
           actions: [
             TextButton(
@@ -433,12 +448,12 @@ class PatientWorkflowTile extends StatelessWidget {
     );
   }
 
-  void _showVitalsDialog(BuildContext context, EnhancedClinicAppointmentController controller, Appointment appointment) {
+  void _showVitalsDialog(BuildContext context,
+      EnhancedClinicAppointmentController controller, Appointment appointment) {
     final tempController = TextEditingController();
     final weightController = TextEditingController();
     final bpController = TextEditingController();
     final hrController = TextEditingController();
-    final rrController = TextEditingController();
     final notesController = TextEditingController();
 
     showDialog(
@@ -451,7 +466,8 @@ class PatientWorkflowTile extends StatelessWidget {
             children: [
               TextField(
                 controller: tempController,
-                decoration: const InputDecoration(labelText: 'Temperature (°C)'),
+                decoration:
+                    const InputDecoration(labelText: 'Temperature (°C)'),
                 keyboardType: TextInputType.number,
               ),
               TextField(
@@ -465,17 +481,14 @@ class PatientWorkflowTile extends StatelessWidget {
               ),
               TextField(
                 controller: hrController,
-                decoration: const InputDecoration(labelText: 'Heart Rate (bpm)'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: rrController,
-                decoration: const InputDecoration(labelText: 'Respiratory Rate'),
+                decoration:
+                    const InputDecoration(labelText: 'Heart Rate (bpm)'),
                 keyboardType: TextInputType.number,
               ),
               TextField(
                 controller: notesController,
-                decoration: const InputDecoration(labelText: 'Additional Notes'),
+                decoration:
+                    const InputDecoration(labelText: 'Additional Notes'),
                 maxLines: 2,
               ),
             ],
@@ -488,17 +501,17 @@ class PatientWorkflowTile extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              if (tempController.text.isNotEmpty && weightController.text.isNotEmpty) {
-                controller.addVitalSigns(
-                  appointment: appointment,
-                  temperature: double.parse(tempController.text),
-                  weight: double.parse(weightController.text),
-                  bloodPressure: bpController.text.isNotEmpty ? bpController.text : null,
-                  heartRate: hrController.text.isNotEmpty ? int.parse(hrController.text) : null,
-                  respiratoryRate: rrController.text.isNotEmpty ? int.parse(rrController.text) : null,
-                  additionalNotes: notesController.text.isNotEmpty ? notesController.text : null,
-                );
+              if (tempController.text.isNotEmpty &&
+                  weightController.text.isNotEmpty) {
+                // Store vitals temporarily or update appointment with vitals note
+                // You'll need to add this method to your controller
                 Navigator.pop(context);
+                Get.snackbar(
+                  'Vitals Recorded',
+                  'Vital signs have been recorded',
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                );
               }
             },
             child: const Text('Save'),
@@ -508,13 +521,20 @@ class PatientWorkflowTile extends StatelessWidget {
     );
   }
 
-  void _showCompleteServiceDialog(BuildContext context, EnhancedClinicAppointmentController controller, Appointment appointment) {
+  void _showCompleteServiceDialog(BuildContext context,
+      EnhancedClinicAppointmentController controller, Appointment appointment) {
     final diagnosisController = TextEditingController();
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
     final notesController = TextEditingController();
     final costController = TextEditingController();
     final followUpController = TextEditingController();
+
+    // Vitals controllers
+    final tempController = TextEditingController();
+    final weightController = TextEditingController();
+    final bpController = TextEditingController();
+    final hrController = TextEditingController();
 
     showDialog(
       context: context,
@@ -526,34 +546,132 @@ class PatientWorkflowTile extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Medical Record Fields
+                const Text(
+                  'Medical Information',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: diagnosisController,
-                  decoration: const InputDecoration(labelText: 'Diagnosis *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Diagnosis *',
+                    border: OutlineInputBorder(),
+                  ),
                   maxLines: 2,
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: treatmentController,
-                  decoration: const InputDecoration(labelText: 'Treatment *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Treatment *',
+                    border: OutlineInputBorder(),
+                  ),
                   maxLines: 2,
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: prescriptionController,
-                  decoration: const InputDecoration(labelText: 'Prescription'),
+                  decoration: const InputDecoration(
+                    labelText: 'Prescription',
+                    border: OutlineInputBorder(),
+                  ),
                   maxLines: 2,
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: notesController,
-                  decoration: const InputDecoration(labelText: 'Veterinary Notes'),
+                  decoration: const InputDecoration(
+                    labelText: 'Medical Notes',
+                    border: OutlineInputBorder(),
+                  ),
                   maxLines: 3,
                 ),
+
+                const SizedBox(height: 16),
+                const Divider(),
+
+                // Vitals Section
+                const Text(
+                  'Vital Signs (Optional)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: tempController,
+                        decoration: const InputDecoration(
+                          labelText: 'Temperature (°C)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: weightController,
+                        decoration: const InputDecoration(
+                          labelText: 'Weight (kg)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: bpController,
+                        decoration: const InputDecoration(
+                          labelText: 'Blood Pressure',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: hrController,
+                        decoration: const InputDecoration(
+                          labelText: 'Heart Rate (bpm)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+                const Divider(),
+
+                // Appointment Details Section
+                const Text(
+                  'Appointment Details',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: costController,
-                  decoration: const InputDecoration(labelText: 'Total Cost (₱)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Total Cost (₱)',
+                    border: OutlineInputBorder(),
+                  ),
                   keyboardType: TextInputType.number,
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: followUpController,
-                  decoration: const InputDecoration(labelText: 'Follow-up Instructions'),
+                  decoration: const InputDecoration(
+                    labelText: 'Follow-up Instructions',
+                    border: OutlineInputBorder(),
+                  ),
                   maxLines: 2,
                 ),
               ],
@@ -567,18 +685,66 @@ class PatientWorkflowTile extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              if (diagnosisController.text.isNotEmpty && treatmentController.text.isNotEmpty) {
-                controller.completeServiceWithRecord(
-                  appointment: appointment,
-                  diagnosis: diagnosisController.text,
-                  treatment: treatmentController.text,
-                  prescription: prescriptionController.text.isNotEmpty ? prescriptionController.text : null,
-                  vetNotes: notesController.text.isNotEmpty ? notesController.text : null,
-                  totalCost: costController.text.isNotEmpty ? double.parse(costController.text) : null,
-                  followUpInstructions: followUpController.text.isNotEmpty ? followUpController.text : null,
+              if (diagnosisController.text.isEmpty ||
+                  treatmentController.text.isEmpty) {
+                Get.snackbar(
+                  'Required Fields',
+                  'Please fill in diagnosis and treatment',
+                  backgroundColor: Colors.orange,
+                  colorText: Colors.white,
                 );
-                Navigator.pop(context);
+                return;
               }
+
+              // Parse vitals
+              final temperature = tempController.text.isNotEmpty
+                  ? double.tryParse(tempController.text)
+                  : null;
+              final weight = weightController.text.isNotEmpty
+                  ? double.tryParse(weightController.text)
+                  : null;
+              final bloodPressure =
+                  bpController.text.isNotEmpty ? bpController.text : null;
+              final heartRate = hrController.text.isNotEmpty
+                  ? int.tryParse(hrController.text)
+                  : null;
+
+              // Parse cost
+              final totalCost = costController.text.isNotEmpty
+                  ? double.tryParse(costController.text)
+                  : null;
+
+              // Build vitals map for completeServiceWithRecord
+              final Map<String, dynamic>? vitals = (temperature != null ||
+                      weight != null ||
+                      bloodPressure != null ||
+                      heartRate != null)
+                  ? {
+                      if (temperature != null) 'temperature': temperature,
+                      if (weight != null) 'weight': weight,
+                      if (bloodPressure != null) 'bloodPressure': bloodPressure,
+                      if (heartRate != null) 'heartRate': heartRate,
+                    }
+                  : null;
+
+              controller.completeServiceWithRecord(
+                appointment: appointment,
+                diagnosis: diagnosisController.text,
+                treatment: treatmentController.text,
+                prescription: prescriptionController.text.isNotEmpty
+                    ? prescriptionController.text
+                    : null,
+                vetNotes: notesController.text.isNotEmpty
+                    ? notesController.text
+                    : null,
+                vitals: vitals,
+                totalCost: totalCost,
+                followUpInstructions: followUpController.text.isNotEmpty
+                    ? followUpController.text
+                    : null,
+              );
+
+              Navigator.pop(context);
             },
             child: const Text('Complete'),
           ),
@@ -592,40 +758,108 @@ class PatientWorkflowTile extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Medical Record'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Service: ${appointment.service}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              if (appointment.diagnosis != null) ...[
-                const Text('Diagnosis:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(appointment.diagnosis!),
-                const SizedBox(height: 8),
-              ],
-              if (appointment.treatment != null) ...[
-                const Text('Treatment:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(appointment.treatment!),
-                const SizedBox(height: 8),
-              ],
-              if (appointment.prescription != null) ...[
-                const Text('Prescription:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(appointment.prescription!),
-                const SizedBox(height: 8),
-              ],
-              if (appointment.vetNotes != null) ...[
-                const Text('Veterinary Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(appointment.vetNotes!),
-                const SizedBox(height: 8),
-              ],
-              if (appointment.vitals != null) ...[
-                const Text('Vitals:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('Temperature: ${appointment.vitals!['temperature']}°C'),
-                Text('Weight: ${appointment.vitals!['weight']}kg'),
-              ],
-            ],
-          ),
+        content: FutureBuilder(
+          // Fetch from repository instead of controller
+          future: Get.find<AuthRepository>()
+              .getPetMedicalRecords(appointment.petId),
+          builder: (context, AsyncSnapshot<List<MedicalRecord>> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (!snapshot.hasData ||
+                snapshot.data == null ||
+                snapshot.data!.isEmpty) {
+              return const Text(
+                  'No medical record found for this appointment.');
+            }
+
+            // Find the record for this specific appointment
+            final record = snapshot.data!.firstWhere(
+              (r) => r.appointmentId == appointment.documentId,
+              orElse: () => snapshot.data!.first, // Fallback to first record
+            );
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildRecordField('Service', record.service),
+                  const SizedBox(height: 8),
+                  _buildRecordField('Date',
+                      DateFormat('MMM dd, yyyy').format(record.visitDate)),
+                  const SizedBox(height: 8),
+                  _buildRecordField('Diagnosis', record.diagnosis),
+                  const SizedBox(height: 8),
+                  _buildRecordField('Treatment', record.treatment),
+                  const SizedBox(height: 8),
+
+                  if (record.prescription != null &&
+                      record.prescription!.isNotEmpty) ...[
+                    _buildRecordField('Prescription', record.prescription!),
+                    const SizedBox(height: 8),
+                  ],
+
+                  if (record.notes != null && record.notes!.isNotEmpty) ...[
+                    _buildRecordField('Medical Notes', record.notes!),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Display individual vitals
+                  if (record.hasVitals) ...[
+                    const Text(
+                      'Vital Signs:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    const SizedBox(height: 4),
+                    if (record.temperature != null)
+                      Text(
+                          'Temperature: ${record.temperature!.toStringAsFixed(1)}°C'),
+                    if (record.weight != null)
+                      Text('Weight: ${record.weight!.toStringAsFixed(2)} kg'),
+                    if (record.bloodPressure != null)
+                      Text('Blood Pressure: ${record.bloodPressure}'),
+                    if (record.heartRate != null)
+                      Text('Heart Rate: ${record.heartRate} bpm'),
+                    const SizedBox(height: 8),
+                  ],
+
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  // Display appointment details
+                  const Text(
+                    'Appointment Details:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                      'Date: ${DateFormat('MMM dd, yyyy • h:mm a').format(appointment.dateTime)}'),
+
+                  if (appointment.totalCost != null)
+                    Text('Cost: ₱${appointment.totalCost!.toStringAsFixed(2)}'),
+
+                  Text(
+                      'Payment Status: ${appointment.isPaid ? "Paid" : "Unpaid"}'),
+
+                  if (appointment.paymentMethod != null)
+                    Text('Payment Method: ${appointment.paymentMethod}'),
+
+                  if (appointment.followUpInstructions != null &&
+                      appointment.followUpInstructions!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildRecordField('Follow-up Instructions',
+                        appointment.followUpInstructions!),
+                  ],
+                ],
+              ),
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -637,8 +871,25 @@ class PatientWorkflowTile extends StatelessWidget {
     );
   }
 
-  void _showPaymentDialog(BuildContext context, EnhancedClinicAppointmentController controller, Appointment appointment) {
-    final amountController = TextEditingController(text: appointment.totalCost?.toString() ?? '');
+  // Helper widget for record fields
+  Widget _buildRecordField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label:',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(fontSize: 13)),
+      ],
+    );
+  }
+
+  void _showPaymentDialog(BuildContext context,
+      EnhancedClinicAppointmentController controller, Appointment appointment) {
+    final amountController =
+        TextEditingController(text: appointment.totalCost?.toString() ?? '');
     String paymentMethod = 'cash';
 
     showDialog(

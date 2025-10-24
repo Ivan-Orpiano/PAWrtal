@@ -83,7 +83,7 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
@@ -107,7 +107,7 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
               ],
             ),
           ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -152,7 +152,8 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    controller.getUserFriendlyStatus(appointment),
+                                    controller
+                                        .getUserFriendlyStatus(appointment),
                                     style: TextStyle(
                                       color: _getStatusColor(),
                                       fontSize: 20,
@@ -173,11 +174,12 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Progress indicator
-                        if (appointment.status != 'declined' && appointment.status != 'no_show') ...[
+                        if (appointment.status != 'declined' &&
+                            appointment.status != 'no_show') ...[
                           Row(
                             children: [
                               Text(
@@ -201,50 +203,77 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           LinearProgressIndicator(
-                            value: controller.getAppointmentProgress(appointment),
+                            value:
+                                controller.getAppointmentProgress(appointment),
                             backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor()),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                _getStatusColor()),
                             minHeight: 6,
                           ),
                         ],
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Basic appointment details
                   _buildDetailSection('Appointment Information', [
-                    _buildDetailRow(Icons.local_hospital, 'Clinic', clinic?.clinicName ?? 'Unknown Clinic'),
-                    _buildDetailRow(Icons.location_on, 'Address', clinic?.address ?? 'Address not available'),
-                    _buildDetailRow(Icons.medical_services, 'Service', appointment.service),
-                    _buildDetailRow(Icons.pets, 'Pet', pet?.name ?? appointment.petId),
+                    _buildDetailRow(Icons.local_hospital, 'Clinic',
+                        clinic?.clinicName ?? 'Unknown Clinic'),
+                    _buildDetailRow(Icons.location_on, 'Address',
+                        clinic?.address ?? 'Address not available'),
+                    _buildDetailRow(
+                        Icons.medical_services, 'Service', appointment.service),
+                    _buildDetailRow(
+                        Icons.pets, 'Pet', pet?.name ?? appointment.petId),
                     if (pet != null)
-                      _buildDetailRow(Icons.category, 'Pet Details', '${pet!.type} • ${pet!.breed}'),
-                    _buildDetailRow(Icons.calendar_today, 'Date', DateFormat('EEEE, MMMM dd, yyyy').format(appointment.dateTime)),
-                    _buildDetailRow(Icons.access_time, 'Time', DateFormat('h:mm a').format(appointment.dateTime)),
+                      _buildDetailRow(Icons.category, 'Pet Details',
+                          '${pet!.type} • ${pet!.breed}'),
+                    _buildDetailRow(
+                        Icons.calendar_today,
+                        'Date',
+                        DateFormat('EEEE, MMMM dd, yyyy')
+                            .format(appointment.dateTime)),
+                    _buildDetailRow(Icons.access_time, 'Time',
+                        DateFormat('h:mm a').format(appointment.dateTime)),
                   ]),
-                  
+
                   // Treatment timeline for active/completed appointments
-                  if (appointment.status == 'in_progress' || appointment.status == 'completed')
+                  if (appointment.status == 'in_progress' ||
+                      appointment.status == 'completed')
                     _buildTreatmentTimeline(),
-                  
-                  // Medical record for completed appointments
-                  if (appointment.status == 'completed' && appointment.hasMedicalRecord)
-                    _buildMedicalRecordSection(),
-                  
+
+                  // Medical record link for completed appointments (REMOVED hasMedicalRecord check)
+                  if (appointment.status == 'completed')
+                    _buildMedicalRecordLinkSection(context),
+
                   // Payment information for completed appointments
-                  if (appointment.status == 'completed' && appointment.totalCost != null)
+                  if (appointment.status == 'completed' &&
+                      appointment.totalCost != null)
                     _buildPaymentSection(),
-                  
+
+                  // Follow-up instructions if available
+                  if (appointment.followUpInstructions != null)
+                    _buildFollowUpSection(),
+
                   // Booking information
                   _buildDetailSection('Booking Information', [
-                    _buildDetailRow(Icons.event, 'Booked on', DateFormat('MMM dd, yyyy • h:mm a').format(appointment.createdAt)),
+                    _buildDetailRow(
+                        Icons.event,
+                        'Booked on',
+                        DateFormat('MMM dd, yyyy • h:mm a')
+                            .format(appointment.createdAt)),
                     if (appointment.updatedAt != appointment.createdAt)
-                      _buildDetailRow(Icons.update, 'Last updated', DateFormat('MMM dd, yyyy • h:mm a').format(appointment.updatedAt)),
+                      _buildDetailRow(
+                          Icons.update,
+                          'Last updated',
+                          DateFormat('MMM dd, yyyy • h:mm a')
+                              .format(appointment.updatedAt)),
                   ]),
-                  
-                  if (appointment.notes != null && appointment.notes!.isNotEmpty)
+
+                  if (appointment.notes != null &&
+                      appointment.notes!.isNotEmpty)
                     _buildDetailSection('Notes', [
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -254,12 +283,12 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
                         ),
                       ),
                     ]),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Action buttons
                   _buildActionButtons(context, controller),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -385,7 +414,9 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
     ]);
   }
 
-  Widget _buildTimelineItem(String title, String time, IconData icon, Color color, {bool isCompleted = false}) {
+  Widget _buildTimelineItem(
+      String title, String time, IconData icon, Color color,
+      {bool isCompleted = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -436,72 +467,76 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMedicalRecordSection() {
-    return _buildDetailSection('Medical Record', [
-      if (appointment.diagnosis != null)
-        _buildDetailRow(Icons.medical_information, 'Diagnosis', appointment.diagnosis!),
-      if (appointment.treatment != null)
-        _buildDetailRow(Icons.healing, 'Treatment', appointment.treatment!),
-      if (appointment.prescription != null)
-        _buildDetailRow(Icons.medication, 'Prescription', appointment.prescription!),
-      if (appointment.vetNotes != null)
-        _buildDetailRow(Icons.note_alt, 'Veterinary Notes', appointment.vetNotes!),
-      if (appointment.vitals != null)
-        _buildVitalsSection(),
-      if (appointment.followUpInstructions != null)
-        _buildDetailRow(Icons.assignment, 'Follow-up Instructions', appointment.followUpInstructions!),
-    ]);
-  }
-
-  Widget _buildVitalsSection() {
-    final vitals = appointment.vitals!;
+  // UPDATED: Medical record link section (replaces old medical info display)
+  Widget _buildMedicalRecordLinkSection(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.favorite,
-                  color: Colors.red,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Vital Signs',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
+          Text(
+            'Medical Record',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.all(12),
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.withOpacity(0.2)),
+              color: Colors.teal[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.teal[200]!),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (vitals['temperature'] != null)
-                  _buildVitalRow('Temperature', '${vitals['temperature']}°C', Icons.thermostat),
-                if (vitals['weight'] != null)
-                  _buildVitalRow('Weight', '${vitals['weight']} kg', Icons.monitor_weight),
-                if (vitals['heartRate'] != null)
-                  _buildVitalRow('Heart Rate', '${vitals['heartRate']} bpm', Icons.favorite),
-                if (vitals['bloodPressure'] != null)
-                  _buildVitalRow('Blood Pressure', vitals['bloodPressure'], Icons.bloodtype),
+                Row(
+                  children: [
+                    Icon(Icons.medical_information,
+                        color: Colors.teal[700], size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Medical Record Available',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'This appointment has been completed. Medical records including diagnosis, treatment, prescriptions, and vital signs are stored separately in the Medical Records section.',
+                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Navigate to medical records screen
+                      Get.snackbar(
+                        'Info',
+                        'Medical records feature will navigate to the health records section',
+                        backgroundColor: Colors.teal,
+                        colorText: Colors.white,
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('View Medical Records'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -510,46 +545,47 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildVitalRow(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.red[600]),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 12)),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+  // NEW: Follow-up instructions section
+  Widget _buildFollowUpSection() {
+    return _buildDetailSection('Follow-up Care', [
+      _buildDetailRow(
+        Icons.assignment,
+        'Instructions',
+        appointment.followUpInstructions!,
       ),
-    );
+      if (appointment.nextAppointmentDate != null)
+        _buildDetailRow(
+          Icons.calendar_today,
+          'Next Appointment',
+          DateFormat('EEEE, MMMM dd, yyyy')
+              .format(appointment.nextAppointmentDate!),
+        ),
+    ]);
   }
 
   Widget _buildPaymentSection() {
     return _buildDetailSection('Payment Information', [
-      _buildDetailRow(Icons.attach_money, 'Total Cost', '₱${appointment.totalCost!.toStringAsFixed(2)}'),
+      _buildDetailRow(Icons.attach_money, 'Total Cost',
+          '₱${appointment.totalCost!.toStringAsFixed(2)}'),
       _buildDetailRow(
         appointment.isPaid ? Icons.check_circle : Icons.pending,
         'Payment Status',
         appointment.isPaid ? 'Paid' : 'Pending',
       ),
       if (appointment.paymentMethod != null)
-        _buildDetailRow(Icons.payment, 'Payment Method', appointment.paymentMethod!.toUpperCase()),
+        _buildDetailRow(Icons.payment, 'Payment Method',
+            appointment.paymentMethod!.toUpperCase()),
     ]);
   }
 
-  Widget _buildActionButtons(BuildContext context, EnhancedUserAppointmentController controller) {
+  Widget _buildActionButtons(
+      BuildContext context, EnhancedUserAppointmentController controller) {
     return FutureBuilder<bool>(
-      future: Get.find<AuthRepository>().hasUserReviewedAppointment(appointment.documentId!),
+      future: Get.find<AuthRepository>()
+          .hasUserReviewedAppointment(appointment.documentId!),
       builder: (context, snapshot) {
         final hasReviewed = snapshot.data ?? false;
-        
+
         return Column(
           children: [
             // Rating & Review button for completed appointments
@@ -599,9 +635,9 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
                         ),
                       ),
               ),
-            
+
             if (appointment.status == 'completed') const SizedBox(height: 12),
-            
+
             // Cancel button for eligible appointments
             if (controller.canCancelAppointment(appointment))
               SizedBox(
@@ -631,10 +667,10 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
                   ),
                 ),
               ),
-            
+
             if (controller.canCancelAppointment(appointment))
               const SizedBox(height: 12),
-            
+
             // Contact clinic button
             SizedBox(
               width: double.infinity,
@@ -658,7 +694,7 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
     );
   }
 
-    void _showRatingDialog(BuildContext context) async {
+  void _showRatingDialog(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => MobileRatingDialog(
@@ -667,23 +703,22 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
         pet: pet,
       ),
     );
-    
-    // If review was submitted, refresh the UI
+
     if (result == true) {
-      // Close the appointment details bottom sheet
       Navigator.pop(context);
-      // Refresh appointments
       Get.find<EnhancedUserAppointmentController>().fetchAppointments();
     }
   }
 
-  void _showCancelDialog(BuildContext context, EnhancedUserAppointmentController controller) {
+  void _showCancelDialog(
+      BuildContext context, EnhancedUserAppointmentController controller) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Cancel Appointment'),
-        content: const Text('Are you sure you want to cancel this appointment? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to cancel this appointment? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -696,7 +731,8 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
               controller.cancelPendingAppointment(appointment.documentId!);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Cancel Appointment', style: TextStyle(color: Colors.white)),
+            child: const Text('Cancel Appointment',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -738,17 +774,18 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                  color:
+                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.phone, color: Color.fromARGB(255, 81, 115, 153)),
+                child: const Icon(Icons.phone,
+                    color: Color.fromARGB(255, 81, 115, 153)),
               ),
               title: const Text('Call Clinic'),
               subtitle: Text(clinic?.contact ?? 'Phone not available'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Implement phone call functionality
                 Get.snackbar('Info', 'Phone call feature will be implemented');
               },
             ),
@@ -756,17 +793,18 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                  color:
+                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.email, color: Color.fromARGB(255, 81, 115, 153)),
+                child: const Icon(Icons.email,
+                    color: Color.fromARGB(255, 81, 115, 153)),
               ),
               title: const Text('Send Email'),
               subtitle: Text(clinic?.email ?? 'Email not available'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Implement email functionality
                 Get.snackbar('Info', 'Email feature will be implemented');
               },
             ),
@@ -776,37 +814,4 @@ class EnhancedAppointmentDetailsPage extends StatelessWidget {
       ),
     );
   }
-
-  // void _showRescheduleDialog(BuildContext context) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-  //       title: const Text('Request Reschedule'),
-  //       content: const Text('Would you like to request a reschedule for this appointment? The clinic will be notified and will contact you with available time slots.'),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context),
-  //           child: const Text('Cancel'),
-  //         ),
-  //         ElevatedButton(
-  //           onPressed: () {
-  //             Navigator.pop(context);
-  //             // TODO: Implement reschedule request functionality
-  //             Get.snackbar(
-  //               'Request Sent',
-  //               'Your reschedule request has been sent to the clinic.',
-  //               backgroundColor: Colors.green,
-  //               colorText: Colors.white,
-  //             );
-  //           },
-  //           style: ElevatedButton.styleFrom(
-  //             backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-  //           ),
-  //           child: const Text('Send Request', style: TextStyle(color: Colors.white)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 }

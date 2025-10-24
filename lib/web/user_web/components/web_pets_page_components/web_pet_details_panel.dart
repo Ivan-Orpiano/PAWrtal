@@ -32,7 +32,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   CardView _currentView = CardView.front;
   CardView _previousView = CardView.front;
   bool _isGoingForward = true;
-  
+
   // Selected record for detail view
   MedicalRecord? _selectedMedicalRecord;
   Vaccination? _selectedVaccination;
@@ -47,7 +47,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    
+
     // Fetch histories when panel opens
     _fetchHistories();
   }
@@ -151,7 +151,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
           alignment: Alignment.center,
           child: angle.abs() >= math.pi / 2
               ? Transform(
-                  transform: Matrix4.identity()..rotateY(_isGoingForward ? math.pi : -math.pi),
+                  transform: Matrix4.identity()
+                    ..rotateY(_isGoingForward ? math.pi : -math.pi),
                   alignment: Alignment.center,
                   child: _buildCurrentView(),
                 )
@@ -236,7 +237,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                     ),
                     child: ClipOval(
                       child: Image.network(
-                        widget.pet.image ?? 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop',
+                        widget.pet.image ??
+                            'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop',
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
                           color: Colors.grey[200],
@@ -249,9 +251,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 20),
-                  
+
                   // Pet info next to image
                   Expanded(
                     child: Column(
@@ -267,7 +269,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(12),
@@ -284,12 +287,13 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                       ],
                     ),
                   ),
-                  
+
                   // Action buttons
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
+                        icon: const Icon(Icons.more_horiz_rounded,
+                            color: Colors.white),
                         onPressed: () => _flipToView(CardView.back),
                         tooltip: "More",
                       ),
@@ -308,7 +312,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 ],
               ),
             ),
-            
+
             // Body section with pet details
             Padding(
               padding: const EdgeInsets.all(24),
@@ -320,7 +324,11 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   const Divider(height: 24),
                   _buildIDRow('Color', widget.pet.color ?? 'Not specified'),
                   const Divider(height: 24),
-                  _buildIDRow('Weight', widget.pet.weight != null ? '${widget.pet.weight} kg' : 'Not specified'),
+                  _buildIDRow(
+                      'Weight',
+                      widget.pet.weight != null
+                          ? '${widget.pet.weight} kg'
+                          : 'Not specified'),
                   const Divider(height: 24),
                   _buildIDRow('Gender', widget.pet.gender ?? 'Not specified'),
                 ],
@@ -367,7 +375,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                     onPressed: () => _flipToView(CardView.front),
                     tooltip: "Back",
                   ),
-                  const SizedBox(width: 8,),
+                  const SizedBox(
+                    width: 8,
+                  ),
                   const Text(
                     'Health Records',
                     style: TextStyle(
@@ -379,7 +389,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 ],
               ),
             ),
-            
+
             // Back side content
             Padding(
               padding: const EdgeInsets.all(24),
@@ -394,9 +404,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                     () => _flipToView(CardView.medicalHistory),
                     _getMedicalRecordCount(),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Vaccination History section
                   _buildHistoryButton(
                     'Vaccination History',
@@ -426,7 +436,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
 
   Widget _buildMedicalHistoryView() {
     final controller = Get.find<WebPetsController>();
-    
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -468,7 +478,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _selectedMedicalRecord != null 
+                    _selectedMedicalRecord != null
                         ? 'Medical Record Details'
                         : 'Medical History',
                     style: const TextStyle(
@@ -491,14 +501,14 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: Obx(() {
               if (controller.isLoadingMedical.value) {
                 return const Center(child: CircularProgressIndicator());
               }
-              
+
               if (controller.medicalRecords.isEmpty) {
                 return _buildEmptyState(
                   'No Medical Records',
@@ -506,11 +516,11 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   Icons.medical_services_outlined,
                 );
               }
-              
+
               if (_selectedMedicalRecord != null) {
                 return _buildMedicalRecordDetails(_selectedMedicalRecord!);
               }
-              
+
               return _buildMedicalRecordsList(controller.medicalRecords);
             }),
           ),
@@ -521,7 +531,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
 
   Widget _buildVaccinationHistoryView() {
     final controller = Get.find<WebPetsController>();
-    
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -563,7 +573,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _selectedVaccination != null 
+                    _selectedVaccination != null
                         ? 'Vaccination Details'
                         : 'Vaccination History',
                     style: const TextStyle(
@@ -586,14 +596,14 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: Obx(() {
               if (controller.isLoadingVaccinations.value) {
                 return const Center(child: CircularProgressIndicator());
               }
-              
+
               if (controller.vaccinations.isEmpty) {
                 return _buildEmptyState(
                   'No Vaccination Records',
@@ -601,11 +611,11 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   Icons.vaccines_outlined,
                 );
               }
-              
+
               if (_selectedVaccination != null) {
                 return _buildVaccinationDetails(_selectedVaccination!);
               }
-              
+
               return _buildVaccinationsList(controller.vaccinations);
             }),
           ),
@@ -656,9 +666,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   size: 24,
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Content
               Expanded(
                 child: Column(
@@ -695,7 +705,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   ],
                 ),
               ),
-              
+
               // Arrow
               Icon(
                 Icons.chevron_right,
@@ -717,33 +727,45 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
           _buildDetailCard(
             'Visit Information',
             [
-              _buildDetailRow('Date', DateFormat('MMMM dd, yyyy').format(record.visitDate)),
+              _buildDetailRow(
+                  'Date', DateFormat('MMMM dd, yyyy').format(record.visitDate)),
               _buildDetailRow('Service', record.service),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildDetailCard(
             'Diagnosis & Treatment',
             [
               _buildDetailRow('Diagnosis', record.diagnosis),
               _buildDetailRow('Treatment', record.treatment),
-              if (record.prescription != null && record.prescription!.isNotEmpty)
+              if (record.prescription != null &&
+                  record.prescription!.isNotEmpty)
                 _buildDetailRow('Prescription', record.prescription!),
             ],
           ),
-          
-          if (record.vitals != null && record.vitals!.isNotEmpty) ...[
+
+          // UPDATED: Use individual vital fields instead of vitals map
+          if (record.hasVitals) ...[
             const SizedBox(height: 16),
             _buildDetailCard(
               'Vital Signs',
-              record.vitals!.entries.map((e) => 
-                _buildDetailRow(e.key, e.value.toString())
-              ).toList(),
+              [
+                if (record.temperature != null)
+                  _buildDetailRow('Temperature',
+                      '${record.temperature!.toStringAsFixed(1)}°C'),
+                if (record.weight != null)
+                  _buildDetailRow(
+                      'Weight', '${record.weight!.toStringAsFixed(2)} kg'),
+                if (record.bloodPressure != null)
+                  _buildDetailRow('Blood Pressure', record.bloodPressure!),
+                if (record.heartRate != null)
+                  _buildDetailRow('Heart Rate', '${record.heartRate} bpm'),
+              ],
             ),
           ],
-          
+
           if (record.notes != null && record.notes!.isNotEmpty) ...[
             const SizedBox(height: 16),
             _buildDetailCard(
@@ -776,7 +798,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     } else {
       statusColor = Colors.green;
     }
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -807,9 +829,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   size: 24,
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Content
               Expanded(
                 child: Column(
@@ -869,7 +891,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                   ],
                 ),
               ),
-              
+
               // Arrow
               Icon(
                 Icons.chevron_right,
@@ -891,7 +913,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     } else {
       statusColor = Colors.green;
     }
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -923,24 +945,26 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildDetailCard(
             'Vaccine Information',
             [
               _buildDetailRow('Vaccine Name', vaccination.vaccineName),
               _buildDetailRow('Type', vaccination.vaccineType),
               _buildDetailRow('Booster', vaccination.isBooster ? 'Yes' : 'No'),
-              if (vaccination.manufacturer != null && vaccination.manufacturer!.isNotEmpty)
+              if (vaccination.manufacturer != null &&
+                  vaccination.manufacturer!.isNotEmpty)
                 _buildDetailRow('Manufacturer', vaccination.manufacturer!),
-              if (vaccination.batchNumber != null && vaccination.batchNumber!.isNotEmpty)
+              if (vaccination.batchNumber != null &&
+                  vaccination.batchNumber!.isNotEmpty)
                 _buildDetailRow('Batch Number', vaccination.batchNumber!),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildDetailCard(
             'Vaccination Dates',
             [
@@ -955,16 +979,16 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           _buildDetailCard(
             'Administered By',
             [
               _buildDetailRow('Veterinarian', vaccination.veterinarianName),
             ],
           ),
-          
+
           if (vaccination.notes != null && vaccination.notes!.isNotEmpty) ...[
             const SizedBox(height: 16),
             _buildDetailCard(

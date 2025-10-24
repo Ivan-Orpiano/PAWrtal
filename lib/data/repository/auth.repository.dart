@@ -138,13 +138,33 @@ class AuthRepository {
     print('>>> Document ID: $documentId');
     print('>>> ============================================');
 
-    if (data.containsKey('vitals')) {
-      print('>>> Vitals data in appointment update: ${data['vitals']}');
+    // CRITICAL: Validate that no medical data is being sent
+    final medicalFields = [
+      'diagnosis',
+      'treatment',
+      'prescription',
+      'vetNotes',
+      'vitals'
+    ];
+    final foundMedicalFields =
+        data.keys.where((key) => medicalFields.contains(key)).toList();
+
+    if (foundMedicalFields.isNotEmpty) {
+      print('>>> ⚠️ WARNING: Medical fields detected in appointment update!');
+      print('>>> Found: $foundMedicalFields');
+      print('>>> These should be in MedicalRecord, not Appointment');
+      print('>>> Removing them from update...');
+
+      // Remove medical fields
+      for (var field in foundMedicalFields) {
+        data.remove(field);
+      }
     }
 
-    print('>>> Full update data: $data');
+    print('>>> Final data keys: ${data.keys.toList()}');
     print('>>> ============================================');
 
+    // Call the provider method which will clean data again (defense in depth)
     return appWriteProvider.updateFullAppointment(documentId, data);
   }
 
@@ -206,33 +226,83 @@ class AuthRepository {
     print('>>>   - service: ${recordMap['service']}');
     print('>>>   - diagnosis: ${recordMap['diagnosis']}');
     print('>>>   - treatment: ${recordMap['treatment']}');
-    print('>>>   - temperature: ${recordMap['temperature']}');
-    print('>>>   - weight: ${recordMap['weight']}');
-    print('>>>   - bloodPressure: ${recordMap['bloodPressure']}');
-    print('>>>   - heartRate: ${recordMap['heartRate']}');
-    print('>>>   - vitals map: ${recordMap['vitals']}');
+    print('>>>   - Individual vitals:');
+    print('>>>     * temperature: ${recordMap['temperature']}');
+    print('>>>     * weight: ${recordMap['weight']}');
+    print('>>>     * bloodPressure: ${recordMap['bloodPressure']}');
+    print('>>>     * heartRate: ${recordMap['heartRate']}');
+    print('>>>   - vitals column: ${recordMap['vitals']} (should be null)');
     print('>>> ============================================');
+
+    // CRITICAL: Validate that vitals column is null
+    if (recordMap['vitals'] != null) {
+      print('>>> ⚠️ WARNING: vitals column is not null!');
+      print('>>> Forcing it to null...');
+      recordMap['vitals'] = null;
+    }
+
+    // Validate required fields
+    if (recordMap['diagnosis'] == null ||
+        recordMap['diagnosis'].toString().isEmpty) {
+      print('>>> ✗ ERROR: Missing diagnosis');
+      throw Exception('Diagnosis is required for medical records');
+    }
+    if (recordMap['treatment'] == null ||
+        recordMap['treatment'].toString().isEmpty) {
+      print('>>> ✗ ERROR: Missing treatment');
+      throw Exception('Treatment is required for medical records');
+    }
 
     return appWriteProvider.createMedicalRecord(recordMap);
   }
 
   Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
     try {
+      print('>>> REPOSITORY: Getting medical records for pet: $petId');
+
       final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
-      return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+
+      print('>>> Found ${rawRecords.length} medical records');
+
+      final records = rawRecords.map((data) {
+        // Log vitals data for debugging
+        print(
+            '>>> Record vitals: temp=${data['temperature']}, weight=${data['weight']}, bp=${data['bloodPressure']}, hr=${data['heartRate']}');
+
+        return MedicalRecord.fromMap(data);
+      }).toList();
+
+      print('>>> Successfully parsed ${records.length} medical records');
+
+      return records;
     } catch (e) {
-      print('Error getting pet medical records: $e');
+      print('>>> Error getting pet medical records: $e');
       return [];
     }
   }
 
   Future<List<MedicalRecord>> getClinicMedicalRecords(String clinicId) async {
     try {
+      print('>>> REPOSITORY: Getting medical records for clinic: $clinicId');
+
       final rawRecords =
           await appWriteProvider.getClinicMedicalRecords(clinicId);
-      return rawRecords.map((data) => MedicalRecord.fromMap(data)).toList();
+
+      print('>>> Found ${rawRecords.length} medical records');
+
+      final records = rawRecords.map((data) {
+        // Log vitals data for debugging
+        print(
+            '>>> Record vitals: temp=${data['temperature']}, weight=${data['weight']}, bp=${data['bloodPressure']}, hr=${data['heartRate']}');
+
+        return MedicalRecord.fromMap(data);
+      }).toList();
+
+      print('>>> Successfully parsed ${records.length} medical records');
+
+      return records;
     } catch (e) {
-      print('Error getting clinic medical records: $e');
+      print('>>> Error getting clinic medical records: $e');
       return [];
     }
   }
@@ -355,6 +425,119 @@ class AuthRepository {
     } catch (e) {
       print('Error getting conversation messages: $e');
       return [];
+    }
+  }
+
+  Future<models.Document> updateMedicalRecord(
+      String documentId, Map<String, dynamic> data) async {
+    print('>>> ============================================');
+    print('>>> REPOSITORY: Updating medical record');
+    print('>>> Document ID: $documentId');
+    print('>>> ============================================');
+
+    // Ensure vitals column is null
+    if (data.containsKey('vitals') && data['vitals'] != null) {
+      print('>>> ⚠️ WARNING: vitals column in update data, setting to null');
+      data['vitals'] = null;
+    }
+
+    // Log individual vitals
+    print('>>> Individual vitals in update:');
+    print('>>>   - temperature: ${data['temperature']}');
+    print('>>>   - weight: ${data['weight']}');
+    print('>>>   - bloodPressure: ${data['bloodPressure']}');
+    print('>>>   - heartRate: ${data['heartRate']}');
+    print('>>> ============================================');
+
+    return appWriteProvider.updateMedicalRecord(documentId, data);
+  }
+
+  Future<void> migrateMedicalRecordsVitals(String clinicId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> MIGRATING MEDICAL RECORDS VITALS');
+      print('>>> Clinic ID: $clinicId');
+      print('>>> ============================================');
+
+      final rawRecords =
+          await appWriteProvider.getClinicMedicalRecords(clinicId);
+
+      print('>>> Found ${rawRecords.length} records to check');
+
+      int migratedCount = 0;
+      int alreadyMigratedCount = 0;
+      int errorCount = 0;
+
+      for (var recordData in rawRecords) {
+        try {
+          final recordId = recordData['\$id'];
+
+          // Check if already migrated (has individual fields)
+          final hasIndividualFields = recordData['temperature'] != null ||
+              recordData['weight'] != null ||
+              recordData['bloodPressure'] != null ||
+              recordData['heartRate'] != null;
+
+          if (hasIndividualFields) {
+            alreadyMigratedCount++;
+            continue;
+          }
+
+          // Check if has old vitals JSON
+          final vitalsData = recordData['vitals'];
+          if (vitalsData == null) {
+            alreadyMigratedCount++;
+            continue;
+          }
+
+          print('>>> Migrating record: $recordId');
+
+          // Parse old vitals JSON
+          Map<String, dynamic> vitals;
+          if (vitalsData is String) {
+            vitals = jsonDecode(vitalsData);
+          } else if (vitalsData is Map) {
+            vitals = Map<String, dynamic>.from(vitalsData);
+          } else {
+            print('>>>   ⚠️ Unknown vitals format, skipping');
+            continue;
+          }
+
+          // Update with individual fields
+          final updateData = <String, dynamic>{
+            'temperature': vitals['temperature'] != null
+                ? double.tryParse(vitals['temperature'].toString())
+                : null,
+            'weight': vitals['weight'] != null
+                ? double.tryParse(vitals['weight'].toString())
+                : null,
+            'bloodPressure': vitals['bloodPressure']?.toString(),
+            'heartRate': vitals['heartRate'] != null
+                ? int.tryParse(vitals['heartRate'].toString())
+                : null,
+            'vitals': null, // Clear the old column
+          };
+
+          await appWriteProvider.updateMedicalRecord(recordId, updateData);
+
+          print('>>>   ✓ Migrated successfully');
+          migratedCount++;
+        } catch (e) {
+          print('>>>   ✗ Error migrating record: $e');
+          errorCount++;
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> MIGRATION COMPLETE');
+      print('>>> Total records: ${rawRecords.length}');
+      print('>>> Migrated: $migratedCount');
+      print('>>> Already migrated: $alreadyMigratedCount');
+      print('>>> Errors: $errorCount');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Error in migration: $e');
+      rethrow;
     }
   }
 
@@ -1246,7 +1429,7 @@ class AuthRepository {
   Future<void> updateFeedbackPriority(String documentId, Priority priority) {
     return appWriteProvider.updateFeedbackPriority(documentId, priority);
   }
-  
+
   /// Toggle pin status of feedback
   Future<Document> toggleFeedbackPin(
     String documentId,

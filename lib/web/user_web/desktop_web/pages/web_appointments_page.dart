@@ -26,7 +26,7 @@ class _EnhancedWebAppointmentsPageState
   int selectedTabIndex = 0;
   final double tabletWidth = 1100;
   late EnhancedUserAppointmentController appointmentController;
-  
+
   // Track reviewed appointments in memory
   final Set<String> _reviewedAppointments = {};
 
@@ -54,17 +54,17 @@ class _EnhancedWebAppointmentsPageState
     if (_reviewedAppointments.contains(appointmentId)) {
       return true;
     }
-    
+
     // Check database
     final hasReview = await Get.find<AuthRepository>()
         .hasUserReviewedAppointment(appointmentId);
-    
+
     if (hasReview) {
       setState(() {
         _reviewedAppointments.add(appointmentId);
       });
     }
-    
+
     return hasReview;
   }
 
@@ -835,24 +835,10 @@ class _EnhancedWebAppointmentsPageState
                       _buildDialogDetailRow(Icons.access_time, "Time",
                           DateFormat('h:mm a').format(appointment.dateTime)),
                     ]),
-                    if (appointment.status == 'completed' &&
-                        appointment.hasMedicalRecord) ...[
-                      const SizedBox(height: 20),
-                      _buildDialogSection("Medical Record", [
-                        if (appointment.diagnosis != null)
-                          _buildDialogDetailRow(Icons.medical_information,
-                              "Diagnosis", appointment.diagnosis!),
-                        if (appointment.treatment != null)
-                          _buildDialogDetailRow(Icons.healing, "Treatment",
-                              appointment.treatment!),
-                        if (appointment.prescription != null)
-                          _buildDialogDetailRow(Icons.medication,
-                              "Prescription", appointment.prescription!),
-                        if (appointment.vetNotes != null)
-                          _buildDialogDetailRow(Icons.note_alt,
-                              "Veterinary Notes", appointment.vetNotes!),
-                      ]),
-                    ],
+
+                    // REMOVED: Medical record section from appointment
+                    // Medical records are now separate and should be viewed in pet's medical history
+
                     const SizedBox(height: 20),
                     _buildDialogSection("Booking Information", [
                       _buildDialogDetailRow(
@@ -867,6 +853,72 @@ class _EnhancedWebAppointmentsPageState
                             DateFormat('MMM dd, yyyy • h:mm a')
                                 .format(appointment.updatedAt)),
                     ]),
+
+                    // UPDATED: Display workflow tracking info
+                    if (appointment.hasArrived ||
+                        appointment.hasServiceStarted ||
+                        appointment.hasServiceCompleted) ...[
+                      const SizedBox(height: 20),
+                      _buildDialogSection("Service Progress", [
+                        if (appointment.checkedInAt != null)
+                          _buildDialogDetailRow(
+                              Icons.login,
+                              "Checked In",
+                              DateFormat('MMM dd, yyyy • h:mm a')
+                                  .format(appointment.checkedInAt!)),
+                        if (appointment.serviceStartedAt != null)
+                          _buildDialogDetailRow(
+                              Icons.play_arrow,
+                              "Service Started",
+                              DateFormat('MMM dd, yyyy • h:mm a')
+                                  .format(appointment.serviceStartedAt!)),
+                        if (appointment.serviceCompletedAt != null)
+                          _buildDialogDetailRow(
+                              Icons.check_circle,
+                              "Service Completed",
+                              DateFormat('MMM dd, yyyy • h:mm a')
+                                  .format(appointment.serviceCompletedAt!)),
+                        if (appointment.serviceDuration != null)
+                          _buildDialogDetailRow(Icons.timer, "Service Duration",
+                              '${appointment.serviceDuration!.inMinutes} minutes'),
+                      ]),
+                    ],
+
+                    // Display payment info if available
+                    if (appointment.totalCost != null ||
+                        appointment.isPaid) ...[
+                      const SizedBox(height: 20),
+                      _buildDialogSection("Payment Information", [
+                        if (appointment.totalCost != null)
+                          _buildDialogDetailRow(
+                              Icons.attach_money,
+                              "Total Cost",
+                              '₱${appointment.totalCost!.toStringAsFixed(2)}'),
+                        _buildDialogDetailRow(Icons.payment, "Payment Status",
+                            appointment.isPaid ? 'Paid' : 'Unpaid'),
+                        if (appointment.paymentMethod != null)
+                          _buildDialogDetailRow(Icons.credit_card,
+                              "Payment Method", appointment.paymentMethod!),
+                      ]),
+                    ],
+
+                    // Display follow-up information
+                    if (appointment.followUpInstructions != null ||
+                        appointment.nextAppointmentDate != null) ...[
+                      const SizedBox(height: 20),
+                      _buildDialogSection("Follow-up", [
+                        if (appointment.followUpInstructions != null)
+                          _buildDialogDetailRow(Icons.note, "Instructions",
+                              appointment.followUpInstructions!),
+                        if (appointment.nextAppointmentDate != null)
+                          _buildDialogDetailRow(
+                              Icons.event_note,
+                              "Next Appointment",
+                              DateFormat('MMM dd, yyyy • h:mm a')
+                                  .format(appointment.nextAppointmentDate!)),
+                      ]),
+                    ],
+
                     if (appointment.notes != null &&
                         appointment.notes!.isNotEmpty) ...[
                       const SizedBox(height: 20),
@@ -886,6 +938,25 @@ class _EnhancedWebAppointmentsPageState
                         ),
                       ]),
                     ],
+
+                    // Display cancellation info if cancelled
+                    if (appointment.isCancelled || appointment.isDeclined) ...[
+                      const SizedBox(height: 20),
+                      _buildDialogSection("Cancellation Details", [
+                        _buildDialogDetailRow(Icons.cancel, "Cancelled By",
+                            appointment.isCancelledByUser ? 'You' : 'Clinic'),
+                        if (appointment.cancelledAt != null)
+                          _buildDialogDetailRow(
+                              Icons.event,
+                              "Cancelled On",
+                              DateFormat('MMM dd, yyyy • h:mm a')
+                                  .format(appointment.cancelledAt!)),
+                        if (appointment.cancellationReason != null)
+                          _buildDialogDetailRow(Icons.info, "Reason",
+                              appointment.cancellationReason!),
+                      ]),
+                    ],
+
                     const SizedBox(height: 30),
                     _buildDialogActionButtons(appointment, clinic, pet),
                   ],
@@ -977,12 +1048,12 @@ class _EnhancedWebAppointmentsPageState
   Widget _buildDialogActionButtons(
       Appointment appointment, Clinic? clinic, Pet? pet) {
     final controller = Get.find<EnhancedUserAppointmentController>();
-    
+
     return FutureBuilder<bool>(
       future: _checkIfReviewed(appointment.documentId!),
       builder: (context, snapshot) {
         final hasReviewed = snapshot.data ?? false;
-        
+
         return Column(
           children: [
             if (appointment.status == 'completed')
@@ -1238,7 +1309,6 @@ class _EnhancedWebAppointmentsPageState
                       ],
                     ),
                     const SizedBox(height: 20),
-
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1264,7 +1334,6 @@ class _EnhancedWebAppointmentsPageState
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1309,7 +1378,6 @@ class _EnhancedWebAppointmentsPageState
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     const Text(
                       'Please select a reason for cancellation:',
                       style: TextStyle(
@@ -1318,7 +1386,6 @@ class _EnhancedWebAppointmentsPageState
                       ),
                     ),
                     const SizedBox(height: 12),
-
                     ...predefinedReasons.map((reason) {
                       return RadioListTile<String>(
                         title:
@@ -1335,9 +1402,7 @@ class _EnhancedWebAppointmentsPageState
                         dense: true,
                       );
                     }),
-
                     const SizedBox(height: 16),
-
                     TextField(
                       controller: customReasonController,
                       decoration: InputDecoration(
@@ -1351,9 +1416,7 @@ class _EnhancedWebAppointmentsPageState
                       maxLines: 3,
                       maxLength: 200,
                     ),
-
                     const SizedBox(height: 8),
-
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1377,9 +1440,7 @@ class _EnhancedWebAppointmentsPageState
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -1595,7 +1656,6 @@ class _EnhancedWebAppointmentsPageState
                     ],
                   ),
                 ),
-
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
@@ -1651,9 +1711,7 @@ class _EnhancedWebAppointmentsPageState
                             ],
                           ),
                         ),
-
                         const SizedBox(height: 24),
-
                         const Text(
                           'How would you rate your experience?',
                           style: TextStyle(
@@ -1662,7 +1720,6 @@ class _EnhancedWebAppointmentsPageState
                           ),
                         ),
                         const SizedBox(height: 16),
-
                         Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1677,18 +1734,21 @@ class _EnhancedWebAppointmentsPageState
                                     });
                                   },
                                   child: Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 4),
                                     child: Stack(
                                       children: [
                                         Icon(
                                           selectedRating >= starValue
                                               ? Icons.star
-                                              : (selectedRating >= starValue - 0.5
+                                              : (selectedRating >=
+                                                      starValue - 0.5
                                                   ? Icons.star_half
                                                   : Icons.star_border),
-                                          color: selectedRating >= starValue - 0.5
-                                              ? Colors.amber
-                                              : Colors.grey.shade400,
+                                          color:
+                                              selectedRating >= starValue - 0.5
+                                                  ? Colors.amber
+                                                  : Colors.grey.shade400,
                                           size: 40,
                                         ),
                                         Positioned(
@@ -1701,7 +1761,8 @@ class _EnhancedWebAppointmentsPageState
                                             child: GestureDetector(
                                               onTap: () {
                                                 setState(() {
-                                                  selectedRating = starValue - 0.5;
+                                                  selectedRating =
+                                                      starValue - 0.5;
                                                 });
                                               },
                                               child: Container(
@@ -1718,9 +1779,7 @@ class _EnhancedWebAppointmentsPageState
                             }),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
@@ -1743,7 +1802,8 @@ class _EnhancedWebAppointmentsPageState
                               ),
                               if (selectedRating > 0)
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       '${selectedRating.toStringAsFixed(1)} stars',
@@ -1757,7 +1817,8 @@ class _EnhancedWebAppointmentsPageState
                                       _getRatingTextFromDouble(selectedRating),
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: _getRatingColorFromDouble(selectedRating),
+                                        color: _getRatingColorFromDouble(
+                                            selectedRating),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1766,9 +1827,7 @@ class _EnhancedWebAppointmentsPageState
                             ],
                           ),
                         ),
-
                         const SizedBox(height: 24),
-
                         const Text(
                           'Share your experience (Optional)',
                           style: TextStyle(
@@ -1777,7 +1836,6 @@ class _EnhancedWebAppointmentsPageState
                           ),
                         ),
                         const SizedBox(height: 12),
-
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
@@ -1798,9 +1856,7 @@ class _EnhancedWebAppointmentsPageState
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 24),
-
                         const Text(
                           'Add Photos (Optional)',
                           style: TextStyle(
@@ -1809,7 +1865,6 @@ class _EnhancedWebAppointmentsPageState
                           ),
                         ),
                         const SizedBox(height: 12),
-
                         InkWell(
                           onTap: () async {
                             final result = await FilePicker.platform.pickFiles(
@@ -1821,7 +1876,7 @@ class _EnhancedWebAppointmentsPageState
                             if (result != null && result.files.isNotEmpty) {
                               List<PlatformFile> validFiles = [];
                               List<String> rejectedFiles = [];
-                              
+
                               for (var file in result.files) {
                                 // Check 5MB limit (5 * 1024 * 1024 bytes)
                                 if (file.size <= 5 * 1024 * 1024) {
@@ -1830,7 +1885,7 @@ class _EnhancedWebAppointmentsPageState
                                   rejectedFiles.add(file.name);
                                 }
                               }
-                              
+
                               if (rejectedFiles.isNotEmpty) {
                                 Get.snackbar(
                                   'File Size Limit',
@@ -1841,7 +1896,7 @@ class _EnhancedWebAppointmentsPageState
                                   snackPosition: SnackPosition.BOTTOM,
                                 );
                               }
-                              
+
                               setState(() {
                                 selectedImages.addAll(validFiles);
                                 if (selectedImages.length > 5) {
@@ -1883,7 +1938,6 @@ class _EnhancedWebAppointmentsPageState
                             ),
                           ),
                         ),
-
                         if (selectedImages.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           SizedBox(
@@ -1944,9 +1998,7 @@ class _EnhancedWebAppointmentsPageState
                             ),
                           ),
                         ],
-
                         const SizedBox(height: 24),
-
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -2089,7 +2141,7 @@ class _EnhancedWebAppointmentsPageState
 
       // Close loading dialog
       Get.back();
-      
+
       // Close rating dialog
       Navigator.pop(context);
 

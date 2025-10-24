@@ -721,26 +721,68 @@ class AppWriteProvider {
     print('>>> UPDATING APPOINTMENT IN APPWRITE');
     print('>>> Document ID: $documentId');
     print('>>> ============================================');
-    print('>>> Update data: $data');
+    print('>>> Update data keys: ${data.keys.toList()}');
 
-    // Log vitals specifically
-    if (data.containsKey('vitals')) {
-      print('>>> Vitals in update: ${data['vitals']}');
-    }
+    // CRITICAL: Remove any medical data fields if they somehow got in
+    // Appointments should ONLY have workflow, billing, and follow-up fields
+    final cleanedData = Map<String, dynamic>.from(data);
+
+    // Remove medical fields that belong in MedicalRecord
+    cleanedData.remove('diagnosis');
+    cleanedData.remove('treatment');
+    cleanedData.remove('prescription');
+    cleanedData.remove('vetNotes');
+    cleanedData.remove('vitals');
+
+    // Log what we're actually saving
+    print('>>> Cleaned appointment data (medical fields removed):');
+    print('>>> Keys being saved: ${cleanedData.keys.toList()}');
     print('>>> ============================================');
+
+    // Validate that we're only updating appointment-specific fields
+    final allowedFields = [
+      'userId',
+      'clinicId',
+      'petId',
+      'service',
+      'dateTime',
+      'status',
+      'notes', // User's booking notes
+      'createdAt',
+      'updatedAt',
+      'cancellationReason',
+      'cancelledBy',
+      'cancelledAt',
+      'checkedInAt',
+      'serviceStartedAt',
+      'serviceCompletedAt',
+      'attachments',
+      'totalCost',
+      'isPaid',
+      'paymentMethod',
+      'followUpInstructions',
+      'nextAppointmentDate',
+    ];
+
+    // Warn about any unexpected fields
+    for (var key in cleanedData.keys) {
+      if (!allowedFields.contains(key)) {
+        print('>>> ⚠️ WARNING: Unexpected field in appointment update: $key');
+      }
+    }
 
     try {
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.appointmentCollectionID,
         documentId: documentId,
-        data: data,
+        data: cleanedData,
       );
 
-      print('>>> âœ" Appointment updated successfully');
+      print('>>> ✓ Appointment updated successfully');
       print('>>> ============================================');
     } catch (e) {
-      print('>>> âœ— ERROR updating appointment: $e');
+      print('>>> ✗ ERROR updating appointment: $e');
       print('>>> ============================================');
       rethrow;
     }
@@ -748,17 +790,19 @@ class AppWriteProvider {
 
   Future<models.Document> createMedicalRecord(Map<String, dynamic> data) async {
     print('>>> ============================================');
-    print('>>> CREATING MEDICAL RECORD IN APPWRITE');
+    print('>>> APPWRITE PROVIDER: Creating medical record');
     print('>>> ============================================');
     print('>>> Full data received: $data');
 
-    // Log vitals data specifically
-    print('>>> Individual Vitals:');
-    print('>>>   - temperature: ${data['temperature']}');
-    print('>>>   - weight: ${data['weight']}');
-    print('>>>   - bloodPressure: ${data['bloodPressure']}');
-    print('>>>   - heartRate: ${data['heartRate']}');
-    print('>>>   - vitals map: ${data['vitals']}');
+    // CRITICAL: Validate individual vitals data
+    print('>>> Vitals validation:');
+    print(
+        '>>>   - temperature: ${data['temperature']} (${data['temperature']?.runtimeType})');
+    print('>>>   - weight: ${data['weight']} (${data['weight']?.runtimeType})');
+    print(
+        '>>>   - bloodPressure: ${data['bloodPressure']} (${data['bloodPressure']?.runtimeType})');
+    print(
+        '>>>   - heartRate: ${data['heartRate']} (${data['heartRate']?.runtimeType})');
     print('>>> ============================================');
 
     // Ensure all required fields are present
@@ -769,7 +813,7 @@ class AppWriteProvider {
       throw Exception('Treatment is required for medical records');
     }
 
-    // CRITICAL: Ensure vitals data is properly formatted
+    // CRITICAL: Clean data - ensure proper types for individual vital columns
     final Map<String, dynamic> cleanedData = {
       'petId': data['petId'],
       'clinicId': data['clinicId'],
@@ -781,13 +825,25 @@ class AppWriteProvider {
       'treatment': data['treatment'],
       'prescription': data['prescription'],
       'notes': data['notes'],
-      // CRITICAL: Individual vital fields with proper null handling
-      'temperature': data['temperature'],
-      'weight': data['weight'],
-      'bloodPressure': data['bloodPressure'],
-      'heartRate': data['heartRate'],
-      // CRITICAL: Keep the full vitals map for backward compatibility
-      'vitals': data['vitals'],
+      // CRITICAL: Individual vital columns - handle null values properly
+      'temperature': data['temperature'] != null
+          ? (data['temperature'] is double
+              ? data['temperature']
+              : double.tryParse(data['temperature'].toString()))
+          : null,
+      'weight': data['weight'] != null
+          ? (data['weight'] is double
+              ? data['weight']
+              : double.tryParse(data['weight'].toString()))
+          : null,
+      'bloodPressure': data['bloodPressure']?.toString(),
+      'heartRate': data['heartRate'] != null
+          ? (data['heartRate'] is int
+              ? data['heartRate']
+              : int.tryParse(data['heartRate'].toString()))
+          : null,
+      // CRITICAL: ALWAYS set vitals column to null - we don't use it anymore
+      'vitals': null,
       'attachments': data['attachments'],
       'createdAt': data['createdAt'],
       'updatedAt': data['updatedAt'],
@@ -798,7 +854,7 @@ class AppWriteProvider {
     print('>>>   - weight: ${cleanedData['weight']}');
     print('>>>   - bloodPressure: ${cleanedData['bloodPressure']}');
     print('>>>   - heartRate: ${cleanedData['heartRate']}');
-    print('>>>   - vitals: ${cleanedData['vitals']}');
+    print('>>>   - vitals: ${cleanedData['vitals']} (should be null)');
     print('>>> ============================================');
 
     try {
@@ -809,12 +865,12 @@ class AppWriteProvider {
         data: cleanedData,
       );
 
-      print('>>> âœ" Medical record created successfully: ${doc.$id}');
+      print('>>> ✓ Medical record created successfully: ${doc.$id}');
       print('>>> ============================================');
 
       return doc;
     } catch (e) {
-      print('>>> âœ— ERROR creating medical record: $e');
+      print('>>> ✗ ERROR creating medical record: $e');
       print('>>> ============================================');
       rethrow;
     }
@@ -846,13 +902,72 @@ class AppWriteProvider {
 
   Future<Document> updateMedicalRecord(
       String documentId, Map<String, dynamic> data) async {
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    return await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.medicalRecordsCollectionID,
-      documentId: documentId,
-      data: data,
-    );
+    print('>>> ============================================');
+    print('>>> UPDATING MEDICAL RECORD IN APPWRITE');
+    print('>>> Document ID: $documentId');
+    print('>>> ============================================');
+
+    // Clean the data similar to create
+    final Map<String, dynamic> cleanedData = {
+      if (data.containsKey('petId')) 'petId': data['petId'],
+      if (data.containsKey('clinicId')) 'clinicId': data['clinicId'],
+      if (data.containsKey('vetId')) 'vetId': data['vetId'],
+      if (data.containsKey('appointmentId'))
+        'appointmentId': data['appointmentId'],
+      if (data.containsKey('visitDate')) 'visitDate': data['visitDate'],
+      if (data.containsKey('service')) 'service': data['service'],
+      if (data.containsKey('diagnosis')) 'diagnosis': data['diagnosis'],
+      if (data.containsKey('treatment')) 'treatment': data['treatment'],
+      if (data.containsKey('prescription'))
+        'prescription': data['prescription'],
+      if (data.containsKey('notes')) 'notes': data['notes'],
+      // Individual vitals
+      'temperature': data['temperature'] != null
+          ? (data['temperature'] is double
+              ? data['temperature']
+              : double.tryParse(data['temperature'].toString()))
+          : null,
+      'weight': data['weight'] != null
+          ? (data['weight'] is double
+              ? data['weight']
+              : double.tryParse(data['weight'].toString()))
+          : null,
+      'bloodPressure': data['bloodPressure']?.toString(),
+      'heartRate': data['heartRate'] != null
+          ? (data['heartRate'] is int
+              ? data['heartRate']
+              : int.tryParse(data['heartRate'].toString()))
+          : null,
+      // CRITICAL: Always null
+      'vitals': null,
+      if (data.containsKey('attachments')) 'attachments': data['attachments'],
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    print('>>> Cleaned update data:');
+    print('>>>   - temperature: ${cleanedData['temperature']}');
+    print('>>>   - weight: ${cleanedData['weight']}');
+    print('>>>   - bloodPressure: ${cleanedData['bloodPressure']}');
+    print('>>>   - heartRate: ${cleanedData['heartRate']}');
+    print('>>> ============================================');
+
+    try {
+      final doc = await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.medicalRecordsCollectionID,
+        documentId: documentId,
+        data: cleanedData,
+      );
+
+      print('>>> ✓ Medical record updated successfully');
+      print('>>> ============================================');
+
+      return doc;
+    } catch (e) {
+      print('>>> ✗ ERROR updating medical record: $e');
+      print('>>> ============================================');
+      rethrow;
+    }
   }
 
   Future<Document> updateClinic(
@@ -2961,7 +3076,7 @@ class AppWriteProvider {
       }
 
       // If verified, update user's verification status in users collection
-          if (mappedStatus == 'approved') {
+      if (mappedStatus == 'approved') {
         print('>>> Updating user verification status...');
         final userDoc = await getUserById(userId);
         if (userDoc != null) {
@@ -3552,34 +3667,34 @@ class AppWriteProvider {
       rethrow;
     }
   }
+
   /// Toggle pin status of feedback
-Future<Document> toggleFeedbackPin(
-  String documentId,
-  bool isPinned,
-  String pinnedBy,
-) async {
-  try {
-    print('>>> Toggling feedback pin: $documentId to $isPinned');
-    
-    final data = {
-      'isPinned': isPinned,
-      'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
-      'pinnedBy': isPinned ? pinnedBy : null,
-      'updatedAt': DateTime.now().toIso8601String(),
-    };
+  Future<Document> toggleFeedbackPin(
+    String documentId,
+    bool isPinned,
+    String pinnedBy,
+  ) async {
+    try {
+      print('>>> Toggling feedback pin: $documentId to $isPinned');
 
-    return await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-      documentId: documentId,
-      data: data,
-    );
-  } catch (e) {
-    print('>>> Error toggling feedback pin: $e');
-    rethrow;
+      final data = {
+        'isPinned': isPinned,
+        'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
+        'pinnedBy': isPinned ? pinnedBy : null,
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error toggling feedback pin: $e');
+      rethrow;
+    }
   }
-}
-
 
   /// Update feedback status
   Future<void> updateFeedbackStatus(
@@ -6227,63 +6342,61 @@ Future<Document> toggleFeedbackPin(
     }
   }
 
-
   /// Migrate existing feedback to add pin fields
-Future<void> migrateFeedbackPinFields() async {
-  try {
-    print('>>> ============================================');
-    print('>>> MIGRATING FEEDBACK PIN FIELDS');
-    print('>>> Adding isPinned, pinnedAt, pinnedBy fields');
-    print('>>> ============================================');
+  Future<void> migrateFeedbackPinFields() async {
+    try {
+      print('>>> ============================================');
+      print('>>> MIGRATING FEEDBACK PIN FIELDS');
+      print('>>> Adding isPinned, pinnedAt, pinnedBy fields');
+      print('>>> ============================================');
 
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-      queries: [Query.limit(500)],
-    );
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        queries: [Query.limit(500)],
+      );
 
-    print('>>> Found ${result.documents.length} feedback records');
+      print('>>> Found ${result.documents.length} feedback records');
 
-    int updated = 0;
-    for (var doc in result.documents) {
-      try {
-        // Check if pin fields exist
-        if (!doc.data.containsKey('isPinned')) {
-          print('>>> Updating feedback: ${doc.$id}');
+      int updated = 0;
+      for (var doc in result.documents) {
+        try {
+          // Check if pin fields exist
+          if (!doc.data.containsKey('isPinned')) {
+            print('>>> Updating feedback: ${doc.$id}');
 
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-            documentId: doc.$id,
-            data: {
-              'isPinned': false,
-              'pinnedAt': null,
-              'pinnedBy': null,
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+              documentId: doc.$id,
+              data: {
+                'isPinned': false,
+                'pinnedAt': null,
+                'pinnedBy': null,
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
 
-          updated++;
-          print('>>>   ✓ Migration successful');
+            updated++;
+            print('>>>   ✓ Migration successful');
+          }
+        } catch (e) {
+          print('>>> Error updating feedback ${doc.$id}: $e');
         }
-      } catch (e) {
-        print('>>> Error updating feedback ${doc.$id}: $e');
       }
+
+      print('>>> ============================================');
+      print('>>> MIGRATION COMPLETE');
+      print('>>> Updated $updated feedback records');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Migration error: $e');
     }
-
-    print('>>> ============================================');
-    print('>>> MIGRATION COMPLETE');
-    print('>>> Updated $updated feedback records');
-    print('>>> ============================================');
-  } catch (e) {
-    print('>>> Migration error: $e');
   }
-}
-
 
   Future<List<Map<String, dynamic>>> getPetMedicalRecords(String petId) async {
     try {
-      final res = await databases!.listDocuments(
+      final rawRecords = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.medicalRecordsCollectionID,
         queries: [
@@ -6292,14 +6405,14 @@ Future<void> migrateFeedbackPinFields() async {
         ],
       );
 
-      return res.documents
+      return rawRecords.documents
           .map((doc) => {
                 ...doc.data,
                 '\$id': doc.$id,
               })
           .toList();
     } catch (e) {
-      print('Error in AppWriteProvider.getPetMedicalRecords: $e');
+      print('Error getting pet medical records: $e');
       return [];
     }
   }

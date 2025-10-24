@@ -676,11 +676,14 @@ class WebAppointmentTile extends StatelessWidget {
   }
 
   void _showVitalsDialog(WebAppointmentController controller) {
+    // Controllers
     final tempController = TextEditingController();
     final weightController = TextEditingController();
     final bpController = TextEditingController();
     final hrController = TextEditingController();
-    bool hasChanges = false;
+
+    // Form key for validation
+    final formKey = GlobalKey<FormState>();
 
     // Pre-fill with pending vitals if they exist
     final pendingVitals = controller.getPendingVitals(appointment.documentId!);
@@ -699,259 +702,334 @@ class WebAppointmentTile extends StatelessWidget {
       }
     }
 
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(24),
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              return WillPopScope(
-                onWillPop: () async {
-                  if (hasChanges) {
-                    return await _showDiscardChangesDialog(context);
-                  }
-                  return true;
-                },
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.favorite,
-                                color: Colors.red, size: 24),
+    // Validation functions
+    String? validateTemperature(String? value) {
+      if (value == null || value.isEmpty) return null;
+
+      final temp = double.tryParse(value);
+      if (temp == null) {
+        return 'Enter a valid number';
+      }
+      if (temp < 0 || temp > 50) {
+        return 'Temperature must be 0-50°C';
+      }
+      return null;
+    }
+
+    String? validateWeight(String? value) {
+      if (value == null || value.isEmpty) return null;
+
+      final weight = double.tryParse(value);
+      if (weight == null) {
+        return 'Enter a valid number';
+      }
+      if (weight < 0 || weight > 500) {
+        return 'Weight must be 0-500kg';
+      }
+      return null;
+    }
+
+    String? validateHeartRate(String? value) {
+      if (value == null || value.isEmpty) return null;
+
+      final hr = int.tryParse(value);
+      if (hr == null) {
+        return 'Enter a valid whole number';
+      }
+      if (hr < 0 || hr > 300) {
+        return 'Heart rate must be 0-300 bpm';
+      }
+      return null;
+    }
+
+    String? validateBloodPressure(String? value) {
+      if (value == null || value.isEmpty) return null;
+
+      final bpPattern = RegExp(r'^\d{2,3}\/\d{2,3}');
+
+      if (!bpPattern.hasMatch(value)) {
+        return 'Format: 120/80';
+      }
+      return null;
+    }
+
+    // Helper method to check if any field has data
+    bool hasVitalData() {
+      return tempController.text.isNotEmpty ||
+          weightController.text.isNotEmpty ||
+          bpController.text.isNotEmpty ||
+          hrController.text.isNotEmpty;
+    }
+
+    // Show dialog
+    showDialog(
+      context: Get.context!,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            width: 500,
+            constraints: const BoxConstraints(maxHeight: 700),
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          const SizedBox(width: 12),
-                          const Expanded(
+                          child: const Icon(Icons.favorite,
+                              color: Colors.red, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Record Vital Signs',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Close',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.blue[700], size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
                             child: Text(
-                              'Record Vital Signs',
+                              'Vitals will be saved when you complete the service.',
                               style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color.fromARGB(255, 81, 115, 153),
-                              ),
+                                  fontSize: 12, color: Colors.blue[700]),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Temperature and Weight
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: tempController,
+                            decoration: InputDecoration(
+                              labelText: 'Temperature (°C)',
+                              border: const OutlineInputBorder(),
+                              hintText: '36.0 - 40.0',
+                              helperText: 'Range: 0-50°C',
+                              helperStyle: TextStyle(
+                                  fontSize: 11, color: Colors.grey[600]),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            validator: validateTemperature,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline,
-                                color: Colors.blue[700], size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Vitals will be saved when you complete the service. They won\'t be saved to the database yet.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blue[700],
-                                ),
-                              ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: weightController,
+                            decoration: InputDecoration(
+                              labelText: 'Weight (kg)',
+                              border: const OutlineInputBorder(),
+                              hintText: '5.0 - 50.0',
+                              helperText: 'Range: 0-500kg',
+                              helperStyle: TextStyle(
+                                  fontSize: 11, color: Colors.grey[600]),
                             ),
-                          ],
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            validator: validateWeight,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                      // Temperature and Weight
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: tempController,
-                              decoration: const InputDecoration(
-                                labelText: 'Temperature (°C)',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., 38.5',
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              onChanged: (value) {
-                                if (value.isNotEmpty) hasChanges = true;
-                              },
+                    // Blood Pressure and Heart Rate
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: bpController,
+                            decoration: InputDecoration(
+                              labelText: 'Blood Pressure',
+                              border: const OutlineInputBorder(),
+                              hintText: '120/80',
+                              helperText: 'Format: 120/80',
+                              helperStyle: TextStyle(
+                                  fontSize: 11, color: Colors.grey[600]),
                             ),
+                            validator: validateBloodPressure,
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: weightController,
-                              decoration: const InputDecoration(
-                                labelText: 'Weight (kg)',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., 25.5',
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              onChanged: (value) {
-                                if (value.isNotEmpty) hasChanges = true;
-                              },
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: hrController,
+                            decoration: InputDecoration(
+                              labelText: 'Heart Rate (bpm)',
+                              border: const OutlineInputBorder(),
+                              hintText: '60 - 100',
+                              helperText: 'Range: 0-300 bpm',
+                              helperStyle: TextStyle(
+                                  fontSize: 11, color: Colors.grey[600]),
                             ),
+                            keyboardType: TextInputType.number,
+                            validator: validateHeartRate,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                        ),
+                      ],
+                    ),
 
-                      // Blood Pressure and Heart Rate
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: bpController,
-                              decoration: const InputDecoration(
-                                labelText: 'Blood Pressure',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., 120/80',
-                              ),
-                              onChanged: (value) {
-                                if (value.isNotEmpty) hasChanges = true;
-                              },
-                            ),
+                    const SizedBox(height: 24),
+
+                    // Action Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Validate form
+                            if (!formKey.currentState!.validate()) {
+                              Get.snackbar(
+                                "Invalid Input",
+                                "Please fix the errors before recording vitals",
+                                backgroundColor: Colors.orange,
+                                colorText: Colors.white,
+                                icon: const Icon(Icons.warning,
+                                    color: Colors.white),
+                              );
+                              return;
+                            }
+
+                            // Check that at least one field is filled
+                            if (!hasVitalData()) {
+                              Get.snackbar(
+                                "Required",
+                                "Please enter at least one vital sign",
+                                backgroundColor: Colors.orange,
+                                colorText: Colors.white,
+                              );
+                              return;
+                            }
+
+                            // Build vitals map
+                            final vitals = <String, dynamic>{};
+
+                            if (tempController.text.isNotEmpty) {
+                              vitals['temperature'] =
+                                  double.parse(tempController.text);
+                            }
+
+                            if (weightController.text.isNotEmpty) {
+                              vitals['weight'] =
+                                  double.parse(weightController.text);
+                            }
+
+                            if (bpController.text.isNotEmpty) {
+                              vitals['bloodPressure'] = bpController.text;
+                            }
+
+                            if (hrController.text.isNotEmpty) {
+                              vitals['heartRate'] =
+                                  int.parse(hrController.text);
+                            }
+
+                            vitals['recordedAt'] =
+                                DateTime.now().toIso8601String();
+
+                            // Store locally
+                            controller.recordVitalsLocally(appointment, vitals);
+
+                            // Close dialog AFTER storing
+                            Navigator.of(dialogContext).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: hrController,
-                              decoration: const InputDecoration(
-                                labelText: 'Heart Rate (bpm)',
-                                border: OutlineInputBorder(),
-                                hintText: 'e.g., 72',
-                              ),
-                              keyboardType: TextInputType.number,
-                              onChanged: (value) {
-                                if (value.isNotEmpty) hasChanges = true;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Action Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              if (hasChanges) {
-                                _showDiscardChangesDialog(context)
-                                    .then((discard) {
-                                  if (discard == true) {
-                                    tempController.dispose();
-                                    weightController.dispose();
-                                    bpController.dispose();
-                                    hrController.dispose();
-                                    Get.back();
-                                  }
-                                });
-                              } else {
-                                tempController.dispose();
-                                weightController.dispose();
-                                bpController.dispose();
-                                hrController.dispose();
-                                Get.back();
-                              }
-                            },
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              // Validate that at least one field is filled
-                              if (tempController.text.isEmpty &&
-                                  weightController.text.isEmpty &&
-                                  bpController.text.isEmpty &&
-                                  hrController.text.isEmpty) {
-                                Get.snackbar(
-                                  "Required",
-                                  "Please enter at least one vital sign",
-                                  backgroundColor: Colors.orange,
-                                  colorText: Colors.white,
-                                );
-                                return;
-                              }
-
-                              final vitals = <String, dynamic>{};
-
-                              if (tempController.text.isNotEmpty) {
-                                final temp =
-                                    double.tryParse(tempController.text);
-                                if (temp != null) {
-                                  vitals['temperature'] = temp;
-                                }
-                              }
-
-                              if (weightController.text.isNotEmpty) {
-                                final weight =
-                                    double.tryParse(weightController.text);
-                                if (weight != null) {
-                                  vitals['weight'] = weight;
-                                }
-                              }
-
-                              if (bpController.text.isNotEmpty) {
-                                vitals['bloodPressure'] = bpController.text;
-                              }
-
-                              if (hrController.text.isNotEmpty) {
-                                final hr = int.tryParse(hrController.text);
-                                if (hr != null) {
-                                  vitals['heartRate'] = hr;
-                                }
-                              }
-
-                              vitals['recordedAt'] =
-                                  DateTime.now().toIso8601String();
-
-                              // MODIFIED: Store locally instead of saving to database
-                              controller.recordVitalsLocally(
-                                  appointment, vitals);
-
-                              tempController.dispose();
-                              weightController.dispose();
-                              bpController.dispose();
-                              hrController.dispose();
-                              Get.back();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color.fromARGB(255, 81, 115, 153),
-                            ),
-                            child: const Text('Record Vitals',
-                                style: TextStyle(color: Colors.white)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                          child: const Text('Record Vitals',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ).then((_) {
+      // Dispose controllers after dialog closes
+      tempController.dispose();
+      weightController.dispose();
+      bpController.dispose();
+      hrController.dispose();
+    });
   }
+
+// Helper widget to build vital info rows in the discard dialog
+  // Widget _buildVitalInfoRow(String label, String value) {
+  //   return Padding(
+  //     padding: const EdgeInsets.only(bottom: 6),
+  //     child: Row(
+  //       children: [
+  //         Icon(Icons.check_circle, size: 14, color: Colors.orange[700]),
+  //         const SizedBox(width: 8),
+  //         Text(
+  //           '$label: ',
+  //           style: const TextStyle(
+  //             fontSize: 13,
+  //             fontWeight: FontWeight.w600,
+  //           ),
+  //         ),
+  //         Text(
+  //           value,
+  //           style: const TextStyle(
+  //             fontSize: 13,
+  //             fontWeight: FontWeight.normal,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _showCompleteServiceDialog(WebAppointmentController controller) {
     if (controller.isVaccinationService(appointment.service)) {
