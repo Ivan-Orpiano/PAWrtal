@@ -29,6 +29,12 @@ class _VaccinationCompletionDialogState
   final _notesController = TextEditingController();
   final _vetNotesController = TextEditingController();
 
+  // ADDED: Vitals fields
+  final _tempController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _bpController = TextEditingController();
+  final _hrController = TextEditingController();
+
   DateTime? _nextDueDate;
   bool _isBooster = false;
 
@@ -50,6 +56,34 @@ class _VaccinationCompletionDialogState
   String? _selectedVaccineType;
 
   @override
+  void initState() {
+    super.initState();
+    _loadPendingVitals();
+  }
+
+  // ADDED: Load pending vitals if they exist
+  void _loadPendingVitals() {
+    final controller = Get.find<WebAppointmentController>();
+    final pendingVitals =
+        controller.getPendingVitals(widget.appointment.documentId!);
+
+    if (pendingVitals != null) {
+      if (pendingVitals['temperature'] != null) {
+        _tempController.text = pendingVitals['temperature'].toString();
+      }
+      if (pendingVitals['weight'] != null) {
+        _weightController.text = pendingVitals['weight'].toString();
+      }
+      if (pendingVitals['bloodPressure'] != null) {
+        _bpController.text = pendingVitals['bloodPressure'].toString();
+      }
+      if (pendingVitals['heartRate'] != null) {
+        _hrController.text = pendingVitals['heartRate'].toString();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _vaccineNameController.dispose();
     _vaccineTypeController.dispose();
@@ -57,10 +91,14 @@ class _VaccinationCompletionDialogState
     _manufacturerController.dispose();
     _notesController.dispose();
     _vetNotesController.dispose();
+    // ADDED: Dispose vitals controllers
+    _tempController.dispose();
+    _weightController.dispose();
+    _bpController.dispose();
+    _hrController.dispose();
     super.dispose();
   }
 
-  /// Check if form has any unsaved changes
   bool _hasFormChanges() {
     return _vaccineNameController.text.isNotEmpty ||
         _vaccineTypeController.text.isNotEmpty ||
@@ -68,11 +106,14 @@ class _VaccinationCompletionDialogState
         _manufacturerController.text.isNotEmpty ||
         _notesController.text.isNotEmpty ||
         _vetNotesController.text.isNotEmpty ||
+        _tempController.text.isNotEmpty ||
+        _weightController.text.isNotEmpty ||
+        _bpController.text.isNotEmpty ||
+        _hrController.text.isNotEmpty ||
         _nextDueDate != null ||
         _isBooster;
   }
 
-  /// Show discard changes confirmation dialog
   Future<bool?> _showDiscardChangesDialog() {
     return showDialog<bool>(
       context: context,
@@ -123,7 +164,6 @@ class _VaccinationCompletionDialogState
     );
   }
 
-  /// Dispose of all controllers
   void _disposeControllers() {
     _vaccineNameController.dispose();
     _vaccineTypeController.dispose();
@@ -131,15 +171,50 @@ class _VaccinationCompletionDialogState
     _manufacturerController.dispose();
     _notesController.dispose();
     _vetNotesController.dispose();
+    _tempController.dispose();
+    _weightController.dispose();
+    _bpController.dispose();
+    _hrController.dispose();
   }
 
-  /// Handle back button press
   Future<bool> _onWillPop() async {
     if (_hasFormChanges()) {
       final shouldDiscard = await _showDiscardChangesDialog();
       return shouldDiscard ?? false;
     }
     return true;
+  }
+
+  // ADDED: Validation methods for vitals
+  String? _validateTemperature(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final temp = double.tryParse(value);
+    if (temp == null) return 'Enter a valid number';
+    if (temp < 0 || temp > 50) return 'Temperature must be 0-50°C';
+    return null;
+  }
+
+  String? _validateWeight(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final weight = double.tryParse(value);
+    if (weight == null) return 'Enter a valid number';
+    if (weight < 0 || weight > 500) return 'Weight must be 0-500kg';
+    return null;
+  }
+
+  String? _validateHeartRate(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final hr = int.tryParse(value);
+    if (hr == null) return 'Enter a valid whole number';
+    if (hr < 0 || hr > 300) return 'Heart rate must be 0-300 bpm';
+    return null;
+  }
+
+  String? _validateBloodPressure(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final bpPattern = RegExp(r'^\d{2,3}\/\d{2,3}');
+    if (!bpPattern.hasMatch(value)) return 'Format: 120/80';
+    return null;
   }
 
   @override
@@ -206,10 +281,10 @@ class _VaccinationCompletionDialogState
                           final shouldDiscard =
                               await _showDiscardChangesDialog();
                           if (shouldDiscard == true) {
-                            Navigator.pop(context);
+                            if (mounted) Navigator.pop(context);
                           }
                         } else {
-                          Navigator.pop(context);
+                          if (mounted) Navigator.pop(context);
                         }
                       },
                       icon: const Icon(Icons.close),
@@ -274,7 +349,6 @@ class _VaccinationCompletionDialogState
                           },
                         ),
 
-                        // Custom vaccine type (if Other is selected)
                         if (_selectedVaccineType == 'Other') ...[
                           const SizedBox(height: 16),
                           TextFormField(
@@ -284,9 +358,7 @@ class _VaccinationCompletionDialogState
                               border: OutlineInputBorder(),
                               hintText: 'Enter vaccine type',
                             ),
-                            onChanged: (value) {
-                              setState(() {});
-                            },
+                            onChanged: (value) => setState(() {}),
                             validator: (value) {
                               if (_selectedVaccineType == 'Other' &&
                                   (value == null || value.isEmpty)) {
@@ -307,9 +379,7 @@ class _VaccinationCompletionDialogState
                             border: OutlineInputBorder(),
                             hintText: 'e.g., Nobivac, Purevax, etc.',
                           ),
-                          onChanged: (value) {
-                            setState(() {});
-                          },
+                          onChanged: (value) => setState(() {}),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter vaccine name';
@@ -318,6 +388,119 @@ class _VaccinationCompletionDialogState
                           },
                         ),
 
+                        const SizedBox(height: 24),
+                        const Divider(),
+                        const SizedBox(height: 16),
+
+                        // ADDED: Vitals Section
+                        Row(
+                          children: [
+                            Icon(Icons.favorite,
+                                color: Colors.red[700], size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Vital Signs (Optional)',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 81, 115, 153),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: Colors.blue[700], size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Record vital signs taken during vaccination visit',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.blue[700]),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Temperature and Weight
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _tempController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Temperature (°C)',
+                                  border: OutlineInputBorder(),
+                                  hintText: '36.0 - 40.0',
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: _validateTemperature,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _weightController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Weight (kg)',
+                                  border: OutlineInputBorder(),
+                                  hintText: '5.0 - 50.0',
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: _validateWeight,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Blood Pressure and Heart Rate
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _bpController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Blood Pressure',
+                                  border: OutlineInputBorder(),
+                                  hintText: '120/80',
+                                ),
+                                validator: _validateBloodPressure,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _hrController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Heart Rate (bpm)',
+                                  border: OutlineInputBorder(),
+                                  hintText: '60 - 100',
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: _validateHeartRate,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+                        const Divider(),
                         const SizedBox(height: 16),
 
                         // Batch Number and Manufacturer
@@ -331,9 +514,7 @@ class _VaccinationCompletionDialogState
                                   border: OutlineInputBorder(),
                                   hintText: 'Optional',
                                 ),
-                                onChanged: (value) {
-                                  setState(() {});
-                                },
+                                onChanged: (value) => setState(() {}),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -345,9 +526,7 @@ class _VaccinationCompletionDialogState
                                   border: OutlineInputBorder(),
                                   hintText: 'Optional',
                                 ),
-                                onChanged: (value) {
-                                  setState(() {});
-                                },
+                                onChanged: (value) => setState(() {}),
                               ),
                             ),
                           ],
@@ -356,25 +535,20 @@ class _VaccinationCompletionDialogState
                         const SizedBox(height: 16),
 
                         // Booster checkbox
-                        StatefulBuilder(
-                          builder: (context, setCheckboxState) {
-                            return CheckboxListTile(
-                              title: const Text('This is a booster shot'),
-                              subtitle: const Text(
-                                'Check if this is a follow-up/booster vaccination',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              value: _isBooster,
-                              onChanged: (value) {
-                                setCheckboxState(() {
-                                  _isBooster = value ?? false;
-                                  setState(() {});
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                            );
+                        CheckboxListTile(
+                          title: const Text('This is a booster shot'),
+                          subtitle: const Text(
+                            'Check if this is a follow-up/booster vaccination',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          value: _isBooster,
+                          onChanged: (value) {
+                            setState(() {
+                              _isBooster = value ?? false;
+                            });
                           },
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
                         ),
 
                         const SizedBox(height: 16),
@@ -414,14 +588,12 @@ class _VaccinationCompletionDialogState
                                 'Any reactions, special instructions, etc.',
                           ),
                           maxLines: 3,
-                          onChanged: (value) {
-                            setState(() {});
-                          },
+                          onChanged: (value) => setState(() {}),
                         ),
 
                         const SizedBox(height: 16),
 
-                        // Veterinary Notes (for medical record)
+                        // Veterinary Notes
                         TextFormField(
                           controller: _vetNotesController,
                           decoration: const InputDecoration(
@@ -430,9 +602,7 @@ class _VaccinationCompletionDialogState
                             hintText: 'Additional notes for the medical record',
                           ),
                           maxLines: 3,
-                          onChanged: (value) {
-                            setState(() {});
-                          },
+                          onChanged: (value) => setState(() {}),
                         ),
 
                         const SizedBox(height: 16),
@@ -441,20 +611,21 @@ class _VaccinationCompletionDialogState
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue[50],
+                            color: Colors.green[50],
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue[200]!),
+                            border: Border.all(color: Colors.green[200]!),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info_outline, color: Colors.blue[700]),
+                              Icon(Icons.check_circle,
+                                  color: Colors.green[700]),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'This will create both a vaccination record and a medical record for this pet.',
+                                  'This will create a vaccination record, medical record, and save any vitals recorded.',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.blue[700],
+                                    color: Colors.green[700],
                                   ),
                                 ),
                               ),
@@ -481,11 +652,11 @@ class _VaccinationCompletionDialogState
                               await _showDiscardChangesDialog();
                           if (shouldDiscard == true) {
                             _disposeControllers();
-                            Navigator.pop(context);
+                            if (mounted) Navigator.pop(context);
                           }
                         } else {
                           _disposeControllers();
-                          Navigator.pop(context);
+                          if (mounted) Navigator.pop(context);
                         }
                       },
                       child: const Text('Cancel'),
@@ -523,7 +694,7 @@ class _VaccinationCompletionDialogState
       helpText: 'Select next vaccination due date',
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _nextDueDate = picked;
       });
@@ -533,9 +704,38 @@ class _VaccinationCompletionDialogState
   void _submitVaccination() {
     if (_formKey.currentState!.validate()) {
       final controller = Get.find<WebAppointmentController>();
-
-      // Get veterinarian name
       final vetName = controller.getVeterinarianName();
+
+      // Build vitals map if any vital data is present
+      Map<String, dynamic>? vitalsData;
+      if (_tempController.text.isNotEmpty ||
+          _weightController.text.isNotEmpty ||
+          _bpController.text.isNotEmpty ||
+          _hrController.text.isNotEmpty) {
+        print('>>> DIALOG: Building vitals data...');
+        vitalsData = {};
+
+        if (_tempController.text.isNotEmpty) {
+          vitalsData['temperature'] = double.parse(_tempController.text);
+          print('>>>   - temperature: ${vitalsData['temperature']}');
+        }
+        if (_weightController.text.isNotEmpty) {
+          vitalsData['weight'] = double.parse(_weightController.text);
+          print('>>>   - weight: ${vitalsData['weight']}');
+        }
+        if (_bpController.text.isNotEmpty) {
+          vitalsData['bloodPressure'] = _bpController.text;
+          print('>>>   - bloodPressure: ${vitalsData['bloodPressure']}');
+        }
+        if (_hrController.text.isNotEmpty) {
+          vitalsData['heartRate'] = int.parse(_hrController.text);
+          print('>>>   - heartRate: ${vitalsData['heartRate']}');
+        }
+
+        print('>>> DIALOG: Vitals data complete');
+      } else {
+        print('>>> DIALOG: No vitals data provided');
+      }
 
       final vaccinationData = {
         'vaccineType': _vaccineTypeController.text.trim(),
@@ -554,16 +754,22 @@ class _VaccinationCompletionDialogState
         'veterinarianName': vetName,
       };
 
-      // Close dialog
-      Navigator.pop(context);
+      print('>>> DIALOG: Vaccination data prepared');
+      print('>>> DIALOG: Has vitals: ${vitalsData != null}');
 
-      // Complete vaccination through controller
-      controller.completeVaccinationService(
+      // Close dialog BEFORE starting the async operation
+      if (mounted) Navigator.pop(context);
+
+      print('>>> DIALOG: Calling completeVaccinationServiceWithVitals...');
+
+      // Call the updated method with vitals
+      controller.completeVaccinationServiceWithVitals(
         appointment: widget.appointment,
         vaccinationData: vaccinationData,
         vetNotes: _vetNotesController.text.trim().isNotEmpty
             ? _vetNotesController.text.trim()
             : null,
+        vitals: vitalsData,
       );
     }
   }

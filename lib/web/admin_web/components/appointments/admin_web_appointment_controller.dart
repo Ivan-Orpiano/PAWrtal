@@ -342,65 +342,70 @@ class WebAppointmentController extends GetxController {
   }
 
   void updateFilteredAppointments() {
-    List<Appointment> filtered = appointments.toList();
+  List<Appointment> filtered = appointments.toList();
 
-    if (selectedCalendarDate.value != null) {
-      final selectedDate = selectedCalendarDate.value!;
-      filtered = filtered.where((appointment) {
-        final appointmentDate = appointment.dateTime;
-        return appointmentDate.year == selectedDate.year &&
-            appointmentDate.month == selectedDate.month &&
-            appointmentDate.day == selectedDate.day;
-      }).toList();
-    } else {
-      if (selectedTab.value != 'pending' && selectedTab.value != 'scheduled') {
-        filtered = _getFilteredAppointmentsForStats();
-      }
-    }
-
-    switch (selectedTab.value) {
-      case 'today':
-        filtered =
-            filtered.where((appointment) => appointment.isToday).toList();
-        break;
-      case 'pending':
-        filtered = filtered.where((a) => a.status == 'pending').toList();
-        break;
-      case 'scheduled':
-        filtered = filtered
-            .where((a) => a.status == 'accepted' && !a.isToday)
-            .toList();
-        break;
-      case 'in_progress':
-        filtered = filtered.where((a) => a.status == 'in_progress').toList();
-        break;
-      case 'completed':
-        filtered = filtered.where((a) => a.status == 'completed').toList();
-        break;
-      case 'cancelled':
-        filtered = filtered.where((a) => a.status == 'cancelled').toList();
-        break;
-      case 'declined':
-        filtered = filtered.where((a) => a.status == 'declined').toList();
-        break;
-    }
-
-    if (searchQuery.value.isNotEmpty) {
-      filtered = filtered.where((appointment) {
-        final petName = getPetName(appointment.petId).toLowerCase();
-        final ownerName = getOwnerName(appointment.userId).toLowerCase();
-        final service = appointment.service.toLowerCase();
-        final query = searchQuery.value.toLowerCase();
-
-        return petName.contains(query) ||
-            ownerName.contains(query) ||
-            service.contains(query);
-      }).toList();
-    }
-
-    filtered.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-    filteredAppointments.assignAll(filtered);
+  // Safety check
+  if (filtered == null) {
+    filtered = [];
   }
+
+  if (selectedCalendarDate.value != null) {
+    final selectedDate = selectedCalendarDate.value!;
+    filtered = filtered.where((appointment) {
+      final appointmentDate = appointment.dateTime;
+      return appointmentDate.year == selectedDate.year &&
+          appointmentDate.month == selectedDate.month &&
+          appointmentDate.day == selectedDate.day;
+    }).toList();
+  } else {
+    if (selectedTab.value != 'pending' && selectedTab.value != 'scheduled') {
+      filtered = _getFilteredAppointmentsForStats();
+    }
+  }
+
+  switch (selectedTab.value) {
+    case 'today':
+      filtered =
+          filtered.where((appointment) => appointment.isToday).toList();
+      break;
+    case 'pending':
+      filtered = filtered.where((a) => a.status == 'pending').toList();
+      break;
+    case 'scheduled':
+      filtered = filtered
+          .where((a) => a.status == 'accepted' && !a.isToday)
+          .toList();
+      break;
+    case 'in_progress':
+      filtered = filtered.where((a) => a.status == 'in_progress').toList();
+      break;
+    case 'completed':
+      filtered = filtered.where((a) => a.status == 'completed').toList();
+      break;
+    case 'cancelled':
+      filtered = filtered.where((a) => a.status == 'cancelled').toList();
+      break;
+    case 'declined':
+      filtered = filtered.where((a) => a.status == 'declined').toList();
+      break;
+  }
+
+  if (searchQuery.value.isNotEmpty) {
+    filtered = filtered.where((appointment) {
+      final petName = getPetName(appointment.petId).toLowerCase();
+      final ownerName = getOwnerName(appointment.userId).toLowerCase();
+      final service = appointment.service.toLowerCase();
+      final query = searchQuery.value.toLowerCase();
+
+      return petName.contains(query) ||
+          ownerName.contains(query) ||
+          service.contains(query);
+    }).toList();
+  }
+
+  filtered.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+  filteredAppointments.assignAll(filtered);
+}
 
   String getOwnerName(String userId) {
     if (!ownersCache.containsKey(userId)) {
@@ -1508,5 +1513,285 @@ class WebAppointmentController extends GetxController {
       print('>>> Error sending notification: $e');
       // Don't fail the operation if notification fails
     }
+  }
+
+  /// Complete a vaccination service with both vaccination and medical records INCLUDING VITALS
+  Future<void> completeVaccinationServiceWithVitals({
+    required Appointment appointment,
+    required Map<String, dynamic> vaccinationData,
+    String? vetNotes,
+    Map<String, dynamic>? vitals, // ADDED: Vitals parameter
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> Starting vaccination service completion WITH VITALS');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> Vitals provided: ${vitals != null}');
+      if (vitals != null) {
+        print('>>> Vitals data: $vitals');
+      }
+      print('>>> ============================================');
+
+      // CRITICAL: Extract individual vital values
+      double? temperature;
+      double? weight;
+      String? bloodPressure;
+      int? heartRate;
+
+      if (vitals != null && vitals.isNotEmpty) {
+        print('>>> Processing vitals data...');
+
+        if (vitals.containsKey('temperature') &&
+            vitals['temperature'] != null) {
+          try {
+            final tempValue = vitals['temperature'];
+            temperature = tempValue is double
+                ? tempValue
+                : double.parse(tempValue.toString());
+            print('>>> ✓ Temperature: $temperature°C');
+          } catch (e) {
+            print('>>> ✗ Error parsing temperature: $e');
+          }
+        }
+
+        if (vitals.containsKey('weight') && vitals['weight'] != null) {
+          try {
+            final weightValue = vitals['weight'];
+            weight = weightValue is double
+                ? weightValue
+                : double.parse(weightValue.toString());
+            print('>>> ✓ Weight: ${weight}kg');
+          } catch (e) {
+            print('>>> ✗ Error parsing weight: $e');
+          }
+        }
+
+        if (vitals.containsKey('bloodPressure') &&
+            vitals['bloodPressure'] != null) {
+          bloodPressure = vitals['bloodPressure'].toString();
+          print('>>> ✓ Blood Pressure: $bloodPressure');
+        }
+
+        if (vitals.containsKey('heartRate') && vitals['heartRate'] != null) {
+          try {
+            final hrValue = vitals['heartRate'];
+            heartRate =
+                hrValue is int ? hrValue : int.parse(hrValue.toString());
+            print('>>> ✓ Heart Rate: $heartRate bpm');
+          } catch (e) {
+            print('>>> ✗ Error parsing heart rate: $e');
+          }
+        }
+      }
+
+      // Step 1: Update appointment status - ONLY workflow fields
+      print('>>> Step 1: Updating appointment to completed...');
+      final updatedAppointment = appointment.copyWith(
+        status: 'completed',
+        serviceCompletedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await updateFullAppointment(updatedAppointment);
+      print('>>> ✓ Appointment updated to completed');
+
+      // Step 2: Create medical record with vaccination details AND vitals
+      print('>>> Step 2: Creating medical record with vitals...');
+      final user = await authRepository.getUser();
+      if (user != null) {
+        final medicalRecord = MedicalRecord(
+          petId: appointment.petId,
+          clinicId: appointment.clinicId,
+          vetId: user.$id,
+          appointmentId: appointment.documentId!,
+          visitDate: appointment.serviceCompletedAt ?? DateTime.now(),
+          service: appointment.service,
+          diagnosis: 'Vaccination: ${vaccinationData['vaccineType']}',
+          treatment: 'Administered ${vaccinationData['vaccineName']}',
+          prescription: vaccinationData['batchNumber'] != null
+              ? 'Batch: ${vaccinationData['batchNumber']}'
+              : null,
+          notes: vetNotes ?? 'Vaccination completed successfully',
+          // CRITICAL: Include individual vital fields
+          temperature: temperature,
+          weight: weight,
+          bloodPressure: bloodPressure,
+          heartRate: heartRate,
+          attachments: appointment.attachments,
+        );
+
+        print('>>> Medical record vitals:');
+        print('>>>   - temperature: ${medicalRecord.temperature}');
+        print('>>>   - weight: ${medicalRecord.weight}');
+        print('>>>   - bloodPressure: ${medicalRecord.bloodPressure}');
+        print('>>>   - heartRate: ${medicalRecord.heartRate}');
+
+        await authRepository.createMedicalRecord(medicalRecord);
+        print('>>> ✓ Medical record created with vitals');
+
+        // CRITICAL: Clear pending vitals after successful save
+        if (pendingVitals.containsKey(appointment.documentId)) {
+          pendingVitals.remove(appointment.documentId);
+          print('>>> ✓ Cleared pending vitals from local storage');
+        }
+      }
+
+      // Step 3: Create vaccination record
+      print('>>> Step 3: Creating vaccination record...');
+      final vaccination = Vaccination(
+        petId: appointment.petId,
+        clinicId: appointment.clinicId,
+        vaccineType: vaccinationData['vaccineType'],
+        vaccineName: vaccinationData['vaccineName'],
+        dateGiven: appointment.serviceCompletedAt ?? DateTime.now(),
+        nextDueDate: vaccinationData['nextDueDate'],
+        veterinarianName: vaccinationData['veterinarianName'],
+        veterinarianId: user?.$id,
+        batchNumber: vaccinationData['batchNumber'],
+        manufacturer: vaccinationData['manufacturer'],
+        notes: vaccinationData['notes'],
+        isBooster: vaccinationData['isBooster'] ?? false,
+      );
+
+      await authRepository.createVaccination(vaccination);
+      print('>>> ✓ Vaccination record created');
+
+      // Step 4: Create notification
+      print('>>> Step 4: Creating notification...');
+      try {
+        final notification = AppNotification.appointmentCompleted(
+          userId: appointment.userId,
+          appointmentId: appointment.documentId!,
+          clinicId: appointment.clinicId,
+          clinicName: clinicData.value?.clinicName ?? 'Clinic',
+          petName: getPetName(appointment.petId),
+        );
+
+        await authRepository.createNotification(notification);
+        print('>>> ✓ Completion notification sent to user');
+      } catch (e) {
+        print('>>> ⚠️ Error creating notification: $e');
+      }
+
+      await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
+
+      print('>>> ============================================');
+      print('>>> VACCINATION COMPLETION SUCCESSFUL');
+      print('>>> ============================================');
+
+      Get.snackbar(
+        "Success",
+        vitals != null
+            ? "Vaccination completed! Records created with vitals for ${getPetName(appointment.petId)}"
+            : "Vaccination completed! Records created for ${getPetName(appointment.petId)}",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ✗ ERROR completing vaccination service: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      Get.snackbar(
+        "Error",
+        "Failed to complete vaccination: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      rethrow;
+    }
+  }
+
+  /// Check if a service is a medical service (requires vitals)
+  bool isMedicalService(String serviceName) {
+    final medicalKeywords = [
+      'checkup',
+      'check-up',
+      'examination',
+      'exam',
+      'consultation',
+      'diagnosis',
+      'treatment',
+      'surgery',
+      'vaccination',
+      'vaccine',
+      'immunization',
+      'dental',
+      'xray',
+      'x-ray',
+      'ultrasound',
+      'blood test',
+      'lab test',
+      'emergency',
+      'medical',
+      'health check',
+      'wellness',
+      'sick visit',
+      'follow-up',
+      'follow up',
+    ];
+
+    final lowerService = serviceName.toLowerCase();
+    return medicalKeywords.any((keyword) => lowerService.contains(keyword));
+  }
+
+  /// Check if a service is a basic service (grooming, etc.)
+  bool isBasicService(String serviceName) {
+    final basicKeywords = [
+      'grooming',
+      'bath',
+      'nail trim',
+      'nail clipping',
+      'haircut',
+      'shampoo',
+      'brush',
+      'ear cleaning',
+      'teeth cleaning',
+      'boarding',
+      'daycare',
+    ];
+
+    final lowerService = serviceName.toLowerCase();
+    return basicKeywords.any((keyword) => lowerService.contains(keyword));
+  }
+
+  /// Get service type for display
+  String getServiceType(String serviceName) {
+    if (isMedicalService(serviceName)) {
+      return 'Medical Service';
+    } else if (isBasicService(serviceName)) {
+      return 'Basic Service';
+    } else {
+      return 'General Service';
+    }
+  }
+
+  /// Get service type icon
+  IconData getServiceTypeIcon(String serviceName) {
+    if (isMedicalService(serviceName)) {
+      return Icons.medical_services;
+    } else if (isBasicService(serviceName)) {
+      return Icons.content_cut;
+    } else {
+      return Icons.pets;
+    }
+  }
+
+  /// Get service type color
+  Color getServiceTypeColor(String serviceName) {
+    if (isMedicalService(serviceName)) {
+      return Colors.red; // Medical = Red
+    } else if (isBasicService(serviceName)) {
+      return Colors.blue; // Basic = Blue
+    } else {
+      return Colors.grey; // General = Grey
+    }
+  }
+
+  /// Check if service should show vitals button
+  bool shouldShowVitalsButton(String serviceName) {
+    // Only medical services need vitals
+    return isMedicalService(serviceName);
   }
 }
