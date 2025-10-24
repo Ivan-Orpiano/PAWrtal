@@ -24,6 +24,7 @@ import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_binding.dar
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_page.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_binding.dart';
 import 'package:capstone_app/web/pages/web_super_admin_home/web_super_admin_home_page.dart';
+
 // Staff imports - ADD THESE
 import 'package:capstone_app/web/admin_web/components/staffs/staff_main_wrapper.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
@@ -32,6 +33,11 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
+
+// SECURITY: Import middleware
+import 'package:capstone_app/middleware/route_guard.dart';
+import 'package:capstone_app/middleware/auth_middleware.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -43,70 +49,119 @@ class AppPages {
   static const initial = Routes.splash;
 
   static final routes = [
+    // Splash - No security needed
     GetPage(
       name: _Paths.splash,
       page: () => const SplashPage(),
       binding: SplashBinding(),
     ),
-    // Mobile/Web agnostic login routes - controller will handle platform detection
+
+    // Login - Public route
     GetPage(
       name: _Paths.login,
       page: () => kIsWeb ? const WebLoginPage() : const LoginPage(),
       binding: kIsWeb ? WebLoginBinding() : LoginBinding(),
+      // No middleware - public access
     ),
+
+    // Signup - Public route
     GetPage(
       name: _Paths.signup,
       page: () => kIsWeb ? const WebSignUpPage() : const SignUpPage(),
       binding: kIsWeb ? WebSignUpBinding() : SignUpBinding(),
+      // No middleware - public access
     ),
+
+    // PROTECTED ROUTES - User Home
     GetPage(
       name: _Paths.userHome,
       page: () => kIsWeb ? const WebUserHomePage() : const UserHomePage(),
       binding: kIsWeb ? WebUserHomeBinding() : UserHomeBinding(),
+      middlewares: [
+        RouteGuard(), // Checks authentication and role
+        AuthMiddleware(), // Validates session
+      ],
     ),
+
+    // PROTECTED ROUTES - Admin Home
     GetPage(
       name: _Paths.adminHome,
       page: () => kIsWeb ? const WebAdminHomePage() : const WebAdminHomePage(),
       binding: kIsWeb ? WebAdminHomeBinding() : WebAdminHomeBinding(),
+      middlewares: [
+        RouteGuard(), // Checks if user is admin or staff
+        AuthMiddleware(), // Validates session
+      ],
     ),
+
+    // PROTECTED ROUTES - Super Admin Home
     GetPage(
       name: _Paths.superAdminHome,
       page: () =>
           kIsWeb ? const WebSuperAdminHomePage() : const SuperAdminHomePage(),
       binding: kIsWeb ? WebSuperAdminHomeBinding() : SuperAdminHomeBinding(),
+      middlewares: [
+        RouteGuard(), // Checks if user is developer
+        AuthMiddleware(), // Validates session
+      ],
     ),
+
+    // PROTECTED ROUTES - Create Staff (Admin only)
     GetPage(
       name: _Paths.createStaff,
       page: () => const StaffAccountCreationPage(),
       binding: CreateStaffBinding(),
+      middlewares: [
+        RouteGuard(), // Admin only
+        AuthMiddleware(),
+      ],
     ),
-    // Staff Home - ADD THIS
+
+    // PROTECTED ROUTES - Staff Home
     GetPage(
       name: _Paths.staffHome,
       page: () => const StaffMainWrapper(),
       binding: BindingsBuilder(() {
-        // Initialize dependencies for staff
         Get.lazyPut<AppWriteProvider>(() => AppWriteProvider());
         Get.lazyPut<AuthRepository>(
             () => AuthRepository(Get.find<AppWriteProvider>()));
         Get.lazyPut<UserSessionService>(() => UserSessionService());
       }),
+      middlewares: [
+        RouteGuard(), // Staff only
+        AuthMiddleware(),
+      ],
     ),
+
+    // Super Admin - Clinics
     GetPage(
       name: '/super-admin/clinics',
       page: () => const SuperAdminVetClinicDashboard(),
       binding: SuperAdminHomeBinding(),
+      middlewares: [
+        RouteGuard(),
+        AuthMiddleware(),
+      ],
     ),
 
+    // Super Admin - Users
     GetPage(
       name: '/super-admin/users',
       page: () => const SuperAdminUserManagementScreen(),
+      middlewares: [
+        RouteGuard(),
+        AuthMiddleware(),
+      ],
     ),
-    
+
+    // Super Admin - Feedback
     GetPage(
       name: '/super-admin/feedback',
       page: () => const AdminFeedbackManagement(),
+      middlewares: [
+        RouteGuard(),
+        AuthMiddleware(),
+      ],
     ),
-
   ];
 }
