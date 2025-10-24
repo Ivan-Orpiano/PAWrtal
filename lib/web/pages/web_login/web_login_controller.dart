@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'package:capstone_app/utils/session_manager.dart';
+import 'package:capstone_app/utils/security_monitor.dart';
+
 class WebLoginController extends GetxController {
   final AuthRepository _authRepository;
   WebLoginController(this._authRepository);
@@ -183,6 +186,8 @@ class WebLoginController extends GetxController {
       // Store the role
       await _getStorage.write("role", role);
 
+      _initializeSecureSession(userId, role);
+
       print('>>> ============================================');
       print('>>> STORAGE SUMMARY:');
       print('>>> - userId: ${_getStorage.read("userId")}');
@@ -328,5 +333,32 @@ class WebLoginController extends GetxController {
     // passwordController.dispose();
     emailForPasswordResetController.dispose();
     super.onClose();
+  }
+
+  void _initializeSecureSession(String userId, String role) {
+    print('>>> ============================================');
+    print('>>> WEB: INITIALIZING SECURE SESSION');
+    print('>>> User ID: $userId');
+    print('>>> Role: $role');
+    print('>>> ============================================');
+
+    // Store session timestamp
+    _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
+
+    // Start session monitoring
+    SessionManager.startSessionMonitoring();
+
+    // Log successful login event
+    SecurityMonitor.logSecurityEvent(
+      eventType: 'WEB_LOGIN_SUCCESS',
+      userId: userId,
+      details: 'Role: $role, Platform: Web',
+    );
+
+    // Clean up old security data
+    SessionManager.cleanupOldData();
+
+    print('>>> Secure session initialized');
+    print('>>> ============================================');
   }
 }

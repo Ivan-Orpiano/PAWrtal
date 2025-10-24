@@ -13,6 +13,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 
+import 'package:capstone_app/utils/session_manager.dart';
+import 'package:capstone_app/utils/security_monitor.dart';
+
 class LoginController extends GetxController {
   AuthRepository authRepository;
   LoginController(this.authRepository);
@@ -277,6 +280,8 @@ class LoginController extends GetxController {
       _getStorage.write("role", role);
       _getStorage.write("email", userEmail);
 
+      _initializeSecureSession(userId, role);
+
       // Register FCM token for push notifications (Mobile only)
       print('>>> ==========================================');
       print('>>> REGISTERING FCM TOKEN FOR PUSH NOTIFICATIONS');
@@ -406,5 +411,32 @@ class LoginController extends GetxController {
   void moveToSignUp() {
     clearTextEditingControllers();
     Get.toNamed(Routes.signup);
+  }
+
+  void _initializeSecureSession(String userId, String role) {
+    print('>>> ============================================');
+    print('>>> INITIALIZING SECURE SESSION');
+    print('>>> User ID: $userId');
+    print('>>> Role: $role');
+    print('>>> ============================================');
+
+    // Store session timestamp
+    _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
+
+    // Start session monitoring
+    SessionManager.startSessionMonitoring();
+
+    // Log successful login event
+    SecurityMonitor.logSecurityEvent(
+      eventType: 'LOGIN_SUCCESS',
+      userId: userId,
+      details: 'Role: $role',
+    );
+
+    // Clean up old security data periodically
+    SessionManager.cleanupOldData();
+
+    print('>>> Secure session initialized');
+    print('>>> ============================================');
   }
 }
