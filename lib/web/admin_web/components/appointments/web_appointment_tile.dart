@@ -445,6 +445,10 @@ class WebAppointmentTile extends StatelessWidget {
         );
 
       case 'in_progress':
+        // MODIFIED: Check if vaccination service
+        final isVaccination =
+            controller.isVaccinationService(appointment.service);
+
         return Row(
           children: [
             if (!appointment.hasServiceStarted)
@@ -464,23 +468,29 @@ class WebAppointmentTile extends StatelessWidget {
                 ),
               ),
             if (appointment.hasServiceStarted) ...[
-              Expanded(
-                child: SizedBox(
-                  height: buttonHeight,
-                  child: OutlinedButton(
-                    onPressed: () => _showVitalsDialog(controller),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+              // MODIFIED: Only show Vitals button if NOT a vaccination service
+              if (!isVaccination) ...[
+                Expanded(
+                  child: SizedBox(
+                    height: buttonHeight,
+                    child: OutlinedButton(
+                      onPressed: () => _showVitalsDialog(controller),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child:
+                          Text('Vitals', style: TextStyle(fontSize: fontSize)),
                     ),
-                    child: Text('Vitals', style: TextStyle(fontSize: fontSize)),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
               Expanded(
-                flex: 2,
+                flex: isVaccination
+                    ? 1
+                    : 2, // MODIFIED: Full width for vaccination
                 child: SizedBox(
                   height: buttonHeight,
                   child: ElevatedButton(
