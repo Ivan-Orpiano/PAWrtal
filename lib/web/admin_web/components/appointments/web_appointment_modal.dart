@@ -130,12 +130,9 @@ class WebAppointmentModal extends StatelessWidget {
         const SizedBox(height: 24),
         _buildWorkflowProgress(),
         const SizedBox(height: 24),
-        if (appointment.hasMedicalRecord) ...[
-          _buildMedicalInformation(),
-          const SizedBox(height: 24),
-        ],
-        if (appointment.vitals != null) ...[
-          _buildVitalsSection(),
+        // Add link to view medical record if completed
+        if (appointment.status == 'completed') ...[
+          _buildMedicalRecordLink(),
           const SizedBox(height: 24),
         ],
       ],
@@ -156,17 +153,22 @@ class WebAppointmentModal extends StatelessWidget {
             ],
           ),
         ),
+        // REMOVED: Medical information section
+        // Medical data is now in MedicalRecord, not Appointment
         const SizedBox(width: 24),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (appointment.hasMedicalRecord) ...[
-                _buildMedicalInformation(),
+              // Add link to view medical record if completed
+              if (appointment.status == 'completed') ...[
+                _buildMedicalRecordLink(),
                 const SizedBox(height: 24),
               ],
-              if (appointment.vitals != null) ...[
-                _buildVitalsSection(),
+              // Keep workflow stats
+              if (appointment.waitingTime != null ||
+                  appointment.serviceDuration != null) ...[
+                _buildTimingStatistics(),
               ],
             ],
           ),
@@ -213,6 +215,127 @@ class WebAppointmentModal extends StatelessWidget {
               Icons.note,
               'Notes',
               appointment.notes!,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalRecordLink() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.teal[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.teal[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.medical_information, color: Colors.teal[700]),
+              const SizedBox(width: 8),
+              const Text(
+                'Medical Record',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'This appointment has been completed. Medical records including diagnosis, treatment, and vital signs are available in the Medical Records section.',
+            style: TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Navigate to medical records screen
+              Get.back(); // Close modal
+              // You'll need to implement navigation to medical records
+              // filtered by this appointment ID
+            },
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('View Medical Record'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimingStatistics() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Timing Statistics',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color.fromARGB(255, 81, 115, 153),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (appointment.waitingTime != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.access_time, size: 18, color: Colors.orange[700]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Waiting time: ${_formatDuration(appointment.waitingTime!)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.orange[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (appointment.serviceDuration != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.timer, size: 18, color: Colors.green[700]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Service duration: ${_formatDuration(appointment.serviceDuration!)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.green[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
@@ -433,171 +556,6 @@ class WebAppointmentModal extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildMedicalInformation() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.teal[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.teal[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.medical_information, color: Colors.teal[700]),
-              const SizedBox(width: 8),
-              const Text(
-                'Medical Information',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (appointment.diagnosis != null) ...[
-            _buildMedicalRow('Diagnosis', appointment.diagnosis!),
-            const SizedBox(height: 12),
-          ],
-          if (appointment.treatment != null) ...[
-            _buildMedicalRow('Treatment', appointment.treatment!),
-            const SizedBox(height: 12),
-          ],
-          if (appointment.prescription != null) ...[
-            _buildMedicalRow('Prescription', appointment.prescription!),
-            const SizedBox(height: 12),
-          ],
-          if (appointment.vetNotes != null) ...[
-            _buildMedicalRow('Veterinary Notes', appointment.vetNotes!),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicalRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.teal[700],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 15,
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVitalsSection() {
-    if (appointment.vitals == null) return const SizedBox.shrink();
-
-    final vitals = appointment.vitals!;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.red[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.favorite, color: Colors.red[700]),
-              const SizedBox(width: 8),
-              const Text(
-                'Vital Signs',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: 2,
-            childAspectRatio: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            children: [
-              if (vitals['temperature'] != null)
-                _buildVitalCard('Temperature', '${vitals['temperature']}°C',
-                    Icons.thermostat),
-              if (vitals['weight'] != null)
-                _buildVitalCard(
-                    'Weight', '${vitals['weight']}kg', Icons.monitor_weight),
-              if (vitals['heartRate'] != null)
-                _buildVitalCard(
-                    'Heart Rate', '${vitals['heartRate']} bpm', Icons.favorite),
-              if (vitals['bloodPressure'] != null)
-                _buildVitalCard('Blood Pressure', '${vitals['bloodPressure']}',
-                    Icons.bloodtype),
-            ],
-          ),
-          if (vitals['additionalNotes'] != null) ...[
-            const SizedBox(height: 16),
-            _buildMedicalRow('Additional Notes', vitals['additionalNotes']),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVitalCard(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red[100]!),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20, color: Colors.red[600]),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.red[700],
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 

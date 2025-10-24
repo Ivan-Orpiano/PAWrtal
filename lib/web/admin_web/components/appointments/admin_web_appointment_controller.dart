@@ -2,7 +2,6 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
-import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
@@ -49,6 +48,7 @@ class WebAppointmentController extends GetxController {
   var viewMode = AppointmentViewMode.today.obs;
   var selectedCalendarDate = Rxn<DateTime>();
 
+  // CRITICAL: Store pending vitals locally (in memory, not in appointment)
   var pendingVitals = <String, Map<String, dynamic>>{}.obs;
 
   @override
@@ -76,19 +76,16 @@ class WebAppointmentController extends GetxController {
       final user = await authRepository.getUser();
       if (user == null) return;
 
-      // Get user role from storage
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
 
       String? clinicId;
 
       if (userRole == 'staff') {
-        // Staff: Get clinicId from storage
         clinicId = storage.read('clinicId') as String?;
         print(
             '>>> APPOINTMENTS: Staff mode - using stored clinicId: $clinicId');
       } else {
-        // Admin: Get clinic by admin ID
         print('>>> APPOINTMENTS: Admin mode - looking up clinic');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
@@ -261,14 +258,12 @@ class WebAppointmentController extends GetxController {
       try {
         final ownerDoc = await authRepository.getUserById(userId);
         if (ownerDoc != null) {
-          // Store the raw data instead of trying to create a User object
           ownersCache[userId] = {
             'name': ownerDoc.data['name'] ?? 'User #${userId.substring(0, 6)}',
             'email': ownerDoc.data['email'] ?? 'N/A',
             'phone': ownerDoc.data['phone'] ?? 'N/A',
           };
         } else {
-          // Add fallback data to prevent repeated fetching
           ownersCache[userId] = {
             'name': 'User #${userId.substring(0, 6)}',
             'email': 'N/A',
@@ -277,7 +272,6 @@ class WebAppointmentController extends GetxController {
         }
       } catch (e) {
         print("Error fetching owner $userId: $e");
-        // Add fallback data
         ownersCache[userId] = {
           'name': 'User #${userId.substring(0, 6)}',
           'email': 'N/A',
@@ -289,11 +283,9 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
-      // Fetch pet data
       if (!petsCache.containsKey(appointment.petId) &&
           appointment.petId.isNotEmpty) {
         try {
-          // First try to fetch by name
           final petByName =
               await authRepository.getPetByName(appointment.petId);
           if (petByName != null) {
@@ -303,7 +295,6 @@ class WebAppointmentController extends GetxController {
             continue;
           }
 
-          // If not found by name and ID is valid, try fetching by ID
           if (_isValidDocumentId(appointment.petId)) {
             final petDoc = await authRepository.getPetById(appointment.petId);
             if (petDoc != null) {
@@ -314,7 +305,6 @@ class WebAppointmentController extends GetxController {
             }
           }
 
-          // If pet not found, add fallback data
           print("Creating fallback pet data for ID/Name: ${appointment.petId}");
           petsCache[appointment.petId] = Pet(
             petId: appointment.petId,
@@ -339,7 +329,6 @@ class WebAppointmentController extends GetxController {
         }
       }
 
-      // Fetch owner data
       if (!ownersCache.containsKey(appointment.userId)) {
         await _fetchOwnerData(appointment.userId);
       }
@@ -348,7 +337,6 @@ class WebAppointmentController extends GetxController {
 
   bool _isValidDocumentId(String id) {
     if (id.isEmpty || id.length > 36) return false;
-    // Updated regex to handle more ID formats while still being secure
     final validIdRegex = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$');
     return validIdRegex.hasMatch(id);
   }
@@ -356,7 +344,6 @@ class WebAppointmentController extends GetxController {
   void updateFilteredAppointments() {
     List<Appointment> filtered = appointments.toList();
 
-    // If a calendar date is selected, filter by that date first
     if (selectedCalendarDate.value != null) {
       final selectedDate = selectedCalendarDate.value!;
       filtered = filtered.where((appointment) {
@@ -366,8 +353,6 @@ class WebAppointmentController extends GetxController {
             appointmentDate.day == selectedDate.day;
       }).toList();
     } else {
-      // Otherwise filter by view mode for tabs that should respect it
-      // Pending and Scheduled always show all
       if (selectedTab.value != 'pending' && selectedTab.value != 'scheduled') {
         filtered = _getFilteredAppointmentsForStats();
       }
@@ -400,7 +385,6 @@ class WebAppointmentController extends GetxController {
         break;
     }
 
-    // Apply search filter
     if (searchQuery.value.isNotEmpty) {
       filtered = filtered.where((appointment) {
         final petName = getPetName(appointment.petId).toLowerCase();
@@ -418,10 +402,8 @@ class WebAppointmentController extends GetxController {
     filteredAppointments.assignAll(filtered);
   }
 
-  // Helper methods
   String getOwnerName(String userId) {
     if (!ownersCache.containsKey(userId)) {
-      // Trigger a fetch if we don't have the data
       _fetchOwnerData(userId);
       return 'Loading...';
     }
@@ -433,7 +415,6 @@ class WebAppointmentController extends GetxController {
     if (pet != null && pet.name.isNotEmpty) {
       return pet.name;
     }
-    // Use the ID as name if it's short enough, otherwise show Unknown Pet
     return petId.length <= 10 ? petId : 'Unknown Pet';
   }
 
@@ -447,7 +428,6 @@ class WebAppointmentController extends GetxController {
 
   Pet? getPetForAppointment(String petId) => petsCache[petId];
 
-  // Status-based getters
   List<Appointment> get todayAppointments {
     return appointments.where((appointment) => appointment.isToday).toList();
   }
@@ -465,7 +445,6 @@ class WebAppointmentController extends GetxController {
   List<Appointment> get declined =>
       appointments.where((a) => a.status == 'declined').toList();
 
-  // Statistics
   Map<String, int> get appointmentStats {
     List<Appointment> filteredForStats = _getFilteredAppointmentsForStats();
 
@@ -488,11 +467,9 @@ class WebAppointmentController extends GetxController {
 
   List<Appointment> _getFilteredAppointmentsForStats() {
     final now = DateTime.now();
-    // Get all pending appointments first
     final pendingAppointments =
         appointments.where((a) => a.status == 'pending').toList();
 
-    // Get time-filtered non-pending appointments
     List<Appointment> timeFilteredAppointments;
     switch (viewMode.value) {
       case AppointmentViewMode.today:
@@ -527,29 +504,24 @@ class WebAppointmentController extends GetxController {
             appointments.where((a) => a.status != 'pending').toList();
     }
 
-    // Combine pending appointments with time-filtered appointments
     return [...pendingAppointments, ...timeFilteredAppointments];
   }
 
   void setViewMode(AppointmentViewMode mode) {
     viewMode.value = mode;
-    selectedCalendarDate.value =
-        null; // Clear calendar selection when changing view mode
+    selectedCalendarDate.value = null;
     updateFilteredAppointments();
   }
 
   void setCalendarDate(DateTime? date) {
     selectedCalendarDate.value = date;
     if (date != null) {
-      viewMode.value = AppointmentViewMode
-          .today; // Switch to daily view when selecting from calendar
+      viewMode.value = AppointmentViewMode.today;
     }
     updateFilteredAppointments();
   }
 
-  // Appointment actions
   Future<void> acceptAppointment(Appointment appointment) async {
-    // Check if time slot is available before accepting
     final isAvailable = await checkTimeSlotAvailability(
       appointment.clinicId,
       appointment.dateTime,
@@ -677,8 +649,8 @@ class WebAppointmentController extends GetxController {
 
   Future<void> completeServiceWithRecord({
     required Appointment appointment,
-    String? diagnosis,
-    String? treatment,
+    required String diagnosis,
+    required String treatment,
     String? prescription,
     String? vetNotes,
     Map<String, dynamic>? vitals,
@@ -708,15 +680,6 @@ class WebAppointmentController extends GetxController {
       print('>>> Final vitals to be saved: $finalVitals');
       print('>>> ============================================');
 
-      // Ensure we have minimum required data
-      final finalDiagnosis = diagnosis?.trim().isNotEmpty == true
-          ? diagnosis!.trim()
-          : 'Service completed - ${appointment.service}';
-
-      final finalTreatment = treatment?.trim().isNotEmpty == true
-          ? treatment!.trim()
-          : appointment.service;
-
       // CRITICAL: Extract and validate individual vital values
       double? temperature;
       double? weight;
@@ -726,7 +689,6 @@ class WebAppointmentController extends GetxController {
       if (finalVitals != null && finalVitals.isNotEmpty) {
         print('>>> Processing vitals data...');
 
-        // Extract temperature
         if (finalVitals.containsKey('temperature') &&
             finalVitals['temperature'] != null) {
           try {
@@ -740,7 +702,6 @@ class WebAppointmentController extends GetxController {
           }
         }
 
-        // Extract weight
         if (finalVitals.containsKey('weight') &&
             finalVitals['weight'] != null) {
           try {
@@ -754,14 +715,12 @@ class WebAppointmentController extends GetxController {
           }
         }
 
-        // Extract blood pressure
         if (finalVitals.containsKey('bloodPressure') &&
             finalVitals['bloodPressure'] != null) {
           bloodPressure = finalVitals['bloodPressure'].toString();
           print('>>> ✓ Blood Pressure: $bloodPressure');
         }
 
-        // Extract heart rate
         if (finalVitals.containsKey('heartRate') &&
             finalVitals['heartRate'] != null) {
           try {
@@ -773,41 +732,23 @@ class WebAppointmentController extends GetxController {
             print('>>> ✗ Error parsing heart rate: $e');
           }
         }
-
-        print('>>> ============================================');
-        print('>>> EXTRACTED VITALS SUMMARY:');
-        print('>>>   Temperature: $temperature');
-        print('>>>   Weight: $weight');
-        print('>>>   Blood Pressure: $bloodPressure');
-        print('>>>   Heart Rate: $heartRate');
-        print('>>> ============================================');
-      } else {
-        print('>>> ⚠️ No vitals data provided');
       }
 
-      // STEP 1: Update appointment with ALL data including vitals
-      print('>>> STEP 1: Updating appointment...');
+      // STEP 1: Update appointment - ONLY workflow and billing fields
+      print('>>> STEP 1: Updating appointment workflow...');
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
         serviceCompletedAt: DateTime.now(),
-        diagnosis: finalDiagnosis,
-        treatment: finalTreatment,
-        prescription:
-            prescription?.trim().isNotEmpty == true ? prescription : null,
-        vetNotes: vetNotes?.trim().isNotEmpty == true ? vetNotes : null,
-        vitals: finalVitals, // Store the complete vitals map
         followUpInstructions: followUpInstructions,
         nextAppointmentDate: nextAppointmentDate,
         updatedAt: DateTime.now(),
       );
 
-      print(
-          '>>> Appointment vitals before update: ${updatedAppointment.vitals}');
       await updateFullAppointment(updatedAppointment);
       print('>>> ✓ Appointment updated successfully');
       print('>>> ============================================');
 
-      // STEP 2: Create medical record with individual vital fields
+      // STEP 2: Create medical record with ALL medical data
       print('>>> STEP 2: Creating medical record...');
       final user = await authRepository.getUser();
       if (user != null) {
@@ -819,8 +760,8 @@ class WebAppointmentController extends GetxController {
             appointmentId: appointment.documentId!,
             visitDate: appointment.serviceCompletedAt ?? DateTime.now(),
             service: appointment.service,
-            diagnosis: finalDiagnosis,
-            treatment: finalTreatment,
+            diagnosis: diagnosis,
+            treatment: treatment,
             prescription:
                 prescription?.trim().isNotEmpty == true ? prescription : null,
             notes: vetNotes?.trim().isNotEmpty == true ? vetNotes : null,
@@ -829,16 +770,15 @@ class WebAppointmentController extends GetxController {
             weight: weight,
             bloodPressure: bloodPressure,
             heartRate: heartRate,
-            vitals: finalVitals, // Also keep the full vitals map
+
             attachments: appointment.attachments,
           );
 
-          print('>>> Medical record vitals before creation:');
+          print('>>> Medical record vitals:');
           print('>>>   - temperature: ${medicalRecord.temperature}');
           print('>>>   - weight: ${medicalRecord.weight}');
           print('>>>   - bloodPressure: ${medicalRecord.bloodPressure}');
           print('>>>   - heartRate: ${medicalRecord.heartRate}');
-          print('>>>   - vitals map: ${medicalRecord.vitals}');
           print('>>> ============================================');
 
           await authRepository.createMedicalRecord(medicalRecord);
@@ -853,6 +793,7 @@ class WebAppointmentController extends GetxController {
           print('>>> ============================================');
         } catch (e) {
           print('>>> ✗ ERROR: Failed to create medical record: $e');
+          print('>>> Stack trace: ${StackTrace.current}');
           print('>>> ============================================');
           Get.snackbar(
             "Warning",
@@ -863,15 +804,6 @@ class WebAppointmentController extends GetxController {
           );
           return;
         }
-      } else {
-        print('>>> ✗ ERROR: Cannot create medical record - user not found');
-        Get.snackbar(
-          "Warning",
-          "Appointment completed but medical record requires authentication.",
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-        );
-        return;
       }
 
       // STEP 3: Create notification
@@ -1116,27 +1048,39 @@ class WebAppointmentController extends GetxController {
     try {
       print('>>> Starting vaccination service completion...');
 
-      // Step 1: Update appointment status
+      // Step 1: Update appointment status - ONLY workflow fields
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
         serviceCompletedAt: DateTime.now(),
-        diagnosis: 'Vaccination: ${vaccinationData['vaccineType']}',
-        treatment: 'Administered ${vaccinationData['vaccineName']}',
-        prescription: vaccinationData['batchNumber'] != null
-            ? 'Batch: ${vaccinationData['batchNumber']}'
-            : null,
-        vetNotes: vetNotes ?? 'Vaccination completed successfully',
         updatedAt: DateTime.now(),
       );
 
       await updateFullAppointment(updatedAppointment);
       print('>>> Appointment updated to completed');
 
-      // Step 2: Create medical record
+      // Step 2: Create medical record with vaccination details
       final user = await authRepository.getUser();
       if (user != null) {
-        final medicalRecord =
-            MedicalRecord.fromAppointment(updatedAppointment, user.$id);
+        final medicalRecord = MedicalRecord(
+          petId: appointment.petId,
+          clinicId: appointment.clinicId,
+          vetId: user.$id,
+          appointmentId: appointment.documentId!,
+          visitDate: appointment.serviceCompletedAt ?? DateTime.now(),
+          service: appointment.service,
+          diagnosis: 'Vaccination: ${vaccinationData['vaccineType']}',
+          treatment: 'Administered ${vaccinationData['vaccineName']}',
+          prescription: vaccinationData['batchNumber'] != null
+              ? 'Batch: ${vaccinationData['batchNumber']}'
+              : null,
+          notes: vetNotes ?? 'Vaccination completed successfully',
+          temperature: null,
+          weight: null,
+          bloodPressure: null,
+          heartRate: null,
+          attachments: appointment.attachments,
+        );
+
         await authRepository.createMedicalRecord(medicalRecord);
         print('>>> Medical record created');
       }
@@ -1179,98 +1123,7 @@ class WebAppointmentController extends GetxController {
     }
   }
 
-  // ============= DIAGNOSTIC METHOD =============
-
-  /// Check for appointments with missing medical records
-  Future<void> diagnoseMissingMedicalRecords() async {
-    try {
-      print('>>> ============================================');
-      print('>>> DIAGNOSING MISSING MEDICAL RECORDS');
-      print('>>> ============================================');
-
-      final completedAppointments =
-          appointments.where((apt) => apt.status == 'completed').toList();
-
-      print(
-          '>>> Total completed appointments: ${completedAppointments.length}');
-
-      int missingRecords = 0;
-      int emptyDiagnosis = 0;
-      int emptyTreatment = 0;
-
-      for (var apt in completedAppointments) {
-        bool hasMissingData = false;
-
-        if (apt.diagnosis == null || apt.diagnosis!.isEmpty) {
-          emptyDiagnosis++;
-          hasMissingData = true;
-        }
-
-        if (apt.treatment == null || apt.treatment!.isEmpty) {
-          emptyTreatment++;
-          hasMissingData = true;
-        }
-
-        if (hasMissingData) {
-          missingRecords++;
-          print('>>> Missing data in appointment: ${apt.documentId}');
-          print('>>>   - Pet: ${getPetName(apt.petId)}');
-          print('>>>   - Service: ${apt.service}');
-          print('>>>   - Completed: ${apt.serviceCompletedAt}');
-          print('>>>   - Diagnosis: ${apt.diagnosis ?? "EMPTY"}');
-          print('>>>   - Treatment: ${apt.treatment ?? "EMPTY"}');
-        }
-      }
-
-      print('>>> ============================================');
-      print('>>> DIAGNOSIS COMPLETE');
-      print('>>> Appointments with missing data: $missingRecords');
-      print('>>> Missing diagnosis: $emptyDiagnosis');
-      print('>>> Missing treatment: $emptyTreatment');
-      print('>>> ============================================');
-
-      if (missingRecords > 0) {
-        Get.dialog(
-          AlertDialog(
-            title: const Text('Missing Medical Records Detected'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    'Found $missingRecords completed appointments with missing or incomplete medical data.'),
-                const SizedBox(height: 16),
-                Text('• $emptyDiagnosis appointments missing diagnosis'),
-                Text('• $emptyTreatment appointments missing treatment'),
-                const SizedBox(height: 16),
-                const Text(
-                  'These appointments were marked as completed but may not have proper medical records.',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        Get.snackbar(
-          "Diagnosis Complete",
-          "All completed appointments have proper medical data",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e) {
-      print('>>> Error diagnosing medical records: $e');
-    }
-  }
-
-  // Add these methods to WebAppointmentController class
+  // ============= CONFIRMATION METHODS =============
 
   /// Confirm before accepting appointment (pending -> accepted)
   Future<void> confirmAcceptAppointment(Appointment appointment) async {
@@ -1510,92 +1363,6 @@ class WebAppointmentController extends GetxController {
 
     if (result == true) {
       await startService(appointment);
-    }
-  }
-
-  /// Confirm before completing service (in_progress -> completed)
-  Future<void> confirmCompleteService(Appointment appointment) async {
-    final result = await Get.dialog<bool>(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Complete Service?',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'You are about to complete this service.',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${getPetName(appointment.petId)} • ${appointment.service}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Owner: ${getOwnerName(appointment.userId)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.orange[700]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Medical records will be created.',
-                    style: TextStyle(fontSize: 12, color: Colors.orange[700]),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-            child:
-                const Text('Complete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true) {
-      // Return true to signal that completion dialog should be shown
-      Get.back(result: true);
     }
   }
 
