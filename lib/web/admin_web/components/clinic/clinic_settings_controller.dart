@@ -117,6 +117,8 @@ class ClinicSettingsController extends GetxController {
   static const int descriptionMaxLength = 1000;
   static const int serviceNameMaxLength = 50;
 
+  var medicalServices = <String, bool>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -280,12 +282,25 @@ class ClinicSettingsController extends GetxController {
       selectedLocation.value = settings.location;
       emergencyContactController.text = settings.emergencyContact;
       specialInstructionsController.text = settings.specialInstructions;
-      // NEW: Initialize dashboard picture
       tempDashboardPic.value = settings.dashboardPic;
       dashboardPicChanged.value = false;
+
+      // NEW: Populate medical services
+      medicalServices.assignAll(settings.medicalServices);
     } catch (e) {
       print('Error populating settings fields: $e');
     }
+  }
+
+  // NEW: Toggle medical service status
+  void toggleMedicalService(String serviceName, bool isMedical) {
+    medicalServices[serviceName] = isMedical;
+    medicalServices.refresh();
+  }
+
+  // NEW: Check if service is medical
+  bool isServiceMedical(String serviceName) {
+    return medicalServices[serviceName] ?? false;
   }
 
   // Validation methods
@@ -398,30 +413,78 @@ class ClinicSettingsController extends GetxController {
     try {
       isSaving.value = true;
 
+      // CRITICAL: Ensure medicalServices is properly formatted
+      final sanitizedMedicalServices = Map<String, bool>.from(medicalServices);
+
+      // Ensure all selected services have a medical status entry
+      for (var service in selectedServices) {
+        if (!sanitizedMedicalServices.containsKey(service)) {
+          // Default to false if not specified
+          sanitizedMedicalServices[service] =
+              _isServiceMedicalByDefault(service);
+        }
+      }
+
+      print('>>> SAVING CLINIC SETTINGS');
+      print('>>> Selected services: ${selectedServices.toList()}');
+      print('>>> Medical services map: $sanitizedMedicalServices');
+
       final updatedSettings = clinicSettings.value!.copyWith(
         isOpen: isClinicOpen.value,
         autoAcceptAppointments: autoAcceptAppointments.value,
         appointmentDuration: appointmentDuration.value,
         maxAdvanceBooking: maxAdvanceBooking.value,
         services: selectedServices.toList(),
+        medicalServices: sanitizedMedicalServices, // Use sanitized map
         gallery: galleryImages.toList(),
         operatingHours: Map<String, Map<String, dynamic>>.from(operatingHours),
         location: selectedLocation.value,
         emergencyContact: _safeGetText(emergencyContactController).trim(),
         specialInstructions: _safeGetText(specialInstructionsController).trim(),
-        dashboardPic: tempDashboardPic.value, // NEW: Save dashboard picture
+        dashboardPic: tempDashboardPic.value,
       );
 
       await authRepository.updateClinicSettings(updatedSettings);
       clinicSettings.value = updatedSettings;
-      dashboardPicChanged.value = false; // NEW: Reset change flag
+      dashboardPicChanged.value = false;
 
       _showSnackBar("Clinic settings updated successfully!");
     } catch (e) {
+      print('>>> Error saving clinic settings: $e');
       _showSnackBar("Failed to update clinic settings: $e", isError: true);
     } finally {
       isSaving.value = false;
     }
+  }
+
+// Helper method to determine if service should be medical by default
+  bool _isServiceMedicalByDefault(String service) {
+    final medicalServices = [
+      'General Checkup',
+      'Vaccination',
+      'Surgery',
+      'Dental Care',
+      'Emergency Care',
+      'Laboratory Tests',
+      'Microchipping',
+      'Spay/Neuter',
+      'X-Ray Imaging',
+      'Ultrasound',
+      'Blood Work',
+      'Behavioral Consultation',
+      'Nutritional Counseling',
+      'Parasite Treatment',
+      'Wound Care',
+      'Prescription Medications',
+      'Health Certificates',
+    ];
+
+    return medicalServices.contains(service);
+  }
+
+  void removeService(String service) {
+    selectedServices.remove(service);
+    medicalServices.remove(service); // NEW: Also remove from medical services
   }
 
   // NEW: Add/update dashboard picture
@@ -525,7 +588,7 @@ class ClinicSettingsController extends GetxController {
     }
   }
 
-  void addCustomService(String service) {
+  void addCustomService(String service, bool isMedical) {
     final trimmedService = service.trim();
 
     if (trimmedService.isEmpty) {
@@ -546,11 +609,8 @@ class ClinicSettingsController extends GetxController {
     }
 
     selectedServices.add(trimmedService);
+    medicalServices[trimmedService] = isMedical; // NEW
     _showSnackBar("Custom service added successfully!");
-  }
-
-  void removeService(String service) {
-    selectedServices.remove(service);
   }
 
   // Gallery management

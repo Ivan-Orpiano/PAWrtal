@@ -1,3 +1,4 @@
+// clinic_settings_model.dart
 import 'dart:convert';
 
 class ClinicSettings {
@@ -8,6 +9,8 @@ class ClinicSettings {
   late List<String> gallery;
   late Map<String, double>? location;
   late List<String> services;
+  late Map<String, bool>
+      medicalServices; // NEW: Track which services are medical
   late int appointmentDuration;
   late int maxAdvanceBooking;
   late String emergencyContact;
@@ -15,7 +18,7 @@ class ClinicSettings {
   late bool autoAcceptAppointments;
   late String createdAt;
   late String updatedAt;
-  late String dashboardPic; // NEW: Dashboard picture
+  late String dashboardPic;
 
   ClinicSettings({
     this.documentId,
@@ -25,6 +28,7 @@ class ClinicSettings {
     List<String>? gallery,
     this.location,
     List<String>? services,
+    Map<String, bool>? medicalServices, // NEW
     this.appointmentDuration = 30,
     this.maxAdvanceBooking = 30,
     this.emergencyContact = '',
@@ -32,10 +36,11 @@ class ClinicSettings {
     this.autoAcceptAppointments = false,
     String? createdAt,
     String? updatedAt,
-    this.dashboardPic = '', // NEW: Dashboard picture
+    this.dashboardPic = '',
   })  : operatingHours = operatingHours ?? _getDefaultOperatingHours(),
         gallery = gallery ?? [],
         services = services ?? [],
+        medicalServices = medicalServices ?? {}, // NEW
         createdAt = createdAt ?? DateTime.now().toIso8601String(),
         updatedAt = updatedAt ?? DateTime.now().toIso8601String();
 
@@ -60,6 +65,7 @@ class ClinicSettings {
       gallery: List<String>.from(map['gallery'] ?? []),
       location: _parseLocation(map['location']),
       services: List<String>.from(map['services'] ?? []),
+      medicalServices: _parseMedicalServices(map['medicalServices']), // NEW
       appointmentDuration: map['appointmentDuration'] ?? 30,
       maxAdvanceBooking: map['maxAdvanceBooking'] ?? 30,
       emergencyContact: map['emergencyContact'] ?? '',
@@ -67,8 +73,27 @@ class ClinicSettings {
       autoAcceptAppointments: map['autoAcceptAppointments'] ?? false,
       createdAt: map['createdAt'] ?? DateTime.now().toIso8601String(),
       updatedAt: map['updatedAt'] ?? DateTime.now().toIso8601String(),
-      dashboardPic: map['dashboardPic'] ?? '', // NEW: Dashboard picture
+      dashboardPic: map['dashboardPic'] ?? '',
     );
+  }
+
+  // NEW: Parse medical services map
+  static Map<String, bool> _parseMedicalServices(dynamic medicalServices) {
+    if (medicalServices == null) return {};
+    if (medicalServices is String) {
+      try {
+        final decoded = json.decode(medicalServices);
+        if (decoded is Map) {
+          return Map<String, bool>.from(decoded);
+        }
+      } catch (e) {
+        print('Error parsing medical services: $e');
+      }
+    }
+    if (medicalServices is Map) {
+      return Map<String, bool>.from(medicalServices);
+    }
+    return {};
   }
 
   static Map<String, Map<String, dynamic>> _parseOperatingHours(dynamic hours) {
@@ -121,6 +146,9 @@ class ClinicSettings {
       'gallery': gallery,
       'location': location != null ? json.encode(location) : null,
       'services': services,
+      // CRITICAL FIX: Ensure we're sending a JSON string, not a Map
+      'medicalServices':
+          json.encode(medicalServices.isEmpty ? {} : medicalServices),
       'appointmentDuration': appointmentDuration,
       'maxAdvanceBooking': maxAdvanceBooking,
       'emergencyContact': emergencyContact,
@@ -128,12 +156,21 @@ class ClinicSettings {
       'autoAcceptAppointments': autoAcceptAppointments,
       'createdAt': createdAt,
       'updatedAt': DateTime.now().toIso8601String(),
-      'dashboardPic': dashboardPic, // NEW: Dashboard picture
+      'dashboardPic': dashboardPic,
     };
   }
 
-  // ========== HELPER METHODS (UNCHANGED) ==========
+  // NEW: Helper method to check if a service is medical
+  bool isServiceMedical(String serviceName) {
+    return medicalServices[serviceName] ?? false;
+  }
 
+  // NEW: Helper method to set service medical status
+  void setServiceMedicalStatus(String serviceName, bool isMedical) {
+    medicalServices[serviceName] = isMedical;
+  }
+
+  // Existing helper methods remain unchanged...
   bool isOpenToday() {
     final today = DateTime.now().weekday;
     final dayName = _getDayName(today);
@@ -290,6 +327,7 @@ class ClinicSettings {
     List<String>? gallery,
     Map<String, double>? location,
     List<String>? services,
+    Map<String, bool>? medicalServices, // NEW
     int? appointmentDuration,
     int? maxAdvanceBooking,
     String? emergencyContact,
@@ -297,7 +335,7 @@ class ClinicSettings {
     bool? autoAcceptAppointments,
     String? createdAt,
     String? updatedAt,
-    String? dashboardPic, // NEW: Dashboard picture
+    String? dashboardPic,
   }) {
     return ClinicSettings(
       documentId: documentId ?? this.documentId,
@@ -307,6 +345,7 @@ class ClinicSettings {
       gallery: gallery ?? this.gallery,
       location: location ?? this.location,
       services: services ?? this.services,
+      medicalServices: medicalServices ?? this.medicalServices, // NEW
       appointmentDuration: appointmentDuration ?? this.appointmentDuration,
       maxAdvanceBooking: maxAdvanceBooking ?? this.maxAdvanceBooking,
       emergencyContact: emergencyContact ?? this.emergencyContact,
@@ -315,7 +354,7 @@ class ClinicSettings {
           autoAcceptAppointments ?? this.autoAcceptAppointments,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      dashboardPic: dashboardPic ?? this.dashboardPic, // NEW: Dashboard picture
+      dashboardPic: dashboardPic ?? this.dashboardPic,
     );
   }
 }

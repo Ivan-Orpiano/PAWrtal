@@ -286,49 +286,60 @@ class WebAppointmentController extends GetxController {
       if (!petsCache.containsKey(appointment.petId) &&
           appointment.petId.isNotEmpty) {
         try {
-          final petByName =
-              await authRepository.getPetByName(appointment.petId);
-          if (petByName != null) {
-            final pet = Pet.fromMap(petByName.data);
-            pet.documentId = petByName.$id;
-            petsCache[appointment.petId] = pet;
-            continue;
-          }
+          Pet? fetchedPet;
 
+          // STRATEGY 1: Try fetching by ID first (new way - UUID format)
           if (_isValidDocumentId(appointment.petId)) {
+            print('>>> Trying to fetch pet by ID: ${appointment.petId}');
             final petDoc = await authRepository.getPetById(appointment.petId);
             if (petDoc != null) {
-              final pet = Pet.fromMap(petDoc.data);
-              pet.documentId = petDoc.$id;
-              petsCache[appointment.petId] = pet;
-              continue;
+              fetchedPet = Pet.fromMap(petDoc.data);
+              fetchedPet.documentId = petDoc.$id;
+              print('>>> ✓ Pet found by ID: ${fetchedPet.name}');
             }
           }
 
-          print("Creating fallback pet data for ID/Name: ${appointment.petId}");
-          petsCache[appointment.petId] = Pet(
-            petId: appointment.petId,
-            userId: appointment.userId,
-            name: appointment.petId.length <= 10
-                ? appointment.petId
-                : 'Unknown Pet',
-            type: 'Unknown',
-            breed: 'Unknown',
-          );
+          // STRATEGY 2: If not found, try fetching by name (old way - backward compatibility)
+          if (fetchedPet == null) {
+            print('>>> Trying to fetch pet by name: ${appointment.petId}');
+            final petByName =
+                await authRepository.getPetByName(appointment.petId);
+            if (petByName != null) {
+              fetchedPet = Pet.fromMap(petByName.data);
+              fetchedPet.documentId = petByName.$id;
+              print('>>> ✓ Pet found by name: ${fetchedPet.name}');
+            }
+          }
+
+          // If found by either method, cache it
+          if (fetchedPet != null) {
+            petsCache[appointment.petId] = fetchedPet;
+            print('>>> Pet cached: ${fetchedPet.name}');
+          } else {
+            // FALLBACK: Create placeholder with "Unknown Pet" as name
+            print('>>> ⚠️ Pet not found, creating placeholder');
+            petsCache[appointment.petId] = Pet(
+              petId: appointment.petId,
+              userId: appointment.userId,
+              name: 'Unknown Pet', // Simple fallback name
+              type: 'Unknown',
+              breed: 'Unknown',
+            );
+          }
         } catch (e) {
-          print("Error fetching pet ${appointment.petId}: $e");
+          print('>>> ✗ Error fetching pet ${appointment.petId}: $e');
+          // Create fallback pet data on error
           petsCache[appointment.petId] = Pet(
             petId: appointment.petId,
             userId: appointment.userId,
-            name: appointment.petId.length <= 10
-                ? appointment.petId
-                : 'Unknown Pet',
+            name: 'Unknown Pet', // Simple fallback name
             type: 'Unknown',
             breed: 'Unknown',
           );
         }
       }
 
+      // Fetch owner data if not cached
       if (!ownersCache.containsKey(appointment.userId)) {
         await _fetchOwnerData(appointment.userId);
       }
@@ -337,75 +348,87 @@ class WebAppointmentController extends GetxController {
 
   bool _isValidDocumentId(String id) {
     if (id.isEmpty || id.length > 36) return false;
+
+    // Check if it looks like a UUID (contains hyphens and is right length)
+    // UUIDs are typically 36 characters with hyphens: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    if (id.length >= 32 && id.contains('-')) {
+      return true;
+    }
+
+    // Check if it's a valid Appwrite document ID format
     final validIdRegex = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$');
-    return validIdRegex.hasMatch(id);
+    if (validIdRegex.hasMatch(id) && id.length >= 20) {
+      return true;
+    }
+
+    return false;
   }
 
   void updateFilteredAppointments() {
-  List<Appointment> filtered = appointments.toList();
+    List<Appointment> filtered = appointments.toList();
 
-  // Safety check
-  if (filtered == null) {
-    filtered = [];
-  }
-
-  if (selectedCalendarDate.value != null) {
-    final selectedDate = selectedCalendarDate.value!;
-    filtered = filtered.where((appointment) {
-      final appointmentDate = appointment.dateTime;
-      return appointmentDate.year == selectedDate.year &&
-          appointmentDate.month == selectedDate.month &&
-          appointmentDate.day == selectedDate.day;
-    }).toList();
-  } else {
-    if (selectedTab.value != 'pending' && selectedTab.value != 'scheduled') {
-      filtered = _getFilteredAppointmentsForStats();
+    // Safety check
+    if (filtered == null) {
+      filtered = [];
     }
+
+    if (selectedCalendarDate.value != null) {
+      final selectedDate = selectedCalendarDate.value!;
+      filtered = filtered.where((appointment) {
+        final appointmentDate = appointment.dateTime;
+        return appointmentDate.year == selectedDate.year &&
+            appointmentDate.month == selectedDate.month &&
+            appointmentDate.day == selectedDate.day;
+      }).toList();
+    } else {
+      if (selectedTab.value != 'pending' && selectedTab.value != 'scheduled') {
+        filtered = _getFilteredAppointmentsForStats();
+      }
+    }
+
+    switch (selectedTab.value) {
+      case 'today':
+        filtered =
+            filtered.where((appointment) => appointment.isToday).toList();
+        break;
+      case 'pending':
+        filtered = filtered.where((a) => a.status == 'pending').toList();
+        break;
+      case 'scheduled':
+        filtered = filtered
+            .where((a) => a.status == 'accepted' && !a.isToday)
+            .toList();
+        break;
+      case 'in_progress':
+        filtered = filtered.where((a) => a.status == 'in_progress').toList();
+        break;
+      case 'completed':
+        filtered = filtered.where((a) => a.status == 'completed').toList();
+        break;
+      case 'cancelled':
+        filtered = filtered.where((a) => a.status == 'cancelled').toList();
+        break;
+      case 'declined':
+        filtered = filtered.where((a) => a.status == 'declined').toList();
+        break;
+    }
+
+    if (searchQuery.value.isNotEmpty) {
+      filtered = filtered.where((appointment) {
+        final petName = getPetName(appointment.petId).toLowerCase();
+        final ownerName = getOwnerName(appointment.userId).toLowerCase();
+        final service = appointment.service.toLowerCase();
+        final query = searchQuery.value.toLowerCase();
+
+        return petName.contains(query) ||
+            ownerName.contains(query) ||
+            service.contains(query);
+      }).toList();
+    }
+
+    filtered.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    filteredAppointments.assignAll(filtered);
   }
-
-  switch (selectedTab.value) {
-    case 'today':
-      filtered =
-          filtered.where((appointment) => appointment.isToday).toList();
-      break;
-    case 'pending':
-      filtered = filtered.where((a) => a.status == 'pending').toList();
-      break;
-    case 'scheduled':
-      filtered = filtered
-          .where((a) => a.status == 'accepted' && !a.isToday)
-          .toList();
-      break;
-    case 'in_progress':
-      filtered = filtered.where((a) => a.status == 'in_progress').toList();
-      break;
-    case 'completed':
-      filtered = filtered.where((a) => a.status == 'completed').toList();
-      break;
-    case 'cancelled':
-      filtered = filtered.where((a) => a.status == 'cancelled').toList();
-      break;
-    case 'declined':
-      filtered = filtered.where((a) => a.status == 'declined').toList();
-      break;
-  }
-
-  if (searchQuery.value.isNotEmpty) {
-    filtered = filtered.where((appointment) {
-      final petName = getPetName(appointment.petId).toLowerCase();
-      final ownerName = getOwnerName(appointment.userId).toLowerCase();
-      final service = appointment.service.toLowerCase();
-      final query = searchQuery.value.toLowerCase();
-
-      return petName.contains(query) ||
-          ownerName.contains(query) ||
-          service.contains(query);
-    }).toList();
-  }
-
-  filtered.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-  filteredAppointments.assignAll(filtered);
-}
 
   String getOwnerName(String userId) {
     if (!ownersCache.containsKey(userId)) {
@@ -417,10 +440,18 @@ class WebAppointmentController extends GetxController {
 
   String getPetName(String petId) {
     final pet = petsCache[petId];
-    if (pet != null && pet.name.isNotEmpty) {
+    if (pet != null && pet.name.isNotEmpty && pet.name != 'Unknown Pet') {
       return pet.name;
     }
-    return petId.length <= 10 ? petId : 'Unknown Pet';
+
+    // If not in cache, trigger fetch and show loading
+    if (!petsCache.containsKey(petId)) {
+      _fetchRelatedData();
+      return 'Loading...';
+    }
+
+    // Fallback: just show "Unknown Pet" for any ID we can't resolve
+    return 'Unknown Pet';
   }
 
   String getPetBreed(String petId) {
