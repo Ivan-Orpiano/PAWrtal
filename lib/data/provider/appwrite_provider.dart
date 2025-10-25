@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
+import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
@@ -464,12 +465,55 @@ class AppWriteProvider {
   }
 
   Future<void> createAppointment(Map<String, dynamic> data) async {
-    await databases!.createDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.appointmentCollectionID,
-      documentId: ID.unique(),
-      data: data,
-    );
+    try {
+      print('>>> ============================================');
+      print('>>> CREATING APPOINTMENT');
+      print('>>> Service: ${data['service']}');
+      print('>>> Clinic ID: ${data['clinicId']}');
+      print('>>> ============================================');
+
+      // CRITICAL: Check if service is medical BEFORE creating appointment
+      final clinicId = data['clinicId'];
+      final service = data['service'];
+
+      if (clinicId != null && service != null) {
+        print('>>> Checking if service is medical...');
+
+        final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+        if (settingsDoc != null) {
+          final settings = ClinicSettings.fromMap(settingsDoc.data);
+          final isMedical = settings.isServiceMedical(service);
+
+          print('>>> Service "$service" is medical: $isMedical');
+          print('>>> Medical services map: ${settings.medicalServices}');
+
+          // CRITICAL: Set isMedicalService based on clinic settings
+          data['isMedicalService'] = isMedical;
+        } else {
+          print('>>> No settings found - defaulting to false');
+          data['isMedicalService'] = false;
+        }
+      } else {
+        print('>>> Missing clinicId or service - defaulting to false');
+        data['isMedicalService'] = false;
+      }
+
+      print('>>> Final isMedicalService value: ${data['isMedicalService']}');
+      print('>>> ============================================');
+
+      await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+
+      print('>>> Appointment created successfully');
+    } catch (e) {
+      print('>>> Error creating appointment: $e');
+      rethrow;
+    }
   }
 
   Future<List<Map<String, dynamic>>> getUserAppointments(String userId) async {
@@ -6414,6 +6458,181 @@ class AppWriteProvider {
     } catch (e) {
       print('Error getting pet medical records: $e');
       return [];
+    }
+  }
+
+  /// Get all medical appointments for a pet across all clinics
+  Future<List<Map<String, dynamic>>> getPetMedicalAppointmentsAllClinics(
+      String petId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> Fetching all medical appointments for pet: $petId');
+      print('>>> ============================================');
+
+      // Get the pet document to find both petId and name
+      final petDoc = await getPetById(petId);
+      String? petName;
+
+      if (petDoc != null) {
+        petName = petDoc.data['name'] as String?;
+        print('>>> Pet found: $petName (ID: $petId)');
+      } else {
+        print('>>> Warning: Pet document not found for ID: $petId');
+      }
+
+      // Fetch ALL appointments first (we'll filter in code)
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [
+          Query.orderDesc('dateTime'),
+          Query.limit(500),
+        ],
+      );
+
+      print('>>> Total appointments in database: ${result.documents.length}');
+
+      // Filter for this pet (check both petId and petName for backward compatibility)
+      final filteredDocs = result.documents.where((doc) {
+        final docPetId = doc.data['petId']?.toString() ?? '';
+
+        // Match by petId (new way) OR by pet name (old way)
+        final matchesPetId = docPetId == petId;
+        final matchesPetName = petName != null && docPetId == petName;
+
+        if (!matchesPetId && !matchesPetName) {
+          return false;
+        }
+
+        // Check if it's a medical service and completed
+        final status = doc.data['status']?.toString().toLowerCase() ?? '';
+        final isMedicalRaw = doc.data['isMedicalService'];
+
+        // Handle different possible types for isMedicalService
+        bool isMedical = false;
+        if (isMedicalRaw is bool) {
+          isMedical = isMedicalRaw;
+        } else if (isMedicalRaw is String) {
+          isMedical = isMedicalRaw.toLowerCase() == 'true';
+        } else if (isMedicalRaw is int) {
+          isMedical = isMedicalRaw == 1;
+        }
+
+        final isCompleted = status == 'completed';
+        final matches = isMedical && isCompleted;
+
+        if (matchesPetId || matchesPetName) {
+          print('>>> Checking appointment ${doc.$id}:');
+          print('>>>   petId in doc: $docPetId');
+          print('>>>   service: ${doc.data['service']}');
+          print('>>>   status: $status');
+          print('>>>   isMedicalService: $isMedicalRaw ($isMedical)');
+          print('>>>   matches criteria: $matches');
+        }
+
+        return matches;
+      }).toList();
+
+      print('>>> ============================================');
+      print('>>> Filtered medical appointments: ${filteredDocs.length}');
+      print('>>> ============================================');
+
+      return filteredDocs.map((doc) {
+        final data = Map<String, dynamic>.from(doc.data);
+        data['\$id'] = doc.$id;
+        data['createdAt'] = doc.$createdAt;
+        data['updatedAt'] = doc.$updatedAt;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR fetching pet medical appointments: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      return [];
+    }
+  }
+
+  /// Debug method - Check appointment data structure
+  Future<void> debugPetAppointments(String petId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> DEBUG: Checking ALL appointments for pet: $petId');
+      print('>>> ============================================');
+
+      // Get pet name
+      final petDoc = await getPetById(petId);
+      String? petName;
+
+      if (petDoc != null) {
+        petName = petDoc.data['name'] as String?;
+        print('>>> Pet name: $petName');
+      }
+
+      // First, get ALL appointments without any filter
+      final allAppointments = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [
+          Query.limit(500),
+        ],
+      );
+
+      print(
+          '>>> Total appointments in database: ${allAppointments.documents.length}');
+
+      // Filter for this pet (by ID or name)
+      final petAppointments = allAppointments.documents.where((doc) {
+        final docPetId = doc.data['petId']?.toString() ?? '';
+        return docPetId == petId || (petName != null && docPetId == petName);
+      }).toList();
+
+      print('>>> Found ${petAppointments.length} appointments for this pet');
+      print('>>> ');
+
+      if (petAppointments.isEmpty) {
+        print('>>> NO APPOINTMENTS FOUND FOR THIS PET!');
+        print('>>> Pet ID being searched: $petId');
+        if (petName != null) {
+          print('>>> Pet name being searched: $petName');
+        }
+        print('>>> Sample pet IDs in database:');
+
+        final uniquePetIds = allAppointments.documents
+            .map((doc) => doc.data['petId'])
+            .toSet()
+            .take(10)
+            .toList();
+
+        for (var samplePetId in uniquePetIds) {
+          print('>>>   - $samplePetId');
+        }
+      } else {
+        for (var doc in petAppointments) {
+          print('>>> Appointment ${doc.$id}:');
+          print('>>>   petId: ${doc.data['petId']}');
+          print('>>>   service: ${doc.data['service']}');
+          print('>>>   status: ${doc.data['status']}');
+          print('>>>   isMedicalService: ${doc.data['isMedicalService']}');
+          print(
+              '>>>   isMedicalService type: ${doc.data['isMedicalService'].runtimeType}');
+          print('>>>   dateTime: ${doc.data['dateTime']}');
+          print('>>>   clinicId: ${doc.data['clinicId']}');
+
+          // Check if it matches our criteria
+          final isMedical = doc.data['isMedicalService'] == true;
+          final isCompleted = doc.data['status'] == 'completed';
+          final matches = isMedical && isCompleted;
+
+          print('>>>   MATCHES CRITERIA: $matches');
+          print('>>> ---');
+        }
+      }
+
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR in debug: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
     }
   }
 }

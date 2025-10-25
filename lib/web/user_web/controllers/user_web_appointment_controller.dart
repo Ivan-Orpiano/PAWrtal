@@ -322,6 +322,12 @@ class WebAppointmentController extends GetxController {
     try {
       isBooking.value = true;
 
+      print('>>> ============================================');
+      print('>>> BOOKING APPOINTMENT');
+      print('>>> Service selected: ${selectedService.value}');
+      print('>>> Clinic ID: ${clinic.documentId}');
+      print('>>> ============================================');
+
       // Parse time and create DateTime
       final timeParts = selectedTime.value!.split(':');
       final hour = int.parse(timeParts[0]);
@@ -335,19 +341,47 @@ class WebAppointmentController extends GetxController {
         minute,
       );
 
+      // CRITICAL: Check if service is medical from clinic settings
+      bool isMedicalService = false;
+      if (clinicSettings.value != null && selectedService.value != null) {
+        isMedicalService =
+            clinicSettings.value!.isServiceMedical(selectedService.value!);
+        print('>>> Clinic settings loaded');
+        print(
+            '>>> Service "${selectedService.value}" is medical: $isMedicalService');
+        print(
+            '>>> Medical services map: ${clinicSettings.value!.medicalServices}');
+      } else {
+        print('>>> Warning: Clinic settings not loaded, defaulting to false');
+      }
+
+      print(
+          '>>> Creating appointment with isMedicalService: $isMedicalService');
+      print('>>> ============================================');
+
       final appointment = Appointment(
         userId: userId,
         clinicId: clinic.documentId ?? '',
-        petId: selectedPet.value!.name, // Using pet name as ID for now
+        petId: selectedPet.value!.petId, // ← CHANGED: Use petId, not name
         service: selectedService.value!,
         dateTime: appointmentDateTime,
         status: clinicSettings.value?.autoAcceptAppointments == true
             ? 'accepted'
             : 'pending',
+        isMedicalService: isMedicalService,
       );
+
+      print('>>> Appointment object created:');
+      print('>>>   - Service: ${appointment.service}');
+      print('>>>   - isMedicalService: ${appointment.isMedicalService}');
+      print('>>> ============================================');
 
       await authRepository.createAppointment(appointment);
 
+      print('>>> Appointment created successfully');
+      print('>>> ============================================');
+
+      // Create notification for admin
       try {
         final clinicDoc =
             await authRepository.getClinicById(clinic.documentId ?? '');
@@ -392,6 +426,10 @@ class WebAppointmentController extends GetxController {
       selectedPet.value = null;
       availableTimes.clear();
     } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR BOOKING APPOINTMENT: $e');
+      print('>>> ============================================');
+
       _showCompactNotification(
         "Failed to book appointment: $e",
         bgColor: Colors.red[600]!,

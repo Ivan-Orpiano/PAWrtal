@@ -22,6 +22,11 @@ class WebPetsController extends GetxController {
   RxBool isLoadingMedical = false.obs;
   RxBool isLoadingVaccinations = false.obs;
 
+  // NEW: Medical appointments across all clinics
+  final RxList<Map<String, dynamic>> medicalAppointments =
+      <Map<String, dynamic>>[].obs;
+  final RxBool isLoadingMedicalAppointments = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -94,10 +99,39 @@ class WebPetsController extends GetxController {
     }
   }
 
+  // NEW: Fetch medical appointments across all clinics
+  Future<void> fetchPetMedicalAppointmentsAllClinics(String petId) async {
+    try {
+      isLoadingMedicalAppointments.value = true;
+      print('>>> CONTROLLER: Fetching medical appointments for pet: $petId');
+
+      // Call debug first
+      await authRepository.appWriteProvider.debugPetAppointments(petId);
+
+      final appointments =
+          await authRepository.getPetMedicalAppointmentsAllClinics(petId);
+
+      medicalAppointments.value = appointments;
+
+      print(
+          '>>> CONTROLLER: Loaded ${appointments.length} medical appointments');
+    } catch (e) {
+      print('>>> CONTROLLER: Error fetching medical appointments: $e');
+      WebSnackBarService.showError(
+        title: "Error",
+        message: "Failed to fetch medical appointments: $e",
+      );
+      medicalAppointments.clear();
+    } finally {
+      isLoadingMedicalAppointments.value = false;
+    }
+  }
+
   // Clear histories when pet selection changes
   void clearHistories() {
     medicalRecords.clear();
     vaccinations.clear();
+    medicalAppointments.clear(); // NEW: Clear medical appointments too
   }
 
   void selectPet(Pet pet) {
@@ -141,9 +175,9 @@ class WebPetsController extends GetxController {
         // Look for a segment that looks like a file ID (alphanumeric, no dots)
         for (int i = 0; i < urlParts.length - 1; i++) {
           final part = urlParts[i];
-          if (part.isNotEmpty && 
-              part.length > 10 && 
-              !part.contains('.') && 
+          if (part.isNotEmpty &&
+              part.length > 10 &&
+              !part.contains('.') &&
               !part.contains('http') &&
               !part.contains('preview') &&
               !part.contains('view')) {
@@ -162,12 +196,12 @@ class WebPetsController extends GetxController {
 
   Future<void> deletePet(Pet pet) async {
     bool imageDeleted = false;
-    
+
     try {
       // Attempt to delete image if it exists
       if (pet.image != null && pet.image!.isNotEmpty) {
         final imageId = _extractFileId(pet.image);
-        
+
         if (imageId != null) {
           try {
             print('🗑️ Attempting to delete image: $imageId');
@@ -177,13 +211,14 @@ class WebPetsController extends GetxController {
           } catch (imageError) {
             // Log the error but don't fail the entire operation
             print('⚠️ Failed to delete image (continuing anyway): $imageError');
-            
+
             // Only show warning if it's not a "file not found" error
             if (!imageError.toString().contains('storage_file_not_found') &&
                 !imageError.toString().contains('404')) {
               WebSnackBarService.showWarning(
                 title: "Warning",
-                message: "Pet image could not be deleted, but pet record will be removed.",
+                message:
+                    "Pet image could not be deleted, but pet record will be removed.",
               );
             }
           }
@@ -205,25 +240,30 @@ class WebPetsController extends GetxController {
       }
 
       // Show success message
-      final message = imageDeleted 
+      final message = imageDeleted
           ? "${pet.name} has been deleted successfully"
           : "${pet.name} has been deleted (image was already removed)";
-          
+
       WebSnackBarService.showSuccess(
         title: "Success",
         message: message,
       );
-      
     } catch (e) {
       print('❌ Error deleting pet: $e');
       WebSnackBarService.showError(
         title: "Error",
-        message: "Failed to delete pet: ${e.toString().replaceAll('AppwriteException: ', '')}",
+        message:
+            "Failed to delete pet: ${e.toString().replaceAll('AppwriteException: ', '')}",
       );
     }
   }
 
   void refreshPets() {
     fetchUserPets();
+  }
+
+  // In web_pets_controller.dart, add this temporarily
+  Future<void> debugAppointments(String petId) async {
+    await authRepository.appWriteProvider.debugPetAppointments(petId);
   }
 }

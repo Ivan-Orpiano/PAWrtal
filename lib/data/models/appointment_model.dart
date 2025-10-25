@@ -1,3 +1,4 @@
+// appointment_model.dart
 class Appointment {
   final String? documentId;
   final String userId;
@@ -6,34 +7,34 @@ class Appointment {
   final String service;
   final DateTime dateTime;
   final String status;
-  final String? notes; // User's original booking notes
+  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Medical service flag - NEW
+  final bool isMedicalService;
 
   // Cancellation/rejection tracking
   final String? cancellationReason;
   final String? cancelledBy;
   final DateTime? cancelledAt;
 
-  // Workflow tracking - KEEP THESE for appointment workflow
+  // Workflow tracking
   final DateTime? checkedInAt;
   final DateTime? serviceStartedAt;
   final DateTime? serviceCompletedAt;
 
-  // Payment tracking - KEEP THESE for billing
+  // Payment tracking
   final double? totalCost;
   final bool isPaid;
   final String? paymentMethod;
 
-  // Follow-up - KEEP for scheduling
+  // Follow-up
   final String? followUpInstructions;
   final DateTime? nextAppointmentDate;
 
-  // Attachments - KEEP for appointment-related files
+  // Attachments
   final List<String>? attachments;
-
-  // REMOVED: diagnosis, treatment, prescription, vetNotes, vitals
-  // These now live ONLY in MedicalRecord
 
   Appointment({
     this.documentId,
@@ -46,6 +47,7 @@ class Appointment {
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.isMedicalService = false, // NEW: Default to false
     this.cancellationReason,
     this.cancelledBy,
     this.cancelledAt,
@@ -72,6 +74,7 @@ class Appointment {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'isMedicalService': isMedicalService, // NEW
       'cancellationReason': cancellationReason,
       'cancelledBy': cancelledBy,
       'cancelledAt': cancelledAt?.toIso8601String(),
@@ -99,6 +102,7 @@ class Appointment {
       notes: map['notes'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      isMedicalService: map['isMedicalService'] ?? false, // NEW
       cancellationReason: map['cancellationReason'],
       cancelledBy: map['cancelledBy'],
       cancelledAt: map['cancelledAt'] != null
@@ -137,6 +141,7 @@ class Appointment {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isMedicalService, // NEW
     String? cancellationReason,
     String? cancelledBy,
     DateTime? cancelledAt,
@@ -161,6 +166,7 @@ class Appointment {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isMedicalService: isMedicalService ?? this.isMedicalService, // NEW
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancelledBy: cancelledBy ?? this.cancelledBy,
       cancelledAt: cancelledAt ?? this.cancelledAt,
@@ -186,9 +192,6 @@ class Appointment {
   bool get hasArrived => checkedInAt != null;
   bool get hasServiceStarted => serviceStartedAt != null;
   bool get hasServiceCompleted => serviceCompletedAt != null;
-
-  // REMOVED: hasMedicalRecord getter
-  // Medical records should be checked separately via repository
 
   bool get isCancelledByUser => isCancelled && cancelledBy == 'user';
   bool get isCancelledByClinic =>

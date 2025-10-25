@@ -191,8 +191,44 @@ class AuthRepository {
   Future<void> deletePet(String documentId) =>
       appWriteProvider.deletePet(documentId);
 
-  Future<void> createAppointment(Appointment appointment) {
-    return appWriteProvider.createAppointment(appointment.toMap());
+  Future<void> createAppointment(Appointment appointment) async {
+    try {
+      print('>>> ============================================');
+      print('>>> REPOSITORY: Creating appointment');
+      print('>>> Service: ${appointment.service}');
+      print('>>> Clinic ID: ${appointment.clinicId}');
+      print('>>> Initial isMedicalService: ${appointment.isMedicalService}');
+      print('>>> ============================================');
+
+      // CRITICAL: Check if service is medical from clinic settings
+      final clinicSettings =
+          await getClinicSettingsByClinicId(appointment.clinicId);
+
+      bool isMedicalService = false;
+      if (clinicSettings != null) {
+        isMedicalService = clinicSettings.isServiceMedical(appointment.service);
+        print('>>> Checked clinic settings - is medical: $isMedicalService');
+        print(
+            '>>> Medical services in settings: ${clinicSettings.medicalServices}');
+      } else {
+        print('>>> Warning: No clinic settings found');
+      }
+
+      // Create appointment with correct medical status
+      final appointmentWithMedicalStatus = appointment.copyWith(
+        isMedicalService: isMedicalService,
+      );
+
+      print(
+          '>>> Final appointment isMedicalService: ${appointmentWithMedicalStatus.isMedicalService}');
+      print('>>> ============================================');
+
+      return appWriteProvider
+          .createAppointment(appointmentWithMedicalStatus.toMap());
+    } catch (e) {
+      print('>>> Error in repository createAppointment: $e');
+      rethrow;
+    }
   }
 
   Future<List<Appointment>> getUserAppointments(String userId) async {
@@ -277,6 +313,31 @@ class AuthRepository {
       return records;
     } catch (e) {
       print('>>> Error getting pet medical records: $e');
+      return [];
+    }
+  }
+
+  Future<List<Appointment>> getPetMedicalAppointments(String petId) async {
+    try {
+      print('>>> REPOSITORY: Getting medical appointments for pet: $petId');
+
+      final rawAppointments = await appWriteProvider.getUserAppointments(petId);
+
+      final appointments = rawAppointments.map((data) {
+        return Appointment.fromMap(Map<String, dynamic>.from(data));
+      }).toList();
+
+      // Filter only medical service appointments that are completed
+      final medicalAppointments = appointments.where((appointment) {
+        return appointment.isMedicalService &&
+            (appointment.isCompleted || appointment.hasServiceCompleted);
+      }).toList();
+
+      print('>>> Found ${medicalAppointments.length} medical appointments');
+
+      return medicalAppointments;
+    } catch (e) {
+      print('>>> Error getting pet medical appointments: $e');
       return [];
     }
   }
@@ -1945,5 +2006,57 @@ class AuthRepository {
   // Add this method to the AuthRepository class
   Future<void> migrateConversationStarters() {
     return appWriteProvider.migrateConversationStarters();
+  }
+
+  Future<List<Map<String, dynamic>>> getPetMedicalAppointmentsAllClinics(
+      String petId) async {
+    try {
+      print('>>> REPOSITORY: Getting all medical appointments for pet: $petId');
+
+      final rawAppointments =
+          await appWriteProvider.getPetMedicalAppointmentsAllClinics(petId);
+
+      // Enrich appointments with clinic information
+      List<Map<String, dynamic>> enrichedAppointments = [];
+
+      for (var appointmentData in rawAppointments) {
+        try {
+          final clinicId = appointmentData['clinicId'];
+
+          // Fetch clinic details
+          final clinicDoc = await appWriteProvider.getClinicById(clinicId);
+
+          if (clinicDoc != null) {
+            appointmentData['clinicName'] =
+                clinicDoc.data['clinicName'] ?? 'Unknown Clinic';
+            appointmentData['clinicAddress'] =
+                clinicDoc.data['address'] ?? 'N/A';
+            appointmentData['clinicContact'] =
+                clinicDoc.data['contact'] ?? 'N/A';
+          } else {
+            appointmentData['clinicName'] = 'Unknown Clinic';
+            appointmentData['clinicAddress'] = 'N/A';
+            appointmentData['clinicContact'] = 'N/A';
+          }
+
+          enrichedAppointments.add(appointmentData);
+        } catch (e) {
+          print('>>> Error enriching appointment: $e');
+          // Add appointment even if clinic fetch fails
+          appointmentData['clinicName'] = 'Unknown Clinic';
+          appointmentData['clinicAddress'] = 'N/A';
+          appointmentData['clinicContact'] = 'N/A';
+          enrichedAppointments.add(appointmentData);
+        }
+      }
+
+      print(
+          '>>> Successfully enriched ${enrichedAppointments.length} appointments');
+
+      return enrichedAppointments;
+    } catch (e) {
+      print('>>> REPOSITORY: Error getting medical appointments: $e');
+      return [];
+    }
   }
 }

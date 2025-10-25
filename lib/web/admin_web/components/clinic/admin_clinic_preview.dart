@@ -335,7 +335,19 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   void _showServicesEditDialog() {
     final originalServices =
         List<String>.from(widget.controller.selectedServices);
+    final originalMedicalServices =
+        Map<String, bool>.from(widget.controller.medicalServices);
     final tempSelectedServices = List<String>.from(originalServices);
+    final tempMedicalServices = Map<String, bool>.from(originalMedicalServices);
+
+    // Initialize medical status for services that don't have it yet
+    for (var service in tempSelectedServices) {
+      if (!tempMedicalServices.containsKey(service)) {
+        tempMedicalServices[service] = _isServiceMedicalByDefault(service);
+      }
+    }
+
+    bool customServiceIsMedical = true;
 
     showDialog(
       context: context,
@@ -351,6 +363,8 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                 return true;
               for (var service in tempSelectedServices) {
                 if (!originalServices.contains(service)) return true;
+                if (tempMedicalServices[service] !=
+                    originalMedicalServices[service]) return true;
               }
               for (var service in originalServices) {
                 if (!tempSelectedServices.contains(service)) return true;
@@ -364,6 +378,8 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                 if (shouldDiscard == true) {
                   widget.controller.selectedServices
                       .assignAll(originalServices);
+                  widget.controller.medicalServices
+                      .assignAll(originalMedicalServices);
                   if (context.mounted) Navigator.pop(context);
                 }
               } else {
@@ -378,6 +394,8 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                   if (shouldDiscard == true) {
                     widget.controller.selectedServices
                         .assignAll(originalServices);
+                    widget.controller.medicalServices
+                        .assignAll(originalMedicalServices);
                     return true;
                   }
                   return false;
@@ -391,7 +409,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                   width: MediaQuery.of(context).size.width > 785
                       ? 700
                       : MediaQuery.of(context).size.width * 0.9,
-                  constraints: const BoxConstraints(maxHeight: 600),
+                  constraints: const BoxConstraints(maxHeight: 700),
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,9 +417,11 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                       Row(
                         children: [
                           const Expanded(
-                            child: Text("Edit Services",
-                                style: TextStyle(
-                                    fontSize: 24, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              "Edit Services",
+                              style: TextStyle(
+                                  fontSize: 24, fontWeight: FontWeight.bold),
+                            ),
                           ),
                           IconButton(
                               onPressed: handleClose,
@@ -409,91 +429,280 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      const Text("Select services your clinic offers:",
-                          style: TextStyle(fontSize: 16)),
+                      const Text(
+                        "Select services your clinic offers:",
+                        style: TextStyle(fontSize: 16),
+                      ),
                       const SizedBox(height: 16),
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Predefined services
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: widget.controller.availableServices
                                     .map((service) {
-                                  return FilterChip(
-                                    label: Text(service),
-                                    selected:
-                                        tempSelectedServices.contains(service),
-                                    onSelected: (selected) {
+                                  final isSelected =
+                                      tempSelectedServices.contains(service);
+                                  final isMedical =
+                                      tempMedicalServices[service] ??
+                                          _isServiceMedicalByDefault(service);
+
+                                  return InkWell(
+                                    onTap: () {
                                       setDialogState(() {
-                                        if (selected) {
-                                          tempSelectedServices.add(service);
-                                        } else {
+                                        if (isSelected) {
                                           tempSelectedServices.remove(service);
+                                          tempMedicalServices.remove(service);
+                                        } else {
+                                          tempSelectedServices.add(service);
+                                          // Set medical status based on default
+                                          tempMedicalServices[service] =
+                                              _isServiceMedicalByDefault(
+                                                  service);
                                         }
                                       });
                                     },
-                                    selectedColor:
-                                        const Color.fromARGB(255, 81, 115, 153)
-                                            .withOpacity(0.2),
-                                    checkmarkColor:
-                                        const Color.fromARGB(255, 81, 115, 153),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color.fromARGB(
+                                                    255, 81, 115, 153)
+                                                .withOpacity(0.2)
+                                            : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color.fromARGB(
+                                                  255, 81, 115, 153)
+                                              : Colors.grey[300]!,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (isSelected)
+                                            Icon(
+                                              Icons.check_circle,
+                                              size: 16,
+                                              color: const Color.fromARGB(
+                                                  255, 81, 115, 153),
+                                            ),
+                                          if (isSelected)
+                                            const SizedBox(width: 4),
+                                          Text(
+                                            service,
+                                            style: TextStyle(
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                              color: isSelected
+                                                  ? Colors.black87
+                                                  : Colors.grey[700],
+                                            ),
+                                          ),
+                                          // Show medical indicator ONLY in edit dialog
+                                          if (isSelected && isMedical) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green[100],
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                border: Border.all(
+                                                    color: Colors.green[300]!),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.medical_services,
+                                                      size: 10,
+                                                      color: Colors.green[700]),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    'Medical',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.green[700],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
                                   );
                                 }).toList(),
                               ),
                               const SizedBox(height: 24),
-                              const Text("Add custom service:",
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: customServiceController,
-                                maxLength: 50,
-                                decoration: const InputDecoration(
-                                  labelText: "Service name",
-                                  hintText: "Enter custom service...",
-                                  border: OutlineInputBorder(),
-                                  counterText: "",
-                                ),
-                                onSubmitted: (value) {
-                                  if (value.trim().isNotEmpty &&
-                                      !tempSelectedServices
-                                          .contains(value.trim())) {
-                                    setDialogState(() {
-                                      tempSelectedServices.add(value.trim());
-                                      customServiceController.clear();
-                                    });
-                                  }
-                                },
+                              const Divider(),
+                              const SizedBox(height: 24),
+
+                              // Add custom service section
+                              const Text(
+                                "Add custom service:",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                               const SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  if (customServiceController.text
-                                          .trim()
-                                          .isNotEmpty &&
-                                      !tempSelectedServices.contains(
-                                          customServiceController.text
-                                              .trim())) {
-                                    setDialogState(() {
-                                      tempSelectedServices.add(
-                                          customServiceController.text.trim());
-                                      customServiceController.clear();
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.add),
-                                label: const Text("Add Service"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromARGB(255, 81, 115, 153),
-                                  foregroundColor: Colors.white,
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.blue[200]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.info_outline,
+                                            size: 16, color: Colors.blue[700]),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            "Medical services will have their appointments recorded in pet medical history.",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.blue[700],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      controller: customServiceController,
+                                      maxLength: 50,
+                                      decoration: const InputDecoration(
+                                        labelText: "Service name",
+                                        hintText: "Enter custom service...",
+                                        border: OutlineInputBorder(),
+                                        counterText: "",
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Medical service checkbox
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: customServiceIsMedical
+                                              ? Colors.green[300]!
+                                              : Colors.grey[300]!,
+                                        ),
+                                      ),
+                                      child: CheckboxListTile(
+                                        value: customServiceIsMedical,
+                                        onChanged: (value) {
+                                          setDialogState(() {
+                                            customServiceIsMedical =
+                                                value ?? true;
+                                          });
+                                        },
+                                        activeColor: Colors.green,
+                                        controlAffinity:
+                                            ListTileControlAffinity.leading,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                        title: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.medical_services,
+                                              size: 16,
+                                              color: customServiceIsMedical
+                                                  ? Colors.green[700]
+                                                  : Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              "This is a medical service",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                                color: customServiceIsMedical
+                                                    ? Colors.green[700]
+                                                    : Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        subtitle: Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            "Appointments for this service will be added to pet medical records",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Add button
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          if (customServiceController.text
+                                                  .trim()
+                                                  .isNotEmpty &&
+                                              !tempSelectedServices.contains(
+                                                  customServiceController.text
+                                                      .trim())) {
+                                            setDialogState(() {
+                                              final newService =
+                                                  customServiceController.text
+                                                      .trim();
+                                              tempSelectedServices
+                                                  .add(newService);
+                                              tempMedicalServices[newService] =
+                                                  customServiceIsMedical;
+                                              customServiceController.clear();
+                                              customServiceIsMedical = true;
+                                            });
+                                          }
+                                        },
+                                        icon: const Icon(Icons.add),
+                                        label: const Text("Add Service"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color.fromARGB(
+                                              255, 81, 115, 153),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(height: 24),
+
+                              // Selected services display
                               if (tempSelectedServices.isEmpty)
                                 Container(
                                   padding: const EdgeInsets.all(16),
@@ -508,8 +717,9 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                                       Icon(Icons.warning, color: Colors.orange),
                                       SizedBox(width: 8),
                                       Expanded(
-                                          child: Text(
-                                              "Please select at least one service")),
+                                        child: Text(
+                                            "Please select at least one service"),
+                                      ),
                                     ],
                                   ),
                                 )
@@ -518,26 +728,101 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                        "Selected Services (${tempSelectedServices.length}):",
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16)),
+                                      "Selected Services (${tempSelectedServices.length}):",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
                                     const SizedBox(height: 8),
                                     Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
                                       children:
                                           tempSelectedServices.map((service) {
-                                        return Chip(
-                                          label: Text(service),
-                                          onDeleted: () => setDialogState(() =>
-                                              tempSelectedServices
-                                                  .remove(service)),
-                                          deleteIcon:
-                                              const Icon(Icons.close, size: 18),
-                                          backgroundColor: const Color.fromARGB(
-                                                  255, 81, 115, 153)
-                                              .withOpacity(0.1),
+                                        final isMedical =
+                                            tempMedicalServices[service] ??
+                                                false;
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color.fromARGB(
+                                                    255, 81, 115, 153)
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: const Color.fromARGB(
+                                                      255, 81, 115, 153)
+                                                  .withOpacity(0.3),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                service,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w500),
+                                              ),
+                                              if (isMedical) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green[100],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                    border: Border.all(
+                                                        color:
+                                                            Colors.green[300]!),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                          Icons
+                                                              .medical_services,
+                                                          size: 10,
+                                                          color: Colors
+                                                              .green[700]),
+                                                      const SizedBox(width: 2),
+                                                      Text(
+                                                        'Medical',
+                                                        style: TextStyle(
+                                                          fontSize: 9,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              Colors.green[700],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                              const SizedBox(width: 8),
+                                              InkWell(
+                                                onTap: () {
+                                                  setDialogState(() {
+                                                    tempSelectedServices
+                                                        .remove(service);
+                                                    tempMedicalServices
+                                                        .remove(service);
+                                                  });
+                                                },
+                                                child: const Icon(Icons.close,
+                                                    size: 18),
+                                              ),
+                                            ],
+                                          ),
                                         );
                                       }).toList(),
                                     ),
@@ -552,14 +837,50 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                              onPressed: handleClose,
-                              child: const Text("Cancel")),
+                            onPressed: handleClose,
+                            child: const Text("Cancel"),
+                          ),
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
                             onPressed: () async {
+                              print(
+                                  '>>> ============================================');
+                              print('>>> SAVING SERVICES FROM DIALOG');
+                              print(
+                                  '>>> Selected services: $tempSelectedServices');
+                              print(
+                                  '>>> Medical services map: $tempMedicalServices');
+                              print(
+                                  '>>> ============================================');
+
+                              // Ensure all selected services have medical status
+                              for (var service in tempSelectedServices) {
+                                if (!tempMedicalServices.containsKey(service)) {
+                                  tempMedicalServices[service] =
+                                      _isServiceMedicalByDefault(service);
+                                  print(
+                                      '>>> Added default medical status for: $service = ${tempMedicalServices[service]}');
+                                }
+                              }
+
+                              // CRITICAL: Assign to controller
                               widget.controller.selectedServices
                                   .assignAll(tempSelectedServices);
+                              widget.controller.medicalServices
+                                  .assignAll(tempMedicalServices);
+
+                              print(
+                                  '>>> Controller selectedServices: ${widget.controller.selectedServices}');
+                              print(
+                                  '>>> Controller medicalServices: ${widget.controller.medicalServices}');
+
+                              // Save to database
                               await widget.controller.saveClinicSettings();
+
+                              print('>>> Services saved successfully');
+                              print(
+                                  '>>> ============================================');
+
                               if (context.mounted) Navigator.pop(context);
                             },
                             icon: const Icon(Icons.save),
@@ -581,6 +902,31 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
         );
       },
     );
+  }
+
+// NEW: Helper method to determine default medical status
+  bool _isServiceMedicalByDefault(String service) {
+    final medicalServices = [
+      'General Checkup',
+      'Vaccination',
+      'Surgery',
+      'Dental Care',
+      'Emergency Care',
+      'Laboratory Tests',
+      'Microchipping',
+      'Spay/Neuter',
+      'X-Ray Imaging',
+      'Ultrasound',
+      'Blood Work',
+      'Behavioral Consultation',
+      'Nutritional Counseling',
+      'Parasite Treatment',
+      'Wound Care',
+      'Prescription Medications',
+      'Health Certificates',
+    ];
+
+    return medicalServices.contains(service);
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -1791,23 +2137,29 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 32),
           child: SizedBox(
-              width: double.infinity,
-              child: Divider(height: 1, thickness: 0.5)),
+            width: double.infinity,
+            child: Divider(height: 1, thickness: 0.5),
+          ),
         ),
         Row(
           children: [
             Expanded(
-              child: Text('Services offered',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: isMobile ? 18 : 22)),
+              child: Text(
+                'Services offered',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: isMobile ? 18 : 22,
+                ),
+              ),
             ),
             const SizedBox(width: 8),
             ElevatedButton.icon(
               onPressed: _showServicesEditDialog,
               icon: Icon(Icons.edit, size: isMobile ? 14 : 18),
-              label: Text('Edit Services',
-                  style: TextStyle(fontSize: isMobile ? 12 : 14)),
+              label: Text(
+                'Edit Services',
+                style: TextStyle(fontSize: isMobile ? 12 : 14),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 81, 115, 153),
                 foregroundColor: Colors.white,
@@ -1827,13 +2179,19 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.medical_services_outlined,
-                        size: isMobile ? 36 : 48, color: Colors.grey[400]),
+                    Icon(
+                      Icons.medical_services_outlined,
+                      size: isMobile ? 36 : 48,
+                      color: Colors.grey[400],
+                    ),
                     const SizedBox(height: 16),
-                    Text("No services listed",
-                        style: TextStyle(
-                            fontSize: isMobile ? 14 : 16,
-                            color: Colors.grey[600])),
+                    Text(
+                      "No services listed",
+                      style: TextStyle(
+                        fontSize: isMobile ? 14 : 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1871,13 +2229,16 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
 
               return Container(
                 padding: EdgeInsets.symmetric(
-                    horizontal: isTablet ? 12 : (isMobile ? 16 : 14),
-                    vertical: isTablet ? 8 : (isMobile ? 10 : 9)),
+                  horizontal: isTablet ? 12 : (isMobile ? 16 : 14),
+                  vertical: isTablet ? 8 : (isMobile ? 10 : 9),
+                ),
                 decoration: BoxDecoration(
                   color: serviceColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: serviceColor.withOpacity(0.3), width: 1),
+                    color: serviceColor.withOpacity(0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -1891,9 +2252,10 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                       child: Text(
                         service,
                         style: TextStyle(
-                            fontSize: isTablet ? 13 : (isMobile ? 16 : 14),
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87),
+                          fontSize: isTablet ? 13 : (isMobile ? 16 : 14),
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),

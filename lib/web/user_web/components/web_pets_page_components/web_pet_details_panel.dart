@@ -7,7 +7,13 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'dart:math' as math;
 
-enum CardView { front, back, medicalHistory, vaccinationHistory }
+enum CardView {
+  front,
+  back,
+  medicalHistory,
+  vaccinationHistory,
+  medicalAppointmentsHistory
+}
 
 class WebPetDetailsPanel extends StatefulWidget {
   final Pet pet;
@@ -36,6 +42,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   // Selected record for detail view
   MedicalRecord? _selectedMedicalRecord;
   Vaccination? _selectedVaccination;
+  Map<String, dynamic>? _selectedMedicalAppointment;
 
   @override
   void initState() {
@@ -56,6 +63,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     final controller = Get.find<WebPetsController>();
     controller.fetchPetMedicalHistory(widget.pet.petId);
     controller.fetchPetVaccinationHistory(widget.pet.petId);
+    controller.fetchPetMedicalAppointmentsAllClinics(widget.pet.petId);
   }
 
   @override
@@ -72,6 +80,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         return 1;
       case CardView.medicalHistory:
       case CardView.vaccinationHistory:
+      case CardView.medicalAppointmentsHistory:
         return 2;
     }
   }
@@ -84,6 +93,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       // Clear selections when changing views
       _selectedMedicalRecord = null;
       _selectedVaccination = null;
+      _selectedMedicalAppointment = null;
     });
     _controller.forward(from: 0);
   }
@@ -172,6 +182,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         return _buildMedicalHistoryView();
       case CardView.vaccinationHistory:
         return _buildVaccinationHistoryView();
+      case CardView.medicalAppointmentsHistory:
+        return _buildMedicalAppointmentsHistoryView();
     }
   }
 
@@ -185,6 +197,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         return _buildMedicalHistoryView();
       case CardView.vaccinationHistory:
         return _buildVaccinationHistoryView();
+      case CardView.medicalAppointmentsHistory:
+        return _buildMedicalAppointmentsHistoryView();
     }
   }
 
@@ -375,9 +389,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                     onPressed: () => _flipToView(CardView.front),
                     tooltip: "Back",
                   ),
-                  const SizedBox(
-                    width: 8,
-                  ),
+                  const SizedBox(width: 8),
                   const Text(
                     'Health Records',
                     style: TextStyle(
@@ -396,16 +408,28 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Medical Appointments History section (NEW - HIGHLIGHTED)
+                  _buildHistoryButton(
+                    'Medical Appointments History',
+                    'View all medical appointments across clinics',
+                    Icons.local_hospital_outlined,
+                    () => _flipToView(CardView.medicalAppointmentsHistory),
+                    _getMedicalAppointmentsCount(),
+                    isPrimary: true,
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Medical History section
                   _buildHistoryButton(
-                    'Medical History',
+                    'Medical Records',
                     'View complete medical records',
                     Icons.medical_services_outlined,
                     () => _flipToView(CardView.medicalHistory),
                     _getMedicalRecordCount(),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
                   // Vaccination History section
                   _buildHistoryButton(
@@ -432,6 +456,399 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   int _getVaccinationCount() {
     final controller = Get.find<WebPetsController>();
     return controller.vaccinations.length;
+  }
+
+  int _getMedicalAppointmentsCount() {
+    final controller = Get.find<WebPetsController>();
+    return controller.medicalAppointments.length;
+  }
+
+  // NEW: Medical Appointments History View
+  Widget _buildMedicalAppointmentsHistoryView() {
+    final controller = Get.find<WebPetsController>();
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    setState(() {
+                      _selectedMedicalAppointment = null;
+                    });
+                    _flipToView(CardView.back);
+                  },
+                  tooltip: "Back",
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedMedicalAppointment != null
+                            ? 'Appointment Details'
+                            : 'Medical Appointments History',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (_selectedMedicalAppointment == null)
+                        const SizedBox(height: 4),
+                      if (_selectedMedicalAppointment == null)
+                        const Text(
+                          'All medical visits across clinics',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_selectedMedicalAppointment != null)
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _selectedMedicalAppointment = null;
+                      });
+                    },
+                    tooltip: "Close Details",
+                  ),
+              ],
+            ),
+          ),
+
+          // Content
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingMedicalAppointments.value) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading medical appointments...',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (controller.medicalAppointments.isEmpty) {
+                return _buildEmptyState(
+                  'No Medical Appointments',
+                  'No completed medical appointments found for ${widget.pet.name} yet.',
+                  Icons.local_hospital_outlined,
+                );
+              }
+
+              if (_selectedMedicalAppointment != null) {
+                return _buildMedicalAppointmentDetails(
+                    _selectedMedicalAppointment!);
+              }
+
+              return _buildMedicalAppointmentsList(
+                  controller.medicalAppointments);
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Build Medical Appointments List
+  Widget _buildMedicalAppointmentsList(
+      List<Map<String, dynamic>> appointments) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: appointments.length,
+      itemBuilder: (context, index) {
+        final appointment = appointments[index];
+        return _buildMedicalAppointmentCard(appointment);
+      },
+    );
+  }
+
+  // NEW: Build Medical Appointment Card
+  Widget _buildMedicalAppointmentCard(Map<String, dynamic> appointment) {
+    final dateTime = DateTime.parse(appointment['dateTime']);
+    final clinicName = appointment['clinicName'] ?? 'Unknown Clinic';
+    final service = appointment['service'] ?? 'Medical Service';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedMedicalAppointment = appointment;
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon with gradient background
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF667eea).withOpacity(0.3),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.local_hospital,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Clinic Name (Bold)
+                    Text(
+                      clinicName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Service
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.medical_services,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            service,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Date
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('MMMM dd, yyyy • hh:mm a')
+                              .format(dateTime),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Build Medical Appointment Details
+  Widget _buildMedicalAppointmentDetails(Map<String, dynamic> appointment) {
+    final dateTime = DateTime.parse(appointment['dateTime']);
+    final completedAt = appointment['serviceCompletedAt'] != null
+        ? DateTime.parse(appointment['serviceCompletedAt'])
+        : null;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Clinic Information Card
+          _buildDetailCard(
+            'Veterinary Clinic',
+            [
+              _buildDetailRow(
+                  'Clinic Name', appointment['clinicName'] ?? 'N/A'),
+              _buildDetailRow('Address', appointment['clinicAddress'] ?? 'N/A'),
+              _buildDetailRow('Contact', appointment['clinicContact'] ?? 'N/A'),
+            ],
+            icon: Icons.local_hospital,
+            iconColor: const Color(0xFF667eea),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Appointment Information Card
+          _buildDetailCard(
+            'Appointment Information',
+            [
+              _buildDetailRow('Service', appointment['service'] ?? 'N/A'),
+              _buildDetailRow(
+                'Date & Time',
+                DateFormat('MMMM dd, yyyy').format(dateTime),
+              ),
+              _buildDetailRow(
+                'Time',
+                DateFormat('hh:mm a').format(dateTime),
+              ),
+              _buildDetailRow('Status', 'Completed'),
+              if (completedAt != null)
+                _buildDetailRow(
+                  'Completed At',
+                  DateFormat('MMMM dd, yyyy • hh:mm a').format(completedAt),
+                ),
+            ],
+            icon: Icons.event_note,
+            iconColor: const Color(0xFF3498DB),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Payment Information Card
+          if (appointment['totalCost'] != null || appointment['isPaid'] != null)
+            _buildDetailCard(
+              'Payment Information',
+              [
+                if (appointment['totalCost'] != null)
+                  _buildDetailRow(
+                    'Total Cost',
+                    '₱ ${appointment['totalCost'].toStringAsFixed(2)}',
+                  ),
+                _buildDetailRow(
+                  'Payment Status',
+                  appointment['isPaid'] == true ? 'Paid' : 'Unpaid',
+                ),
+                if (appointment['paymentMethod'] != null)
+                  _buildDetailRow(
+                    'Payment Method',
+                    appointment['paymentMethod'] ?? 'N/A',
+                  ),
+              ],
+              icon: Icons.payment,
+              iconColor: const Color(0xFF27AE60),
+            ),
+
+          const SizedBox(height: 16),
+
+          // Follow-up Information Card
+          if (appointment['followUpInstructions'] != null ||
+              appointment['nextAppointmentDate'] != null)
+            _buildDetailCard(
+              'Follow-up Information',
+              [
+                if (appointment['followUpInstructions'] != null &&
+                    appointment['followUpInstructions'].toString().isNotEmpty)
+                  _buildDetailRow(
+                    'Instructions',
+                    appointment['followUpInstructions'],
+                  ),
+                if (appointment['nextAppointmentDate'] != null)
+                  _buildDetailRow(
+                    'Next Appointment',
+                    DateFormat('MMMM dd, yyyy').format(
+                      DateTime.parse(appointment['nextAppointmentDate']),
+                    ),
+                  ),
+              ],
+              icon: Icons.event_available,
+              iconColor: const Color(0xFFE67E22),
+            ),
+
+          const SizedBox(height: 16),
+
+          // Additional Notes Card
+          if (appointment['notes'] != null &&
+              appointment['notes'].toString().isNotEmpty)
+            _buildDetailCard(
+              'Additional Notes',
+              [
+                _buildDetailRow('Notes', appointment['notes']),
+              ],
+              icon: Icons.note,
+              iconColor: const Color(0xFF9B59B6),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMedicalHistoryView() {
@@ -1001,7 +1418,12 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     );
   }
 
-  Widget _buildDetailCard(String title, List<Widget> children) {
+  Widget _buildDetailCard(
+    String title,
+    List<Widget> children, {
+    IconData? icon,
+    Color? iconColor,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -1013,13 +1435,25 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-            ),
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 20,
+                  color: iconColor ?? const Color(0xFF2C3E50),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           ...children,
@@ -1139,8 +1573,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     String subtitle,
     IconData icon,
     VoidCallback onPressed,
-    int count,
-  ) {
+    int count, {
+    bool isPrimary = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1148,14 +1583,20 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF2C3E50),
+              backgroundColor:
+                  isPrimary ? const Color(0xFF667eea) : Colors.white,
+              foregroundColor:
+                  isPrimary ? Colors.white : const Color(0xFF2C3E50),
               padding: const EdgeInsets.all(20),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey[300]!),
+                side: BorderSide(
+                  color:
+                      isPrimary ? const Color(0xFF667eea) : Colors.grey[300]!,
+                  width: isPrimary ? 2 : 1,
+                ),
               ),
-              elevation: 0,
+              elevation: isPrimary ? 4 : 0,
             ),
             onPressed: onPressed,
             child: Row(
@@ -1163,10 +1604,16 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3498DB).withOpacity(0.1),
+                    color: isPrimary
+                        ? Colors.white.withOpacity(0.2)
+                        : const Color(0xFF3498DB).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: const Color(0xFF3498DB), size: 28),
+                  child: Icon(
+                    icon,
+                    color: isPrimary ? Colors.white : const Color(0xFF3498DB),
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -1175,9 +1622,12 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: isPrimary
+                              ? Colors.white
+                              : const Color(0xFF2C3E50),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1185,7 +1635,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                         subtitle,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.grey[600],
+                          color: isPrimary ? Colors.white70 : Colors.grey[600],
                         ),
                       ),
                     ],
@@ -1199,15 +1649,19 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3498DB).withOpacity(0.1),
+                        color: isPrimary
+                            ? Colors.white.withOpacity(0.2)
+                            : const Color(0xFF3498DB).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '$count',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF3498DB),
+                          color: isPrimary
+                              ? Colors.white
+                              : const Color(0xFF3498DB),
                         ),
                       ),
                     ),
@@ -1216,7 +1670,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                       'records',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey[500],
+                        color: isPrimary ? Colors.white60 : Colors.grey[500],
                       ),
                     ),
                   ],
@@ -1225,7 +1679,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: Colors.grey[400],
+                  color: isPrimary ? Colors.white : Colors.grey[400],
                 ),
               ],
             ),
