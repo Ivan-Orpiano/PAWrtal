@@ -54,6 +54,9 @@ class AdminDashboardController extends GetxController {
   final messageController = TextEditingController();
   final scrollController = ScrollController();
 
+  var petProfilePictures = <String, String?>{}.obs;
+  var petImageLoadingStates = <String, bool>{}.obs;
+
   /// Enhanced onInit to ensure real-time setup
   @override
   void onInit() {
@@ -1180,6 +1183,11 @@ class AdminDashboardController extends GetxController {
 
     todayAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     todayAppointments.assignAll(todayAppts);
+
+    // FIXED: Pre-load images for today's appointments
+    if (todayAppts.isNotEmpty) {
+      preloadPetImagesForAppointments(todayAppts.take(5).toList());
+    }
   }
 
   void _processUpcomingAppointments() {
@@ -1199,6 +1207,11 @@ class AdminDashboardController extends GetxController {
 
     upcoming.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     upcomingAppointments.assignAll(upcoming.take(5).toList());
+
+    // FIXED: Pre-load images for upcoming appointments
+    if (upcoming.isNotEmpty) {
+      preloadPetImagesForAppointments(upcoming.take(5).toList());
+    }
   }
 
   Future<void> generateCalendarData() async {
@@ -1976,5 +1989,152 @@ class AdminDashboardController extends GetxController {
         colorText: Colors.white,
       );
     }
+  }
+
+  // Add this method to fetch pet profile picture
+  Future<String?> getPetProfilePictureUrl(String petId) async {
+    // Check cache first
+    if (petProfilePictures.containsKey(petId)) {
+      return petProfilePictures[petId];
+    }
+
+    try {
+      print('>>> Dashboard: Fetching profile picture for pet: $petId');
+
+      // Fetch pet document
+      final petDoc = await authRepository.getPetById(petId);
+
+      if (petDoc != null) {
+        final imageUrl = petDoc.data['image'] as String?;
+
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          // Cache the URL
+          petProfilePictures[petId] = imageUrl;
+          print(
+              '>>> Dashboard: Pet profile picture cached: $petId -> $imageUrl');
+          return imageUrl;
+        }
+      }
+
+      // No image found, cache null
+      petProfilePictures[petId] = null;
+      return null;
+    } catch (e) {
+      print('>>> Dashboard: Error fetching pet profile picture: $e');
+      petProfilePictures[petId] = null;
+      return null;
+    }
+  }
+
+// Add this method to fetch pet image by userId (same as in WebAppointmentController)
+  Future<String?> getPetImageByUserId(String petId, String userId) async {
+    try {
+      // Return immediately if already cached
+      if (petProfilePictures.containsKey(petId)) {
+        return petProfilePictures[petId];
+      }
+
+      // Prevent duplicate fetches
+      if (petImageLoadingStates[petId] == true) {
+        print('>>> Dashboard: Already loading image for pet: $petId');
+        return null;
+      }
+
+      petImageLoadingStates[petId] = true;
+
+      print(
+          '>>> Dashboard: Fetching pet image for petId: $petId, userId: $userId');
+
+      // Fetch all pets for this user
+      final userPets = await authRepository.getUserPets(userId);
+
+      if (userPets.isEmpty) {
+        print('>>> Dashboard: No pets found for user: $userId');
+        petProfilePictures[petId] = null;
+        petImageLoadingStates[petId] = false;
+        return null;
+      }
+
+      // Find the specific pet by petId
+      Pet? targetPet;
+
+      for (var petDoc in userPets) {
+        final pet = Pet.fromMap(petDoc.data);
+        pet.documentId = petDoc.$id;
+
+        // Match by petId (document ID or petId field)
+        if (petDoc.$id == petId || pet.petId == petId || pet.name == petId) {
+          targetPet = pet;
+          print('>>> Dashboard: ✅ Found matching pet: ${pet.name}');
+          break;
+        }
+      }
+
+      if (targetPet == null) {
+        print('>>> Dashboard: ⚠️ Pet not found for this user');
+        petProfilePictures[petId] = null;
+        petImageLoadingStates[petId] = false;
+        return null;
+      }
+
+      // Cache the pet
+      petsCache[petId] = targetPet;
+
+      // Cache the image
+      if (targetPet.image != null && targetPet.image!.isNotEmpty) {
+        petProfilePictures[petId] = targetPet.image;
+        print('>>> Dashboard: Pet image URL cached: ${targetPet.image}');
+        petImageLoadingStates[petId] = false;
+        return targetPet.image;
+      }
+
+      petProfilePictures[petId] = null;
+      petImageLoadingStates[petId] = false;
+      return null;
+    } catch (e) {
+      print('>>> Dashboard: Error fetching pet image: $e');
+      petProfilePictures[petId] = null;
+      petImageLoadingStates[petId] = false;
+      return null;
+    }
+  }
+
+  Future<void> preloadPetImagesForAppointments(
+      List<Appointment> appointments) async {
+    print(
+        '>>> Dashboard: Pre-loading pet images for ${appointments.length} appointments');
+
+    final futures = <Future>[];
+
+    for (var appointment in appointments) {
+      // Skip if already cached
+      if (petProfilePictures.containsKey(appointment.petId)) {
+        continue;
+      }
+
+      // Add to batch
+      futures.add(getPetImageByUserId(appointment.petId, appointment.userId)
+          .catchError((e) {
+        print('>>> Error pre-loading pet ${appointment.petId}: $e');
+      }));
+    }
+
+    // Wait for all images to load
+    await Future.wait(futures);
+    print('>>> Dashboard: Pet images pre-loaded');
+  }
+
+  void clearPetProfilePicturesCache() {
+    petProfilePictures.clear();
+    petImageLoadingStates.clear();
+  }
+
+// Add this method to refresh pet images
+  Future<void> refreshPetImages() async {
+    print('>>> Dashboard: Refreshing pet images cache...');
+    petProfilePictures.clear();
+    petImageLoadingStates.clear();
+    await _fetchRelatedData();
+    print('>>> Dashboard: Pet images cache refreshed');
   }
 }

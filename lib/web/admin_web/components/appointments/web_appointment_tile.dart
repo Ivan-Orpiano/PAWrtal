@@ -238,57 +238,120 @@ class WebAppointmentTile extends StatelessWidget {
   }
 
   Widget _buildPetAvatar() {
-    final controller = Get.find<WebAppointmentController>();
-
-    return FutureBuilder<String?>(
-      future: controller.getPetProfilePictureUrl(appointment.petId),
-      builder: (context, snapshot) {
-        final profilePictureUrl = snapshot.data;
-
-        if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
-          // Show pet profile picture
-          return Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                color: _getStatusBorderColor(appointment.status),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  spreadRadius: 1,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+  final controller = Get.find<WebAppointmentController>();
+  
+  // CRITICAL: Use composite key (userId + petId) to avoid conflicts
+  final cacheKey = '${appointment.userId}_${appointment.petId}';
+  
+  // Check cache FIRST before building FutureBuilder
+  if (controller.petProfilePictures.containsKey(cacheKey)) {
+    final cachedImageUrl = controller.petProfilePictures[cacheKey];
+    
+    if (cachedImageUrl != null && cachedImageUrl.isNotEmpty) {
+      // Show cached image
+      return Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: _getStatusBorderColor(appointment.status),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(25),
-              child: Image.network(
-                profilePictureUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  // Fallback to gradient icon if image fails
-                  return _buildPetAvatarFallback();
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  // Show fallback while loading
-                  return _buildPetAvatarFallback();
-                },
-              ),
-            ),
-          );
-        }
-
-        // Fallback to gradient icon if no profile picture
-        return _buildPetAvatarFallback();
-      },
-    );
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: Image.network(
+            cachedImageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildPetAvatarFallback();
+            },
+          ),
+        ),
+      );
+    } else {
+      // Cached as null - show fallback immediately
+      return _buildPetAvatarFallback();
+    }
   }
+  
+  // Not cached yet - fetch once
+  return FutureBuilder<String?>(
+    future: controller.getPetImageByUserId(
+      appointment.petId,
+      appointment.userId,
+    ),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            color: Colors.grey[200],
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _getStatusBorderColor(appointment.status),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      
+      final profilePictureUrl = snapshot.data;
+      
+      if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+        return Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(
+              color: _getStatusBorderColor(appointment.status),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(25),
+            child: Image.network(
+              profilePictureUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildPetAvatarFallback();
+              },
+            ),
+          ),
+        );
+      }
+      
+      return _buildPetAvatarFallback();
+    },
+  );
+}
 
   // 🆕 Helper method for fallback avatar
   Widget _buildPetAvatarFallback() {
@@ -740,84 +803,91 @@ class WebAppointmentTile extends StatelessWidget {
   }
 
   void _showVitalsDialog(WebAppointmentController controller) {
-    // Controllers
+    // Create a local BuildContext reference
+    final currentContext = Get.context;
+    if (currentContext == null) {
+      print('>>> ERROR: No context available');
+      return;
+    }
+
+    // Controllers - will be disposed in the finally block
     final tempController = TextEditingController();
     final weightController = TextEditingController();
     final bpController = TextEditingController();
     final hrController = TextEditingController();
-
-    // Form key for validation
     final formKey = GlobalKey<FormState>();
 
+    bool isDialogMounted = true;
+    bool hasChanges = false; // Track if user made changes
+
     // Pre-fill with pending vitals if they exist
-    final pendingVitals = controller.getPendingVitals(appointment.documentId!);
-    if (pendingVitals != null) {
-      if (pendingVitals['temperature'] != null) {
-        tempController.text = pendingVitals['temperature'].toString();
+    try {
+      final pendingVitals =
+          controller.getPendingVitals(appointment.documentId!);
+      if (pendingVitals != null) {
+        if (pendingVitals['temperature'] != null) {
+          tempController.text = pendingVitals['temperature'].toString();
+        }
+        if (pendingVitals['weight'] != null) {
+          weightController.text = pendingVitals['weight'].toString();
+        }
+        if (pendingVitals['bloodPressure'] != null) {
+          bpController.text = pendingVitals['bloodPressure'].toString();
+        }
+        if (pendingVitals['heartRate'] != null) {
+          hrController.text = pendingVitals['heartRate'].toString();
+        }
       }
-      if (pendingVitals['weight'] != null) {
-        weightController.text = pendingVitals['weight'].toString();
-      }
-      if (pendingVitals['bloodPressure'] != null) {
-        bpController.text = pendingVitals['bloodPressure'].toString();
-      }
-      if (pendingVitals['heartRate'] != null) {
-        hrController.text = pendingVitals['heartRate'].toString();
-      }
+    } catch (e) {
+      print('>>> Warning: Could not load pending vitals: $e');
     }
+
+    // Add listeners to track changes
+    tempController.addListener(() {
+      hasChanges = true;
+    });
+    weightController.addListener(() {
+      hasChanges = true;
+    });
+    bpController.addListener(() {
+      hasChanges = true;
+    });
+    hrController.addListener(() {
+      hasChanges = true;
+    });
 
     // Validation functions
     String? validateTemperature(String? value) {
       if (value == null || value.isEmpty) return null;
-
       final temp = double.tryParse(value);
-      if (temp == null) {
-        return 'Enter a valid number';
-      }
-      if (temp < 0 || temp > 50) {
-        return 'Temperature must be 0-50°C';
-      }
+      if (temp == null) return 'Enter a valid number';
+      if (temp < 0 || temp > 50) return 'Temperature must be 0-50°C';
       return null;
     }
 
     String? validateWeight(String? value) {
       if (value == null || value.isEmpty) return null;
-
       final weight = double.tryParse(value);
-      if (weight == null) {
-        return 'Enter a valid number';
-      }
-      if (weight < 0 || weight > 500) {
-        return 'Weight must be 0-500kg';
-      }
+      if (weight == null) return 'Enter a valid number';
+      if (weight < 0 || weight > 500) return 'Weight must be 0-500kg';
       return null;
     }
 
     String? validateHeartRate(String? value) {
       if (value == null || value.isEmpty) return null;
-
       final hr = int.tryParse(value);
-      if (hr == null) {
-        return 'Enter a valid whole number';
-      }
-      if (hr < 0 || hr > 300) {
-        return 'Heart rate must be 0-300 bpm';
-      }
+      if (hr == null) return 'Enter a valid whole number';
+      if (hr < 0 || hr > 300) return 'Heart rate must be 0-300 bpm';
       return null;
     }
 
     String? validateBloodPressure(String? value) {
       if (value == null || value.isEmpty) return null;
-
-      final bpPattern = RegExp(r'^\d{2,3}\/\d{2,3}');
-
-      if (!bpPattern.hasMatch(value)) {
-        return 'Format: 120/80';
-      }
+      final bpPattern = RegExp(r'^\d{2,3}\/\d{2,3}$');
+      if (!bpPattern.hasMatch(value)) return 'Format: 120/80';
       return null;
     }
 
-    // Helper method to check if any field has data
     bool hasVitalData() {
       return tempController.text.isNotEmpty ||
           weightController.text.isNotEmpty ||
@@ -825,247 +895,444 @@ class WebAppointmentTile extends StatelessWidget {
           hrController.text.isNotEmpty;
     }
 
-    // Show dialog
-    showDialog(
-      context: Get.context!,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            width: 500,
-            constraints: const BoxConstraints(maxHeight: 700),
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
+    void safeDispose() {
+      try {
+        if (!tempController.hasListeners) tempController.dispose();
+        if (!weightController.hasListeners) weightController.dispose();
+        if (!bpController.hasListeners) bpController.dispose();
+        if (!hrController.hasListeners) hrController.dispose();
+      } catch (e) {
+        print('>>> Error disposing controllers: $e');
+      }
+    }
+
+    // CRITICAL FIX: Use Navigator.of(context).push instead of showDialog
+    // This prevents the TextEditingController disposal error
+    Navigator.of(currentContext)
+        .push(
+      DialogRoute(
+        context: currentContext,
+        builder: (BuildContext dialogContext) {
+          return WillPopScope(
+            onWillPop: () async {
+              // If user has made changes, show confirmation dialog
+              if (hasChanges && hasVitalData()) {
+                final shouldDiscard =
+                    await _showDiscardVitalsDialog(dialogContext);
+                if (shouldDiscard == true) {
+                  isDialogMounted = false;
+                  safeDispose();
+                  return true;
+                }
+                return false; // Don't close if user cancels
+              }
+              // No changes, close normally
+              isDialogMounted = false;
+              safeDispose();
+              return true;
+            },
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: 500,
+                constraints: const BoxConstraints(maxHeight: 700),
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Header
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Colors.red,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Record Vital Signs',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromARGB(255, 81, 115, 153),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () async {
+                                // Check for unsaved changes before closing
+                                if (hasChanges && hasVitalData()) {
+                                  final shouldDiscard =
+                                      await _showDiscardVitalsDialog(
+                                          dialogContext);
+                                  if (shouldDiscard == true) {
+                                    isDialogMounted = false;
+                                    Navigator.of(dialogContext).pop();
+                                    safeDispose();
+                                  }
+                                } else {
+                                  isDialogMounted = false;
+                                  Navigator.of(dialogContext).pop();
+                                  safeDispose();
+                                }
+                              },
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Close',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
+                            color: Colors.blue[50],
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
                           ),
-                          child: const Icon(Icons.favorite,
-                              color: Colors.red, size: 24),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: Colors.blue[700], size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Vitals will be saved when you complete the service.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Record Vital Signs',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color.fromARGB(255, 81, 115, 153),
+                        const SizedBox(height: 20),
+
+                        // Temperature and Weight
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: tempController,
+                                decoration: InputDecoration(
+                                  labelText: 'Temperature (°C)',
+                                  border: const OutlineInputBorder(),
+                                  hintText: '36.0 - 40.0',
+                                  helperText: 'Range: 0-50°C',
+                                  helperStyle: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                validator: validateTemperature,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: weightController,
+                                decoration: InputDecoration(
+                                  labelText: 'Weight (kg)',
+                                  border: const OutlineInputBorder(),
+                                  hintText: '5.0 - 50.0',
+                                  helperText: 'Range: 0-500kg',
+                                  helperStyle: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                validator: validateWeight,
+                              ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Close',
+                        const SizedBox(height: 16),
+
+                        // Blood Pressure and Heart Rate
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: bpController,
+                                decoration: InputDecoration(
+                                  labelText: 'Blood Pressure',
+                                  border: const OutlineInputBorder(),
+                                  hintText: '120/80',
+                                  helperText: 'Format: 120/80',
+                                  helperStyle: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                validator: validateBloodPressure,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: hrController,
+                                decoration: InputDecoration(
+                                  labelText: 'Heart Rate (bpm)',
+                                  border: const OutlineInputBorder(),
+                                  hintText: '60 - 100',
+                                  helperText: 'Range: 0-300 bpm',
+                                  helperStyle: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: validateHeartRate,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Action Buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () async {
+                                // Check for unsaved changes before canceling
+                                if (hasChanges && hasVitalData()) {
+                                  final shouldDiscard =
+                                      await _showDiscardVitalsDialog(
+                                          dialogContext);
+                                  if (shouldDiscard == true) {
+                                    isDialogMounted = false;
+                                    Navigator.of(dialogContext).pop();
+                                    safeDispose();
+                                  }
+                                } else {
+                                  isDialogMounted = false;
+                                  Navigator.of(dialogContext).pop();
+                                  safeDispose();
+                                }
+                              },
+                              child: const Text('Cancel'),
+                            ),
+                            const SizedBox(width: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                // Validate form
+                                if (formKey.currentState?.validate() != true) {
+                                  ScaffoldMessenger.of(dialogContext)
+                                      .showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please fix the errors before recording vitals',
+                                      ),
+                                      backgroundColor: Colors.orange,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Check that at least one field is filled
+                                if (!hasVitalData()) {
+                                  ScaffoldMessenger.of(dialogContext)
+                                      .showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please enter at least one vital sign',
+                                      ),
+                                      backgroundColor: Colors.orange,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Build vitals map
+                                final vitals = <String, dynamic>{};
+
+                                if (tempController.text.isNotEmpty) {
+                                  vitals['temperature'] =
+                                      double.parse(tempController.text);
+                                }
+                                if (weightController.text.isNotEmpty) {
+                                  vitals['weight'] =
+                                      double.parse(weightController.text);
+                                }
+                                if (bpController.text.isNotEmpty) {
+                                  vitals['bloodPressure'] = bpController.text;
+                                }
+                                if (hrController.text.isNotEmpty) {
+                                  vitals['heartRate'] =
+                                      int.parse(hrController.text);
+                                }
+                                vitals['recordedAt'] =
+                                    DateTime.now().toIso8601String();
+
+                                // CRITICAL: Close dialog FIRST
+                                isDialogMounted = false;
+                                Navigator.of(dialogContext).pop();
+
+                                // Dispose controllers immediately after closing
+                                safeDispose();
+
+                                // Store vitals AFTER dialog is closed and controllers disposed
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  try {
+                                    if (Get.isRegistered<
+                                        WebAppointmentController>()) {
+                                      controller.recordVitalsLocally(
+                                        appointment,
+                                        vitals,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    print('>>> Error storing vitals: $e');
+                                  }
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    const Color.fromARGB(255, 81, 115, 153),
+                              ),
+                              child: const Text(
+                                'Record Vitals',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue[200]!),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    )
+        .then((_) {
+      // Ensure controllers are disposed when dialog is dismissed
+      if (isDialogMounted) {
+        isDialogMounted = false;
+        safeDispose();
+      }
+    });
+  }
+
+  Future<bool?> _showDiscardVitalsDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: Colors.orange[700], size: 28),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Discard Vitals?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'You have unsaved vital signs data. If you close now, this information will be lost.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Vitals will only be saved when you complete the service.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[700],
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              color: Colors.blue[700], size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Vitals will be saved when you complete the service.',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.blue[700]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Temperature and Weight
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: tempController,
-                            decoration: InputDecoration(
-                              labelText: 'Temperature (°C)',
-                              border: const OutlineInputBorder(),
-                              hintText: '36.0 - 40.0',
-                              helperText: 'Range: 0-50°C',
-                              helperStyle: TextStyle(
-                                  fontSize: 11, color: Colors.grey[600]),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            validator: validateTemperature,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: weightController,
-                            decoration: InputDecoration(
-                              labelText: 'Weight (kg)',
-                              border: const OutlineInputBorder(),
-                              hintText: '5.0 - 50.0',
-                              helperText: 'Range: 0-500kg',
-                              helperStyle: TextStyle(
-                                  fontSize: 11, color: Colors.grey[600]),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            validator: validateWeight,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Blood Pressure and Heart Rate
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: bpController,
-                            decoration: InputDecoration(
-                              labelText: 'Blood Pressure',
-                              border: const OutlineInputBorder(),
-                              hintText: '120/80',
-                              helperText: 'Format: 120/80',
-                              helperStyle: TextStyle(
-                                  fontSize: 11, color: Colors.grey[600]),
-                            ),
-                            validator: validateBloodPressure,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: hrController,
-                            decoration: InputDecoration(
-                              labelText: 'Heart Rate (bpm)',
-                              border: const OutlineInputBorder(),
-                              hintText: '60 - 100',
-                              helperText: 'Range: 0-300 bpm',
-                              helperStyle: TextStyle(
-                                  fontSize: 11, color: Colors.grey[600]),
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: validateHeartRate,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Action Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Validate form
-                            if (!formKey.currentState!.validate()) {
-                              Get.snackbar(
-                                "Invalid Input",
-                                "Please fix the errors before recording vitals",
-                                backgroundColor: Colors.orange,
-                                colorText: Colors.white,
-                                icon: const Icon(Icons.warning,
-                                    color: Colors.white),
-                              );
-                              return;
-                            }
-
-                            // Check that at least one field is filled
-                            if (!hasVitalData()) {
-                              Get.snackbar(
-                                "Required",
-                                "Please enter at least one vital sign",
-                                backgroundColor: Colors.orange,
-                                colorText: Colors.white,
-                              );
-                              return;
-                            }
-
-                            // Build vitals map
-                            final vitals = <String, dynamic>{};
-
-                            if (tempController.text.isNotEmpty) {
-                              vitals['temperature'] =
-                                  double.parse(tempController.text);
-                            }
-
-                            if (weightController.text.isNotEmpty) {
-                              vitals['weight'] =
-                                  double.parse(weightController.text);
-                            }
-
-                            if (bpController.text.isNotEmpty) {
-                              vitals['bloodPressure'] = bpController.text;
-                            }
-
-                            if (hrController.text.isNotEmpty) {
-                              vitals['heartRate'] =
-                                  int.parse(hrController.text);
-                            }
-
-                            vitals['recordedAt'] =
-                                DateTime.now().toIso8601String();
-
-                            // Store locally
-                            controller.recordVitalsLocally(appointment, vitals);
-
-                            // Close dialog AFTER storing
-                            Navigator.of(dialogContext).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                          ),
-                          child: const Text('Record Vitals',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text(
+                'Keep Editing',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 81, 115, 153),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Text(
+                'Discard Changes',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         );
       },
-    ).then((_) {
-      // Dispose controllers after dialog closes
-      tempController.dispose();
-      weightController.dispose();
-      bpController.dispose();
-      hrController.dispose();
-    });
+    );
   }
 
 // Helper widget to build vital info rows in the discard dialog
@@ -1096,6 +1363,7 @@ class WebAppointmentTile extends StatelessWidget {
   // }
 
   void _showCompleteServiceDialog(WebAppointmentController controller) {
+    // Check if vaccination service FIRST
     if (controller.isVaccinationService(appointment.service)) {
       Get.dialog(
         VaccinationCompletionDialog(appointment: appointment),
@@ -1104,10 +1372,13 @@ class WebAppointmentTile extends StatelessWidget {
       return;
     }
 
+    // Regular service completion dialog
     final diagnosisController = TextEditingController();
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
     final notesController = TextEditingController();
+    final followUpController = TextEditingController();
+    DateTime? nextAppointmentDate;
     bool hasChanges = false;
 
     Get.dialog(
@@ -1115,6 +1386,7 @@ class WebAppointmentTile extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           width: 600,
+          constraints: const BoxConstraints(maxHeight: 700),
           padding: const EdgeInsets.all(24),
           child: StatefulBuilder(
             builder: (context, setState) {
@@ -1130,6 +1402,7 @@ class WebAppointmentTile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header
                       Row(
                         children: [
                           Container(
@@ -1142,11 +1415,11 @@ class WebAppointmentTile extends StatelessWidget {
                                 color: Colors.green, size: 24),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Complete Service',
                                   style: TextStyle(
                                     fontSize: 20,
@@ -1154,10 +1427,10 @@ class WebAppointmentTile extends StatelessWidget {
                                     color: Color.fromARGB(255, 81, 115, 153),
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
-                                  'Fill in the medical information',
-                                  style: TextStyle(
+                                  'Fill in the medical information for ${controller.getPetName(appointment.petId)}',
+                                  style: const TextStyle(
                                       fontSize: 12, color: Colors.grey),
                                 ),
                               ],
@@ -1166,6 +1439,8 @@ class WebAppointmentTile extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
+
+                      // Info banner
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -1191,6 +1466,8 @@ class WebAppointmentTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Diagnosis field (required)
                       TextField(
                         controller: diagnosisController,
                         decoration: const InputDecoration(
@@ -1204,6 +1481,8 @@ class WebAppointmentTile extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 16),
+
+                      // Treatment field (required)
                       TextField(
                         controller: treatmentController,
                         decoration: const InputDecoration(
@@ -1217,11 +1496,14 @@ class WebAppointmentTile extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 16),
+
+                      // Prescription field (optional)
                       TextField(
                         controller: prescriptionController,
                         decoration: const InputDecoration(
                           labelText: 'Prescription (Optional)',
                           border: OutlineInputBorder(),
+                          hintText: 'Enter prescribed medications',
                         ),
                         maxLines: 2,
                         onChanged: (value) {
@@ -1229,11 +1511,68 @@ class WebAppointmentTile extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 16),
+
+                      // Follow-up instructions (optional)
+                      TextField(
+                        controller: followUpController,
+                        decoration: const InputDecoration(
+                          labelText: 'Follow-up Instructions (Optional)',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter any follow-up care instructions',
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) hasChanges = true;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Next appointment date (optional)
+                      InkWell(
+                        onTap: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate:
+                                DateTime.now().add(const Duration(days: 7)),
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              nextAppointmentDate = picked;
+                              hasChanges = true;
+                            });
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Next Appointment Date (Optional)',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today),
+                          ),
+                          child: Text(
+                            nextAppointmentDate != null
+                                ? DateFormat('MMMM dd, yyyy')
+                                    .format(nextAppointmentDate!)
+                                : 'Select date (Optional)',
+                            style: TextStyle(
+                              color: nextAppointmentDate != null
+                                  ? Colors.black87
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Veterinary notes (optional)
                       TextField(
                         controller: notesController,
                         decoration: const InputDecoration(
                           labelText: 'Veterinary Notes (Optional)',
                           border: OutlineInputBorder(),
+                          hintText: 'Additional notes for the medical record',
                         ),
                         maxLines: 3,
                         onChanged: (value) {
@@ -1241,27 +1580,30 @@ class WebAppointmentTile extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 24),
+
+                      // Action buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (hasChanges) {
-                                _showDiscardChangesDialog(context)
-                                    .then((discard) {
-                                  if (discard == true) {
-                                    diagnosisController.dispose();
-                                    treatmentController.dispose();
-                                    prescriptionController.dispose();
-                                    notesController.dispose();
-                                    Get.back();
-                                  }
-                                });
+                                final shouldDiscard =
+                                    await _showDiscardChangesDialog(context);
+                                if (shouldDiscard == true) {
+                                  diagnosisController.dispose();
+                                  treatmentController.dispose();
+                                  prescriptionController.dispose();
+                                  notesController.dispose();
+                                  followUpController.dispose();
+                                  Get.back();
+                                }
                               } else {
                                 diagnosisController.dispose();
                                 treatmentController.dispose();
                                 prescriptionController.dispose();
                                 notesController.dispose();
+                                followUpController.dispose();
                                 Get.back();
                               }
                             },
@@ -1269,45 +1611,67 @@ class WebAppointmentTile extends StatelessWidget {
                           ),
                           const SizedBox(width: 16),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              // Validate required fields
                               if (diagnosisController.text.trim().isEmpty) {
-                                Get.snackbar('Required', 'Enter diagnosis',
-                                    backgroundColor: Colors.orange,
-                                    colorText: Colors.white);
+                                Get.snackbar(
+                                  'Required Field',
+                                  'Please enter a diagnosis',
+                                  backgroundColor: Colors.orange,
+                                  colorText: Colors.white,
+                                );
                                 return;
                               }
                               if (treatmentController.text.trim().isEmpty) {
-                                Get.snackbar('Required', 'Enter treatment',
-                                    backgroundColor: Colors.orange,
-                                    colorText: Colors.white);
+                                Get.snackbar(
+                                  'Required Field',
+                                  'Please enter the treatment provided',
+                                  backgroundColor: Colors.orange,
+                                  colorText: Colors.white,
+                                );
                                 return;
                               }
 
-                              controller.completeServiceWithRecord(
-                                appointment: appointment,
-                                diagnosis: diagnosisController.text.trim(),
-                                treatment: treatmentController.text.trim(),
-                                prescription: prescriptionController.text
-                                        .trim()
-                                        .isNotEmpty
-                                    ? prescriptionController.text.trim()
-                                    : null,
-                                vetNotes: notesController.text.trim().isNotEmpty
-                                    ? notesController.text.trim()
-                                    : null,
-                              );
-
-                              diagnosisController.dispose();
-                              treatmentController.dispose();
-                              prescriptionController.dispose();
-                              notesController.dispose();
+                              // Close dialog FIRST
                               Get.back();
+
+                              // Then call the completion method
+                              try {
+                                await controller.completeServiceWithRecord(
+                                  appointment: appointment,
+                                  diagnosis: diagnosisController.text.trim(),
+                                  treatment: treatmentController.text.trim(),
+                                  prescription: prescriptionController.text
+                                          .trim()
+                                          .isNotEmpty
+                                      ? prescriptionController.text.trim()
+                                      : null,
+                                  vetNotes:
+                                      notesController.text.trim().isNotEmpty
+                                          ? notesController.text.trim()
+                                          : null,
+                                  followUpInstructions:
+                                      followUpController.text.trim().isNotEmpty
+                                          ? followUpController.text.trim()
+                                          : null,
+                                  nextAppointmentDate: nextAppointmentDate,
+                                );
+                              } finally {
+                                // Dispose controllers after completion
+                                diagnosisController.dispose();
+                                treatmentController.dispose();
+                                prescriptionController.dispose();
+                                notesController.dispose();
+                                followUpController.dispose();
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                             ),
-                            child: const Text('Complete Service',
-                                style: TextStyle(color: Colors.white)),
+                            child: const Text(
+                              'Complete Service',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
@@ -1319,6 +1683,7 @@ class WebAppointmentTile extends StatelessWidget {
           ),
         ),
       ),
+      barrierDismissible: false,
     );
   }
 

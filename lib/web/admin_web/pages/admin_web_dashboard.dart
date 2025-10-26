@@ -798,15 +798,97 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         children: [
           Row(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: _getStatusColor(appointment.status),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: const Icon(Icons.pets, color: Colors.white, size: 24),
-              ),
+              // 🔧 FIXED: Use Obx to observe cached pet images (no FutureBuilder)
+              Obx(() {
+                final profilePictureUrl =
+                    controller.petProfilePictures[appointment.petId];
+                final isLoading =
+                    controller.petImageLoadingStates[appointment.petId] ??
+                        false;
+
+                if (isLoading) {
+                  // Show loading indicator
+                  return Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      color: Colors.grey[200],
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _getStatusColor(appointment.status),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+                  // Show pet profile picture
+                  return Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: _getStatusColor(appointment.status),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.3),
+                          spreadRadius: 1,
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25),
+                      child: Image.network(
+                        profilePictureUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          print(
+                              '>>> Dashboard: Error loading pet image: $error');
+                          // Fallback to gradient icon if image fails
+                          return _buildPetAvatarFallback(appointment.status);
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          // Show loading progress
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes !=
+                                        null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  _getStatusColor(appointment.status),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                }
+
+                // Fallback to gradient icon if no profile picture
+                return _buildPetAvatarFallback(appointment.status);
+              }),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -896,6 +978,43 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         ],
       ),
     );
+  }
+
+  // 🆕 ADD THIS HELPER METHOD for fallback avatar
+  Widget _buildPetAvatarFallback(String status) {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(25),
+        gradient: LinearGradient(
+          colors: _getStatusGradient(status),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Icon(Icons.pets, color: Colors.white, size: 24),
+    );
+  }
+
+// 🆕 ADD THIS HELPER METHOD for gradient colors
+  List<Color> _getStatusGradient(String status) {
+    switch (status) {
+      case 'pending':
+        return [Colors.orange, Colors.orange.shade300];
+      case 'accepted':
+        return [Colors.blue, Colors.blue.shade300];
+      case 'in_progress':
+        return [Colors.purple, Colors.purple.shade300];
+      case 'completed':
+        return [Colors.green, Colors.green.shade300];
+      case 'cancelled':
+        return [Colors.grey, Colors.grey.shade300];
+      case 'declined':
+        return [Colors.red, Colors.red.shade300];
+      default:
+        return [Colors.grey, Colors.grey.shade300];
+    }
   }
 
   Widget _buildRecentMessages(
@@ -1198,6 +1317,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       ),
       child: Row(
         children: [
+          // Date container
           Container(
             width: 60,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1226,6 +1346,66 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             ),
           ),
           const SizedBox(width: 12),
+          // 🔧 FIXED: Use Obx instead of FutureBuilder
+          Obx(() {
+            final profilePictureUrl =
+                controller.petProfilePictures[appointment.petId];
+
+            if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+              return Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.green,
+                    width: 2,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.network(
+                    profilePictureUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.pets,
+                          color: Colors.green,
+                          size: 20,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+
+            // Fallback icon
+            return Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.green,
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.pets,
+                color: Colors.green,
+                size: 20,
+              ),
+            );
+          }),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
