@@ -3,16 +3,23 @@ import 'package:capstone_app/mobile/user/components/general_components/app_bar.d
 import 'package:capstone_app/mobile/user/components/general_components/drawer.dart';
 import 'package:capstone_app/mobile/user/pages/appointment_page.dart';
 import 'package:capstone_app/mobile/user/pages/dashboard_page.dart';
-//import 'package:capstone_app/mobile/user/pages/maps.dart';
 import 'package:capstone_app/mobile/user/pages/messages_page.dart';
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
 import 'package:capstone_app/mobile/user/pages/pets_page.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/pages/user_home/user_home_controller.dart';
 import 'package:get/get.dart';
 
 class UserHomePage extends StatefulWidget {
-  const UserHomePage({super.key});
+  final int initialIndex;
+  final ValueChanged<int>? onItemSelected;
+  
+  const UserHomePage({
+    super.key,
+    this.initialIndex = 0,
+    this.onItemSelected,
+  });
 
   @override
   State<UserHomePage> createState() => _UserHomePageState();
@@ -22,7 +29,7 @@ class _UserHomePageState extends State<UserHomePage> {
   final UserHomeController controller =
       UserHomeController(Get.find<AuthRepository>());
 
-  int _currentIndex = 0;
+  late int _currentIndex;
 
   final List<Widget> _pages = const [
     DashboardPage(),
@@ -32,64 +39,89 @@ class _UserHomePageState extends State<UserHomePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: const MyAppBar(),
-      drawer: const MyDrawer(),
-      body: Stack(
-        children: [
-          // Page content
-          _pages[_currentIndex],
-          // Bottom navigation overlay
-          Stack(
-            alignment: Alignment.bottomCenter,
+    return GetX<WebUserHomeController>(
+      builder: (webController) {
+        // Determine if we should show the navigation bar
+        // Hide it when on dashboard (index 0) AND map view is active
+        final bool showNavBar = !(_currentIndex == 0 && webController.showMapView.value);
+
+        return Scaffold(
+          resizeToAvoidBottomInset: false,
+          appBar: const MyAppBar(),
+          drawer: const MyDrawer(),
+          body: Stack(
             children: [
-              Positioned(
-                bottom: 24, // floating above bottom
-                left: 24,
-                right: 24,
-                child: CustomPaint(
-                  painter: NotchedNavbarPainter(),
-                  child: SizedBox(
-                    height: 70,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _navButton(const Icon(Icons.home_rounded), 0),
-                        _navButton(const Icon(Icons.calendar_month_rounded), 1),
-                        const SizedBox(width: 30,),
-                        _navButton(const Icon(Icons.message_rounded), 2),
-                        _navButton(const Icon(Icons.pets_rounded), 3),
-                      ]
+              // Page content
+              _pages[_currentIndex],
+              // Bottom navigation overlay
+              Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // Nav bar - conditionally shown
+                  if (showNavBar)
+                    Positioned(
+                      bottom: 24,
+                      left: 24,
+                      right: 24,
+                      child: CustomPaint(
+                        painter: NotchedNavbarPainter(),
+                        child: SizedBox(
+                          height: 70,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _navButton(const Icon(Icons.home_rounded), 0),
+                              _navButton(const Icon(Icons.calendar_month_rounded), 1),
+                              const SizedBox(width: 30),
+                              _navButton(const Icon(Icons.message_rounded), 2),
+                              _navButton(const Icon(Icons.pets_rounded), 3),
+                            ]
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  // Center button - always shown
+                  Positioned(
+                    bottom: showNavBar ? (24 + 60 - 28) : 24 + 60 - 28,
+                    child: FloatingActionButton(  
+                      backgroundColor: Colors.white,
+                      heroTag: "userHomeLoc",
+                      shape: const CircleBorder(),
+                      onPressed: () {
+                        // If on dashboard (index 0), toggle map view
+                        if (_currentIndex == 0) {
+                          webController.toggleMapView();
+                        } else {
+                          // Otherwise navigate to standalone Pawmap
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const Pawmap(),
+                            )
+                          );
+                        }
+                      },
+                      child: Icon(
+                        (_currentIndex == 0 && webController.showMapView.value)
+                            ? Icons.list_rounded
+                            : Icons.location_on_rounded,
+                        color: Colors.black,
+                      ),
+                    ),
+                  )
+                ],
               ),
-              Positioned(
-                bottom: 24 + 60 - 28,
-                child: FloatingActionButton(  
-                  backgroundColor: Colors.white,
-                  heroTag: "userHomeLoc",
-                  shape: const CircleBorder(),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Pawmap(),
-                      )
-                    );
-                  },
-                  child: const Icon(
-                    Icons.location_on_rounded,
-                    color: Colors.black,
-                  ),
-                ),
-              )
             ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
@@ -99,6 +131,7 @@ class _UserHomePageState extends State<UserHomePage> {
         setState(() {
           _currentIndex = index;
         });
+        widget.onItemSelected?.call(index);
       },
       icon: icon,
       iconSize: 30,
@@ -114,14 +147,12 @@ class NotchedNavbarPainter extends CustomPainter {
       ..color = Colors.grey.shade100
       ..style = PaintingStyle.fill;
 
-    // Main rounded rectangle background
     final Path path = Path()
       ..addRRect(RRect.fromRectAndRadius(
         Rect.fromLTWH(0, 0, size.width, size.height),
         const Radius.circular(35),
       ));
 
-    // Circular notch in the center
     const double notchRadius = 35;
     final double notchCenter = size.width / 2;
     const double notchTop = -25;
@@ -132,14 +163,12 @@ class NotchedNavbarPainter extends CustomPainter {
         radius: notchRadius,
       ));
 
-    // Cut the notch out of the rectangle
     final Path finalPath = Path.combine(
       PathOperation.difference,
       path,
       notchPath,
     );
 
-    // Draw the plain navbar
     canvas.drawPath(finalPath, paint);
   }
 

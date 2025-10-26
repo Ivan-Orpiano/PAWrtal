@@ -4,6 +4,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_grid_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart'; // ADD THIS
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
@@ -22,7 +23,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   Map<String, ClinicSettings?> clinicSettingsMap = {};
   bool isLoading = true;
   String? error;
-  bool _showMap = false;
   String searchQuery = '';
   String selectedFilter = 'All';
 
@@ -49,7 +49,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     
     final authRepository = Get.find<AuthRepository>();
 
-    // Listen to clinic changes (create, update, delete)
     _clinicSubscription = authRepository
         .subscribeToClinicChanges()
         .listen((RealtimeMessage event) {
@@ -88,7 +87,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       print('❌ Clinic subscription error: $error');
     });
 
-    // Listen to settings changes (affects availability and operating hours)
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
@@ -123,11 +121,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
                   color: color.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 22,
-                ),
+                child: Icon(icon, color: color, size: 22),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -184,7 +178,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
 
   Future<void> _fetchClinicsData() async {
     try {
-      // Don't show loading spinner if we're just refreshing
       if (allClinics.isEmpty) {
         setState(() {
           isLoading = true;
@@ -193,8 +186,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       }
 
       final authRepository = Get.find<AuthRepository>();
-
-      // Fetch all clinics with their settings using the repository method
       final clinicsWithSettings = await authRepository.getClinicsWithSettings();
 
       final clinics = <Clinic>[];
@@ -231,7 +222,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   List<Clinic> _applyFilters(List<Clinic> clinics) {
     var filtered = clinics;
 
-    // Apply search filter
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((clinic) {
         final settings = clinicSettingsMap[clinic.documentId ?? ''];
@@ -245,7 +235,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       }).toList();
     }
 
-    // Apply status filter
     switch (selectedFilter) {
       case 'Open':
         filtered = filtered.where((clinic) {
@@ -267,17 +256,11 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         }).toList();
         break;
       case 'Nearby':
-        // For now, just return all clinics
-        break;
       case 'Popular':
-        // For now, just return all clinics
-        break;
       case 'Recommended':
-        // For now, just return all clinics
         break;
     }
 
-    // Sort by status (open clinics first) and then by name
     filtered.sort((a, b) {
       final aSettings = clinicSettingsMap[a.documentId ?? ''];
       final bSettings = clinicSettingsMap[b.documentId ?? ''];
@@ -285,11 +268,9 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       final aIsOpen = aSettings?.isOpen ?? true;
       final bIsOpen = bSettings?.isOpen ?? true;
 
-      // Open clinics first
       if (aIsOpen && !bIsOpen) return -1;
       if (!aIsOpen && bIsOpen) return 1;
 
-      // If both have same status, sort by name
       return a.clinicName.compareTo(b.clinicName);
     });
 
@@ -413,7 +394,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           return settings?.location != null;
         }).length;
       case 'Popular':
-        return 0;
       case 'Recommended':
         return 0;
       default:
@@ -537,6 +517,9 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // MODIFIED: Get controller instance
+    final controller = Get.find<WebUserHomeController>();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: RefreshIndicator(
@@ -555,7 +538,10 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
             ),
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: _showMap ? _buildMapView() : _buildClinicList(),
+              // MODIFIED: Use Obx to listen to shared state
+              child: Obx(() => controller.showMapView.value 
+                  ? _buildMapView() 
+                  : _buildClinicList()),
             ),
           ],
         ),
@@ -566,21 +552,21 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         child: SizedBox(
           height: 50,
           width: 120,
-          child: FloatingActionButton.extended(
+          // MODIFIED: Use Obx for button state
+          child: Obx(() => FloatingActionButton.extended(
             backgroundColor: Colors.white,
-            label: _showMap
+            label: controller.showMapView.value
                 ? const Text("Show List", style: TextStyle(color: Colors.black))
                 : const Text("Show Maps",
                     style: TextStyle(color: Colors.black)),
-            icon: _showMap
+            icon: controller.showMapView.value
                 ? const Icon(Icons.list_rounded, color: Colors.black)
                 : const Icon(Icons.map_rounded, color: Colors.black),
             onPressed: () {
-              setState(() {
-                _showMap = !_showMap;
-              });
+              // MODIFIED: Use controller to toggle
+              controller.toggleMapView();
             },
-          ),
+          )),
         ),
       ),
     );
