@@ -123,17 +123,85 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
     );
   }
 
-  void _handleWebPlatform() {
-    final url = _argosService.generateVerificationUrl(
-      userId: widget.userId,
-      email: widget.email,
-    );
-    
-    _openInBrowser(url);
+  // FIXED: Web platform now creates verification record
+  Future<void> _handleWebPlatform() async {
+    try {
+      print('>>> ============================================');
+      print('>>> WEB PLATFORM VERIFICATION INITIALIZATION');
+      print('>>> User ID: ${widget.userId}');
+      print('>>> Email: ${widget.email}');
+      print('>>> ============================================');
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showPendingScreen();
-    });
+      // Check for existing verification
+      final existingVerification =
+          await widget.authRepository.getIdVerificationByUserId(widget.userId);
+
+      if (existingVerification != null) {
+        print('>>> Found existing verification: ${existingVerification.status}');
+        setState(() {
+          _currentVerification = existingVerification;
+          _isLoading = false;
+        });
+
+        if (existingVerification.isVerified) {
+          _showSuccessScreen();
+          return;
+        }
+
+        if (existingVerification.isRejected) {
+          _showRejectedScreen();
+          return;
+        }
+
+        if (existingVerification.isPending) {
+          _showPendingScreen();
+          return;
+        }
+      }
+
+      // CRITICAL FIX: Create verification record BEFORE opening browser
+      print('>>> Creating new verification record...');
+      final newVerification = IdVerification(
+        userId: widget.userId,
+        email: widget.email,
+        status: 'pending',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      final doc = await widget.authRepository.createIdVerification(newVerification);
+      newVerification.documentId = doc.$id;
+      
+      print('>>> Verification record created: ${doc.$id}');
+
+      setState(() {
+        _currentVerification = newVerification;
+        _isLoading = false;
+      });
+
+      // Generate and open verification URL
+      final url = _argosService.generateVerificationUrl(
+        userId: widget.userId,
+        email: widget.email,
+      );
+      
+      print('>>> Opening verification in browser: $url');
+      _openInBrowser(url);
+
+      // Show pending screen with instructions
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showBrowserOpenedScreen();
+      });
+
+      print('>>> ============================================');
+      print('>>> WEB VERIFICATION INITIALIZED SUCCESSFULLY');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR INITIALIZING WEB VERIFICATION: $e');
+      print('>>> ============================================');
+      _showErrorScreen(e.toString());
+    }
   }
 
   Future<void> _openInBrowser(String url) async {
@@ -146,6 +214,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   Future<void> _initializeVerification() async {
     try {
       print('>>> Initializing ID verification...');
+
+      await widget.authRepository.cleanupStuckVerifications(widget.userId);
 
       final existingVerification =
           await widget.authRepository.getIdVerificationByUserId(widget.userId);
@@ -345,6 +415,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   }
 
   void _showPendingScreen() {
+    widget.authRepository.cleanupStuckVerifications(widget.userId);
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => _ResponsiveVerificationScreen(
