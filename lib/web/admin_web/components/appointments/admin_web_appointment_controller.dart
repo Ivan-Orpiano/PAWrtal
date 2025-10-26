@@ -51,6 +51,8 @@ class WebAppointmentController extends GetxController {
   // CRITICAL: Store pending vitals locally (in memory, not in appointment)
   var pendingVitals = <String, Map<String, dynamic>>{}.obs;
 
+  var petProfilePictures = <String, String?>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -283,56 +285,69 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
-      if (!petsCache.containsKey(appointment.petId) &&
-          appointment.petId.isNotEmpty) {
+      // CRITICAL FIX: Handle both old (pet name) and new (pet ID) format
+      final petIdentifier = appointment.petId;
+
+      if (!petsCache.containsKey(petIdentifier) && petIdentifier.isNotEmpty) {
         try {
           Pet? fetchedPet;
 
-          // STRATEGY 1: Try fetching by ID first (new way - UUID format)
-          if (_isValidDocumentId(appointment.petId)) {
-            print('>>> Trying to fetch pet by ID: ${appointment.petId}');
-            final petDoc = await authRepository.getPetById(appointment.petId);
-            if (petDoc != null) {
-              fetchedPet = Pet.fromMap(petDoc.data);
-              fetchedPet.documentId = petDoc.$id;
-              print('>>> ✓ Pet found by ID: ${fetchedPet.name}');
+          print('>>> Fetching pet data for identifier: $petIdentifier');
+
+          // STRATEGY 1: Try to fetch by actual pet ID first
+          try {
+            final petById = await authRepository.getPetById(petIdentifier);
+
+            if (petById != null) {
+              fetchedPet = Pet.fromMap(petById.data);
+              fetchedPet.documentId = petById.$id;
+              print(
+                  '>>> ✅ Pet found by ID: ${fetchedPet.name} (ID: ${fetchedPet.petId})');
             }
+          } catch (e) {
+            print('>>> ℹ️ Not a valid pet ID, trying by name...');
           }
 
-          // STRATEGY 2: If not found, try fetching by name (old way - backward compatibility)
+          // STRATEGY 2: If not found by ID, try by name (backward compatibility)
           if (fetchedPet == null) {
-            print('>>> Trying to fetch pet by name: ${appointment.petId}');
-            final petByName =
-                await authRepository.getPetByName(appointment.petId);
-            if (petByName != null) {
-              fetchedPet = Pet.fromMap(petByName.data);
-              fetchedPet.documentId = petByName.$id;
-              print('>>> ✓ Pet found by name: ${fetchedPet.name}');
+            try {
+              final petByName =
+                  await authRepository.getPetByName(petIdentifier);
+
+              if (petByName != null) {
+                fetchedPet = Pet.fromMap(petByName.data);
+                fetchedPet.documentId = petByName.$id;
+                print(
+                    '>>> ✅ Pet found by name: ${fetchedPet.name} (ID: ${fetchedPet.petId})');
+              }
+            } catch (e) {
+              print('>>> ⚠️ Pet not found by name either');
             }
           }
 
-          // If found by either method, cache it
-          if (fetchedPet != null) {
-            petsCache[appointment.petId] = fetchedPet;
-            print('>>> Pet cached: ${fetchedPet.name}');
-          } else {
-            // FALLBACK: Create placeholder with "Unknown Pet" as name
-            print('>>> ⚠️ Pet not found, creating placeholder');
-            petsCache[appointment.petId] = Pet(
-              petId: appointment.petId,
+          // STRATEGY 3: If still not found, create a fallback pet object
+          if (fetchedPet == null) {
+            print('>>> ℹ️ Creating fallback pet with name: $petIdentifier');
+            fetchedPet = Pet(
+              petId: petIdentifier,
               userId: appointment.userId,
-              name: 'Unknown Pet', // Simple fallback name
+              name: petIdentifier, // Use identifier as display name
               type: 'Unknown',
               breed: 'Unknown',
             );
           }
+
+          // Cache the pet
+          petsCache[petIdentifier] = fetchedPet;
+          print(
+              '>>> Pet cached with key: $petIdentifier -> ${fetchedPet.name}');
         } catch (e) {
-          print('>>> ✗ Error fetching pet ${appointment.petId}: $e');
-          // Create fallback pet data on error
-          petsCache[appointment.petId] = Pet(
-            petId: appointment.petId,
+          print('>>> ✗ Error fetching pet $petIdentifier: $e');
+          // Create fallback pet
+          petsCache[petIdentifier] = Pet(
+            petId: petIdentifier,
             userId: appointment.userId,
-            name: 'Unknown Pet', // Simple fallback name
+            name: petIdentifier,
             type: 'Unknown',
             breed: 'Unknown',
           );
@@ -344,24 +359,14 @@ class WebAppointmentController extends GetxController {
         await _fetchOwnerData(appointment.userId);
       }
     }
-  }
 
-  bool _isValidDocumentId(String id) {
-    if (id.isEmpty || id.length > 36) return false;
-
-    // Check if it looks like a UUID (contains hyphens and is right length)
-    // UUIDs are typically 36 characters with hyphens: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    if (id.length >= 32 && id.contains('-')) {
-      return true;
+    print('>>> ============================================');
+    print('>>> Pets cache summary:');
+    print('>>> Total cached pets: ${petsCache.length}');
+    for (var entry in petsCache.entries) {
+      print('>>>   ${entry.key} -> ${entry.value.name}');
     }
-
-    // Check if it's a valid Appwrite document ID format
-    final validIdRegex = RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$');
-    if (validIdRegex.hasMatch(id) && id.length >= 20) {
-      return true;
-    }
-
-    return false;
+    print('>>> ============================================');
   }
 
   void updateFilteredAppointments() {
@@ -439,27 +444,52 @@ class WebAppointmentController extends GetxController {
   }
 
   String getPetName(String petId) {
+    // Check cache first
     final pet = petsCache[petId];
-    if (pet != null && pet.name.isNotEmpty && pet.name != 'Unknown Pet') {
+
+    if (pet != null && pet.name.isNotEmpty) {
       return pet.name;
     }
 
-    // If not in cache, trigger fetch and show loading
+    // If not in cache yet, trigger fetch and return identifier as temporary name
     if (!petsCache.containsKey(petId)) {
+      // Trigger background fetch (don't wait for it)
       _fetchRelatedData();
-      return 'Loading...';
     }
 
-    // Fallback: just show "Unknown Pet" for any ID we can't resolve
-    return 'Unknown Pet';
+    // Return the petId itself as display name while loading
+    // (This handles both old format where petId=name, and new format during loading)
+    return petId.isEmpty ? 'Unknown Pet' : petId;
   }
 
   String getPetBreed(String petId) {
-    return petsCache[petId]?.breed ?? 'Not Available';
+    final pet = petsCache[petId];
+
+    if (pet != null) {
+      return pet.breed.isNotEmpty ? pet.breed : 'Not Available';
+    }
+
+    // Trigger fetch if not cached
+    if (!petsCache.containsKey(petId)) {
+      _fetchRelatedData();
+    }
+
+    return 'Loading...';
   }
 
   String getPetType(String petId) {
-    return petsCache[petId]?.type ?? 'Not Available';
+    final pet = petsCache[petId];
+
+    if (pet != null) {
+      return pet.type.isNotEmpty ? pet.type : 'Not Available';
+    }
+
+    // Trigger fetch if not cached
+    if (!petsCache.containsKey(petId)) {
+      _fetchRelatedData();
+    }
+
+    return 'Loading...';
   }
 
   Pet? getPetForAppointment(String petId) => petsCache[petId];
@@ -1824,5 +1854,74 @@ class WebAppointmentController extends GetxController {
   bool shouldShowVitalsButton(String serviceName) {
     // Only medical services need vitals
     return isMedicalService(serviceName);
+  }
+
+  /// Debug method to verify pet fetching
+  Future<void> debugPetFetching() async {
+    print('>>> ============================================');
+    print('>>> DEBUGGING PET FETCHING');
+    print('>>> ============================================');
+
+    for (var appointment in appointments.take(5)) {
+      print('>>> Appointment: ${appointment.documentId}');
+      print('>>>   petId field: ${appointment.petId}');
+      print(
+          '>>>   Cached pet: ${petsCache[appointment.petId]?.name ?? 'Not cached'}');
+
+      // Try to fetch directly
+      try {
+        final petDoc = await authRepository.getPetById(appointment.petId);
+        if (petDoc != null) {
+          print('>>>   ✅ Direct fetch succeeded: ${petDoc.data['name']}');
+        } else {
+          print('>>>   ❌ Direct fetch returned null');
+        }
+      } catch (e) {
+        print('>>>   ❌ Direct fetch error: $e');
+      }
+
+      print('>>> ---');
+    }
+
+    print('>>> ============================================');
+  }
+
+  /// Get pet profile picture URL
+  Future<String?> getPetProfilePictureUrl(String petId) async {
+    // Check cache first
+    if (petProfilePictures.containsKey(petId)) {
+      return petProfilePictures[petId];
+    }
+
+    try {
+      print('>>> Fetching profile picture for pet: $petId');
+
+      // Fetch pet document
+      final petDoc = await authRepository.getPetById(petId);
+
+      if (petDoc != null) {
+        final imageUrl = petDoc.data['image'] as String?;
+
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          // Cache the URL
+          petProfilePictures[petId] = imageUrl;
+          print('>>> Pet profile picture cached: $petId');
+          return imageUrl;
+        }
+      }
+
+      // No image found, cache null
+      petProfilePictures[petId] = null;
+      return null;
+    } catch (e) {
+      print('>>> Error fetching pet profile picture: $e');
+      petProfilePictures[petId] = null;
+      return null;
+    }
+  }
+
+  /// Clear pet profile pictures cache
+  void clearPetProfilePicturesCache() {
+    petProfilePictures.clear();
   }
 }

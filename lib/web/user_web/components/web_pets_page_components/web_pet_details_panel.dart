@@ -1,19 +1,15 @@
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'dart:math' as math;
 
-enum CardView {
-  front,
-  back,
-  medicalHistory,
-  vaccinationHistory,
-  medicalAppointmentsHistory
-}
+enum CardView { front, back, vaccinationHistory, medicalAppointmentsHistory }
 
 class WebPetDetailsPanel extends StatefulWidget {
   final Pet pet;
@@ -40,7 +36,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   bool _isGoingForward = true;
 
   // Selected record for detail view
-  MedicalRecord? _selectedMedicalRecord;
+
   Vaccination? _selectedVaccination;
   Map<String, dynamic>? _selectedMedicalAppointment;
 
@@ -56,14 +52,29 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     );
 
     // Fetch histories when panel opens
-    _fetchHistories();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchHistories();
+    });
+  }
+
+  @override
+  void didUpdateWidget(WebPetDetailsPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refetch if pet changed
+    if (oldWidget.pet.petId != widget.pet.petId) {
+      _fetchHistories();
+    }
   }
 
   void _fetchHistories() {
     final controller = Get.find<WebPetsController>();
-    controller.fetchPetMedicalHistory(widget.pet.petId);
+    print('>>> Fetching histories for pet: ${widget.pet.petId}');
+
+    // Fetch all three: vaccinations, medical appointments, and medical records
     controller.fetchPetVaccinationHistory(widget.pet.petId);
     controller.fetchPetMedicalAppointmentsAllClinics(widget.pet.petId);
+    controller.fetchPetMedicalRecordsForAppointments(
+        widget.pet.petId); // ✅ ADDED THIS
   }
 
   @override
@@ -78,8 +89,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         return 0;
       case CardView.back:
         return 1;
-      case CardView.medicalHistory:
       case CardView.vaccinationHistory:
+        return 2;
+
       case CardView.medicalAppointmentsHistory:
         return 2;
     }
@@ -91,9 +103,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       _isGoingForward = _getViewLevel(newView) > _getViewLevel(_currentView);
       _currentView = newView;
       // Clear selections when changing views
-      _selectedMedicalRecord = null;
       _selectedVaccination = null;
       _selectedMedicalAppointment = null;
+      // REMOVED: _selectedMedicalRecord = null;
     });
     _controller.forward(from: 0);
   }
@@ -178,8 +190,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         return _buildFrontSide();
       case CardView.back:
         return _buildBackSide();
-      case CardView.medicalHistory:
-        return _buildMedicalHistoryView();
       case CardView.vaccinationHistory:
         return _buildVaccinationHistoryView();
       case CardView.medicalAppointmentsHistory:
@@ -193,8 +203,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         return _buildFrontSide();
       case CardView.back:
         return _buildBackSide();
-      case CardView.medicalHistory:
-        return _buildMedicalHistoryView();
       case CardView.vaccinationHistory:
         return _buildVaccinationHistoryView();
       case CardView.medicalAppointmentsHistory:
@@ -402,31 +410,20 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               ),
             ),
 
-            // Back side content
+            // Back side content - REMOVED Medical Records section
             Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Medical Appointments History section (NEW - HIGHLIGHTED)
+                  // Medical Appointments History section (PRIMARY)
                   _buildHistoryButton(
                     'Medical Appointments History',
-                    'View all medical appointments across clinics',
+                    'View all medical appointments with records',
                     Icons.local_hospital_outlined,
                     () => _flipToView(CardView.medicalAppointmentsHistory),
                     _getMedicalAppointmentsCount(),
                     isPrimary: true,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Medical History section
-                  _buildHistoryButton(
-                    'Medical Records',
-                    'View complete medical records',
-                    Icons.medical_services_outlined,
-                    () => _flipToView(CardView.medicalHistory),
-                    _getMedicalRecordCount(),
                   ),
 
                   const SizedBox(height: 16),
@@ -446,11 +443,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         ),
       ),
     );
-  }
-
-  int _getMedicalRecordCount() {
-    final controller = Get.find<WebPetsController>();
-    return controller.medicalRecords.length;
   }
 
   int _getVaccinationCount() {
@@ -610,12 +602,70 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     final dateTime = DateTime.parse(appointment['dateTime']);
     final clinicName = appointment['clinicName'] ?? 'Unknown Clinic';
     final service = appointment['service'] ?? 'Medical Service';
+    final clinicId = appointment['clinicId']; // Get clinicId
+
+    final controller = Get.find<WebPetsController>();
+    final appointmentId = appointment['\$id'];
+    final petId = appointment['petId'];
+
+    print('>>> ============================================');
+    print('>>> Checking records for appointment card');
+    print('>>> Appointment ID: $appointmentId');
+    print('>>> Clinic ID: $clinicId');
+
+    // Check medical records by appointmentId
+    bool hasMedicalRecord = false;
+    MedicalRecord? matchedRecord;
+
+    for (var record in controller.medicalRecords) {
+      if (record.appointmentId == appointmentId) {
+        hasMedicalRecord = true;
+        matchedRecord = record;
+        print('>>> ✅ Medical record found!');
+        break;
+      }
+    }
+
+    if (!hasMedicalRecord) {
+      print('>>> Trying fuzzy match...');
+      for (var record in controller.medicalRecords) {
+        final petMatches = record.petId == petId;
+        final dateMatches = record.visitDate.year == dateTime.year &&
+            record.visitDate.month == dateTime.month &&
+            record.visitDate.day == dateTime.day;
+        final serviceMatches =
+            record.service.toLowerCase().contains(service.toLowerCase()) ||
+                service.toLowerCase().contains(record.service.toLowerCase());
+
+        if (petMatches && dateMatches && serviceMatches) {
+          hasMedicalRecord = true;
+          matchedRecord = record;
+          print('>>> ✅ Fuzzy match found!');
+          break;
+        }
+      }
+    }
+
+    // Check vaccination records
+    final hasVaccinationRecord = controller.vaccinations.any((vaccination) {
+      final isSameDay = vaccination.dateGiven.year == dateTime.year &&
+          vaccination.dateGiven.month == dateTime.month &&
+          vaccination.dateGiven.day == dateTime.day;
+      final isVaccineService = service.toLowerCase().contains('vaccin') ||
+          service.toLowerCase().contains('immuniz');
+      return isSameDay && isVaccineService;
+    });
+
+    final hasAnyRecord = hasMedicalRecord || hasVaccinationRecord;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: hasAnyRecord
+            ? BorderSide.none
+            : BorderSide(color: Colors.orange[300]!, width: 2),
       ),
       child: InkWell(
         onTap: () {
@@ -628,30 +678,55 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Icon with gradient background
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF667eea).withOpacity(0.3),
-                      spreadRadius: 1,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.local_hospital,
-                  color: Colors.white,
-                  size: 24,
-                ),
+              // 🆕 CLINIC PROFILE PICTURE (replaces icon with gradient)
+              FutureBuilder<String?>(
+                future: _getClinicProfilePictureId(clinicId),
+                builder: (context, snapshot) {
+                  final profilePictureId = snapshot.data;
+
+                  if (profilePictureId != null && profilePictureId.isNotEmpty) {
+                    // Show clinic profile picture
+                    return Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (hasAnyRecord
+                                    ? const Color(0xFF667eea)
+                                    : Colors.orange[400]!)
+                                .withOpacity(0.3),
+                            spreadRadius: 1,
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          _getClinicProfilePictureUrl(profilePictureId),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to icon if image fails to load
+                            return _buildClinicIconFallback(
+                                hasAnyRecord, hasVaccinationRecord);
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return _buildClinicIconFallback(
+                                hasAnyRecord, hasVaccinationRecord);
+                          },
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Fallback to icon if no profile picture
+                  return _buildClinicIconFallback(
+                      hasAnyRecord, hasVaccinationRecord);
+                },
               ),
 
               const SizedBox(width: 16),
@@ -661,14 +736,111 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Clinic Name (Bold)
-                    Text(
-                      clinicName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
+                    // Clinic Name (Bold) and Badge
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            clinicName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                        ),
+                        // Record type indicator
+                        if (hasVaccinationRecord)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.purple[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.vaccines,
+                                  size: 12,
+                                  color: Colors.purple[700],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Vaccine',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (hasMedicalRecord)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 12,
+                                  color: Colors.green[700],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Record',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.warning_outlined,
+                                  size: 12,
+                                  color: Colors.orange[700],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'No Record',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
 
@@ -730,12 +902,208 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     );
   }
 
-  // NEW: Build Medical Appointment Details
+// 🆕 Helper method to build fallback icon
+  Widget _buildClinicIconFallback(
+      bool hasAnyRecord, bool hasVaccinationRecord) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: hasAnyRecord
+              ? [const Color(0xFF667eea), const Color(0xFF764ba2)]
+              : [Colors.orange[400]!, Colors.orange[300]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color:
+                (hasAnyRecord ? const Color(0xFF667eea) : Colors.orange[400]!)
+                    .withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        hasAnyRecord
+            ? (hasVaccinationRecord ? Icons.vaccines : Icons.local_hospital)
+            : Icons.local_hospital_outlined,
+        color: Colors.white,
+        size: 24,
+      ),
+    );
+  }
+
+// 🆕 Helper method to get clinic profile picture ID
+  Future<String?> _getClinicProfilePictureId(String clinicId) async {
+    try {
+      final authRepository = Get.find<AuthRepository>();
+      final clinicDoc = await authRepository.getClinicById(clinicId);
+
+      if (clinicDoc != null) {
+        return clinicDoc.data['profilePictureId'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('>>> Error fetching clinic profile picture ID: $e');
+      return null;
+    }
+  }
+
+// 🆕 Helper method to get clinic profile picture URL
+  String _getClinicProfilePictureUrl(String profilePictureId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
+  }
+
   Widget _buildMedicalAppointmentDetails(Map<String, dynamic> appointment) {
     final dateTime = DateTime.parse(appointment['dateTime']);
     final completedAt = appointment['serviceCompletedAt'] != null
         ? DateTime.parse(appointment['serviceCompletedAt'])
         : null;
+
+    final controller = Get.find<WebPetsController>();
+    final appointmentId = appointment['\$id'];
+    final service = appointment['service'] ?? '';
+    final petId = appointment['petId'];
+
+    print('>>> ============================================');
+    print('>>> Looking for records for appointment: $appointmentId');
+    print('>>> Service: $service');
+    print('>>> Pet ID: $petId');
+    print('>>> Appointment Date: $dateTime');
+
+    // CRITICAL: Try MULTIPLE matching strategies
+    MedicalRecord? medicalRecord;
+    Vaccination? vaccinationRecord;
+
+    // STRATEGY 1: Try exact appointmentId match
+    try {
+      medicalRecord = controller.medicalRecords.firstWhere(
+        (record) => record.appointmentId == appointmentId,
+        orElse: () => throw Exception('Not found'),
+      );
+      print('>>> ✅ Found medical record by appointmentId: ${medicalRecord.id}');
+    } catch (e) {
+      print('>>> ℹ️ No medical record found by appointmentId');
+    }
+
+    // STRATEGY 2: If not found, try matching by pet + date + service
+    if (medicalRecord == null) {
+      try {
+        medicalRecord = controller.medicalRecords.firstWhere(
+          (record) {
+            // Match by pet
+            final petMatches = record.petId == petId;
+
+            // Match by date (same day)
+            final recordDate = record.visitDate;
+            final dateMatches = recordDate.year == dateTime.year &&
+                recordDate.month == dateTime.month &&
+                recordDate.day == dateTime.day;
+
+            // Match by service (fuzzy match)
+            final serviceMatches = record.service.toLowerCase() ==
+                    service.toLowerCase() ||
+                service.toLowerCase().contains(record.service.toLowerCase()) ||
+                record.service.toLowerCase().contains(service.toLowerCase());
+
+            final matches = petMatches && dateMatches && serviceMatches;
+
+            if (matches) {
+              print('>>> 🔍 Potential match found by pet+date+service:');
+              print('>>>   Record ID: ${record.id}');
+              print('>>>   Record appointmentId: ${record.appointmentId}');
+              print('>>>   Record petId: ${record.petId}');
+              print('>>>   Record date: ${record.visitDate}');
+              print('>>>   Record service: ${record.service}');
+            }
+
+            return matches;
+          },
+          orElse: () => throw Exception('Not found'),
+        );
+        print('>>> ✅ Found medical record by pet+date+service match!');
+      } catch (e) {
+        print('>>> ℹ️ No medical record found by pet+date+service either');
+      }
+    }
+
+    // STRATEGY 3: If not found, try matching by pet + completed time (within 1 hour)
+    if (medicalRecord == null && completedAt != null) {
+      try {
+        medicalRecord = controller.medicalRecords.firstWhere(
+          (record) {
+            // Match by pet
+            final petMatches = record.petId == petId;
+
+            // Match by time (within 1 hour of completion)
+            final timeDifference =
+                record.visitDate.difference(completedAt).abs();
+            final timeMatches = timeDifference.inHours < 1;
+
+            final matches = petMatches && timeMatches;
+
+            if (matches) {
+              print('>>> 🔍 Potential match found by pet+time:');
+              print('>>>   Record ID: ${record.id}');
+              print(
+                  '>>>   Time difference: ${timeDifference.inMinutes} minutes');
+            }
+
+            return matches;
+          },
+          orElse: () => throw Exception('Not found'),
+        );
+        print('>>> ✅ Found medical record by pet+time match!');
+      } catch (e) {
+        print('>>> ℹ️ No medical record found by pet+time either');
+      }
+    }
+
+    // Try to find vaccination record (match by date and service)
+    try {
+      final isVaccineService = service.toLowerCase().contains('vaccin') ||
+          service.toLowerCase().contains('immuniz');
+
+      if (isVaccineService) {
+        vaccinationRecord = controller.vaccinations.firstWhere(
+          (vaccination) {
+            final isSameDay = vaccination.dateGiven.year == dateTime.year &&
+                vaccination.dateGiven.month == dateTime.month &&
+                vaccination.dateGiven.day == dateTime.day;
+            return isSameDay;
+          },
+          orElse: () => throw Exception('Not found'),
+        );
+        print(
+            '>>> ✅ Found vaccination record: ${vaccinationRecord.vaccineName}');
+      }
+    } catch (e) {
+      print('>>> ℹ️ No vaccination record found');
+    }
+
+    // FINAL CHECK: Print all medical records for this pet to help debug
+    if (medicalRecord == null && vaccinationRecord == null) {
+      print('>>> 📋 All medical records for this pet:');
+      final petRecords =
+          controller.medicalRecords.where((r) => r.petId == petId).toList();
+      for (var record in petRecords) {
+        print('>>>   Record: ${record.id}');
+        print('>>>     appointmentId: ${record.appointmentId}');
+        print('>>>     visitDate: ${record.visitDate}');
+        print('>>>     service: ${record.service}');
+        print('>>>     diagnosis: ${record.diagnosis.substring(0, 30)}...');
+      }
+
+      if (petRecords.isEmpty) {
+        print('>>>   ❌ No medical records found for pet: $petId');
+      }
+    }
+
+    print('>>> ============================================');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -781,35 +1149,215 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
             iconColor: const Color(0xFF3498DB),
           ),
 
-          const SizedBox(height: 16),
+          // ✅✅✅ VACCINATION RECORD SECTION (PRIORITY) ✅✅✅
+          if (vaccinationRecord != null) ...[
+            const SizedBox(height: 16),
 
-          // Payment Information Card
-          if (appointment['totalCost'] != null || appointment['isPaid'] != null)
+            // Vaccine Information Card
             _buildDetailCard(
-              'Payment Information',
+              'Vaccine Information',
               [
-                if (appointment['totalCost'] != null)
-                  _buildDetailRow(
-                    'Total Cost',
-                    '₱ ${appointment['totalCost'].toStringAsFixed(2)}',
-                  ),
+                _buildDetailRow('Vaccine Name', vaccinationRecord.vaccineName),
+                _buildDetailRow('Type', vaccinationRecord.vaccineType),
                 _buildDetailRow(
-                  'Payment Status',
-                  appointment['isPaid'] == true ? 'Paid' : 'Unpaid',
-                ),
-                if (appointment['paymentMethod'] != null)
+                    'Booster', vaccinationRecord.isBooster ? 'Yes' : 'No'),
+                if (vaccinationRecord.manufacturer != null &&
+                    vaccinationRecord.manufacturer!.isNotEmpty)
                   _buildDetailRow(
-                    'Payment Method',
-                    appointment['paymentMethod'] ?? 'N/A',
-                  ),
+                      'Manufacturer', vaccinationRecord.manufacturer!),
+                if (vaccinationRecord.batchNumber != null &&
+                    vaccinationRecord.batchNumber!.isNotEmpty)
+                  _buildDetailRow(
+                      'Batch Number', vaccinationRecord.batchNumber!),
               ],
-              icon: Icons.payment,
-              iconColor: const Color(0xFF27AE60),
+              icon: Icons.vaccines,
+              iconColor: const Color(0xFF9B59B6),
             ),
 
+            const SizedBox(height: 16),
+
+            // Vaccination Dates Card
+            _buildDetailCard(
+              'Vaccination Dates',
+              [
+                _buildDetailRow(
+                  'Date Given',
+                  DateFormat('MMMM dd, yyyy')
+                      .format(vaccinationRecord.dateGiven),
+                ),
+                if (vaccinationRecord.nextDueDate != null)
+                  _buildDetailRow(
+                    'Next Due Date',
+                    DateFormat('MMMM dd, yyyy')
+                        .format(vaccinationRecord.nextDueDate!),
+                  ),
+              ],
+              icon: Icons.event,
+              iconColor: const Color(0xFF3498DB),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Veterinarian Card
+            _buildDetailCard(
+              'Administered By',
+              [
+                _buildDetailRow(
+                    'Veterinarian', vaccinationRecord.veterinarianName),
+              ],
+              icon: Icons.person,
+              iconColor: const Color(0xFF2ECC71),
+            ),
+
+            if (vaccinationRecord.notes != null &&
+                vaccinationRecord.notes!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildDetailCard(
+                'Additional Notes',
+                [_buildDetailRow('Notes', vaccinationRecord.notes!)],
+                icon: Icons.note,
+                iconColor: const Color(0xFF95A5A6),
+              ),
+            ],
+          ]
+          // ✅✅✅ MEDICAL RECORD SECTION (IF NO VACCINATION RECORD) ✅✅✅
+          else if (medicalRecord != null) ...[
+            const SizedBox(height: 16),
+
+            // Diagnosis & Treatment Card
+            _buildDetailCard(
+              'Diagnosis & Treatment',
+              [
+                _buildDetailRow('Diagnosis', medicalRecord.diagnosis),
+                _buildDetailRow('Treatment', medicalRecord.treatment),
+                if (medicalRecord.prescription != null &&
+                    medicalRecord.prescription!.isNotEmpty)
+                  _buildDetailRow('Prescription', medicalRecord.prescription!),
+              ],
+              icon: Icons.medical_services,
+              iconColor: const Color(0xFFE74C3C),
+            ),
+
+            // Vital Signs Card (if available)
+            if (medicalRecord.hasVitals) ...[
+              const SizedBox(height: 16),
+              _buildDetailCard(
+                'Vital Signs',
+                [
+                  if (medicalRecord.temperature != null)
+                    _buildDetailRow('Temperature',
+                        '${medicalRecord.temperature!.toStringAsFixed(1)}°C'),
+                  if (medicalRecord.weight != null)
+                    _buildDetailRow('Weight',
+                        '${medicalRecord.weight!.toStringAsFixed(2)} kg'),
+                  if (medicalRecord.bloodPressure != null)
+                    _buildDetailRow(
+                        'Blood Pressure', medicalRecord.bloodPressure!),
+                  if (medicalRecord.heartRate != null)
+                    _buildDetailRow(
+                        'Heart Rate', '${medicalRecord.heartRate} bpm'),
+                ],
+                icon: Icons.favorite,
+                iconColor: const Color(0xFFE74C3C),
+              ),
+            ],
+
+            // Veterinary Notes Card
+            if (medicalRecord.notes != null &&
+                medicalRecord.notes!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildDetailCard(
+                'Veterinary Notes',
+                [
+                  _buildDetailRow('Notes', medicalRecord.notes!),
+                ],
+                icon: Icons.note,
+                iconColor: const Color(0xFF9B59B6),
+              ),
+            ],
+          ] else ...[
+            // No records found - Enhanced debug info
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.orange[700], size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'No medical record available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'This appointment was completed, but no detailed medical record or vaccination record was created at the time.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Debug Information:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Appointment ID: $appointmentId',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        ),
+                        Text(
+                          'Pet ID: $petId',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        ),
+                        Text(
+                          'Completed: ${completedAt != null ? DateFormat('MMM dd, yyyy HH:mm').format(completedAt) : 'N/A'}',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 16),
 
-          // Follow-up Information Card
           if (appointment['followUpInstructions'] != null ||
               appointment['nextAppointmentDate'] != null)
             _buildDetailCard(
@@ -835,112 +1383,17 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
 
           const SizedBox(height: 16),
 
-          // Additional Notes Card
+          // Additional Notes Card (from appointment)
           if (appointment['notes'] != null &&
               appointment['notes'].toString().isNotEmpty)
             _buildDetailCard(
-              'Additional Notes',
+              'Additional Appointment Notes',
               [
                 _buildDetailRow('Notes', appointment['notes']),
               ],
-              icon: Icons.note,
-              iconColor: const Color(0xFF9B59B6),
+              icon: Icons.note_outlined,
+              iconColor: const Color(0xFF95A5A6),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicalHistoryView() {
-    final controller = Get.find<WebPetsController>();
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Color(0xFF3498DB),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    setState(() {
-                      _selectedMedicalRecord = null;
-                    });
-                    _flipToView(CardView.back);
-                  },
-                  tooltip: "Back",
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _selectedMedicalRecord != null
-                        ? 'Medical Record Details'
-                        : 'Medical History',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                if (_selectedMedicalRecord != null)
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () {
-                      setState(() {
-                        _selectedMedicalRecord = null;
-                      });
-                    },
-                    tooltip: "Close Details",
-                  ),
-              ],
-            ),
-          ),
-
-          // Content
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoadingMedical.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (controller.medicalRecords.isEmpty) {
-                return _buildEmptyState(
-                  'No Medical Records',
-                  'No medical history available for this pet yet.',
-                  Icons.medical_services_outlined,
-                );
-              }
-
-              if (_selectedMedicalRecord != null) {
-                return _buildMedicalRecordDetails(_selectedMedicalRecord!);
-              }
-
-              return _buildMedicalRecordsList(controller.medicalRecords);
-            }),
-          ),
         ],
       ),
     );
@@ -1036,160 +1489,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               return _buildVaccinationsList(controller.vaccinations);
             }),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicalRecordsList(List<MedicalRecord> records) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: records.length,
-      itemBuilder: (context, index) {
-        final record = records[index];
-        return _buildMedicalRecordCard(record);
-      },
-    );
-  }
-
-  Widget _buildMedicalRecordCard(MedicalRecord record) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedMedicalRecord = record;
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3498DB).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.medical_services,
-                  color: Color(0xFF3498DB),
-                  size: 24,
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      record.service,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('MMM dd, yyyy').format(record.visitDate),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    if (record.diagnosis.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        record.diagnosis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[700],
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Arrow
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey[400],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMedicalRecordDetails(MedicalRecord record) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildDetailCard(
-            'Visit Information',
-            [
-              _buildDetailRow(
-                  'Date', DateFormat('MMMM dd, yyyy').format(record.visitDate)),
-              _buildDetailRow('Service', record.service),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildDetailCard(
-            'Diagnosis & Treatment',
-            [
-              _buildDetailRow('Diagnosis', record.diagnosis),
-              _buildDetailRow('Treatment', record.treatment),
-              if (record.prescription != null &&
-                  record.prescription!.isNotEmpty)
-                _buildDetailRow('Prescription', record.prescription!),
-            ],
-          ),
-
-          // UPDATED: Use individual vital fields instead of vitals map
-          if (record.hasVitals) ...[
-            const SizedBox(height: 16),
-            _buildDetailCard(
-              'Vital Signs',
-              [
-                if (record.temperature != null)
-                  _buildDetailRow('Temperature',
-                      '${record.temperature!.toStringAsFixed(1)}°C'),
-                if (record.weight != null)
-                  _buildDetailRow(
-                      'Weight', '${record.weight!.toStringAsFixed(2)} kg'),
-                if (record.bloodPressure != null)
-                  _buildDetailRow('Blood Pressure', record.bloodPressure!),
-                if (record.heartRate != null)
-                  _buildDetailRow('Heart Rate', '${record.heartRate} bpm'),
-              ],
-            ),
-          ],
-
-          if (record.notes != null && record.notes!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildDetailCard(
-              'Additional Notes',
-              [_buildDetailRow('Notes', record.notes!)],
-            ),
-          ],
         ],
       ),
     );
