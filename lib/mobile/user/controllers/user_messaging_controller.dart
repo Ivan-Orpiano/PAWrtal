@@ -30,6 +30,10 @@ class MessagingController extends GetxController {
   final currentReceiverId = ''.obs;
   final currentReceiverType = ''.obs;
 
+  final shouldAutoSelectConversation = false.obs;
+  final selectedConversationData = Rxn<Map<String, dynamic>>();
+
+
   // Text controller for message input
   final messageController = TextEditingController();
   final scrollController = ScrollController();
@@ -690,4 +694,53 @@ Future<Conversation?> startConversationWithClinic(String clinicId) async {
       return total + conversation.userUnreadCount;
     });
   }
+
+  /// Preserve conversation data for layout transitions
+void preserveConversationForTransition() {
+  if (currentConversation.value != null) {
+    selectedConversationData.value = {
+      'conversation': currentConversation.value,
+      'receiverId': currentReceiverId.value,
+      'receiverType': currentReceiverType.value,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
+    shouldAutoSelectConversation.value = true;
+    print('>>> Preserved conversation: ${currentConversation.value?.documentId}');
+  }
+}
+
+/// Clear preserved conversation data after it's been used
+void clearPreservedConversation() {
+  selectedConversationData.value = null;
+  shouldAutoSelectConversation.value = false;
+  print('>>> Cleared preserved conversation');
+}
+
+/// Check if we should restore a preserved conversation
+bool shouldRestoreConversation() {
+  if (selectedConversationData.value == null) return false;
+  
+  // Only restore if preserved within last 5 seconds (to prevent stale data)
+  final timestamp = selectedConversationData.value!['timestamp'] as int;
+  final age = DateTime.now().millisecondsSinceEpoch - timestamp;
+  return age < 5000; // 5 seconds
+}
+
+/// Restore the preserved conversation
+Future<void> restorePreservedConversation() async {
+  if (!shouldRestoreConversation()) {
+    clearPreservedConversation();
+    return;
+  }
+
+  final data = selectedConversationData.value!;
+  final conversation = data['conversation'] as Conversation;
+  final receiverId = data['receiverId'] as String;
+  final receiverType = data['receiverType'] as String;
+
+  print('>>> Restoring conversation: ${conversation.documentId}');
+  
+  await openConversation(conversation, receiverId, receiverType);
+  clearPreservedConversation();
+}
 }

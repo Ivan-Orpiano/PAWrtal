@@ -21,10 +21,12 @@ class AppwriteConstants {
   static String feedbackAttachmentsBucketID = "67ef83bd0022c1e63789";
   static String archivedUsersCollectionID = "archiveduser";
   static String archivedClinicsCollectionID = "archivedclinic";
-  static const String feedbackDeletionRequestCollectionID = 'feedbackDeletionRequest';
+  static const String feedbackDeletionRequestCollectionID =
+      'feedbackDeletionRequest';
   static String pushNotificationProviderID = "68f47697001c82e7ce64";
   static String emailAutomationProviderID = "68f47f4b002a327bba16";
   static String notificationsCollectionID = "68f859fe000532ab827a";
+  static String userDailyReportsTrackerID = "userdailyreporttracker_";
 
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID !=

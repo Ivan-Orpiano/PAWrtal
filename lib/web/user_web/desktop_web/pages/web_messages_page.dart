@@ -33,6 +33,10 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
   @override
   void dispose() {
     _searchController.dispose();
+      if (_controller.currentConversation.value != null) {
+    _controller.preserveConversationForTransition();
+  }
+
     super.dispose();
   }
 
@@ -50,28 +54,38 @@ class _WebMessagesPageState extends State<WebMessagesPage> {
     _autoSelectLatestConversationIfNeeded();
   }
 
-  void _autoSelectLatestConversationIfNeeded() async {
-    // Only auto-select if:
-    // 1. There are conversations
-    // 2. No conversation is currently selected
-    if (_controller.conversations.isNotEmpty && 
-        _controller.currentConversation.value == null) {
-      
-      final latestConversation = _controller.conversations.first;
-      final clinicData = await _getClinicData(latestConversation.clinicId);
-
-      // Use a post-frame callback to ensure the widget is fully built
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _selectConversation(
-          latestConversation,
-          latestConversation.clinicId,
-          clinicData['name'],
-          clinicData['image'],
-          clinicData['profilePictureId'],
-        );
-      });
-    }
+void _autoSelectLatestConversationIfNeeded() async {
+  // First, check if we should restore a preserved conversation
+  if (_controller.shouldRestoreConversation()) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _controller.restorePreservedConversation();
+    });
+    return;
   }
+
+  // Only auto-select if:
+  // 1. There are conversations
+  // 2. No conversation is currently selected
+  // 3. Not told to skip auto-selection
+  if (_controller.conversations.isNotEmpty && 
+      _controller.currentConversation.value == null &&
+      !_controller.shouldAutoSelectConversation.value) {
+    
+    final latestConversation = _controller.conversations.first;
+    final clinicData = await _getClinicData(latestConversation.clinicId);
+
+    // Use a post-frame callback to ensure the widget is fully built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _selectConversation(
+        latestConversation,
+        latestConversation.clinicId,
+        clinicData['name'],
+        clinicData['image'],
+        clinicData['profilePictureId'],
+      );
+    });
+  }
+}
 
   List<Conversation> get _filteredConversations {
     if (_searchQuery.isEmpty) {

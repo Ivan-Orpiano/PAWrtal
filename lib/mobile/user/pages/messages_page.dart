@@ -20,18 +20,50 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
       Get.find<MessagingController>();
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   final Map<String, dynamic> _clinicCache = {}; // Cache clinic data
-  final Map<String, dynamic> _userCache = {}; // Cache user data
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Load conversations and set up real-time updates
+    // Load conversations ONCE on init
     _messagingController.loadUserConversations();
-    _setupRealtimeUpdates();
+    
+    // Real-time updates will handle everything else
+    _messagingController.subscribeToConversationUpdates();
+    
+    // Check if we need to restore a preserved conversation from desktop/tablet
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_messagingController.shouldRestoreConversation()) {
+        final data = _messagingController.selectedConversationData.value!;
+        final conversation = data['conversation'] as Conversation;
+        final receiverId = data['receiverId'] as String;
+        final receiverType = data['receiverType'] as String;
+        
+        // Get clinic/user data
+        final conversationData = await _getConversationData(conversation);
+        
+        // Navigate to the conversation
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MessagesNextPage(
+              conversation: conversation,
+              receiverId: receiverId,
+              receiverType: receiverType,
+              receiverName: conversationData['name'],
+              receiverImage: conversationData['image'],
+              receiverProfilePictureId: conversationData['profilePictureId'],
+            ),
+          ),
+        );
+        
+        _messagingController.clearPreservedConversation();
+      }
+    });
   }
 
   @override
@@ -45,28 +77,25 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // Refresh conversations when app comes to foreground
+    // Only refresh when app comes back from background (to catch missed updates)
     if (state == AppLifecycleState.resumed) {
       _messagingController.loadUserConversations();
     }
   }
 
-  void _setupRealtimeUpdates() {
-    // Subscribe to conversation updates to get real-time message notifications
-    _messagingController.subscribeToConversationUpdates();
+  List<Conversation> get _filteredConversations {
+    if (_searchQuery.isEmpty) {
+      return _messagingController.conversations;
+    }
 
-    // Periodically refresh conversations (fallback for real-time)
-    _startPeriodicRefresh();
-  }
+    final query = _searchQuery.toLowerCase();
+    return _messagingController.conversations.where((conversation) {
+      final clinicData = _clinicCache[conversation.clinicId];
+      final clinicName = clinicData?['name']?.toString().toLowerCase() ?? '';
+      final lastMessage = conversation.lastMessageText?.toLowerCase() ?? '';
 
-  void _startPeriodicRefresh() {
-    // Refresh conversations every 10 seconds when on messages page
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
-        _messagingController.loadUserConversations();
-        _startPeriodicRefresh(); // Schedule next refresh
-      }
-    });
+      return clinicName.contains(query) || lastMessage.contains(query);
+    }).toList();
   }
 
   Future<Map<String, dynamic>> _getConversationData(
@@ -199,8 +228,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                 ),
               ),
             );
-            // Refresh conversations when returning
-            _messagingController.loadUserConversations();
+            // No need to manually refresh - real-time will handle it
           },
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -329,7 +357,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
       backgroundColor: Colors.blue.shade50,
       body: Column(
         children: [
-          // Header with refresh button
+          // Header
           Container(
             height: 75,
             padding: const EdgeInsets.only(top: 20),
@@ -383,15 +411,28 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                       ),
                       child: TextField(
                         controller: _searchController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: "Search conversations...",
                           border: InputBorder.none,
-                          prefixIcon: Icon(Icons.search),
-                          contentPadding: EdgeInsets.symmetric(
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                         ),
                         onChanged: (value) {
-                          // Implement search functionality
+                          setState(() {
+                            _searchQuery = value;
+                          });
                         },
                       ),
                     ),
@@ -441,16 +482,50 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                         );
                       }
 
+                      final filteredConversations = _filteredConversations;
+
+                      if (filteredConversations.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No conversations found",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Try a different search term",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
                       return RefreshIndicator(
                         onRefresh: () async {
                           await _messagingController.loadUserConversations();
                         },
                         child: ListView.builder(
                           padding: const EdgeInsets.only(bottom: 20),
-                          itemCount: _messagingController.conversations.length,
+                          itemCount: filteredConversations.length,
                           itemBuilder: (context, index) {
-                            final conversation =
-                                _messagingController.conversations[index];
+                            final conversation = filteredConversations[index];
                             return _buildConversationTile(conversation);
                           },
                         ),

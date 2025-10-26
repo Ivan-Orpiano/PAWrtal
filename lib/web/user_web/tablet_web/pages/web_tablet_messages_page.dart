@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -23,14 +24,52 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
   String? _selectedClinicId;
   String? _selectedClinicName;
   String? _selectedClinicImage;
+  String? _selectedProfilePictureId;
   bool _showStarters = false;
   bool _showConversationsList = true; // Toggle between list and messages
+  
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
-  void initState() {
-    super.initState();
-    _initializeMessaging();
+void initState() {
+  super.initState();
+  _initializeMessaging();
+  
+  // Check if we need to restore a preserved conversation
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    if (_controller.shouldRestoreConversation()) {
+      final data = _controller.selectedConversationData.value!;
+      final conversation = data['conversation'] as Conversation;
+      
+      // Get clinic data
+      final clinicData = await _getClinicData(conversation.clinicId);
+      
+      // Select the conversation
+      _selectConversation(
+        conversation,
+        conversation.clinicId,
+        clinicData['name'],
+        clinicData['image'],
+        clinicData['profilePictureId'],
+      );
+      
+      _controller.clearPreservedConversation();
+    }
+  });
+}
+
+  @override
+void dispose() {
+  _searchController.dispose();
+  
+  // Preserve conversation state when switching layouts
+  if (_selectedConversation != null) {
+    _controller.preserveConversationForTransition();
   }
+  
+  super.dispose();
+}
 
   void _initializeMessaging() {
     if (Get.isRegistered<MessagingController>()) {
@@ -40,6 +79,21 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
     }
     
     _controller.loadUserConversations();
+  }
+
+  List<Conversation> get _filteredConversations {
+    if (_searchQuery.isEmpty) {
+      return _controller.conversations;
+    }
+
+    final query = _searchQuery.toLowerCase();
+    return _controller.conversations.where((conversation) {
+      final clinicData = _clinicCache[conversation.clinicId];
+      final clinicName = clinicData?['name']?.toString().toLowerCase() ?? '';
+      final lastMessage = conversation.lastMessageText?.toLowerCase() ?? '';
+
+      return clinicName.contains(query) || lastMessage.contains(query);
+    }).toList();
   }
 
   Future<Map<String, dynamic>> _getClinicData(String clinicId) async {
@@ -54,6 +108,7 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
         final clinicData = {
           'name': clinic.clinicName,
           'image': clinic.image,
+          'profilePictureId': clinic.profilePictureId ?? '',
           'address': clinic.address,
         };
         _clinicCache[clinicId] = clinicData;
@@ -63,15 +118,22 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
       print('Error loading clinic: $e');
     }
 
-    return {'name': 'Unknown Clinic', 'image': '', 'address': ''};
+    return {
+      'name': 'Unknown Clinic',
+      'image': '',
+      'profilePictureId': '',
+      'address': ''
+    };
   }
 
-  void _selectConversation(Conversation conversation, String clinicId, String clinicName, String clinicImage) async {
+  void _selectConversation(Conversation conversation, String clinicId,
+      String clinicName, String clinicImage, String profilePictureId) async {
     setState(() {
       _selectedConversation = conversation;
       _selectedClinicId = clinicId;
       _selectedClinicName = clinicName;
       _selectedClinicImage = clinicImage;
+      _selectedProfilePictureId = profilePictureId;
       _showStarters = false;
       _showConversationsList = false; // Switch to messages view
     });
@@ -83,6 +145,10 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
     setState(() {
       _showConversationsList = true;
     });
+  }
+
+  String _getProfileImageUrl(String profilePictureId) {
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
   }
 
   @override
@@ -127,9 +193,26 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Search conversations...',
                 prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -167,16 +250,40 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
                 );
               }
 
+              final filteredConversations = _filteredConversations;
+
+              if (filteredConversations.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No conversations found',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try a different search term',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               return ListView.builder(
-                itemCount: _controller.conversations.length,
+                itemCount: filteredConversations.length,
                 itemBuilder: (context, index) {
-                  final conversation = _controller.conversations[index];
+                  final conversation = filteredConversations[index];
                   return FutureBuilder<Map<String, dynamic>>(
                     future: _getClinicData(conversation.clinicId),
                     builder: (context, snapshot) {
                       final clinicData = snapshot.data ?? {
                         'name': 'Loading...',
                         'image': '',
+                        'profilePictureId': '',
                         'address': ''
                       };
                       
@@ -203,6 +310,7 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
           conversation.clinicId,
           clinicData['name'],
           clinicData['image'],
+          clinicData['profilePictureId'],
         ),
         child: Container(
           padding: const EdgeInsets.all(12),
@@ -211,20 +319,7 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
           ),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: clinicData['image'].isNotEmpty
-                    ? Image.network(
-                        clinicData['image'],
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildDefaultAvatar(clinicData['name']);
-                        },
-                      )
-                    : _buildDefaultAvatar(clinicData['name']),
-              ),
+              _buildProfileImage(clinicData, 48),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -292,20 +387,61 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
     );
   }
 
-  Widget _buildDefaultAvatar(String name) {
+  Widget _buildProfileImage(Map<String, dynamic> clinicData, double size) {
+    final profilePictureId = clinicData['profilePictureId'] as String? ?? '';
+    final fallbackImage = clinicData['image'] as String? ?? '';
+    final clinicName = clinicData['name'] as String? ?? 'Clinic';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size / 2),
+      child: profilePictureId.isNotEmpty
+          ? Image.network(
+              _getProfileImageUrl(profilePictureId),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return fallbackImage.isNotEmpty
+                    ? Image.network(
+                        fallbackImage,
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildDefaultAvatar(clinicName, size);
+                        },
+                      )
+                    : _buildDefaultAvatar(clinicName, size);
+              },
+            )
+          : fallbackImage.isNotEmpty
+              ? Image.network(
+                  fallbackImage,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildDefaultAvatar(clinicName, size);
+                  },
+                )
+              : _buildDefaultAvatar(clinicName, size),
+    );
+  }
+
+  Widget _buildDefaultAvatar(String name, double size) {
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: const Color.fromARGB(255, 81, 115, 153),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(size / 2),
       ),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 20,
+            fontSize: size * 0.4,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -332,6 +468,12 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
   }
 
   Widget _buildMessagesHeader() {
+    final clinicData = {
+      'name': _selectedClinicName,
+      'image': _selectedClinicImage,
+      'profilePictureId': _selectedProfilePictureId,
+    };
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -355,46 +497,13 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
             onPressed: _backToConversations,
           ),
           const SizedBox(width: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: _selectedClinicImage!.isNotEmpty
-                ? Image.network(
-                    _selectedClinicImage!,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildDefaultAvatar(_selectedClinicName!);
-                    },
-                  )
-                : Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 81, 115, 153),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _selectedClinicName![0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
+          _buildProfileImage(clinicData, 40),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               _selectedClinicName!,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () {},
           ),
           IconButton(
             icon: Icon(_showStarters ? Icons.close : Icons.auto_awesome),
@@ -419,6 +528,8 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
       child: Obx(() {
+        final isSending = _controller.isSendingMessage.value;
+
         if (_controller.conversationStarters.isEmpty) {
           return const Center(
             child: Text(
@@ -428,14 +539,48 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
           );
         }
 
-        return ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: _controller.conversationStarters.length,
-          itemBuilder: (context, index) {
-            final starter = _controller.conversationStarters[index];
-            return _buildStarterChip(starter);
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isSending)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color.fromARGB(255, 81, 115, 153),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sending message...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _controller.conversationStarters.length,
+                itemBuilder: (context, index) {
+                  final starter = _controller.conversationStarters[index];
+                  return _buildStarterChip(starter);
+                },
+              ),
+            ),
+          ],
         );
       }),
     );
@@ -444,57 +589,88 @@ class _WebTabletMessagesPageState extends State<WebTabletMessagesPage> {
   Widget _buildStarterChip(ConversationStarter starter) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: () {
-          _controller.sendStarterMessage(starter);
-          setState(() {
-            _showStarters = false;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          constraints: const BoxConstraints(maxWidth: 200),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color.fromARGB(255, 81, 115, 153),
-              width: 1,
+      child: Obx(() {
+        final isSending = _controller.isSendingMessage.value;
+
+        return InkWell(
+          onTap: isSending
+              ? null
+              : () {
+                  _controller.sendStarterMessage(starter);
+                  setState(() {
+                    _showStarters = false;
+                  });
+                },
+          child: Opacity(
+            opacity: isSending ? 0.5 : 1.0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              constraints: const BoxConstraints(maxWidth: 200),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSending
+                      ? Colors.grey
+                      : const Color.fromARGB(255, 81, 115, 153),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      starter.categoryDisplayName,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Color.fromARGB(255, 81, 115, 153),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          starter.triggerText,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isSending) ...[
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color.fromARGB(255, 81, 115, 153),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  starter.categoryDisplayName,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color.fromARGB(255, 81, 115, 153),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                starter.triggerText,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+      }),
     );
   }
 

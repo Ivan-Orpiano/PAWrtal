@@ -2,6 +2,8 @@ import 'package:capstone_app/mobile/user/components/dashboard_components/dashboa
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_tile.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/search_bar.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/tags.dart';
+import 'package:capstone_app/mobile/user/pages/pawmap.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -23,6 +25,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final webController = Get.find<WebUserHomeController>();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: RefreshIndicator(
@@ -55,92 +59,101 @@ class _DashboardPageState extends State<DashboardPage> {
             );
           }
 
-          return ListView(
-            children: [
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.only(
-                    left: 16, top: 16, bottom: 8, right: 16),
-                child: MySearchBar(
-                  onSearchChanged: controller.updateSearchQuery,
-                ),
-              ),
+          return Obx(() {
+            // If map view is enabled, show Pawmap
+            if (webController.showMapView.value) {
+              return const Pawmap();
+            }
 
-              // Filter Tags
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: MyTags(
-                  selectedFilter: controller.selectedFilter.value,
-                  onFilterChanged: controller.setFilter,
-                  getFilterCount: controller.getFilterCount,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Results Summary
-              if (controller.searchQuery.value.isNotEmpty || 
-                  controller.selectedFilter.value != 'All')
+            // Otherwise show the normal list view
+            return ListView(
+              children: [
+                // Search Bar
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    "${controller.filteredClinics.length} clinics found",
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
+                  padding: const EdgeInsets.only(
+                      left: 16, top: 16, bottom: 8, right: 16),
+                  child: MySearchBar(
+                    onSearchChanged: controller.updateSearchQuery,
                   ),
                 ),
 
-              // Clinic List
-              if (controller.filteredClinics.isEmpty && 
-                  (controller.searchQuery.value.isNotEmpty || 
-                   controller.selectedFilter.value != 'All'))
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          controller.searchQuery.value.isNotEmpty 
-                            ? "No clinics found for '${controller.searchQuery.value}'"
-                            : "No clinics match the selected filter",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () {
-                            controller.searchQuery.value = '';
-                            controller.selectedFilter.value = 'All';
-                            controller.applyFilters();
-                          },
-                          child: const Text("Clear filters"),
-                        ),
-                      ],
+                // Filter Tags
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: MyTags(
+                    selectedFilter: controller.selectedFilter.value,
+                    onFilterChanged: controller.setFilter,
+                    getFilterCount: controller.getFilterCount,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Results Summary
+                if (controller.searchQuery.value.isNotEmpty || 
+                    controller.selectedFilter.value != 'All')
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      "${controller.filteredClinics.length} clinics found",
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                )
-              else
-                ...controller.filteredClinics.map((clinic) => 
-                  MyDashboardTile(
-                    clinic: clinic,
-                    clinicSettings: controller.clinicSettingsMap[clinic.documentId ?? ''],
+
+                // Clinic List
+                if (controller.filteredClinics.isEmpty && 
+                    (controller.searchQuery.value.isNotEmpty || 
+                     controller.selectedFilter.value != 'All'))
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            controller.searchQuery.value.isNotEmpty 
+                              ? "No clinics found for '${controller.searchQuery.value}'"
+                              : "No clinics match the selected filter",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              controller.searchQuery.value = '';
+                              controller.selectedFilter.value = 'All';
+                              controller.applyFilters();
+                            },
+                            child: const Text("Clear filters"),
+                          ),
+                        ],
+                      ),
+                    ),
                   )
-                ),
-            ],
-          );
+                else
+                  ...controller.filteredClinics.map((clinic) => 
+                    MyDashboardTile(
+                      clinic: clinic,
+                      clinicSettings: controller.clinicSettingsMap[clinic.documentId ?? ''],
+                    )
+                  ),
+              ],
+            );
+          });
         }),
       ),
+      // FAB removed - now handled in user_home_page.dart
     );
   }
 }

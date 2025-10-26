@@ -1,8 +1,12 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/pages/dashboard_next_page.dart';
+import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 
 class MyDashboardTile extends StatefulWidget {
   final Clinic clinic;
@@ -19,6 +23,36 @@ class MyDashboardTile extends StatefulWidget {
 }
 
 class _MyDashboardTileState extends State<MyDashboardTile> {
+  ClinicRatingStats? _ratingStats;
+  bool _isLoadingRating = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRatingStats();
+  }
+
+  Future<void> _loadRatingStats() async {
+    try {
+      final authRepository = Get.find<AuthRepository>();
+      final stats = await authRepository
+          .getClinicRatingStats(widget.clinic.documentId ?? '');
+      if (mounted) {
+        setState(() {
+          _ratingStats = stats;
+          _isLoadingRating = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading rating stats for tile: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingRating = false;
+        });
+      }
+    }
+  }
+
   Widget _buildStatusBadge() {
     final isOpen = widget.clinicSettings?.isOpen ?? true;
     final isOpenNow = widget.clinicSettings?.isOpenNow() ?? true;
@@ -51,6 +85,64 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
           fontWeight: FontWeight.bold,
         ),
       ),
+    );
+  }
+
+  Widget _buildRatingDisplay() {
+    if (_isLoadingRating) {
+      return const Row(
+        children: [
+          Icon(Icons.star, color: Colors.amber, size: 16),
+          SizedBox(width: 3),
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 1.5),
+          ),
+        ],
+      );
+    }
+
+    final rating = _ratingStats?.averageRating ?? 0.0;
+    final reviewCount = _ratingStats?.totalReviews ?? 0;
+
+    if (reviewCount == 0) {
+      return const Row(
+        children: [
+          Icon(Icons.star_border, color: Colors.grey, size: 16),
+          SizedBox(width: 3),
+          Text(
+            "No reviews",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        const Icon(Icons.star, color: Colors.amber, size: 16),
+        const SizedBox(width: 3),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          " ($reviewCount)",
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 
@@ -143,10 +235,7 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DashboardNextPage(
-              clinic: widget.clinic,
-              clinicSettings: widget.clinicSettings,
-            ),
+            builder: (context) => WebClinicPageHandlerUpdated(clinic: widget.clinic)
           ),
         );
       },
@@ -235,19 +324,7 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Row(
-                        children: [
-                          Icon(Icons.star, color: Colors.amber, size: 16),
-                          SizedBox(width: 3),
-                          Text(
-                            "5.0",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+                      _buildRatingDisplay(),
                     ],
                   ),
 
