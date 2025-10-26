@@ -543,31 +543,31 @@ class _PawmapState extends State<Pawmap> {
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton:Padding(
-        padding: const EdgeInsets.only(bottom: 55),
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 6,
-                offset: const Offset(0, 3)
-              )
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.black,),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-        ),
-      )
+      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // floatingActionButton:Padding(
+      //   padding: const EdgeInsets.only(bottom: 55),
+      //   child: Container(
+      //     width: 60,
+      //     height: 60,
+      //     decoration: BoxDecoration(
+      //       color: Colors.grey.shade100,
+      //       shape: BoxShape.circle,
+      //       boxShadow: [
+      //         BoxShadow(
+      //           color: Colors.black.withValues(alpha: 0.15),
+      //           blurRadius: 6,
+      //           offset: const Offset(0, 3)
+      //         )
+      //       ],
+      //     ),
+      //     child: IconButton(
+      //       icon: const Icon(Icons.close_rounded, color: Colors.black,),
+      //       onPressed: () {
+      //         Navigator.pop(context);
+      //       },
+      //     ),
+      //   ),
+      // )
     );
   }
 }

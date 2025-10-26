@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:flutter/material.dart';
@@ -24,12 +25,15 @@ class WebDashboardTile extends StatefulWidget {
 class _WebDashboardTileState extends State<WebDashboardTile> {
   bool _isLiked = false;
   ClinicSettings? _clinicSettings;
+  ClinicRatingStats? _ratingStats;
   bool _isLoadingSettings = true;
+  bool _isLoadingRating = true;
 
   @override
   void initState() {
     super.initState();
     _loadClinicSettings();
+    _loadRatingStats();
   }
 
   Future<void> _loadClinicSettings() async {
@@ -37,15 +41,40 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
       final authRepository = Get.find<AuthRepository>();
       final settings = await authRepository
           .getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
-      setState(() {
-        _clinicSettings = settings;
-        _isLoadingSettings = false;
-      });
+      if (mounted) {
+        setState(() {
+          _clinicSettings = settings;
+          _isLoadingSettings = false;
+        });
+      }
     } catch (e) {
       print("Error loading clinic settings for tile: $e");
-      setState(() {
-        _isLoadingSettings = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingSettings = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadRatingStats() async {
+    try {
+      final authRepository = Get.find<AuthRepository>();
+      final stats = await authRepository
+          .getClinicRatingStats(widget.clinic.documentId ?? '');
+      if (mounted) {
+        setState(() {
+          _ratingStats = stats;
+          _isLoadingRating = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading rating stats for tile: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingRating = false;
+        });
+      }
     }
   }
 
@@ -136,6 +165,64 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
           fontWeight: FontWeight.bold,
         ),
       ),
+    );
+  }
+
+  Widget _buildRatingDisplay() {
+    if (_isLoadingRating) {
+      return const Row(
+        children: [
+          Icon(Icons.star, color: Colors.amber, size: 18),
+          SizedBox(width: 3),
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 1.5),
+          ),
+        ],
+      );
+    }
+
+    final rating = _ratingStats?.averageRating ?? 0.0;
+    final reviewCount = _ratingStats?.totalReviews ?? 0;
+
+    if (reviewCount == 0) {
+      return const Row(
+        children: [
+          Icon(Icons.star_border, color: Colors.grey, size: 18),
+          SizedBox(width: 3),
+          Text(
+            "No reviews",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        const Icon(Icons.star, color: Colors.amber, size: 18),
+        const SizedBox(width: 3),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          " ($reviewCount)",
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 
@@ -264,22 +351,7 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.star_rounded,
-                          color: Colors.amber,
-                          size: 18,
-                        ),
-                        Text(
-                          "4.95", // You can add rating to your clinic model later
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildRatingDisplay(),
                   ],
                 ),
               ),

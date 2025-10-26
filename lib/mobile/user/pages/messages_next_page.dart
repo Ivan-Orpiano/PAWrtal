@@ -5,6 +5,7 @@ import 'package:capstone_app/data/models/conversation_starter_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:capstone_app/web/dimensions.dart';
 
 class MessagesNextPage extends StatefulWidget {
   final Conversation conversation;
@@ -119,163 +120,190 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 5),
-          child: AppBar(
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            backgroundColor: Colors.white,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.keyboard_arrow_left_rounded,
-                size: 30,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-            title: Row(
-              children: [
-                Stack(
-                  children: [
-                    _buildProfileImage(40),
-                    // Online status indicator
-                    Obx(() {
-                      final status = _messagingController.getUserStatus(widget.receiverId);
-                      if (status?.isOnline == true) {
-                        return Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    }),
-                  ],
+  String _getLayoutType(double width) {
+  if (width < mobileWidth) {
+    return 'mobile';
+  } else if (width < tabletWidth) {
+    return 'tablet';
+  } else {
+    return 'desktop';
+  }
+}
+
+@override
+Widget build(BuildContext context) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final currentLayout = _getLayoutType(constraints.maxWidth);
+      
+      // If we're no longer on mobile, preserve state and pop back
+      if (currentLayout != 'mobile') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && Navigator.of(context).canPop()) {
+            // Preserve the conversation state before popping
+            _messagingController.preserveConversationForTransition();
+            Navigator.of(context).pop();
+          }
+        });
+      }
+      
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(70),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: AppBar(
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              backgroundColor: Colors.white,
+              leading: IconButton(
+                icon: const Icon(
+                  Icons.keyboard_arrow_left_rounded,
+                  size: 30,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              title: Row(
+                children: [
+                  Stack(
                     children: [
-                      Text(
-                        widget.receiverName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      _buildProfileImage(40),
+                      // Online status indicator
                       Obx(() {
                         final status = _messagingController.getUserStatus(widget.receiverId);
-                        return Text(
-                          status?.statusText ?? 'Offline',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        );
+                        if (status?.isOnline == true) {
+                          return Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
                       }),
                     ],
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.receiverName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Obx(() {
+                          final status = _messagingController.getUserStatus(widget.receiverId);
+                          return Text(
+                            status?.statusText ?? 'Offline',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                if (widget.receiverType == 'clinic')
+                  IconButton(
+                    icon: const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showStarters = !_showStarters;
+                      });
+                    },
+                  ),
               ],
             ),
-            actions: [
-              if (widget.receiverType == 'clinic')
-                IconButton(
-                  icon: const Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _showStarters = !_showStarters;
-                    });
-                  },
-                ),
-            ],
           ),
         ),
-      ),
-      body: Column(
-        children: [
-          // Conversation Starters
-          if (_showStarters && widget.receiverType == 'clinic')
-            Container(
-              height: 120,
-              color: Colors.grey[50],
-              padding: const EdgeInsets.symmetric(vertical: 8),
+        body: Column(
+          children: [
+            // Conversation Starters
+            if (_showStarters && widget.receiverType == 'clinic')
+              Container(
+                height: 120,
+                color: Colors.grey[50],
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Obx(() {
+                  if (_messagingController.conversationStarters.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No conversation starters available',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _messagingController.conversationStarters.length,
+                    itemBuilder: (context, index) {
+                      final starter = _messagingController.conversationStarters[index];
+                      return _buildConversationStarter(starter);
+                    },
+                  );
+                }),
+              ),
+            
+            // Messages with Reverse ListView
+            Expanded(
               child: Obx(() {
-                if (_messagingController.conversationStarters.isEmpty) {
+                if (_messagingController.isLoadingConversation.value) {
                   return const Center(
-                    child: Text(
-                      'No conversation starters available',
-                      style: TextStyle(color: Colors.grey),
+                    child: CircularProgressIndicator(
+                      color: Color.fromARGB(255, 81, 115, 153),
                     ),
                   );
                 }
-                
+
+                if (_messagingController.currentMessages.isEmpty) {
+                  return _buildEmptyMessageState();
+                }
+
                 return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _messagingController.conversationStarters.length,
+                  controller: _messagingController.scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  reverse: true,
+                  itemCount: _messagingController.currentMessages.length,
                   itemBuilder: (context, index) {
-                    final starter = _messagingController.conversationStarters[index];
-                    return _buildConversationStarter(starter);
+                    final reversedIndex = _messagingController.currentMessages.length - 1 - index;
+                    final message = _messagingController.currentMessages[reversedIndex];
+                    return _buildMessageBubble(message);
                   },
                 );
               }),
             ),
-          
-          // Messages with Reverse ListView
-          Expanded(
-            child: Obx(() {
-              if (_messagingController.isLoadingConversation.value) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    color: Color.fromARGB(255, 81, 115, 153),
-                  ),
-                );
-              }
-
-              if (_messagingController.currentMessages.isEmpty) {
-                return _buildEmptyMessageState();
-              }
-
-              return ListView.builder(
-                controller: _messagingController.scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                reverse: true,
-                itemCount: _messagingController.currentMessages.length,
-                itemBuilder: (context, index) {
-                  final reversedIndex = _messagingController.currentMessages.length - 1 - index;
-                  final message = _messagingController.currentMessages[reversedIndex];
-                  return _buildMessageBubble(message);
-                },
-              );
-            }),
-          ),
-          
-          // Message Input
-          _buildMessageInput(),
-        ],
-      ),
-    );
-  }
+            
+            // Message Input
+            _buildMessageInput(),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildConversationStarter(ConversationStarter starter) {
     return Container(
@@ -576,4 +604,5 @@ class _MessagesNextPageState extends State<MessagesNextPage> {
       ),
     );
   }
+  
 }

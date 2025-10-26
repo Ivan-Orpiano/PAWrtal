@@ -1,6 +1,7 @@
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_grid_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart'; // ADD THIS
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -24,7 +25,7 @@ class _WebTabletDashboardPageUpdatedState
   Map<String, ClinicSettings?> clinicSettingsMap = {};
   bool isLoading = true;
   String? error;
-  bool _showMap = false;
+  // REMOVED: bool _showMap = false; // No longer needed
   String searchQuery = '';
   String selectedFilter = 'All';
 
@@ -96,7 +97,6 @@ class _WebTabletDashboardPageUpdatedState
 
     final authRepository = Get.find<AuthRepository>();
 
-    // Listen to clinic changes (create, update, delete)
     _clinicSubscription = authRepository
         .subscribeToClinicChanges()
         .listen((RealtimeMessage event) {
@@ -135,7 +135,6 @@ class _WebTabletDashboardPageUpdatedState
       print('❌ Clinic subscription error: $error');
     });
 
-    // Listen to settings changes (affects availability and operating hours)
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
@@ -231,7 +230,6 @@ class _WebTabletDashboardPageUpdatedState
 
   Future<void> _fetchClinicsData() async {
     try {
-      // Don't show loading spinner if we're just refreshing
       if (allClinics.isEmpty) {
         setState(() {
           isLoading = true;
@@ -240,8 +238,6 @@ class _WebTabletDashboardPageUpdatedState
       }
 
       final authRepository = Get.find<AuthRepository>();
-
-      // Fetch all clinics with their settings using the repository method
       final clinicsWithSettings = await authRepository.getClinicsWithSettings();
 
       final clinics = <Clinic>[];
@@ -278,7 +274,6 @@ class _WebTabletDashboardPageUpdatedState
   List<Clinic> _applyFilters(List<Clinic> clinics) {
     var filtered = clinics;
 
-    // Apply search filter
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((clinic) {
         final settings = clinicSettingsMap[clinic.documentId ?? ''];
@@ -292,7 +287,6 @@ class _WebTabletDashboardPageUpdatedState
       }).toList();
     }
 
-    // Apply status filter
     switch (selectedFilter) {
       case 'Open':
         filtered = filtered.where((clinic) {
@@ -314,17 +308,11 @@ class _WebTabletDashboardPageUpdatedState
         }).toList();
         break;
       case 'Nearby':
-        // For now, just return all clinics
-        break;
       case 'Popular':
-        // For now, just return all clinics
-        break;
       case 'Recommended':
-        // For now, just return all clinics
         break;
     }
 
-    // Sort by status (open clinics first) and then by name
     filtered.sort((a, b) {
       final aSettings = clinicSettingsMap[a.documentId ?? ''];
       final bSettings = clinicSettingsMap[b.documentId ?? ''];
@@ -332,11 +320,9 @@ class _WebTabletDashboardPageUpdatedState
       final aIsOpen = aSettings?.isOpen ?? true;
       final bIsOpen = bSettings?.isOpen ?? true;
 
-      // Open clinics first
       if (aIsOpen && !bIsOpen) return -1;
       if (!aIsOpen && bIsOpen) return 1;
 
-      // If both have same status, sort by name
       return a.clinicName.compareTo(b.clinicName);
     });
 
@@ -458,7 +444,6 @@ class _WebTabletDashboardPageUpdatedState
                 },
               ),
             ),
-            // Left scroll button
             if (_showLeft)
               Positioned(
                 left: 0,
@@ -523,7 +508,6 @@ class _WebTabletDashboardPageUpdatedState
                   ),
                 ),
               ),
-            // Right scroll button
             if (_showRight)
               Positioned(
                 right: 0,
@@ -708,6 +692,9 @@ class _WebTabletDashboardPageUpdatedState
 
   @override
   Widget build(BuildContext context) {
+    // MODIFIED: Get controller instance
+    final controller = Get.find<WebUserHomeController>();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: RefreshIndicator(
@@ -726,7 +713,10 @@ class _WebTabletDashboardPageUpdatedState
             ),
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: _showMap ? _buildMapView() : _buildClinicList(),
+              // MODIFIED: Use Obx to listen to shared state
+              child: Obx(() => controller.showMapView.value 
+                  ? _buildMapView() 
+                  : _buildClinicList()),
             ),
           ],
         ),
@@ -737,21 +727,21 @@ class _WebTabletDashboardPageUpdatedState
         child: SizedBox(
           height: 50,
           width: 120,
-          child: FloatingActionButton.extended(
+          // MODIFIED: Use Obx for button state
+          child: Obx(() => FloatingActionButton.extended(
             backgroundColor: Colors.white,
-            label: _showMap
+            label: controller.showMapView.value
                 ? const Text("Show List", style: TextStyle(color: Colors.black))
                 : const Text("Show Maps",
                     style: TextStyle(color: Colors.black)),
-            icon: _showMap
+            icon: controller.showMapView.value
                 ? const Icon(Icons.list_rounded, color: Colors.black)
                 : const Icon(Icons.map_rounded, color: Colors.black),
             onPressed: () {
-              setState(() {
-                _showMap = !_showMap;
-              });
+              // MODIFIED: Use controller to toggle
+              controller.toggleMapView();
             },
-          ),
+          )),
         ),
       ),
     );
