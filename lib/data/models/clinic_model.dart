@@ -11,7 +11,8 @@ class Clinic {
   late String services;
   late String description;
   late String image;
-  String? profilePictureId; // ADD THIS LINE
+  String? profilePictureId;
+  String? dashboardPic;
 
   Clinic({
     this.documentId,
@@ -26,7 +27,8 @@ class Clinic {
     required this.services,
     required this.description,
     required this.image,
-    this.profilePictureId, // ADD THIS LINE
+    this.profilePictureId,
+    this.dashboardPic,
   });
 
   Clinic.fromMap(Map<String, dynamic> map) {
@@ -42,7 +44,8 @@ class Clinic {
     services = map['services'] ?? 'No services available';
     description = map['description'] ?? '';
     image = map['image'] ?? '';
-    profilePictureId = map['profilePictureId'] ?? ''; // ADD THIS LINE
+    profilePictureId = map['profilePictureId'] ?? '';
+    dashboardPic = map['dashboardPic'] ?? '';
   }
 
   Map<String, dynamic> toMap() {
@@ -58,7 +61,8 @@ class Clinic {
       'services': services,
       'description': description,
       'image': image,
-      'profilePictureId': profilePictureId ?? '', // ADD THIS LINE
+      'profilePictureId': profilePictureId ?? '',
+      'dashboardPic': dashboardPic ?? '',
     };
   }
 
@@ -75,7 +79,8 @@ class Clinic {
     String? services,
     String? description,
     String? image,
-    String? profilePictureId, // ADD THIS LINE
+    String? profilePictureId,
+    String? dashboardPic,
   }) {
     return Clinic(
       documentId: documentId ?? this.documentId,
@@ -90,8 +95,8 @@ class Clinic {
       services: services ?? this.services,
       description: description ?? this.description,
       image: image ?? this.image,
-      profilePictureId:
-          profilePictureId ?? this.profilePictureId, // ADD THIS LINE
+      profilePictureId: profilePictureId ?? this.profilePictureId,
+      dashboardPic: dashboardPic ?? this.dashboardPic,
     );
   }
 }

@@ -512,70 +512,329 @@ class _SuperAdminVetClinicDetailPageState
 
   Widget _buildActionButtons(
       BuildContext context, Clinic clinic, bool isMobile) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionButton(
-            icon: Icons.people,
-            label: 'Manage Staff',
-            subtitle: '$totalStaff Members',
-            color: const Color.fromARGB(255, 74, 145, 101),
-            onPressed: isDeleting
-                ? null
-                : () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SuperAdminStaffManagementPage(
-                          clinic: clinic,
-                        ),
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 248, 253, 255),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color.fromRGBO(81, 115, 153, 0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color.fromRGBO(81, 115, 153, 0.15),
+                      const Color.fromRGBO(81, 115, 153, 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.settings_suggest_rounded,
+                  color: Color.fromRGBO(81, 115, 153, 1),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Quick Actions',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromRGBO(81, 115, 153, 1),
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Action Buttons Row
+          Row(
+            children: [
+              // Staff Management - Larger/Primary
+              Expanded(
+                flex: 2,
+                child: _buildPrimaryActionCard(
+                  icon: Icons.people_rounded,
+                  label: 'Staff',
+                  subtitle: '$totalStaff Members',
+                  count: totalStaff,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF10B981),
+                      Color(0xFF059669),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onPressed: isDeleting
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  SuperAdminStaffManagementPage(
+                                clinic: clinic,
+                              ),
+                            ),
+                          ).then((_) => _loadStaffCount());
+                        },
+                  isMobile: isMobile,
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Compact Buttons Column
+              Expanded(
+                flex: 2,
+                child: Column(
+                  children: [
+                    // Edit Button
+                    _buildCompactActionCard(
+                      icon: Icons.edit_rounded,
+                      label: 'Edit Details',
+                      color: const Color.fromRGBO(81, 115, 153, 1),
+                      onPressed: isDeleting
+                          ? null
+                          : () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SuperAdminEditClinicPage(
+                                    clinic: clinic,
+                                    settings: currentSettings,
+                                  ),
+                                ),
+                              );
+                              if (result == true) {
+                                _showUpdateNotification(
+                                    'Clinic updated successfully');
+                              }
+                            },
+                      isMobile: isMobile,
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Archive Button
+                    _buildCompactActionCard(
+                      icon: isDeleting
+                          ? Icons.hourglass_empty
+                          : Icons.archive_rounded,
+                      label: isDeleting ? 'Archiving...' : 'Archive',
+                      color: const Color(0xFFEA580C),
+                      onPressed: isDeleting
+                          ? null
+                          : () => _showDeleteConfirmation(context, clinic),
+                      isMobile: isMobile,
+                      isLoading: isDeleting,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryActionCard({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required int count,
+    required Gradient gradient,
+    required VoidCallback? onPressed,
+    required bool isMobile,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: isMobile ? 120 : 130,
+          padding: EdgeInsets.all(isMobile ? 14 : 16),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF10B981).withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: isMobile ? 22 : 24,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 14 : 16,
                       ),
-                    ).then((_) => _loadStaffCount());
-                  },
-            isMobile: isMobile,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isMobile ? 16 : 18,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: isMobile ? 12 : 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionButton(
-            icon: Icons.edit,
-            label: 'Edit Clinic',
-            subtitle: 'Modify Details',
-            color: const Color.fromARGB(255, 74, 108, 146),
-            onPressed: isDeleting
-                ? null
-                : () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SuperAdminEditClinicPage(
-                          clinic: clinic,
-                          settings: currentSettings,
+      ),
+    );
+  }
+
+// Compact Action Card (Edit & Archive)
+  Widget _buildCompactActionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onPressed,
+    required bool isMobile,
+    bool isLoading = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: isMobile ? 55 : 60,
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : 14,
+            vertical: isMobile ? 10 : 12,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: isLoading
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: color,
                         ),
+                      )
+                    : Icon(
+                        icon,
+                        color: color,
+                        size: isMobile ? 18 : 20,
                       ),
-                    );
-                    if (result == true) {
-                      _showUpdateNotification('Clinic updated successfully');
-                    }
-                  },
-            isMobile: isMobile,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: isMobile ? 13 : 14,
+                    letterSpacing: 0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: color.withOpacity(0.5),
+                size: 14,
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildActionButton(
-            icon: isDeleting ? Icons.hourglass_empty : Icons.archive,
-            label: isDeleting ? 'Archiving...' : 'Archive',
-            subtitle: 'Archive Clinic',
-            color: Colors.orange[700]!,
-            onPressed: isDeleting
-                ? null
-                : () => _showDeleteConfirmation(context, clinic),
-            isMobile: isMobile,
-            isLoading: isDeleting,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
