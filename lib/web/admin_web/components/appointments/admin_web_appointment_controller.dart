@@ -2,6 +2,8 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/conversation_model.dart';
+import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
@@ -625,6 +627,11 @@ class WebAppointmentController extends GetxController {
 
     await _sendAppointmentStatusNotification(appointment, 'accepted');
 
+    await _sendAutomatedAppointmentMessage(
+      appointment: appointment,
+      messageType: 'accepted',
+    );
+
     Get.snackbar(
       "Success",
       "Appointment accepted! Time slot has been reserved.",
@@ -664,6 +671,12 @@ class WebAppointmentController extends GetxController {
       await _sendAppointmentStatusNotification(
         updatedAppointment,
         'declined',
+        declineReason: notes,
+      );
+
+      await _sendAutomatedAppointmentMessage(
+        appointment: updatedAppointment,
+        messageType: 'declined',
         declineReason: notes,
       );
 
@@ -890,6 +903,11 @@ class WebAppointmentController extends GetxController {
       }
 
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
+
+      await _sendAutomatedAppointmentMessage(
+        appointment: updatedAppointment,
+        messageType: 'completed',
+      );
 
       print('>>> ============================================');
       print('>>> SERVICE COMPLETION SUCCESSFUL');
@@ -1736,6 +1754,11 @@ class WebAppointmentController extends GetxController {
 
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
 
+      await _sendAutomatedAppointmentMessage(
+        appointment: updatedAppointment,
+        messageType: 'completed',
+      );
+
       print('>>> ============================================');
       print('>>> VACCINATION COMPLETION SUCCESSFUL');
       print('>>> ============================================');
@@ -1917,6 +1940,144 @@ class WebAppointmentController extends GetxController {
       print('>>> Error fetching pet profile picture: $e');
       petProfilePictures[petId] = null;
       return null;
+    }
+  }
+
+  Future<void> _sendAutomatedAppointmentMessage({
+    required Appointment appointment,
+    required String messageType, // 'accepted', 'declined', 'completed'
+    String? declineReason,
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> SENDING AUTOMATED APPOINTMENT MESSAGE');
+      print('>>> Type: $messageType');
+      print('>>> User ID: ${appointment.userId}');
+      print('>>> Clinic ID: ${appointment.clinicId}');
+      print('>>> ============================================');
+
+      // Step 1: Get or create conversation
+      print('>>> Step 1: Getting or creating conversation...');
+      final conversation = await authRepository.getOrCreateConversation(
+        appointment.userId,
+        appointment.clinicId,
+      );
+
+      if (conversation == null) {
+        print('>>> ERROR: Failed to get/create conversation');
+        // Don't throw error - just log and continue
+        // The appointment action already succeeded
+        return;
+      }
+
+      print('>>> Conversation ready: ${conversation.documentId}');
+
+      // Step 2: Build the automated message based on type
+      print('>>> Step 2: Building message text...');
+      String messageText;
+      final petName = getPetName(appointment.petId);
+      final clinicName = clinicData.value?.clinicName ?? 'Our clinic';
+      final formattedDate =
+          DateFormat('MMMM dd, yyyy').format(appointment.dateTime);
+      final formattedTime = DateFormat('hh:mm a').format(appointment.dateTime);
+
+      switch (messageType) {
+        case 'accepted':
+          messageText = '''
+Hello! 🎉
+
+Your appointment for $petName has been ACCEPTED!
+
+📅 Date: $formattedDate
+🕐 Time: $formattedTime
+🏥 Service: ${appointment.service}
+
+Please arrive 10 minutes early. We look forward to seeing you and $petName!
+
+If you need to make any changes, please let us know as soon as possible.
+
+- $clinicName Team
+''';
+          break;
+
+        case 'declined':
+          messageText = '''
+Hello,
+
+We regret to inform you that your appointment for $petName on $formattedDate at $formattedTime could not be confirmed.
+
+${declineReason != null && declineReason.isNotEmpty ? '📝 Reason: $declineReason\n\n' : ''}Please contact us to reschedule or discuss alternative time slots.
+
+We apologize for any inconvenience.
+
+- $clinicName Team
+''';
+          break;
+
+        case 'completed':
+          messageText = '''
+Hello! ✅
+
+$petName's appointment has been completed.
+
+📋 Service: ${appointment.service}
+📅 Date: $formattedDate
+
+${appointment.followUpInstructions != null && appointment.followUpInstructions!.isNotEmpty ? '💡 Follow-up instructions: ${appointment.followUpInstructions}\n\n' : ''}Thank you for choosing $clinicName. If you have any questions about the visit, please don't hesitate to reach out!
+
+- $clinicName Team
+''';
+          break;
+
+        default:
+          messageText = '''
+Hello,
+
+Your appointment for $petName has been updated.
+
+📅 Date: $formattedDate
+🕐 Time: $formattedTime
+🏥 Service: ${appointment.service}
+
+For more details, please check your appointments.
+
+- $clinicName Team
+''';
+      }
+
+      print('>>> Message text prepared (${messageText.length} characters)');
+
+      // Step 3: Send the automated message
+      // CRITICAL: Use clinic ID as sender (not admin user ID)
+      print('>>> Step 3: Sending message...');
+      print('>>>   Sender (Clinic) ID: ${appointment.clinicId}');
+      print('>>>   Receiver (User) ID: ${appointment.userId}');
+      print('>>>   Conversation ID: ${conversation.documentId}');
+
+      final messageData = {
+        'conversationId': conversation.documentId!,
+        'senderId': appointment.clinicId, // IMPORTANT: Use clinic ID as sender
+        'senderType': 'clinic',
+        'receiverId': appointment.userId,
+        'messageText': messageText,
+        'messageType': 'text',
+        'timestamp': DateTime.now().toIso8601String(),
+        'isRead': false,
+        'isDeleted': false,
+        'sentAt': DateTime.now().toIso8601String(),
+      };
+
+      await authRepository.appWriteProvider.createMessage(messageData);
+
+      print('>>> ✅ Automated message sent successfully!');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ⚠️ ERROR sending automated message: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      // Don't rethrow - the appointment action already succeeded
+      // Just log the error
     }
   }
 
