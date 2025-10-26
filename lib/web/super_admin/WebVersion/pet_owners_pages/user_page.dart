@@ -373,10 +373,7 @@ Widget _buildSortOption(
     }
 
   /// Setup real-time subscriptions for users and verifications
-  // AFTER line 120 (after existing _setupRealtimeSubscriptions method)
-// ADD this enhanced version:
-
-void _setupRealtimeSubscriptions() {
+  void _setupRealtimeSubscriptions() {
   try {
     final realtime = Realtime(_authRepository.appWriteProvider.client);
 
@@ -450,7 +447,6 @@ void _setupRealtimeSubscriptions() {
     print('>>> ============================================');
   }
 }
-
 // ADD this NEW method after _setupRealtimeSubscriptions:
 void _updateUserVerificationStatus(String userId, bool isVerified) {
   setState(() {
@@ -494,24 +490,25 @@ void _updateUserVerificationStatus(String userId, bool isVerified) {
     }
   });
 }
-Future<bool> _checkUserVerificationStatus(String userId) async {
-  try {
-    final verificationDoc = await _authRepository.appWriteProvider.databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.idVerificationCollectionID,
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('status', 'approved'),
-        Query.limit(1),
-      ],
-    );
-    
-    return verificationDoc.documents.isNotEmpty;
-  } catch (e) {
-    print('>>> Error checking verification status: $e');
-    return false;
+
+  Future<bool> _checkUserVerificationStatus(String userId) async {
+    try {
+      final verificationDoc = await _authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('status', 'approved'),
+          Query.limit(1),
+        ],
+      );
+      
+      return verificationDoc.documents.isNotEmpty;
+    } catch (e) {
+      print('>>> Error checking verification status: $e');
+      return false;
+    }
   }
-}
 
   /// Filter users based on search query
   List<User> _filterUsers(List<User> users) {

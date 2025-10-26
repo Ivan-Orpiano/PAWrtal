@@ -2298,4 +2298,23 @@ Future<Set<String>> getAllVerifiedUserIds() async {
     return {};
   }
 }
+
+Future<bool> hasPendingDeletionRequest(String reviewId) async {
+  try {
+    final requests = await appWriteProvider.databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      queries: [
+        Query.equal('reviewId', reviewId),
+        Query.equal('status', 'pending'),
+        Query.limit(1),
+      ],
+    );
+    
+    return requests.documents.isNotEmpty;
+  } catch (e) {
+    print('Error checking deletion request: $e');
+    return false;
+  }
+}
 }

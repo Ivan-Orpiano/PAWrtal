@@ -99,49 +99,49 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   }
 
   Widget _buildStatsCards() {
-    return Obx(() => Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _buildStatCard(
-                'Total',
-                controller.feedbackStats['total']?.toString() ?? '0',
-                Colors.blue,
-                Icons.feedback,
+  return Obx(() => Container(
+        color: const Color.fromRGBO(248, 253, 255, 1),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _buildStatCard(
+              'Total',
+              controller.feedbackStats['total']?.toString() ?? '0',
+              Colors.blue,
+              Icons.feedback,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Pending',
+              controller.feedbackStats['pending']?.toString() ?? '0',
+              Colors.orange,
+              Icons.schedule, 
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'In Progress',
+              controller.feedbackStats['inProgress']?.toString() ?? '0',
+              Colors.blue,
+              Icons.autorenew,             
               ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Pending',
-                controller.feedbackStats['pending']?.toString() ?? '0',
-                Colors.orange,
-                Icons.pending,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'In Progress',
-                controller.feedbackStats['inProgress']?.toString() ?? '0',
-                Colors.blue,
-                Icons.work,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Resolved',
-                controller.feedbackStats['resolved']?.toString() ?? '0',
-                Colors.green,
-                Icons.check_circle,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Critical',
-                controller.feedbackStats['critical']?.toString() ?? '0',
-                Colors.red,
-                Icons.warning,
-              ),
-            ],
-          ),
-        ));
-  }
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Resolved',
+              controller.feedbackStats['resolved']?.toString() ?? '0',
+              Colors.green,
+              Icons.check_circle,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Critical',
+              controller.feedbackStats['critical']?.toString() ?? '0',
+              Colors.red,
+              Icons.warning,
+            ),
+          ],
+        ),
+      ));
+}
 
   Widget _buildStatCard(
       String title, String value, Color color, IconData icon) {
@@ -302,6 +302,20 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       ),
     );
   }
+  IconData _getStatusIcon(FeedbackStatus status) {
+  switch (status) {
+    case FeedbackStatus.pending:
+      return Icons.schedule; // ✅ Pending icon
+    case FeedbackStatus.inProgress:
+      return Icons.autorenew; // ✅ In Progress icon (rotating arrows)
+    case FeedbackStatus.resolved:
+      return Icons.check_circle; // ✅ Resolved icon
+    case FeedbackStatus.closed:
+      return Icons.lock; // ✅ Closed icon
+    case FeedbackStatus.archived:
+      return Icons.inventory_2; // ✅ Archived icon (box)
+  }
+}
 
   Widget _buildFilterDropdown<T>(
     String label,
@@ -373,11 +387,17 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       );
     });
   }
+  
 
  Widget _buildFeedbackCard(FeedbackAndReport feedback) {
  
   return Obx(() {
-    final isPinned = controller.isPinned(feedback.documentId!);
+    // ✅ Get fresh pin status from controller
+    final feedbackItem = controller.allFeedback.firstWhere(
+      (f) => f.documentId == feedback.documentId,
+      orElse: () => feedback,
+    );
+    final isPinned = feedbackItem.isPinned;
     
     return Card(
       color: isPinned 
@@ -509,6 +529,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ],
                 ],
               ),
+              
 
               // Quick Actions for Closed/Resolved
               if (feedback.status == FeedbackStatus.closed ||
@@ -539,6 +560,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       ),
     );
   });
+  
 }
  Widget _buildClickablePriorityBadge(FeedbackAndReport feedback) {
   Color color = _getPriorityColor(feedback.priority);
@@ -1304,8 +1326,7 @@ String _formatDateTime(DateTime dateTime) {
   }
 }
 
-_getStatusIcon(FeedbackStatus status) {
-}
+
 
 // Feedback Details Dialog
 class FeedbackDetailsDialog extends StatefulWidget {

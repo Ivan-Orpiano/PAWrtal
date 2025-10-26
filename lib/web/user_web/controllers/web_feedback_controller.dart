@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/models/daily_report_tracker_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
@@ -10,11 +11,15 @@ class WebFeedbackController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
 
+
   WebFeedbackController({
     required this.authRepository,
     required this.session,
   });
 
+  final Rx<UserDailyReportTracker?> dailyTracker = Rx<UserDailyReportTracker?>(null);
+  final RxBool isCheckingLimit = false.obs;
+  
   // User-side properties
   RxList<PlatformFile> selectedFiles = <PlatformFile>[].obs;
   RxBool isSubmitting = false.obs;
@@ -36,14 +41,62 @@ final RxString searchQuery = ''.obs;
 // Pinned feedback IDs
 final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
 
-// Toggle pin status
-void togglePin(String feedbackId) {
-  if (pinnedFeedbackIds.contains(feedbackId)) {
-    pinnedFeedbackIds.remove(feedbackId);
-  } else {
-    pinnedFeedbackIds.add(feedbackId);
+
+/// Toggle pin status
+Future<void> togglePin(String feedbackId) async {
+  try {
+    print('>>> Toggling pin for feedback: $feedbackId');
+
+    // Find the feedback item
+    final feedbackIndex =
+        allFeedback.indexWhere((f) => f.documentId == feedbackId);
+
+    if (feedbackIndex == -1) {
+      print('>>> Error: Feedback not found');
+      return;
+    }
+
+    final feedback = allFeedback[feedbackIndex];
+    final newPinStatus = !feedback.isPinned;
+
+    // Get current admin/user info
+    final userName = session.userName.isNotEmpty ? session.userName : 'System';
+
+    print('>>> New pin status: $newPinStatus');
+    print('>>> Pinned by: $userName');
+
+    // Update in database
+    await authRepository.toggleFeedbackPin(
+      feedbackId,
+      newPinStatus,
+      userName,
+    );
+
+    // Update local state
+    if (newPinStatus) {
+      pinnedFeedbackIds.add(feedbackId);
+    } else {
+      pinnedFeedbackIds.remove(feedbackId);
+    }
+
+    // Update the feedback object
+    allFeedback[feedbackIndex] = feedback.copyWith(
+      isPinned: newPinStatus,
+      pinnedAt: newPinStatus ? DateTime.now() : null,
+      pinnedBy: newPinStatus ? userName : null,
+    );
+
+    allFeedback.refresh();
+
+    _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
+
+    print('>>> Pin toggle successful');
+  } catch (e) {
+    print('>>> Error toggling pin: $e');
+    _showError('Failed to toggle pin');
   }
 }
+
 
 // Check if feedback is pinned
 bool isPinned(String feedbackId) {
@@ -60,9 +113,132 @@ bool isPinned(String feedbackId) {
     final role = session.userRole;
     if (role == 'admin' || role == 'staff') {
       loadAllFeedback();
+     _loadDailyReportTracker();
     }
   }
 
+ Future<void> _loadDailyReportTracker() async {
+    try {
+      isCheckingLimit.value = true;
+      
+      final userId = session.userId;
+      if (userId.isEmpty) {
+        print('>>> No user ID, skipping tracker load');
+        return;
+      }
+      
+      print('>>> Loading daily report tracker for user: $userId');
+      
+      // Get user's feedback submissions from last 24 hours
+      final allFeedback = await authRepository.getUserFeedback(userId);
+      
+      final now = DateTime.now();
+      final last24Hours = now.subtract(Duration(hours: 24));
+      
+      // Count reports in last 24 hours
+      final recentReports = allFeedback.where((feedback) {
+        return feedback.submittedAt.isAfter(last24Hours);
+      }).toList();
+      
+      print('>>> Found ${recentReports.length} reports in last 24 hours');
+      
+      // Find the oldest report timestamp to use as reset time
+      DateTime lastResetAt = now.subtract(Duration(hours: 24));
+      DateTime? lastReportAt;
+      
+      if (recentReports.isNotEmpty) {
+        // Sort by submission time
+        recentReports.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+        lastResetAt = recentReports.first.submittedAt;
+        lastReportAt = recentReports.last.submittedAt;
+      }
+      
+      // Create tracker
+      final tracker = UserDailyReportTracker(
+        userId: userId,
+        reportCount: recentReports.length,
+        lastResetAt: lastResetAt,
+        lastReportAt: lastReportAt ?? now,
+      );
+      
+      // Check if needs reset
+      if (tracker.needsReset) {
+        print('>>> Tracker needs reset (>24 hours old)');
+        dailyTracker.value = tracker.reset();
+      } else {
+        dailyTracker.value = tracker;
+      }
+      
+      print('>>> Daily tracker loaded:');
+      print('>>>   Reports today: ${dailyTracker.value!.reportCount}/3');
+      print('>>>   Remaining: ${dailyTracker.value!.remainingReports}');
+      print('>>>   Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
+      
+    } catch (e) {
+      print('>>> Error loading daily tracker: $e');
+    } finally {
+      isCheckingLimit.value = false;
+    }
+  }
+   bool canSubmitFeedback() {
+    
+    if (dailyTracker.value == null) {
+      print('>>> No tracker loaded, allowing submission');
+      return true;
+    }
+    
+    // Check if needs reset first
+    if (dailyTracker.value!.needsReset) {
+      print('>>> Tracker needs reset, resetting now...');
+      dailyTracker.value = dailyTracker.value!.reset();
+      return true;
+    }
+
+    
+    
+    final canSubmit = !dailyTracker.value!.hasExceededLimit;
+    
+    if (!canSubmit) {
+      print('>>> Daily limit exceeded: ${dailyTracker.value!.reportCount}/3');
+      print('>>> Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
+    }
+    
+    return canSubmit;
+  }
+   /// Get remaining reports count
+  int getRemainingReports() {
+    if (dailyTracker.value == null) return 3;
+    
+    if (dailyTracker.value!.needsReset) {
+      return 3;
+    }
+    
+    return dailyTracker.value!.remainingReports;
+  }
+  
+  /// Get time until reset as formatted string
+  String getTimeUntilReset() {
+    if (dailyTracker.value == null) return 'N/A';
+    
+    if (dailyTracker.value!.needsReset) {
+      return 'Ready to reset';
+    }
+    
+    return _formatDuration(dailyTracker.value!.timeUntilReset);
+  }
+  
+  /// Format duration to readable string
+  String _formatDuration(Duration duration) {
+    if (duration.inHours > 0) {
+      final hours = duration.inHours;
+      final minutes = duration.inMinutes % 60;
+      return '${hours}h ${minutes}m';
+    } else if (duration.inMinutes > 0) {
+      return '${duration.inMinutes}m';
+    } else {
+      return 'Less than 1 minute';
+    }
+  }
   // ============= NOTIFICATION HELPER =============
 
   /// Show compact toast notification at top right
@@ -264,8 +440,14 @@ bool isPinned(String feedbackId) {
 
   /// Submit feedback
   Future<bool> submitFeedback() async {
-    if (!validateForm()) return false;
 
+    if (!canSubmitFeedback()) {
+      _showError(
+        'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.'
+      );
+      return false;
+    }
+    if (!validateForm()) return false;
     isSubmitting.value = true;
 
     try {
@@ -290,28 +472,21 @@ bool isPinned(String feedbackId) {
         return false;
       }
 
-      List<String> attachmentIds = [];
+  List<String> attachmentIds = [];
 
-      // Upload attachments ONLY if files are selected (optional)
+      // Upload attachments if provided
       if (selectedFiles.isNotEmpty) {
         _showInfo("Uploading ${selectedFiles.length} file(s)...");
-
         final uploadedFiles =
             await authRepository.uploadFeedbackAttachments(selectedFiles);
         attachmentIds = uploadedFiles.map((f) => f.$id).toList();
-
-        print('Uploaded ${attachmentIds.length} attachments: $attachmentIds');
-      } else {
-        print('No attachments provided (optional)');
       }
 
-      // Get device/platform info
       final platform = 'web';
       final appVersion = '1.0.0';
       final deviceInfo = 'Web Browser';
       final now = DateTime.now();
 
-      // Create feedback object
       final feedback = FeedbackAndReport(
         userId: userId,
         userName: userName.isNotEmpty ? userName : 'Unknown User',
@@ -329,29 +504,40 @@ bool isPinned(String feedbackId) {
         submittedAt: now,
       );
 
-      print('Feedback object created, submitting to database...');
-      print('Feedback data map: ${feedback.toMap()}');
-
       // Submit to database
       final createdFeedback =
           await authRepository.createFeedbackAndReport(feedback);
 
-      print(
-          'Feedback created successfully with ID: ${createdFeedback.documentId}');
+      print('Feedback created successfully: ${createdFeedback.documentId}');
 
-      // Clear form COMPLETELY before showing success
+      // STEP 3: Update daily tracker AFTER successful submission
+      if (dailyTracker.value != null) {
+        dailyTracker.value = dailyTracker.value!.incrementCount();
+        print('>>> Updated tracker: ${dailyTracker.value!.reportCount}/3 reports');
+      } else {
+        // Create new tracker if doesn't exist
+        dailyTracker.value = UserDailyReportTracker(
+          userId: userId,
+          reportCount: 1,
+          lastResetAt: now,
+          lastReportAt: now,
+        );
+      }
+
+      // Clear form
       clearForm();
 
-      // Show success notification
-      _showSuccess("Feedback submitted successfully");
+      // Show success with remaining count
+      final remaining = getRemainingReports();
+      _showSuccess(
+        "Feedback submitted! ($remaining reports remaining today)"
+      );
 
       return true;
     } catch (e, stackTrace) {
       print('=== ERROR SUBMITTING FEEDBACK ===');
       print('Error: $e');
       print('Stack trace: $stackTrace');
-      print('================================');
-
       _showError("Failed to submit feedback. Please try again.");
       return false;
     } finally {
@@ -404,24 +590,36 @@ bool isPinned(String feedbackId) {
   // ============= ADMIN-SIDE METHODS =============
 
   /// Load all feedback for admin
-  Future<void> loadAllFeedback() async {
-    isLoadingFeedback.value = true;
+/// Load all feedback for admin
+Future<void> loadAllFeedback() async {
+  isLoadingFeedback.value = true;
 
-    try {
-      final feedback = await authRepository.getAllFeedback(
-        status: statusFilter.value,
-        priority: priorityFilter.value,
-      );
+  try {
+    // ✅ CHANGED: Pass null to load ALL feedback, then filter locally
+    final feedback = await authRepository.getAllFeedback(
+      status: null,  // Don't filter by status in database
+      priority: null, // Don't filter by priority in database
+    );
 
-      allFeedback.value = feedback;
-      filterFeedback();
-      updateStatistics();
-    } catch (e) {
-      _showError("Failed to load feedback: $e");
-    } finally {
-      isLoadingFeedback.value = false;
-    }
+    allFeedback.value = feedback;
+    
+    // Load pinned IDs from database
+    pinnedFeedbackIds.value = feedback
+        .where((f) => f.isPinned)
+        .map((f) => f.documentId!)
+        .toSet();
+    
+    print('>>> Loaded ${pinnedFeedbackIds.length} pinned feedback items');
+    
+    // ✅ IMPORTANT: Apply filters AFTER loading (preserves user's filter selections)
+    filterFeedback();
+    updateStatistics();
+  } catch (e) {
+    _showError("Failed to load feedback: $e");
+  } finally {
+    isLoadingFeedback.value = false;
   }
+}
 
   /// Filter feedback based on current filters
   void filterFeedback() {
