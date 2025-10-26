@@ -287,78 +287,65 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _fetchRelatedData() async {
     for (var appointment in appointments) {
-      // CRITICAL FIX: Handle both old (pet name) and new (pet ID) format
       final petIdentifier = appointment.petId;
+      final userId = appointment.userId;
 
-      if (!petsCache.containsKey(petIdentifier) && petIdentifier.isNotEmpty) {
+      // CRITICAL: Use composite key to avoid conflicts between different users with same pet names
+      final petCacheKey = '${userId}_$petIdentifier';
+      final imageCacheKey = '${userId}_$petIdentifier';
+
+      // Only fetch if not already cached
+      if (!petsCache.containsKey(petCacheKey) && petIdentifier.isNotEmpty) {
         try {
-          Pet? fetchedPet;
+          print('>>> Fetching pet data for: $petIdentifier (User: $userId)');
 
-          print('>>> Fetching pet data for identifier: $petIdentifier');
+          // Fetch pet using the new method that includes userId
+          final fetchedPet = await _fetchPetByUserAndId(userId, petIdentifier);
 
-          // STRATEGY 1: Try to fetch by actual pet ID first
-          try {
-            final petById = await authRepository.getPetById(petIdentifier);
+          if (fetchedPet != null) {
+            // Cache the pet with composite key
+            petsCache[petCacheKey] = fetchedPet;
+            print(
+                '>>> Pet cached with composite key: $petCacheKey -> ${fetchedPet.name}');
 
-            if (petById != null) {
-              fetchedPet = Pet.fromMap(petById.data);
-              fetchedPet.documentId = petById.$id;
+            // Cache profile picture with composite key
+            if (fetchedPet.image != null && fetchedPet.image!.isNotEmpty) {
+              petProfilePictures[imageCacheKey] = fetchedPet.image;
               print(
-                  '>>> ✅ Pet found by ID: ${fetchedPet.name} (ID: ${fetchedPet.petId})');
+                  '>>> Pet profile picture cached: $imageCacheKey -> ${fetchedPet.image}');
+            } else {
+              petProfilePictures[imageCacheKey] = null;
+              print('>>> No profile picture for pet: $imageCacheKey');
             }
-          } catch (e) {
-            print('>>> ℹ️ Not a valid pet ID, trying by name...');
-          }
-
-          // STRATEGY 2: If not found by ID, try by name (backward compatibility)
-          if (fetchedPet == null) {
-            try {
-              final petByName =
-                  await authRepository.getPetByName(petIdentifier);
-
-              if (petByName != null) {
-                fetchedPet = Pet.fromMap(petByName.data);
-                fetchedPet.documentId = petByName.$id;
-                print(
-                    '>>> ✅ Pet found by name: ${fetchedPet.name} (ID: ${fetchedPet.petId})');
-              }
-            } catch (e) {
-              print('>>> ⚠️ Pet not found by name either');
-            }
-          }
-
-          // STRATEGY 3: If still not found, create a fallback pet object
-          if (fetchedPet == null) {
-            print('>>> ℹ️ Creating fallback pet with name: $petIdentifier');
-            fetchedPet = Pet(
+          } else {
+            // Create fallback pet if not found
+            print('>>> Creating fallback pet for: $petIdentifier');
+            petsCache[petCacheKey] = Pet(
               petId: petIdentifier,
-              userId: appointment.userId,
-              name: petIdentifier, // Use identifier as display name
+              userId: userId,
+              name: petIdentifier,
               type: 'Unknown',
               breed: 'Unknown',
             );
+            petProfilePictures[imageCacheKey] = null;
           }
-
-          // Cache the pet
-          petsCache[petIdentifier] = fetchedPet;
-          print(
-              '>>> Pet cached with key: $petIdentifier -> ${fetchedPet.name}');
         } catch (e) {
-          print('>>> ✗ Error fetching pet $petIdentifier: $e');
-          // Create fallback pet
-          petsCache[petIdentifier] = Pet(
+          print('>>> Error fetching pet $petIdentifier: $e');
+          // Create fallback pet on error
+          petsCache[petCacheKey] = Pet(
             petId: petIdentifier,
-            userId: appointment.userId,
+            userId: userId,
             name: petIdentifier,
             type: 'Unknown',
             breed: 'Unknown',
           );
+          petProfilePictures[imageCacheKey] = null;
         }
       }
 
       // Fetch owner data if not cached
-      if (!ownersCache.containsKey(appointment.userId)) {
-        await _fetchOwnerData(appointment.userId);
+      if (!ownersCache.containsKey(userId)) {
+        await _fetchOwnerData(userId);
       }
     }
 
@@ -368,7 +355,42 @@ class WebAppointmentController extends GetxController {
     for (var entry in petsCache.entries) {
       print('>>>   ${entry.key} -> ${entry.value.name}');
     }
+    print('>>> Profile pictures cache: ${petProfilePictures.length}');
     print('>>> ============================================');
+  }
+
+  /// NEW HELPER METHOD: Fetch pet by both userId and petId
+  Future<Pet?> _fetchPetByUserAndId(String userId, String petIdentifier) async {
+    try {
+      // Get all pets for this specific user
+      final userPets = await authRepository.getUserPets(userId);
+
+      if (userPets.isEmpty) {
+        print('>>> No pets found for user: $userId');
+        return null;
+      }
+
+      // Find the specific pet by petId (document ID, petId field, or name)
+      for (var petDoc in userPets) {
+        final pet = Pet.fromMap(petDoc.data);
+        pet.documentId = petDoc.$id;
+
+        // Match by document ID, petId field, or name (in that order of priority)
+        if (petDoc.$id == petIdentifier ||
+            pet.petId == petIdentifier ||
+            pet.name == petIdentifier) {
+          print(
+              '>>> ✅ Found pet: ${pet.name} (ID: ${pet.petId}) for user: $userId');
+          return pet;
+        }
+      }
+
+      print('>>> ⚠️ Pet not found in user\'s pets: $petIdentifier');
+      return null;
+    } catch (e) {
+      print('>>> Error fetching pet by user and ID: $e');
+      return null;
+    }
   }
 
   void updateFilteredAppointments() {
@@ -445,49 +467,68 @@ class WebAppointmentController extends GetxController {
     return ownersCache[userId]?['name'] ?? 'User #${userId.substring(0, 6)}';
   }
 
+  /// Get pet name using composite key (userId + petId)
   String getPetName(String petId) {
-    // Check cache first
-    final pet = petsCache[petId];
+    // Find the appointment to get userId
+    final appointment = appointments.firstWhereOrNull(
+      (a) => a.petId == petId,
+    );
 
-    if (pet != null && pet.name.isNotEmpty) {
-      return pet.name;
+    if (appointment != null) {
+      final cacheKey = '${appointment.userId}_$petId';
+      final pet = petsCache[cacheKey];
+
+      if (pet != null && pet.name.isNotEmpty) {
+        return pet.name;
+      }
     }
 
-    // If not in cache yet, trigger fetch and return identifier as temporary name
-    if (!petsCache.containsKey(petId)) {
-      // Trigger background fetch (don't wait for it)
+    // Fallback: trigger fetch if not cached
+    if (appointment != null) {
       _fetchRelatedData();
     }
 
-    // Return the petId itself as display name while loading
-    // (This handles both old format where petId=name, and new format during loading)
     return petId.isEmpty ? 'Unknown Pet' : petId;
   }
 
+  /// Get pet breed using composite key
   String getPetBreed(String petId) {
-    final pet = petsCache[petId];
+    final appointment = appointments.firstWhereOrNull(
+      (a) => a.petId == petId,
+    );
 
-    if (pet != null) {
-      return pet.breed.isNotEmpty ? pet.breed : 'Not Available';
+    if (appointment != null) {
+      final cacheKey = '${appointment.userId}_$petId';
+      final pet = petsCache[cacheKey];
+
+      if (pet != null) {
+        return pet.breed.isNotEmpty ? pet.breed : 'Not Available';
+      }
     }
 
-    // Trigger fetch if not cached
-    if (!petsCache.containsKey(petId)) {
+    if (appointment != null) {
       _fetchRelatedData();
     }
 
     return 'Loading...';
   }
 
+  /// Get pet type using composite key
   String getPetType(String petId) {
-    final pet = petsCache[petId];
+    final appointment = appointments.firstWhereOrNull(
+      (a) => a.petId == petId,
+    );
 
-    if (pet != null) {
-      return pet.type.isNotEmpty ? pet.type : 'Not Available';
+    if (appointment != null) {
+      final cacheKey = '${appointment.userId}_$petId';
+      final pet = petsCache[cacheKey];
+
+      if (pet != null) {
+        return pet.type.isNotEmpty ? pet.type : 'Not Available';
+      }
     }
 
-    // Trigger fetch if not cached
-    if (!petsCache.containsKey(petId)) {
+    if (appointment != null) {
       _fetchRelatedData();
     }
 
@@ -759,134 +800,113 @@ class WebAppointmentController extends GetxController {
       print('>>> Final vitals to be saved: $finalVitals');
       print('>>> ============================================');
 
-      // CRITICAL: Extract and validate individual vital values
-      double? temperature;
-      double? weight;
-      String? bloodPressure;
-      int? heartRate;
-
-      if (finalVitals != null && finalVitals.isNotEmpty) {
-        print('>>> Processing vitals data...');
-
-        if (finalVitals.containsKey('temperature') &&
-            finalVitals['temperature'] != null) {
-          try {
-            final tempValue = finalVitals['temperature'];
-            temperature = tempValue is double
-                ? tempValue
-                : double.parse(tempValue.toString());
-            print('>>> ✓ Temperature: $temperature°C');
-          } catch (e) {
-            print('>>> ✗ Error parsing temperature: $e');
-          }
-        }
-
-        if (finalVitals.containsKey('weight') &&
-            finalVitals['weight'] != null) {
-          try {
-            final weightValue = finalVitals['weight'];
-            weight = weightValue is double
-                ? weightValue
-                : double.parse(weightValue.toString());
-            print('>>> ✓ Weight: ${weight}kg');
-          } catch (e) {
-            print('>>> ✗ Error parsing weight: $e');
-          }
-        }
-
-        if (finalVitals.containsKey('bloodPressure') &&
-            finalVitals['bloodPressure'] != null) {
-          bloodPressure = finalVitals['bloodPressure'].toString();
-          print('>>> ✓ Blood Pressure: $bloodPressure');
-        }
-
-        if (finalVitals.containsKey('heartRate') &&
-            finalVitals['heartRate'] != null) {
-          try {
-            final hrValue = finalVitals['heartRate'];
-            heartRate =
-                hrValue is int ? hrValue : int.parse(hrValue.toString());
-            print('>>> ✓ Heart Rate: $heartRate bpm');
-          } catch (e) {
-            print('>>> ✗ Error parsing heart rate: $e');
-          }
-        }
-      }
-
-      // STEP 1: Update appointment - ONLY workflow and billing fields
-      print('>>> STEP 1: Updating appointment workflow...');
+      // Step 1: Update appointment status
+      print('>>> Step 1: Updating appointment to completed...');
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
         serviceCompletedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
         followUpInstructions: followUpInstructions,
         nextAppointmentDate: nextAppointmentDate,
-        updatedAt: DateTime.now(),
       );
 
       await updateFullAppointment(updatedAppointment);
-      print('>>> ✓ Appointment updated successfully');
-      print('>>> ============================================');
+      print('>>> ✅ Appointment updated to completed');
 
-      // STEP 2: Create medical record with ALL medical data
-      print('>>> STEP 2: Creating medical record...');
+      // Step 2: Create medical record with vitals
+      print('>>> Step 2: Creating medical record...');
       final user = await authRepository.getUser();
       if (user != null) {
-        try {
-          final medicalRecord = MedicalRecord(
-            petId: appointment.petId,
-            clinicId: appointment.clinicId,
-            vetId: user.$id,
-            appointmentId: appointment.documentId!,
-            visitDate: appointment.serviceCompletedAt ?? DateTime.now(),
-            service: appointment.service,
-            diagnosis: diagnosis,
-            treatment: treatment,
-            prescription:
-                prescription?.trim().isNotEmpty == true ? prescription : null,
-            notes: vetNotes?.trim().isNotEmpty == true ? vetNotes : null,
-            // CRITICAL: Pass individual vital fields
-            temperature: temperature,
-            weight: weight,
-            bloodPressure: bloodPressure,
-            heartRate: heartRate,
+        // Parse vitals into individual fields
+        double? temperature;
+        double? weight;
+        String? bloodPressure;
+        int? heartRate;
 
-            attachments: appointment.attachments,
-          );
+        if (finalVitals != null && finalVitals.isNotEmpty) {
+          print('>>> Processing vitals data...');
 
-          print('>>> Medical record vitals:');
-          print('>>>   - temperature: ${medicalRecord.temperature}');
-          print('>>>   - weight: ${medicalRecord.weight}');
-          print('>>>   - bloodPressure: ${medicalRecord.bloodPressure}');
-          print('>>>   - heartRate: ${medicalRecord.heartRate}');
-          print('>>> ============================================');
-
-          await authRepository.createMedicalRecord(medicalRecord);
-          print('>>> ✓ Medical record created successfully');
-
-          // CRITICAL: Clear pending vitals after successful save
-          if (pendingVitals.containsKey(appointment.documentId)) {
-            pendingVitals.remove(appointment.documentId);
-            print('>>> ✓ Cleared pending vitals from local storage');
+          if (finalVitals.containsKey('temperature') &&
+              finalVitals['temperature'] != null) {
+            try {
+              final tempValue = finalVitals['temperature'];
+              temperature = tempValue is double
+                  ? tempValue
+                  : double.parse(tempValue.toString());
+              print('>>> ✓ Temperature: ${temperature}°C');
+            } catch (e) {
+              print('>>> ✗ Error parsing temperature: $e');
+            }
           }
 
-          print('>>> ============================================');
-        } catch (e) {
-          print('>>> ✗ ERROR: Failed to create medical record: $e');
-          print('>>> Stack trace: ${StackTrace.current}');
-          print('>>> ============================================');
-          Get.snackbar(
-            "Warning",
-            "Appointment completed but medical record creation failed: $e",
-            backgroundColor: Colors.orange,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 5),
-          );
-          return;
+          if (finalVitals.containsKey('weight') &&
+              finalVitals['weight'] != null) {
+            try {
+              final weightValue = finalVitals['weight'];
+              weight = weightValue is double
+                  ? weightValue
+                  : double.parse(weightValue.toString());
+              print('>>> ✓ Weight: ${weight}kg');
+            } catch (e) {
+              print('>>> ✗ Error parsing weight: $e');
+            }
+          }
+
+          if (finalVitals.containsKey('bloodPressure') &&
+              finalVitals['bloodPressure'] != null) {
+            bloodPressure = finalVitals['bloodPressure'].toString();
+            print('>>> ✓ Blood Pressure: $bloodPressure');
+          }
+
+          if (finalVitals.containsKey('heartRate') &&
+              finalVitals['heartRate'] != null) {
+            try {
+              final hrValue = finalVitals['heartRate'];
+              heartRate =
+                  hrValue is int ? hrValue : int.parse(hrValue.toString());
+              print('>>> ✓ Heart Rate: $heartRate bpm');
+            } catch (e) {
+              print('>>> ✗ Error parsing heart rate: $e');
+            }
+          }
+        }
+
+        final medicalRecord = MedicalRecord(
+          petId: appointment.petId,
+          clinicId: appointment.clinicId,
+          vetId: user.$id,
+          appointmentId: appointment.documentId!,
+          visitDate: appointment.serviceCompletedAt ?? DateTime.now(),
+          service: appointment.service,
+          diagnosis: diagnosis,
+          treatment: treatment,
+          prescription: prescription,
+          notes: vetNotes,
+          temperature: temperature,
+          weight: weight,
+          bloodPressure: bloodPressure,
+          heartRate: heartRate,
+          attachments: appointment.attachments,
+        );
+
+        print('>>> Medical record vitals:');
+        print('>>>   - temperature: ${medicalRecord.temperature}');
+        print('>>>   - weight: ${medicalRecord.weight}');
+        print('>>>   - bloodPressure: ${medicalRecord.bloodPressure}');
+        print('>>>   - heartRate: ${medicalRecord.heartRate}');
+
+        await authRepository.createMedicalRecord(medicalRecord);
+        print('>>> ✅ Medical record created');
+
+        // Clear pending vitals after successful save
+        if (pendingVitals.containsKey(appointment.documentId)) {
+          pendingVitals.remove(appointment.documentId);
+          print('>>> ✅ Cleared pending vitals from local storage');
         }
       }
 
-      // STEP 3: Create notification
-      print('>>> STEP 3: Creating notification...');
+      // Step 3: Create notification
+      print('>>> Step 3: Creating notification...');
       try {
         final notification = AppNotification.appointmentCompleted(
           userId: appointment.userId,
@@ -897,13 +917,15 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-        print('>>> ✓ Completion notification sent to user');
+        print('>>> ✅ Completion notification sent to user');
       } catch (e) {
         print('>>> ⚠️ Error creating notification: $e');
       }
 
+      // Step 4: Send status notification
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
 
+      // Step 5: Send automated message
       await _sendAutomatedAppointmentMessage(
         appointment: updatedAppointment,
         messageType: 'completed',
@@ -913,20 +935,37 @@ class WebAppointmentController extends GetxController {
       print('>>> SERVICE COMPLETION SUCCESSFUL');
       print('>>> ============================================');
 
-      Get.snackbar(
-        "Success",
-        finalVitals != null
-            ? "Service completed and medical record created with vitals!"
-            : "Service completed and medical record created!",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      // Use Future.microtask to ensure we're not in the middle of a build
+      Future.microtask(() {
+        if (Get.isRegistered<WebAppointmentController>()) {
+          Get.snackbar(
+            "Success",
+            finalVitals != null
+                ? "Service completed! Medical record created with vitals for ${getPetName(appointment.petId)}"
+                : "Service completed! Medical record created for ${getPetName(appointment.petId)}",
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 4),
+          );
+        }
+      });
     } catch (e) {
       print('>>> ============================================');
       print('>>> ✗ ERROR in completeServiceWithRecord: $e');
       print('>>> Stack trace: ${StackTrace.current}');
       print('>>> ============================================');
-      Get.snackbar("Error", "Failed to complete service: $e");
+
+      // Use Future.microtask for error snackbar
+      Future.microtask(() {
+        if (Get.isRegistered<WebAppointmentController>()) {
+          Get.snackbar(
+            "Error",
+            "Failed to complete service: $e",
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+      });
       rethrow;
     }
   }
@@ -958,24 +997,43 @@ class WebAppointmentController extends GetxController {
       print('>>> Vitals: $vitals');
       print('>>> ============================================');
 
+      // CRITICAL FIX: Check if we're still registered and in valid state
+      if (!Get.isRegistered<WebAppointmentController>()) {
+        print('>>> Controller not registered, aborting');
+        return;
+      }
+
       // Store vitals in memory with appointment ID as key
-      pendingVitals[appointment.documentId!] = vitals;
+      pendingVitals[appointment.documentId!] =
+          Map<String, dynamic>.from(vitals);
 
       print(
           '>>> Vitals stored locally for appointment: ${appointment.documentId}');
       print('>>> Will be saved when service is completed');
       print('>>> ============================================');
 
-      Get.snackbar(
-        "Vitals Recorded",
-        "Vital signs recorded. They will be saved when you complete the service.",
-        backgroundColor: Colors.blue,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      // CRITICAL FIX: Schedule snackbar for next frame to avoid state conflicts
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          if (Get.isRegistered<WebAppointmentController>() &&
+              Get.context != null) {
+            Get.snackbar(
+              "Vitals Recorded",
+              "Vital signs recorded. They will be saved when you complete the service.",
+              backgroundColor: Colors.blue,
+              colorText: Colors.white,
+              duration: const Duration(seconds: 3),
+              snackPosition: SnackPosition.TOP,
+              margin: const EdgeInsets.all(16),
+            );
+          }
+        } catch (e) {
+          print('>>> Error showing snackbar: $e');
+        }
+      });
     } catch (e) {
       print('>>> Error recording vitals locally: $e');
-      Get.snackbar("Error", "Failed to record vitals: $e");
+      print('>>> Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -1909,38 +1967,138 @@ class WebAppointmentController extends GetxController {
     print('>>> ============================================');
   }
 
-  /// Get pet profile picture URL
-  Future<String?> getPetProfilePictureUrl(String petId) async {
-    // Check cache first
-    if (petProfilePictures.containsKey(petId)) {
-      return petProfilePictures[petId];
-    }
+  /// Get pet profile picture URL using composite key (userId + petId)
+  Future<String?> getPetProfilePictureUrl(String petId,
+      {String? userId}) async {
+    // If userId is provided, use it directly
+    if (userId != null) {
+      final cacheKey = '${userId}_$petId';
 
-    try {
-      print('>>> Fetching profile picture for pet: $petId');
-
-      // Fetch pet document
-      final petDoc = await authRepository.getPetById(petId);
-
-      if (petDoc != null) {
-        final imageUrl = petDoc.data['image'] as String?;
-
-        if (imageUrl != null && imageUrl.isNotEmpty) {
-          // Cache the URL
-          petProfilePictures[petId] = imageUrl;
-          print('>>> Pet profile picture cached: $petId');
-          return imageUrl;
-        }
+      // Check cache first
+      if (petProfilePictures.containsKey(cacheKey)) {
+        return petProfilePictures[cacheKey];
       }
 
-      // No image found, cache null
-      petProfilePictures[petId] = null;
+      // Fetch and cache
+      return await _fetchAndCachePetImage(userId, petId);
+    }
+
+    // If userId not provided, find it from appointments
+    final appointment = appointments.firstWhereOrNull(
+      (a) => a.petId == petId,
+    );
+
+    if (appointment != null) {
+      final cacheKey = '${appointment.userId}_$petId';
+
+      // Check cache first
+      if (petProfilePictures.containsKey(cacheKey)) {
+        return petProfilePictures[cacheKey];
+      }
+
+      // Fetch and cache
+      return await _fetchAndCachePetImage(appointment.userId, petId);
+    }
+
+    return null;
+  }
+
+  /// HELPER: Fetch and cache pet image
+  Future<String?> _fetchAndCachePetImage(String userId, String petId) async {
+    try {
+      final cacheKey = '${userId}_$petId';
+
+      print('>>> Fetching pet image for: $petId (User: $userId)');
+
+      // Fetch pet using the user-specific method
+      final pet = await _fetchPetByUserAndId(userId, petId);
+
+      if (pet != null && pet.image != null && pet.image!.isNotEmpty) {
+        // Cache the image URL
+        petProfilePictures[cacheKey] = pet.image;
+        print('>>> Pet image cached: $cacheKey -> ${pet.image}');
+        return pet.image;
+      }
+
+      // Cache null result
+      petProfilePictures[cacheKey] = null;
+      print('>>> No image for pet: $cacheKey');
       return null;
     } catch (e) {
-      print('>>> Error fetching pet profile picture: $e');
-      petProfilePictures[petId] = null;
+      print('>>> Error fetching pet image: $e');
+      final cacheKey = '${userId}_$petId';
+      petProfilePictures[cacheKey] = null;
       return null;
     }
+  }
+
+  /// Get pet image by userId (already implemented correctly)
+  Future<String?> getPetImageByUserId(String petId, String userId) async {
+    try {
+      // CRITICAL: Use composite key (userId + petId)
+      final cacheKey = '${userId}_$petId';
+
+      // Check cache FIRST - return immediately if already cached
+      if (petProfilePictures.containsKey(cacheKey)) {
+        print('>>> Using cached pet image for: $cacheKey');
+        return petProfilePictures[cacheKey];
+      }
+
+      print('>>> Fetching pet image for petId: $petId, userId: $userId');
+
+      // Use the new helper method
+      final pet = await _fetchPetByUserAndId(userId, petId);
+
+      if (pet == null) {
+        print('>>> ⚠️ Pet not found for this user');
+        petProfilePictures[cacheKey] = null;
+        return null;
+      }
+
+      // Cache the pet with composite key
+      final petCacheKey = '${userId}_${pet.petId}';
+      petsCache[petCacheKey] = pet;
+
+      // Return and cache the image URL
+      if (pet.image != null && pet.image!.isNotEmpty) {
+        petProfilePictures[cacheKey] = pet.image;
+        print('>>> Pet image URL cached with key: $cacheKey -> ${pet.image}');
+        return pet.image;
+      }
+
+      petProfilePictures[cacheKey] = null;
+      return null;
+    } catch (e) {
+      print('>>> Error fetching pet image by userId: $e');
+      final cacheKey = '${userId}_$petId';
+      petProfilePictures[cacheKey] = null;
+      return null;
+    }
+  }
+
+  /// Preload pet images for visible appointments
+  Future<void> preloadPetImages() async {
+    print('>>> Preloading pet images for visible appointments...');
+
+    final visibleAppointments = filteredAppointments.take(20).toList();
+
+    for (var appointment in visibleAppointments) {
+      final cacheKey = '${appointment.userId}_${appointment.petId}';
+
+      // Skip if already cached
+      if (petProfilePictures.containsKey(cacheKey)) {
+        continue;
+      }
+
+      // Fetch in background (don't await)
+      getPetImageByUserId(appointment.petId, appointment.userId)
+          .catchError((e) {
+        print('>>> Error preloading image for ${appointment.petId}: $e');
+      });
+    }
+
+    print(
+        '>>> Preload initiated for ${visibleAppointments.length} appointments');
   }
 
   Future<void> _sendAutomatedAppointmentMessage({
@@ -2084,5 +2242,60 @@ For more details, please check your appointments.
   /// Clear pet profile pictures cache
   void clearPetProfilePicturesCache() {
     petProfilePictures.clear();
+  }
+
+  Future<void> refreshPetImages() async {
+    print('>>> Refreshing pet images cache...');
+    petProfilePictures.clear();
+    await _fetchRelatedData();
+    print('>>> Pet images cache refreshed');
+  }
+
+  Future<void> debugPetData(String appointmentId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> DEBUG: Pet data for appointment: $appointmentId');
+      print('>>> ============================================');
+
+      final appointment = appointments.firstWhere(
+        (a) => a.documentId == appointmentId,
+        orElse: () => throw Exception('Appointment not found'),
+      );
+
+      print('>>> Appointment petId: ${appointment.petId}');
+      print('>>> Appointment userId: ${appointment.userId}');
+
+      // Fetch user's pets
+      final userPets = await authRepository.getUserPets(appointment.userId);
+      print('>>> User has ${userPets.length} pets');
+
+      for (var petDoc in userPets) {
+        final pet = Pet.fromMap(petDoc.data);
+        print('>>> Pet:');
+        print('>>>   Document ID: ${petDoc.$id}');
+        print('>>>   Pet ID field: ${pet.petId}');
+        print('>>>   Name: ${pet.name}');
+        print('>>>   Image: ${pet.image}');
+        print(
+            '>>>   Matches appointment: ${petDoc.$id == appointment.petId || pet.petId == appointment.petId || pet.name == appointment.petId}');
+        print('>>> ---');
+      }
+
+      // Check cache
+      print('>>> Cache status:');
+      print(
+          '>>>   Pet in petsCache: ${petsCache.containsKey(appointment.petId)}');
+      print(
+          '>>>   Image in petProfilePictures: ${petProfilePictures.containsKey(appointment.petId)}');
+      if (petProfilePictures.containsKey(appointment.petId)) {
+        print(
+            '>>>   Cached image URL: ${petProfilePictures[appointment.petId]}');
+      }
+
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR in debugPetData: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+    }
   }
 }

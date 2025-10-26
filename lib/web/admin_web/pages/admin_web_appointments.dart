@@ -74,13 +74,21 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   }
 
   void _onTabControllerChanged() {
-    if (_isDisposed || _tabController.indexIsChanging) return;
-
-    if (Get.isRegistered<WebAppointmentController>()) {
-      final controller = Get.find<WebAppointmentController>();
-      controller.setSelectedTab(_tabValues[_tabController.index]);
-    }
+  if (_isDisposed || _tabController.indexIsChanging) return;
+  
+  // CRITICAL FIX: Check if controller still exists
+  if (!Get.isRegistered<WebAppointmentController>()) {
+    print('>>> Controller no longer registered, skipping tab change');
+    return;
   }
+
+  try {
+    final controller = Get.find<WebAppointmentController>();
+    controller.setSelectedTab(_tabValues[_tabController.index]);
+  } catch (e) {
+    print('>>> Error in tab controller changed: $e');
+  }
+}
 
   void _onMobileTabControllerChanged() {
     if (_isDisposed || _mobileTabController.indexIsChanging) return;
