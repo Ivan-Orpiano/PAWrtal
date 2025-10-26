@@ -12,16 +12,28 @@ class ArgosService {
     final baseUrl = AppwriteConstants.argosLiveformBaseUrl;
     final pid = AppwriteConstants.argosProjectId;
 
+    print('>>> ============================================');
+    print('>>> GENERATING ARGOS URL');
+    print('>>> User ID: $userId');
+    print('>>> Email: $email');
+    print('>>> ============================================');
+
     // Build URL with query parameters
     final uri = Uri.parse(baseUrl).replace(
       queryParameters: {
         'pid': pid,
         'email': email,
-        'userId': userId,
+        // CRITICAL: Pass your app's userId to ARGOS
+        // This will be returned in webhook as customUserId or userId
+        'customUserId': userId,  // Try this first
+        'userId': userId,         // Fallback
+        'custom_user_id': userId, // Another fallback
       },
     );
 
-    print('>>> ARGOS Verification URL generated: $uri');
+    print('>>> Generated URL: $uri');
+    print('>>> ============================================');
+    
     return uri.toString();
   }
 
