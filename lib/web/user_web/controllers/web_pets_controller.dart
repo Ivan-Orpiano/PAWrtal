@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
@@ -87,16 +89,33 @@ class WebPetsController extends GetxController {
   Future<void> fetchPetVaccinationHistory(String petId) async {
     isLoadingVaccinations.value = true;
     try {
+      print('>>> CONTROLLER: Fetching vaccinations for pet: $petId');
+
       final vaccins = await authRepository.getPetVaccinations(petId);
+
       vaccinations.value = vaccins;
+
+      print('>>> CONTROLLER: ✅ Loaded ${vaccins.length} vaccinations');
+
+      // Debug info
+      if (vaccins.isNotEmpty) {
+        print('>>> First vaccination: ${vaccins.first.vaccineName}');
+        print('>>> Date given: ${vaccins.first.dateGiven}');
+      }
     } catch (e) {
+      print('>>> CONTROLLER: ❌ Error fetching vaccinations: $e');
       WebSnackBarService.showError(
         title: "Error",
         message: "Failed to fetch vaccination history: $e",
       );
+      vaccinations.clear();
     } finally {
       isLoadingVaccinations.value = false;
     }
+  }
+
+  Future<void> debugVaccinations(String petId) async {
+    await authRepository.appWriteProvider.debugPetVaccinations(petId);
   }
 
   // NEW: Fetch medical appointments across all clinics
@@ -105,18 +124,23 @@ class WebPetsController extends GetxController {
       isLoadingMedicalAppointments.value = true;
       print('>>> CONTROLLER: Fetching medical appointments for pet: $petId');
 
-      // Call debug first
-      await authRepository.appWriteProvider.debugPetAppointments(petId);
-
+      // ✅ CRITICAL FIX 6: Call the corrected method
       final appointments =
           await authRepository.getPetMedicalAppointmentsAllClinics(petId);
 
       medicalAppointments.value = appointments;
 
       print(
-          '>>> CONTROLLER: Loaded ${appointments.length} medical appointments');
+          '>>> CONTROLLER: ✅ Loaded ${appointments.length} medical appointments');
+
+      // ✅ Additional debug info
+      if (appointments.isNotEmpty) {
+        print(
+            '>>> First appointment service: ${appointments.first['service']}');
+        print('>>> First appointment petId: ${appointments.first['petId']}');
+      }
     } catch (e) {
-      print('>>> CONTROLLER: Error fetching medical appointments: $e');
+      print('>>> CONTROLLER: ❌ Error fetching medical appointments: $e');
       WebSnackBarService.showError(
         title: "Error",
         message: "Failed to fetch medical appointments: $e",
@@ -191,6 +215,48 @@ class WebPetsController extends GetxController {
     } catch (e) {
       print('⚠️ Error extracting file ID from $imageUrl: $e');
       return null;
+    }
+  }
+
+  // Update the fetchPetMedicalRecordsForAppointments method
+  Future<void> fetchPetMedicalRecordsForAppointments(String petId) async {
+    isLoadingMedical.value = true;
+    try {
+      print('>>> ============================================');
+      print('>>> CONTROLLER: Fetching medical records for pet: $petId');
+      print('>>> ============================================');
+
+      final records = await authRepository.getPetMedicalRecords(petId);
+
+      medicalRecords.value = records;
+
+      print('>>> CONTROLLER: ✅ Loaded ${records.length} medical records');
+
+      // Debug info - print each record
+      if (records.isNotEmpty) {
+        for (var record in records) {
+          print('>>> Medical Record:');
+          print('>>>   Record ID: ${record.id}');
+          print('>>>   Appointment ID: ${record.appointmentId}');
+          print('>>>   Service: ${record.service}');
+          print('>>>   Pet ID: ${record.petId}');
+          print('>>>   Visit Date: ${record.visitDate}');
+          print(
+              '>>>   Diagnosis: ${record.diagnosis.substring(0, math.min(30, record.diagnosis.length))}...');
+          print('>>> ---');
+        }
+      }
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> CONTROLLER: ❌ Error fetching medical records: $e');
+      print('>>> Stack trace: $stackTrace');
+      WebSnackBarService.showError(
+        title: "Error",
+        message: "Failed to fetch medical records: $e",
+      );
+      medicalRecords.clear();
+    } finally {
+      isLoadingMedical.value = false;
     }
   }
 

@@ -238,6 +238,60 @@ class WebAppointmentTile extends StatelessWidget {
   }
 
   Widget _buildPetAvatar() {
+    final controller = Get.find<WebAppointmentController>();
+
+    return FutureBuilder<String?>(
+      future: controller.getPetProfilePictureUrl(appointment.petId),
+      builder: (context, snapshot) {
+        final profilePictureUrl = snapshot.data;
+
+        if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+          // Show pet profile picture
+          return Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: _getStatusBorderColor(appointment.status),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(25),
+              child: Image.network(
+                profilePictureUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback to gradient icon if image fails
+                  return _buildPetAvatarFallback();
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  // Show fallback while loading
+                  return _buildPetAvatarFallback();
+                },
+              ),
+            ),
+          );
+        }
+
+        // Fallback to gradient icon if no profile picture
+        return _buildPetAvatarFallback();
+      },
+    );
+  }
+
+  // 🆕 Helper method for fallback avatar
+  Widget _buildPetAvatarFallback() {
     return Container(
       width: 50,
       height: 50,

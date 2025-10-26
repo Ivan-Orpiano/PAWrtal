@@ -362,7 +362,7 @@ class WebAppointmentController extends GetxController {
       final appointment = Appointment(
         userId: userId,
         clinicId: clinic.documentId ?? '',
-        petId: selectedPet.value!.petId, // ← CHANGED: Use petId, not name
+        petId: selectedPet.value!.name, // ← CHANGED: Use name instead of petId
         service: selectedService.value!,
         dateTime: appointmentDateTime,
         status: clinicSettings.value?.autoAcceptAppointments == true

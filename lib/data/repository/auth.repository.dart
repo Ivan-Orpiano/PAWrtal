@@ -176,8 +176,43 @@ class AuthRepository {
 
   Future<models.Document> createPet(Map map) => appWriteProvider.createPet(map);
 
-  Future<models.Document?> getPetById(String petId) =>
-      appWriteProvider.getPetById(petId);
+  Future<models.Document?> getPetById(String petId) async {
+    try {
+      print('>>> REPOSITORY: Fetching pet by ID: $petId');
+
+      // STRATEGY 1: Try as document ID first
+      try {
+        final result = await appWriteProvider.databases!.getDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.petsCollectionID,
+          documentId: petId,
+        );
+
+        print('>>> Pet found by document ID');
+        return result;
+      } catch (e) {
+        print('>>> Not a document ID, trying as petId field...');
+      }
+
+      // STRATEGY 2: Try as petId field (for backward compatibility)
+      final result = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.petsCollectionID,
+        queries: [Query.equal("petId", petId)],
+      );
+
+      if (result.documents.isNotEmpty) {
+        print('>>> Pet found by petId field');
+        return result.documents.first;
+      }
+
+      print('>>> No pet found with ID: $petId');
+      return null;
+    } catch (e) {
+      print(">>> Error fetching pet: $e");
+      return null;
+    }
+  }
 
   Future<models.Document?> getPetByName(String petName) =>
       appWriteProvider.getPetByName(petName);
@@ -294,25 +329,34 @@ class AuthRepository {
 
   Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
     try {
+      print('>>> ============================================');
       print('>>> REPOSITORY: Getting medical records for pet: $petId');
+      print('>>> ============================================');
 
       final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
 
-      print('>>> Found ${rawRecords.length} medical records');
+      print('>>> Found ${rawRecords.length} raw medical records');
 
       final records = rawRecords.map((data) {
-        // Log vitals data for debugging
-        print(
-            '>>> Record vitals: temp=${data['temperature']}, weight=${data['weight']}, bp=${data['bloodPressure']}, hr=${data['heartRate']}');
+        // Log each record's data
+        print('>>> Processing record:');
+        print('>>>   \$id: ${data['\$id']}');
+        print('>>>   appointmentId: ${data['appointmentId']}');
+        print('>>>   petId: ${data['petId']}');
+        print('>>>   service: ${data['service']}');
 
         return MedicalRecord.fromMap(data);
       }).toList();
 
       print('>>> Successfully parsed ${records.length} medical records');
+      print('>>> ============================================');
 
       return records;
-    } catch (e) {
-      print('>>> Error getting pet medical records: $e');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ERROR getting pet medical records: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
       return [];
     }
   }
@@ -1264,10 +1308,21 @@ class AuthRepository {
 
   Future<List<Vaccination>> getPetVaccinations(String petId) async {
     try {
+      print('>>> REPOSITORY: Getting vaccinations for pet: $petId');
+
       final rawVaccinations = await appWriteProvider.getPetVaccinations(petId);
-      return rawVaccinations.map((data) => Vaccination.fromMap(data)).toList();
+
+      print('>>> Found ${rawVaccinations.length} vaccinations');
+
+      final vaccinations = rawVaccinations.map((data) {
+        return Vaccination.fromMap(data);
+      }).toList();
+
+      print('>>> Successfully parsed ${vaccinations.length} vaccinations');
+
+      return vaccinations;
     } catch (e) {
-      print('Error getting pet vaccinations: $e');
+      print('>>> Error getting pet vaccinations: $e');
       return [];
     }
   }
@@ -2013,6 +2068,17 @@ class AuthRepository {
     try {
       print('>>> REPOSITORY: Getting all medical appointments for pet: $petId');
 
+      // Get the pet document to find both petId and name
+      final petDoc = await getPetById(petId);
+      String? petName;
+
+      if (petDoc != null) {
+        petName = petDoc.data['name'] as String?;
+        print('>>> Pet found: $petName (ID: $petId)');
+      } else {
+        print('>>> Warning: Pet document not found for ID: $petId');
+      }
+
       final rawAppointments =
           await appWriteProvider.getPetMedicalAppointmentsAllClinics(petId);
 
@@ -2057,6 +2123,77 @@ class AuthRepository {
     } catch (e) {
       print('>>> REPOSITORY: Error getting medical appointments: $e');
       return [];
+    }
+  }
+
+  Future<models.Document?> getPetByPetId(String petId) async {
+    try {
+      print('>>> REPOSITORY: Fetching pet by petId: $petId');
+
+      final result = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.petsCollectionID,
+        queries: [Query.equal("petId", petId)],
+      );
+
+      if (result.documents.isNotEmpty) {
+        print('>>> Pet found by petId');
+        return result.documents.first;
+      }
+
+      print('>>> No pet found with petId: $petId');
+      return null;
+    } catch (e) {
+      print(">>> Error fetching pet by petId: $e");
+      return null;
+    }
+  }
+
+  Future<void> debugPetVaccinations(String petId) async {
+    return appWriteProvider.debugPetVaccinations(petId);
+  }
+
+  /// Debug method to check medical records and appointments relationship
+  Future<void> debugMedicalRecordsForPet(String petId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> DEBUGGING MEDICAL RECORDS FOR PET: $petId');
+      print('>>> ============================================');
+
+      // Get medical records
+      final records = await getPetMedicalRecords(petId);
+      print('>>> Found ${records.length} medical records');
+
+      for (var record in records) {
+        print('>>> Medical Record:');
+        print('>>>   ID: ${record.id}');
+        print('>>>   Appointment ID: ${record.appointmentId}');
+        print('>>>   Service: ${record.service}');
+        print('>>>   Diagnosis: ${record.diagnosis}');
+        print('>>>   Has vitals: ${record.hasVitals}');
+        print('>>> ---');
+      }
+
+      // Get medical appointments
+      final appointments = await getPetMedicalAppointmentsAllClinics(petId);
+      print('>>> Found ${appointments.length} medical appointments');
+
+      for (var appointment in appointments) {
+        print('>>> Medical Appointment:');
+        print('>>>   ID: ${appointment['\$id']}');
+        print('>>>   Service: ${appointment['service']}');
+        print('>>>   Date: ${appointment['dateTime']}');
+
+        // Check if has matching medical record
+        final hasRecord =
+            records.any((r) => r.appointmentId == appointment['\$id']);
+        print('>>>   Has medical record: $hasRecord');
+        print('>>> ---');
+      }
+
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> DEBUG ERROR: $e');
     }
   }
 }

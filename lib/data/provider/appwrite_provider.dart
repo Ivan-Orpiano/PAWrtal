@@ -413,14 +413,38 @@ class AppWriteProvider {
 
   Future<Document?> getPetById(String petId) async {
     try {
-      final result = await databases!.getDocument(
+      print('>>> PROVIDER: Fetching pet by ID: $petId');
+
+      // STRATEGY 1: Try as document ID
+      try {
+        final result = await databases!.getDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.petsCollectionID,
+          documentId: petId,
+        );
+        print('>>> Pet found by document ID: ${result.data['name']}');
+        return result;
+      } catch (e) {
+        print('>>> Not a document ID: $e');
+      }
+
+      // STRATEGY 2: Try as petId field
+      final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.petsCollectionID,
-        documentId: petId,
+        queries: [Query.equal("petId", petId)],
       );
-      return result;
+
+      if (result.documents.isNotEmpty) {
+        print(
+            '>>> Pet found by petId field: ${result.documents.first.data['name']}');
+        return result.documents.first;
+      }
+
+      print('>>> No pet found');
+      return null;
     } catch (e) {
-      print("Error fetching pet: $e");
+      print(">>> Error fetching pet: $e");
       return null;
     }
   }
@@ -3637,23 +3661,99 @@ class AppWriteProvider {
 
   Future<List<Map<String, dynamic>>> getPetVaccinations(String petId) async {
     try {
-      final res = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.vaccinationsCollectionID,
-        queries: [
-          Query.equal("petId", petId),
-          Query.orderDesc("dateGiven"),
-        ],
-      );
+      print('>>> ============================================');
+      print('>>> FETCHING VACCINATIONS FOR PET: $petId');
+      print('>>> ============================================');
 
-      return res.documents
-          .map((doc) => {
-                ...doc.data,
-                '\$id': doc.$id,
-              })
-          .toList();
-    } catch (e) {
-      print('Error in AppWriteProvider.getPetVaccinations: $e');
+      // Step 1: Get the pet document to find both petId and name
+      final petDoc = await getPetById(petId);
+      String? petName;
+      String? actualPetId;
+
+      if (petDoc != null) {
+        petName = petDoc.data['name'] as String?;
+        actualPetId = petDoc.data['petId'] as String?;
+        print('>>> Pet found: $petName');
+        print('>>> Pet petId field: $actualPetId');
+        print('>>> Pet document ID: ${petDoc.$id}');
+      } else {
+        print('>>> WARNING: Pet document not found for ID: $petId');
+      }
+
+      // Step 2: Fetch ALL vaccinations (pagination)
+      const int limit = 100;
+      int offset = 0;
+      bool hasMore = true;
+      final List<Document> allDocs = [];
+
+      while (hasMore) {
+        print('>>> Fetching batch: offset=$offset, limit=$limit');
+
+        final result = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.vaccinationsCollectionID,
+          queries: [
+            Query.orderDesc('dateGiven'),
+            Query.limit(limit),
+            Query.offset(offset),
+          ],
+        );
+
+        if (result.documents.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        allDocs.addAll(result.documents);
+
+        if (result.documents.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+
+      print('>>> Total vaccinations fetched from DB: ${allDocs.length}');
+
+      // Step 3: Filter for THIS pet using multiple matching strategies
+      final filteredDocs = allDocs.where((doc) {
+        final docPetId = doc.data['petId']?.toString() ?? '';
+
+        // Strategy 1: Match by document ID
+        final matchesDocId = docPetId == petId;
+
+        // Strategy 2: Match by petId field
+        final matchesPetIdField =
+            actualPetId != null && docPetId == actualPetId;
+
+        // Strategy 3: Match by pet name (backward compatibility)
+        final matchesPetName = petName != null && docPetId == petName;
+
+        final matches = matchesDocId || matchesPetIdField || matchesPetName;
+
+        if (matches) {
+          print('>>> ✅ Found vaccination: ${doc.data['vaccineName']}');
+          print('>>>   Vaccination petId: $docPetId');
+          print('>>>   Date given: ${doc.data['dateGiven']}');
+        }
+
+        return matches;
+      }).toList();
+
+      print('>>> ============================================');
+      print('>>> ✅ Found ${filteredDocs.length} vaccinations for this pet');
+      print('>>> ============================================');
+
+      return filteredDocs.map((doc) {
+        final data = Map<String, dynamic>.from(doc.data);
+        data['\$id'] = doc.$id;
+        return data;
+      }).toList();
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR fetching pet vaccinations: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
       return [];
     }
   }
@@ -6520,101 +6620,98 @@ class AppWriteProvider {
 
   Future<List<Map<String, dynamic>>> getPetMedicalRecords(String petId) async {
     try {
-      final rawRecords = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.medicalRecordsCollectionID,
-        queries: [
-          Query.equal("petId", petId),
-          Query.orderDesc("visitDate"),
-        ],
-      );
-
-      return rawRecords.documents
-          .map((doc) => {
-                ...doc.data,
-                '\$id': doc.$id,
-              })
-          .toList();
-    } catch (e) {
-      print('Error getting pet medical records: $e');
-      return [];
-    }
-  }
-
-  /// Get all medical appointments for a pet across all clinics
-  Future<List<Map<String, dynamic>>> getPetMedicalAppointmentsAllClinics(
-      String petId) async {
-    try {
       print('>>> ============================================');
-      print('>>> Fetching all medical appointments for pet: $petId');
+      print('>>> PROVIDER: Fetching medical records for pet: $petId');
       print('>>> ============================================');
 
-      // Get the pet document to find both petId and name
+      // Get pet document to find both document ID and petId field
       final petDoc = await getPetById(petId);
       String? petName;
+      String? actualPetId;
+      String? petDocumentId;
 
       if (petDoc != null) {
         petName = petDoc.data['name'] as String?;
-        print('>>> Pet found: $petName (ID: $petId)');
+        actualPetId = petDoc.data['petId'] as String?;
+        petDocumentId = petDoc.$id;
+        print('>>> Pet found:');
+        print('>>>   Name: $petName');
+        print('>>>   petId field: $actualPetId');
+        print('>>>   Document ID: $petDocumentId');
       } else {
-        print('>>> Warning: Pet document not found for ID: $petId');
+        print('>>> WARNING: Pet document not found for ID: $petId');
       }
 
-      // Fetch ALL appointments first (we'll filter in code)
-      final result = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.appointmentCollectionID,
-        queries: [
-          Query.orderDesc('dateTime'),
-          Query.limit(500),
-        ],
-      );
+      // Fetch ALL medical records (paginated)
+      const int limit = 100;
+      int offset = 0;
+      bool hasMore = true;
+      final List<Document> allDocs = [];
 
-      print('>>> Total appointments in database: ${result.documents.length}');
+      while (hasMore) {
+        print('>>> Fetching batch: offset=$offset, limit=$limit');
 
-      // Filter for this pet (check both petId and petName for backward compatibility)
-      final filteredDocs = result.documents.where((doc) {
+        final result = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.medicalRecordsCollectionID,
+          queries: [
+            Query.orderDesc('visitDate'),
+            Query.limit(limit),
+            Query.offset(offset),
+          ],
+        );
+
+        if (result.documents.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        allDocs.addAll(result.documents);
+
+        if (result.documents.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+
+      print('>>> Total medical records fetched from DB: ${allDocs.length}');
+
+      // Filter for THIS pet using multiple matching strategies
+      final filteredDocs = allDocs.where((doc) {
         final docPetId = doc.data['petId']?.toString() ?? '';
 
-        // Match by petId (new way) OR by pet name (old way)
-        final matchesPetId = docPetId == petId;
+        // Strategy 1: Match by document ID
+        final matchesDocId = petDocumentId != null && docPetId == petDocumentId;
+
+        // Strategy 2: Match by petId field
+        final matchesPetIdField =
+            actualPetId != null && docPetId == actualPetId;
+
+        // Strategy 3: Match by pet name (backward compatibility)
         final matchesPetName = petName != null && docPetId == petName;
 
-        if (!matchesPetId && !matchesPetName) {
-          return false;
-        }
+        // Strategy 4: Match by the provided petId directly
+        final matchesProvidedId = docPetId == petId;
 
-        // Check if it's a medical service and completed
-        final status = doc.data['status']?.toString().toLowerCase() ?? '';
-        final isMedicalRaw = doc.data['isMedicalService'];
+        final matches = matchesDocId ||
+            matchesPetIdField ||
+            matchesPetName ||
+            matchesProvidedId;
 
-        // Handle different possible types for isMedicalService
-        bool isMedical = false;
-        if (isMedicalRaw is bool) {
-          isMedical = isMedicalRaw;
-        } else if (isMedicalRaw is String) {
-          isMedical = isMedicalRaw.toLowerCase() == 'true';
-        } else if (isMedicalRaw is int) {
-          isMedical = isMedicalRaw == 1;
-        }
-
-        final isCompleted = status == 'completed';
-        final matches = isMedical && isCompleted;
-
-        if (matchesPetId || matchesPetName) {
-          print('>>> Checking appointment ${doc.$id}:');
-          print('>>>   petId in doc: $docPetId');
-          print('>>>   service: ${doc.data['service']}');
-          print('>>>   status: $status');
-          print('>>>   isMedicalService: $isMedicalRaw ($isMedical)');
-          print('>>>   matches criteria: $matches');
+        if (matches) {
+          print('>>> ✅ Found medical record: ${doc.$id}');
+          print('>>>   Record petId: $docPetId');
+          print('>>>   Appointment ID: ${doc.data['appointmentId']}');
+          print('>>>   Service: ${doc.data['service']}');
+          print('>>>   Visit Date: ${doc.data['visitDate']}');
         }
 
         return matches;
       }).toList();
 
       print('>>> ============================================');
-      print('>>> Filtered medical appointments: ${filteredDocs.length}');
+      print('>>> ✅ Found ${filteredDocs.length} medical records for this pet');
       print('>>> ============================================');
 
       return filteredDocs.map((doc) {
@@ -6624,10 +6721,138 @@ class AppWriteProvider {
         data['updatedAt'] = doc.$updatedAt;
         return data;
       }).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('>>> ============================================');
-      print('>>> ERROR fetching pet medical appointments: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ❌ ERROR fetching pet medical records: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+      return [];
+    }
+  }
+
+  /// Get all medical appointments for a pet across all clinics
+  Future<List<Map<String, dynamic>>> getPetMedicalAppointmentsAllClinics(
+      String petId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> Fetching ALL medical appointments for pet: $petId');
+      print('>>> ============================================');
+
+      // ✅ CRITICAL FIX 1: Use pagination to get ALL appointments
+      const int limit = 100;
+      int offset = 0;
+      bool hasMore = true;
+      final List<Document> allDocs = [];
+
+      // Step 1: Fetch ALL appointments (paginated)
+      while (hasMore) {
+        print('>>> Fetching batch: offset=$offset, limit=$limit');
+
+        final result = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.orderDesc('dateTime'),
+            Query.limit(limit),
+            Query.offset(offset),
+          ],
+        );
+
+        if (result.documents.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        allDocs.addAll(result.documents);
+
+        if (result.documents.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+
+      print('>>> Total appointments fetched from DB: ${allDocs.length}');
+
+      // Step 2: Get pet document to find BOTH petId AND name (for backward compatibility)
+      final petDoc = await getPetById(petId);
+      String? petName;
+
+      if (petDoc != null) {
+        petName = petDoc.data['name'] as String?;
+        print('>>> Pet found: $petName (ID: $petId)');
+      } else {
+        print('>>> ⚠️ WARNING: Pet document not found for ID: $petId');
+      }
+
+      // Step 3: Filter for THIS pet's COMPLETED MEDICAL appointments
+      final filteredDocs = allDocs.where((doc) {
+        // ✅ CRITICAL FIX 2: Match by petId (correct way) OR by pet name (backward compatibility)
+        final docPetId = doc.data['petId']?.toString() ?? '';
+
+        // Match by actual petId
+        final matchesPetId = docPetId == petId;
+
+        // Match by pet name (for old appointments that stored name instead of ID)
+        final matchesPetName = petName != null && docPetId == petName;
+
+        if (!matchesPetId && !matchesPetName) {
+          return false; // Not this pet
+        }
+
+        // ✅ Check status - must be completed
+        final status = doc.data['status']?.toString().toLowerCase() ?? '';
+        if (status != 'completed') {
+          if (matchesPetId || matchesPetName) {
+            print(
+                '>>> Skipping appointment ${doc.$id}: status=$status (not completed)');
+          }
+          return false;
+        }
+
+        // ✅ CRITICAL FIX 3: Check if it's a medical service
+        final isMedicalRaw = doc.data['isMedicalService'];
+
+        bool isMedical = false;
+        if (isMedicalRaw is bool) {
+          isMedical = isMedicalRaw;
+        } else if (isMedicalRaw is String) {
+          isMedical = isMedicalRaw.toLowerCase() == 'true';
+        } else if (isMedicalRaw is int) {
+          isMedical = isMedicalRaw == 1;
+        }
+
+        // ✅ DEBUG LOG for matching appointments
+        if (matchesPetId || matchesPetName) {
+          print('>>> Checking appointment ${doc.$id}:');
+          print('>>>   petId in doc: $docPetId');
+          print('>>>   matches petId: $matchesPetId');
+          print('>>>   matches petName: $matchesPetName');
+          print('>>>   service: ${doc.data['service']}');
+          print('>>>   status: $status');
+          print('>>>   isMedicalService: $isMedicalRaw (parsed: $isMedical)');
+          print('>>>   ✓ MATCHES: ${isMedical && status == 'completed'}');
+        }
+
+        return isMedical; // Only medical services that are completed
+      }).toList();
+
+      print('>>> ============================================');
+      print('>>> ✅ Found ${filteredDocs.length} medical appointments');
+      print('>>> ============================================');
+
+      // Step 4: Convert to Map format
+      return filteredDocs.map((doc) {
+        final data = Map<String, dynamic>.from(doc.data);
+        data['\$id'] = doc.$id;
+        data['createdAt'] = doc.$createdAt;
+        data['updatedAt'] = doc.$updatedAt;
+        return data;
+      }).toList();
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR fetching pet medical appointments: $e');
+      print('>>> Stack trace: $stackTrace');
       print('>>> ============================================');
       return [];
     }
@@ -6710,6 +6935,102 @@ class AppWriteProvider {
       }
 
       print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR in debug: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+    }
+  }
+
+  /// Get pet by petId field (not document ID)
+  Future<Document?> getPetByPetId(String petId) async {
+    try {
+      print('>>> PROVIDER: Fetching pet by petId field: $petId');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.petsCollectionID,
+        queries: [Query.equal("petId", petId)],
+      );
+
+      if (result.documents.isNotEmpty) {
+        print('>>> Pet found: ${result.documents.first.data['name']}');
+        return result.documents.first;
+      }
+
+      print('>>> No pet found with petId: $petId');
+      return null;
+    } catch (e) {
+      print(">>> Error fetching pet by petId: $e");
+      return null;
+    }
+  }
+
+  Future<void> debugPetVaccinations(String petId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> DEBUG: Checking ALL vaccinations for pet: $petId');
+      print('>>> ============================================');
+
+      // Get pet name
+      final petDoc = await getPetById(petId);
+      String? petName;
+
+      if (petDoc != null) {
+        petName = petDoc.data['name'] as String?;
+        print('>>> Pet name: $petName');
+      }
+
+      // Get ALL vaccinations
+      final allVaccinations = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vaccinationsCollectionID,
+        queries: [
+          Query.limit(500),
+        ],
+      );
+
+      print(
+          '>>> Total vaccinations in database: ${allVaccinations.documents.length}');
+
+      // Filter for this pet
+      final petVaccinations = allVaccinations.documents.where((doc) {
+        final docPetId = doc.data['petId']?.toString() ?? '';
+        return docPetId == petId || (petName != null && docPetId == petName);
+      }).toList();
+
+      print('>>> Found ${petVaccinations.length} vaccinations for this pet');
+      print('>>> ');
+
+      if (petVaccinations.isEmpty) {
+        print('>>> NO VACCINATIONS FOUND FOR THIS PET!');
+        print('>>> Pet ID being searched: $petId');
+        if (petName != null) {
+          print('>>> Pet name being searched: $petName');
+        }
+        print('>>> Sample pet IDs in database:');
+
+        final uniquePetIds = allVaccinations.documents
+            .map((doc) => doc.data['petId'])
+            .toSet()
+            .take(10)
+            .toList();
+
+        for (var samplePetId in uniquePetIds) {
+          print('>>>   - $samplePetId');
+        }
+      } else {
+        for (var doc in petVaccinations) {
+          print('>>> Vaccination ${doc.$id}:');
+          print('>>>   petId: ${doc.data['petId']}');
+          print('>>>   vaccineName: ${doc.data['vaccineName']}');
+          print('>>>   vaccineType: ${doc.data['vaccineType']}');
+          print('>>>   dateGiven: ${doc.data['dateGiven']}');
+          print('>>>   nextDueDate: ${doc.data['nextDueDate']}');
+          print('>>> ---');
+        }
+      }
+
+      print('>>> ====================================a========');
     } catch (e) {
       print('>>> ERROR in debug: $e');
       print('>>> Stack trace: ${StackTrace.current}');
