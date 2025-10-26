@@ -501,8 +501,8 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
           if (unreadCount == 0) return const SizedBox.shrink();
 
           return Positioned(
-            right: 8,
-            top: 8,
+            right: 4,
+            top: 2,
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
@@ -510,8 +510,8 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
                 shape: BoxShape.circle,
               ),
               constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
+                minWidth: 16,
+                minHeight: 16,
               ),
               child: Center(
                 child: Text(

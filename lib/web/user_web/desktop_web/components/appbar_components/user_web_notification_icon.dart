@@ -1,5 +1,3 @@
-// Universal notification panel for web (works for both admin and user)
-
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:flutter/material.dart';
@@ -354,21 +352,21 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
                           if (notification.priority == NotificationPriority.high ||
                               notification.priority == NotificationPriority.urgent) ...[
                             const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                notification.priorityLabel,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.orange[800],
-                                ),
-                              ),
-                            ),
+                            // Container(
+                            //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            //   decoration: BoxDecoration(
+                            //     color: Colors.orange.withOpacity(0.2),
+                            //     borderRadius: BorderRadius.circular(4),
+                            //   ),
+                            //   child: Text(
+                            //     notification.priorityLabel,
+                            //     style: TextStyle(
+                            //       fontSize: 10,
+                            //       fontWeight: FontWeight.w600,
+                            //       color: Colors.orange[800],
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ],
                       ),
@@ -503,8 +501,8 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
           if (unreadCount == 0) return const SizedBox.shrink();
 
           return Positioned(
-            right: 8,
-            top: 8,
+            right: 4,
+            top: 2,
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
@@ -512,8 +510,8 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
                 shape: BoxShape.circle,
               ),
               constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
+                minWidth: 16,
+                minHeight: 16,
               ),
               child: Center(
                 child: Text(
