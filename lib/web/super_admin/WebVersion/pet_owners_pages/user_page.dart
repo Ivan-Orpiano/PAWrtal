@@ -79,7 +79,9 @@ Future<void> _loadUsers() async {
   setState(() => _isLoading = true);
 
   try {
-    print('>>> Loading all users...');
+    print('>>> ============================================');
+    print('>>> LOADING ALL USERS WITH VERIFICATION CHECK');
+    print('>>> ============================================');
 
     // Get all users from database
     final docs = await _authRepository.appWriteProvider.databases!.listDocuments(
@@ -92,35 +94,81 @@ Future<void> _loadUsers() async {
       ],
     );
     
-    print('>>> Found ${docs.documents.length} users');
+    print('>>> Found ${docs.documents.length} users in Users collection');
     
     // Convert to User models
     _allUsers = docs.documents.map((doc) => User.fromMap(doc.data)).toList();
     
-    // CRITICAL: Fetch verification status for each user from ID verification collection
-    print('>>> Fetching verification status for ${_allUsers.length} users...');
+    // ============================================
+    // CRITICAL: Check verification status from idVerificationCollectionID
+    // ============================================
+    print('>>> Checking verification status from ID Verification collection...');
     
-    for (var user in _allUsers) {
-      try {
-        final verificationDoc = await _authRepository.getIdVerificationByUserId(user.userId);
-        
-        if (verificationDoc != null && verificationDoc.status == 'approved') {
-          // Update user's verification status from ID verification collection
-          user.idVerified = true;
-          user.idVerifiedAt = verificationDoc.verifiedAt?.toIso8601String();
-          print('>>> User ${user.name} verified from ID collection');
-        }
-      } catch (e) {
-        print('>>> Error fetching verification for ${user.userId}: $e');
+    // Get ALL verification records at once (more efficient)
+    final verificationDocs = await _authRepository.appWriteProvider.databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.idVerificationCollectionID,
+      queries: [
+        Query.equal('status', 'approved'), // Only get approved verifications
+        Query.limit(1000),
+      ],
+    );
+    
+    print('>>> Found ${verificationDocs.documents.length} approved verifications');
+    
+    // Create a Set of verified user IDs for O(1) lookup
+    final verifiedUserIds = <String>{};
+    for (var verificationDoc in verificationDocs.documents) {
+      final userId = verificationDoc.data['userId'] as String?;
+      if (userId != null) {
+        verifiedUserIds.add(userId);
       }
     }
     
-    // Split into verified and unverified
+    print('>>> Verified user IDs: ${verifiedUserIds.length}');
+    
+    // Update each user's verification status based on ID Verification collection
+    int verifiedCount = 0;
+    int unverifiedCount = 0;
+    
+    for (var user in _allUsers) {
+      // Check if user exists in verified IDs set
+      final isVerified = verifiedUserIds.contains(user.userId);
+      
+      // IMPORTANT: We're NOT updating the database here
+      // Just updating the local object for UI display
+      user.idVerified = isVerified;
+      
+      if (isVerified) {
+        verifiedCount++;
+        print('>>> âœ" User verified: ${user.name} (${user.userId})');
+      } else {
+        unverifiedCount++;
+      }
+    }
+    
+    print('>>> ============================================');
+    print('>>> VERIFICATION STATUS SUMMARY');
+    print('>>> Total Users: ${_allUsers.length}');
+    print('>>> Verified Users: $verifiedCount');
+    print('>>> Unverified Users: $unverifiedCount');
+    print('>>> ============================================');
+    
+    // Split into verified and unverified lists
     _categorizeUsers();
     
     setState(() => _isLoading = false);
+    
+    print('>>> âœ" User loading complete');
+    print('>>> Verified Tab: ${_verifiedUsers.length} users');
+    print('>>> Unverified Tab: ${_unverifiedUsers.length} users');
+    print('>>> ============================================');
   } catch (e) {
-    print('>>> Error loading users: $e');
+    print('>>> ============================================');
+    print('>>> ERROR LOADING USERS: $e');
+    print('>>> Stack trace: ${StackTrace.current}');
+    print('>>> ============================================');
+    
     setState(() => _isLoading = false);
 
     Get.snackbar(
@@ -332,49 +380,52 @@ void _setupRealtimeSubscriptions() {
   try {
     final realtime = Realtime(_authRepository.appWriteProvider.client);
 
-    // Subscribe to users collection changes
-    _userSubscription = realtime.subscribe([
-      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.usersCollectionID}.documents'
-    ]);
-
-    _userSubscription!.stream.listen((response) {
-      print('>>> Real-time user event: ${response.events}');
-
-      if (response.events.contains('databases.*.collections.*.documents.*')) {
-        // Reload users when any user document changes
-        _loadUsers();
-      }
-    });
-
-    // Subscribe to verification collection changes
+    // ============================================
+    // SUBSCRIPTION: ID Verification Collection Changes (PRIMARY)
+    // ============================================
     _verificationSubscription = realtime.subscribe([
       'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.idVerificationCollectionID}.documents'
     ]);
 
     _verificationSubscription!.stream.listen((response) {
-      print('>>> Real-time verification event: ${response.events}');
+      print('>>> ============================================');
+      print('>>> REAL-TIME VERIFICATION EVENT DETECTED');
+      print('>>> Events: ${response.events}');
+      print('>>> ============================================');
 
-      if (response.events.contains('databases.*.collections.*.documents.*')) {
-        // CRITICAL: Get the payload to check if verification was approved
-        final payload = response.payload;
+      final payload = response.payload;
+      final status = payload['status'] as String?;
+      final userId = payload['userId'] as String?;
+      
+      print('>>> Verification Status: $status');
+      print('>>> User ID: $userId');
+      
+      // Check if this is a verification approval
+      if (status == 'approved' && userId != null) {
+        print('>>> âœ" VERIFICATION APPROVED!');
+        print('>>> User should move to VERIFIED tab');
         
-        if (payload['status'] == 'approved') {
-          final userId = payload['userId'] as String?;
-          
-          if (userId != null) {
-            print('>>> User $userId was verified, updating UI...');
-            
-            // Update the specific user in the list
-            _updateUserVerificationStatus(userId, true);
-          }
-        }
+        // Update the specific user's verification status locally
+        _updateUserVerificationStatus(userId, true);
         
-        // Also reload users to ensure sync
-        _loadUsers();
+        // Show success notification
+        Get.snackbar(
+          'User Verified',
+          'A user has been successfully verified',
+          backgroundColor: const Color(0xFF34D399),
+          colorText: Colors.white,
+          icon: const Icon(Icons.verified_user, color: Colors.white),
+          duration: const Duration(seconds: 3),
+        );
+      } else if (status == 'rejected' && userId != null) {
+        print('>>> âœ— Verification rejected for user: $userId');
+        _updateUserVerificationStatus(userId, false);
       }
     });
 
-    // ADD: Storage subscription for profile picture changes
+    // ============================================
+    // SUBSCRIPTION: Storage Changes (Profile Pictures)
+    // ============================================
     _storageSubscription = realtime
         .subscribe(['buckets.${AppwriteConstants.imageBucketID}.files']);
 
@@ -387,9 +438,16 @@ void _setupRealtimeSubscriptions() {
       }
     });
 
-    print('>>> Real-time subscriptions established for users (including storage)');
+    print('>>> ============================================');
+    print('>>> âœ" REAL-TIME SUBSCRIPTIONS ACTIVE');
+    print('>>> Listening to:');
+    print('>>> 1. ID Verification Collection (PRIMARY - for status changes)');
+    print('>>> 2. Storage Bucket (for profile picture changes)');
+    print('>>> ============================================');
   } catch (e) {
-    print('>>> Error setting up real-time subscriptions: $e');
+    print('>>> ============================================');
+    print('>>> ERROR SETTING UP REAL-TIME: $e');
+    print('>>> ============================================');
   }
 }
 
@@ -400,18 +458,61 @@ void _updateUserVerificationStatus(String userId, bool isVerified) {
     final userIndex = _allUsers.indexWhere((u) => u.userId == userId);
     
     if (userIndex != -1) {
-      print('>>> Updating user ${_allUsers[userIndex].name} verification status');
+      print('>>> ============================================');
+      print('>>> UPDATING LOCAL USER STATUS');
+      print('>>> User: ${_allUsers[userIndex].name}');
+      print('>>> Old Status: ${_allUsers[userIndex].idVerified ? "Verified" : "Unverified"}');
+      print('>>> New Status: ${isVerified ? "Verified" : "Unverified"}');
+      print('>>> ============================================');
       
-      // Update the user object
+      // Update the user object (local only)
       _allUsers[userIndex].idVerified = isVerified;
-      _allUsers[userIndex].idVerifiedAt = DateTime.now().toIso8601String();
       
       // Re-categorize users to move between verified/unverified lists
       _categorizeUsers();
       
-      print('>>> User moved to ${isVerified ? "verified" : "unverified"} list');
+      print('>>> âœ" User moved to ${isVerified ? "VERIFIED" : "UNVERIFIED"} tab');
+      print('>>> Verified count: ${_verifiedUsers.length}');
+      print('>>> Unverified count: ${_unverifiedUsers.length}');
+      
+      // Show success snackbar
+      Get.snackbar(
+        isVerified ? 'User Verified' : 'Verification Removed',
+        '${_allUsers[userIndex].name} has been ${isVerified ? "verified and moved to the Verified tab" : "moved to the Unverified tab"}',
+        backgroundColor: isVerified ? const Color(0xFF34D399) : const Color(0xFFF59E0B),
+        colorText: Colors.white,
+        icon: Icon(
+          isVerified ? Icons.verified_user : Icons.pending,
+          color: Colors.white,
+        ),
+        duration: const Duration(seconds: 3),
+      );
+    } else {
+      print('>>> âš ï¸ User not found in local list: $userId');
+      print('>>> Reloading all users...');
+      _loadUsers();
     }
   });
+}
+
+/// Check if a user is verified by looking up ID Verification collection
+Future<bool> _checkUserVerificationStatus(String userId) async {
+  try {
+    final verificationDoc = await _authRepository.appWriteProvider.databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.idVerificationCollectionID,
+      queries: [
+        Query.equal('userId', userId),
+        Query.equal('status', 'approved'),
+        Query.limit(1),
+      ],
+    );
+    
+    return verificationDoc.documents.isNotEmpty;
+  } catch (e) {
+    print('>>> Error checking verification status: $e');
+    return false;
+  }
 }
 
   /// Filter users based on search query

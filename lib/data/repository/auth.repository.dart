@@ -2196,55 +2196,55 @@ class AuthRepository {
       print('>>> DEBUG ERROR: $e');
     }
   }
-
-  Future<bool> sendAutomatedAppointmentMessage({
-    required String userId,
-    required String clinicId,
-    required String messageText,
-  }) async {
-    try {
-      print('>>> ============================================');
-      print('>>> AUTH REPO: Sending automated appointment message');
-      print('>>> User ID: $userId');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
-
-      // Step 1: Get or create conversation
-      final conversation = await getOrCreateConversation(userId, clinicId);
-
-      if (conversation == null) {
-        print('>>> ERROR: Failed to get/create conversation');
-        return false;
-      }
-
-      print('>>> Conversation ready: ${conversation.documentId}');
-
-      // Step 2: Send the message
-      final messageData = {
-        'conversationId': conversation.documentId!,
-        'senderId': clinicId, // Use clinic ID as sender
-        'senderType': 'clinic',
-        'receiverId': userId,
-        'messageText': messageText,
-        'messageType': 'text',
-        'timestamp': DateTime.now().toIso8601String(),
-        'isRead': false,
-        'isDeleted': false,
-        'sentAt': DateTime.now().toIso8601String(),
-      };
-
-      await appWriteProvider.createMessage(messageData);
-
-      print('>>> ✅ Automated message sent successfully');
-      print('>>> ============================================');
-
-      return true;
-    } catch (e) {
-      print('>>> ============================================');
-      print('>>> ⚠️ ERROR in sendAutomatedAppointmentMessage: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
-      return false;
-    }
+  Future<bool> isUserVerifiedByIdCollection(String userId) async {
+  try {
+    final verificationDoc = await appWriteProvider.databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.idVerificationCollectionID,
+      queries: [
+        Query.equal('userId', userId),
+        Query.equal('status', 'approved'),
+        Query.limit(1),
+      ],
+    );
+    
+    final isVerified = verificationDoc.documents.isNotEmpty;
+    
+    print('>>> Verification check for user $userId: $isVerified');
+    
+    return isVerified;
+  } catch (e) {
+    print('>>> Error checking verification: $e');
+    return false;
   }
+}
+
+/// Get all verified user IDs from ID Verification collection
+Future<Set<String>> getAllVerifiedUserIds() async {
+  try {
+    final verificationDocs = await appWriteProvider.databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.idVerificationCollectionID,
+      queries: [
+        Query.equal('status', 'approved'),
+        Query.limit(1000),
+      ],
+    );
+    
+    final verifiedIds = <String>{};
+    for (var doc in verificationDocs.documents) {
+      final userId = doc.data['userId'] as String?;
+      if (userId != null) {
+        verifiedIds.add(userId);
+      }
+    }
+    
+    print('>>> Found ${verifiedIds.length} verified users in ID Verification collection');
+    
+    return verifiedIds;
+  } catch (e) {
+    print('>>> Error getting verified user IDs: $e');
+    return {};
+  }
+}
 }
