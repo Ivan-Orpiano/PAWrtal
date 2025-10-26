@@ -111,13 +111,249 @@ class VerificationErrorHandler {
     );
   }
 
-  /// Show verification rejected dialog
-  static void showRejectedDialog({
+  /// NEW: Show name mismatch dialog
+  static void showNameMismatchDialog({
     required BuildContext context,
-    String? reason,
+    required String accountName,
+    required String idName,
+    String? additionalInfo,
+    required VoidCallback onUpdateAccountName,
     required VoidCallback onRetry,
     required VoidCallback onCancel,
   }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9800).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.warning_rounded,
+                  color: Color(0xFFFF9800),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Name Mismatch',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'The name on your account does not match the name on your ID.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFFF9800),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 18,
+                            color: Color(0xFFFF9800),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Account Name:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 26),
+                        child: Text(
+                          accountName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.badge_outlined,
+                            size: 18,
+                            color: Color(0xFFFF9800),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'ID Name:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 26),
+                        child: Text(
+                          idName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (additionalInfo != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: Color(0xFF1976D2),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            additionalInfo,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                const Text(
+                  'To resolve this:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildActionItem(
+                  '1. Update your account name to match your ID exactly',
+                  Icons.edit_outlined,
+                ),
+                _buildActionItem(
+                  '2. OR verify again with an ID that matches your account name',
+                  Icons.refresh_rounded,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                onCancel();
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                onRetry();
+              },
+              child: const Text('Verify Again'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                onUpdateAccountName();
+              },
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Update Name'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1976D2),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Show verification rejected dialog (updated with name mismatch handling)
+  static void showRejectedDialog({
+    required BuildContext context,
+    String? reason,
+    bool isNameMismatch = false,
+    String? accountName,
+    String? idName,
+    required VoidCallback onRetry,
+    VoidCallback? onUpdateAccountName,
+    required VoidCallback onCancel,
+  }) {
+    // If it's a name mismatch, show specialized dialog
+    if (isNameMismatch && accountName != null && idName != null && onUpdateAccountName != null) {
+      showNameMismatchDialog(
+        context: context,
+        accountName: accountName,
+        idName: idName,
+        additionalInfo: 'Your account information must match your government ID for security purposes.',
+        onUpdateAccountName: onUpdateAccountName,
+        onRetry: onRetry,
+        onCancel: onCancel,
+      );
+      return;
+    }
+
+    // Otherwise show regular rejection dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -185,6 +421,7 @@ class VerificationErrorHandler {
               _buildRejectionTip('ID document is expired'),
               _buildRejectionTip('Photo doesn\'t match the ID'),
               _buildRejectionTip('Document is damaged or tampered'),
+              _buildRejectionTip('Account name doesn\'t match ID name'),
             ],
           ),
           actions: [
@@ -269,6 +506,25 @@ class VerificationErrorHandler {
     );
   }
 
+  static Widget _buildActionItem(String text, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF1976D2)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   static Widget _buildRejectionTip(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 8, bottom: 4),
@@ -301,6 +557,8 @@ class VerificationErrorHandler {
       return 'Camera access is required for verification. Please grant camera permission.';
     } else if (errorString.contains('not found')) {
       return 'Resource not found. Please try again.';
+    } else if (errorString.contains('name') && errorString.contains('match')) {
+      return 'The name on your account does not match your ID. Please update your account name or verify with a matching ID.';
     } else {
       return 'An unexpected error occurred. Please try again or contact support.';
     }

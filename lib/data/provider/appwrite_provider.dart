@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'package:appwrite/enums.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:capstone_app/data/id_verification/utils/name_validator.dart';
 
 enum AuthStatus {
   uninitialized,
@@ -3057,7 +3058,7 @@ class AppWriteProvider {
   ) async {
     try {
       print('>>> ============================================');
-      print('>>> PROCESSING ARGOS WEBHOOK');
+      print('>>> PROCESSING ARGOS WEBHOOK WITH NAME VALIDATION');
       print('>>> Webhook data: $webhookData');
       print('>>> ============================================');
 
@@ -3065,6 +3066,7 @@ class AppWriteProvider {
       final submissionId = webhookData['submissionId'] as String?;
       final status = webhookData['status'] as String?;
       final email = webhookData['email'] as String?;
+      final fullName = webhookData['fullName'] as String?;
 
       if (userId == null || submissionId == null) {
         return {
@@ -3078,12 +3080,70 @@ class AppWriteProvider {
 
       // Map ARGOS status to our status
       String mappedStatus = 'pending';
+      String? rejectionReason;
+
       if (status == 'approved' || status == 'success') {
-        mappedStatus = 'approved';
+        print('>>> Step 1: ARGOS verification approved');
+
+        // CRITICAL: Validate name matching BEFORE marking as approved
+        if (fullName != null && fullName.isNotEmpty) {
+          print('>>> Step 2: Validating name match...');
+
+          // Get user's account information
+          final userDoc = await getUserById(userId);
+
+          if (userDoc != null) {
+            final accountName = userDoc.data['name'] as String?;
+
+            if (accountName != null && accountName.isNotEmpty) {
+              print('>>> Account name from database: "$accountName"');
+              print('>>> Name from ARGOS ID: "$fullName"');
+
+              // Validate name match using our validator
+              final validationResult = NameValidator.validateNameMatchDetailed(
+                accountName: accountName,
+                idName: fullName,
+              );
+
+              final namesMatch = validationResult['isValid'] as bool;
+
+              if (namesMatch) {
+                print('>>> ✓ NAME VALIDATION PASSED');
+                mappedStatus = 'approved';
+              } else {
+                print('>>> ✗ NAME VALIDATION FAILED');
+                mappedStatus = 'rejected';
+                rejectionReason = validationResult['reason'] as String;
+                print('>>> Rejection reason: $rejectionReason');
+              }
+            } else {
+              print(
+                  '>>> WARNING: Account has no name, skipping name validation');
+              mappedStatus =
+                  'approved'; // Allow if account has no name (shouldn't happen)
+            }
+          } else {
+            print('>>> WARNING: User document not found');
+            mappedStatus =
+                'approved'; // Allow if user doc not found (shouldn't happen)
+          }
+        } else {
+          print(
+              '>>> WARNING: No fullName in webhook, skipping name validation');
+          mappedStatus =
+              'approved'; // Allow if ARGOS didn't return name (shouldn't happen)
+        }
       } else if (status == 'rejected' || status == 'failed') {
+        print('>>> ARGOS verification rejected/failed');
         mappedStatus = 'rejected';
+        rejectionReason = webhookData['rejectReason'] as String?;
       } else if (status == 'pending') {
         mappedStatus = 'in_progress';
+      }
+
+      print('>>> Final mapped status: $mappedStatus');
+      if (rejectionReason != null) {
+        print('>>> Rejection reason: $rejectionReason');
       }
 
       final updateData = {
@@ -3093,7 +3153,7 @@ class AppWriteProvider {
         'birthDate': webhookData['birthDate'],
         'idType': webhookData['idType'],
         'countryCode': webhookData['countryCode'],
-        'rejectionReason': webhookData['rejectReason'],
+        'rejectionReason': rejectionReason ?? webhookData['rejectReason'],
         'additionalData': webhookData['rawData'],
       };
 
@@ -3121,7 +3181,7 @@ class AppWriteProvider {
 
       // If verified, update user's verification status in users collection
       if (mappedStatus == 'approved') {
-        print('>>> Updating user verification status...');
+        print('>>> Updating user verification status in Users collection...');
         final userDoc = await getUserById(userId);
         if (userDoc != null) {
           await databases!.updateDocument(
@@ -3131,23 +3191,43 @@ class AppWriteProvider {
             data: {
               'idVerified': true,
               'idVerifiedAt': DateTime.now().toIso8601String(),
-              // NEW: Link to verification document
               'verificationDocumentId': updatedDoc.$id,
             },
           );
           print('>>> User verification status updated with document link');
+        }
+      } else if (mappedStatus == 'rejected') {
+        // Ensure user is NOT marked as verified if rejected
+        print('>>> Ensuring user is NOT marked as verified (rejection)...');
+        final userDoc = await getUserById(userId);
+        if (userDoc != null) {
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.usersCollectionID,
+            documentId: userDoc.$id,
+            data: {
+              'idVerified': false,
+              'idVerifiedAt': null,
+              'verificationDocumentId': null,
+            },
+          );
+          print('>>> User verification status cleared');
         }
       }
 
       print('>>> ============================================');
       print('>>> WEBHOOK PROCESSED SUCCESSFULLY');
       print('>>> Status: $mappedStatus');
+      if (mappedStatus == 'rejected' && rejectionReason != null) {
+        print('>>> Rejection: $rejectionReason');
+      }
       print('>>> ============================================');
 
       return {
         'success': true,
         'verificationDoc': updatedDoc,
         'status': mappedStatus,
+        'rejectionReason': rejectionReason,
       };
     } catch (e) {
       print('>>> ============================================');
@@ -3241,7 +3321,7 @@ class AppWriteProvider {
 
         // If stuck in 'in_progress' or 'pending' for more than 30 minutes, reset
         if ((status == 'in_progress' || status == 'pending') &&
-            now.difference(createdAt).inMinutes > 30) {
+            now.difference(createdAt).inMinutes > 10) {
           print('>>> Cleaning up stuck verification record');
           await databases!.deleteDocument(
             databaseId: AppwriteConstants.dbID,

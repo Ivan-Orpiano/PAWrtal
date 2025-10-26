@@ -8,8 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-
-// SECURITY: Import session manager
 import 'package:capstone_app/utils/session_manager.dart';
 
 void main() async {
@@ -22,7 +20,6 @@ void main() async {
   
   await initializeDependencies();
   
-  // SECURITY: Initialize security features
   await _initializeSecurity();
   
   runApp(kIsWeb ? const WebMain() : const MobileMain());
