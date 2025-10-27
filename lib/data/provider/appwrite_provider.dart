@@ -344,12 +344,12 @@ class AppWriteProvider {
 
     // Determine success and failure URLs based on environment
     final String successUrl = kIsWeb 
-        ? '${Uri.base.origin}/auth/success'  // Uses current domain
-        : 'http://localhost:3000/auth/success';
+        ? '${Uri.base.origin}/#/auth/success'  // Uses current domain
+        : 'http://localhost:3000/#/auth/success';
         
     final String failureUrl = kIsWeb
-        ? '${Uri.base.origin}/auth/failure'
-        : 'http://localhost:3000/auth/failure';
+        ? '${Uri.base.origin}/#/auth/failure'
+        : 'http://localhost:3000/#/auth/failure';
 
     print('>>> Success URL: $successUrl');
     print('>>> Failure URL: $failureUrl');
