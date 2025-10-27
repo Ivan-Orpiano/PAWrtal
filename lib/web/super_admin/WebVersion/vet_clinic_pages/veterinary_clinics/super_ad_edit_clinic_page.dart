@@ -43,21 +43,55 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   String? newMainImageId;
   List<String> galleryImages = [];
   List<String> removedGalleryImages = [];
+  List<String> clinicServices = [];
+  Map<String, bool> medicalServices = {};
 
   // Services
   List<String> selectedServices = [];
   final List<String> availableServices = [
-    'Vaccination',
-    'Surgery',
-    'Dental Care',
-    'Grooming',
-    'Emergency Care',
-    'Consultation',
-    'Laboratory',
-    'X-Ray',
-    'Ultrasound',
-    'Pet Boarding',
+    'General Checkup',
+      'Vaccination',
+      'Surgery',
+      'Dental Care',
+      'Emergency Care',
+      'Laboratory Tests',
+      'Microchipping',
+      'Spay/Neuter',
+      'X-Ray Imaging',
+      'Ultrasound',
+      'Blood Work',
+      'Behavioral Consultation',
+      'Nutritional Counseling',
+      'Parasite Treatment',
+      'Wound Care',
+      'Prescription Medications',
+      'Health Certificates',
   ];
+
+  bool _isServiceMedicalByDefault(String service) {
+    // Define which services are medical by default
+    final List<String> medicalServicesList = [
+      'General Checkup',
+      'Vaccination',
+      'Surgery',
+      'Dental Care',
+      'Emergency Care',
+      'Laboratory Tests',
+      'Microchipping',
+      'Spay/Neuter',
+      'X-Ray Imaging',
+      'Ultrasound',
+      'Blood Work',
+      'Behavioral Consultation',
+      'Nutritional Counseling',
+      'Parasite Treatment',
+      'Wound Care',
+      'Prescription Medications',
+      'Health Certificates',
+    ];
+
+    return medicalServicesList.contains(service);
+  }
 
   // Operating hours
   Map<String, Map<String, dynamic>> operatingHours = {};
@@ -96,7 +130,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   void _initializeData() {
     // Services
     if (widget.clinic.services.isNotEmpty) {
-      selectedServices = widget.clinic.services
+      clinicServices = widget.clinic.services
           .split(',')
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
@@ -111,6 +145,9 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       maxAdvanceBooking = widget.settings!.maxAdvanceBooking;
       autoAcceptAppointments = widget.settings!.autoAcceptAppointments;
       isOpen = widget.settings!.isOpen;
+
+      medicalServices =
+          Map<String, bool>.from(widget.settings!.medicalServices);
     } else {
       operatingHours = _getDefaultOperatingHours();
     }
@@ -201,213 +238,212 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   Widget _buildBasicInfoTab() {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(24),
-    child: Column(
-      children: [
-        _buildSectionCard(
-          title: "Clinic Image",
-          child: Column(
-            children: [
-              Center( 
-                child: Container(
-                  width: 300,  
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
-                    color: Colors.grey[100],  
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 1.0,  
-                    child: ClipRRect(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          _buildSectionCard(
+            title: "Clinic Image",
+            child: Column(
+              children: [
+                Center(
+                  child: Container(
+                    width: 300,
+                    decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      child: newMainImageId != null
-                          ? Image.network(
-                              getPetImageUrl(newMainImageId!),
-                              fit: BoxFit.cover,
-                            )
-                          : widget.clinic.image.isNotEmpty
-                              ? Image.network(
-                                  getPetImageUrl(widget.clinic.image),
-                                  fit: BoxFit.cover,
-                                )
-                              : Center(
-                                  child: Icon(
-                                    Icons.image,
-                                    size: 64,
-                                    color: Colors.grey[400],
+                      border: Border.all(color: Colors.grey[300]!),
+                      color: Colors.grey[100],
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 1.0,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: newMainImageId != null
+                            ? Image.network(
+                                getPetImageUrl(newMainImageId!),
+                                fit: BoxFit.cover,
+                              )
+                            : widget.clinic.image.isNotEmpty
+                                ? Image.network(
+                                    getPetImageUrl(widget.clinic.image),
+                                    fit: BoxFit.cover,
+                                  )
+                                : Center(
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 64,
+                                      color: Colors.grey[400],
+                                    ),
                                   ),
-                                ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: isLoadingImage ? null : _pickMainImage,
-                icon: isLoadingImage
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ) 
-                    : const Icon(Icons.upload),
-                label: Text(isLoadingImage ? 'Uploading...' : 'Change Image'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: isLoadingImage ? null : _pickMainImage,
+                  icon: isLoadingImage
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload),
+                  label: Text(isLoadingImage ? 'Uploading...' : 'Change Image'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                    foregroundColor: Colors.white,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
-        _buildDashboardImageSection(),
-        const SizedBox(height: 24),
-        _buildSectionCard(
-          title: "Basic Information",
-          child: Column(
-            children: [
-              _buildTextField(
-                controller: clinicNameController,
-                label: "Clinic Name",
-                icon: Icons.business,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: emailController,
-                label: "Email",
-                icon: Icons.email,
-                keyboardType: TextInputType.emailAddress,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: addressController,
-                label: "Address",
-                icon: Icons.location_on,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: contactController,
-                label: "Contact Number",
-                icon: Icons.phone,
-                keyboardType: TextInputType.phone,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: descriptionController,
-                label: "Description",
-                icon: Icons.description,
-                maxLines: 4,
-                hint: "Tell customers about your clinic...",
-              ),
-            ],
+          const SizedBox(height: 24),
+          _buildDashboardImageSection(),
+          const SizedBox(height: 24),
+          _buildSectionCard(
+            title: "Basic Information",
+            child: Column(
+              children: [
+                _buildTextField(
+                  controller: clinicNameController,
+                  label: "Clinic Name",
+                  icon: Icons.business,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: emailController,
+                  label: "Email",
+                  icon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: addressController,
+                  label: "Address",
+                  icon: Icons.location_on,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: contactController,
+                  label: "Contact Number",
+                  icon: Icons.phone,
+                  keyboardType: TextInputType.phone,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: descriptionController,
+                  label: "Description",
+                  icon: Icons.description,
+                  maxLines: 4,
+                  hint: "Tell customers about your clinic...",
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
- 
-Widget _buildDashboardImageSection() {
-  return _buildSectionCard(
-    title: "Dashboard Image (Optional)",
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue[200]!),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Dashboard image will be shown in the main dashboard. If not set, the main clinic image will be used.',
-                  style: TextStyle(
-                    color: Colors.blue[900],
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Center( 
-          child: Container(
-            width: 300,  
+  Widget _buildDashboardImageSection() {
+    return _buildSectionCard(
+      title: "Dashboard Image (Optional)",
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
+              color: Colors.blue[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-              color: Colors.grey[100], 
+              border: Border.all(color: Colors.blue[200]!),
             ),
-            child: AspectRatio(
-              aspectRatio: 1.0,  
-              child: ClipRRect(
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Dashboard image will be shown in the main dashboard. If not set, the main clinic image will be used.',
+                    style: TextStyle(
+                      color: Colors.blue[900],
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Container(
+              width: 300,
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                child: _buildDashboardImagePreview(),
+                border: Border.all(color: Colors.grey[300]!),
+                color: Colors.grey[100],
+              ),
+              child: AspectRatio(
+                aspectRatio: 1.0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: _buildDashboardImagePreview(),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: isLoadingImage ? null : _pickDashboardImage,
-                icon: isLoadingImage
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.upload),
-                label: Text(isLoadingImage
-                    ? 'Uploading...'
-                    : 'Change Dashboard Image'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ),
-            if (newDashboardImageId != null ||
-                (widget.clinic.dashboardPic != null &&
-                    widget.clinic.dashboardPic!.isNotEmpty)) ...[
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: _removeDashboardImage,
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Remove'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[700],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 20,
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isLoadingImage ? null : _pickDashboardImage,
+                  icon: isLoadingImage
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload),
+                  label: Text(isLoadingImage
+                      ? 'Uploading...'
+                      : 'Change Dashboard Image'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ),
+              if (newDashboardImageId != null ||
+                  (widget.clinic.dashboardPic != null &&
+                      widget.clinic.dashboardPic!.isNotEmpty)) ...[
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _removeDashboardImage,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remove'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[700],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 20,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
-        ),
-      ],
-    ),
-  );
-}
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildServicesAndHoursTab() {
     return SingleChildScrollView(
@@ -424,6 +460,8 @@ Widget _buildDashboardImageSection() {
                   runSpacing: 8,
                   children: availableServices.map((service) {
                     final isSelected = selectedServices.contains(service);
+                    final isMedical = medicalServices[service] ??
+                        _isServiceMedicalByDefault(service);
                     return FilterChip(
                       label: Text(service),
                       selected: isSelected,
@@ -431,8 +469,11 @@ Widget _buildDashboardImageSection() {
                         setState(() {
                           if (selected) {
                             selectedServices.add(service);
+                            medicalServices[service] =
+                                _isServiceMedicalByDefault(service);
                           } else {
                             selectedServices.remove(service);
+                            medicalServices.remove(service);
                           }
                         });
                       },
@@ -845,87 +886,83 @@ Widget _buildDashboardImageSection() {
   }
 
   Widget _buildDashboardImagePreview() {
-
-
-     if (newDashboardImageId != null && newDashboardImageId!.isNotEmpty) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          getPetImageUrl(newDashboardImageId!),
-          fit: BoxFit.cover,
-        ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green[700],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.new_releases, color: Colors.white, size: 16),
-                SizedBox(width: 4),
-                Text(
-                  'NEW',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+    if (newDashboardImageId != null && newDashboardImageId!.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            getPetImageUrl(newDashboardImageId!),
+            fit: BoxFit.cover,
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green[700],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.new_releases, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'NEW',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
+        ],
+      );
+    }
 
-
-  if (newDashboardImageId == '' &&
-      widget.clinic.dashboardPic != null &&
-      widget.clinic.dashboardPic!.isNotEmpty) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          getPetImageUrl(widget.clinic.dashboardPic!),
-          fit: BoxFit.cover,
-          color: Colors.red.withOpacity(0.3),
-          colorBlendMode: BlendMode.color,
-        ),
-        Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.red[700],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.delete_outline, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Will be removed on save',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+    if (newDashboardImageId == '' &&
+        widget.clinic.dashboardPic != null &&
+        widget.clinic.dashboardPic!.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            getPetImageUrl(widget.clinic.dashboardPic!),
+            fit: BoxFit.cover,
+            color: Colors.red.withOpacity(0.3),
+            colorBlendMode: BlendMode.color,
+          ),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.red[700],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Will be removed on save',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
+        ],
+      );
+    }
 
     if (widget.clinic.dashboardPic != null &&
         widget.clinic.dashboardPic!.isNotEmpty) {
@@ -1217,9 +1254,11 @@ Widget _buildDashboardImageSection() {
         final settingsData = {
           'clinicId': widget.clinic.documentId!,
           'isOpen': isOpen,
-          'operatingHours': operatingHours,
+          'operatingHours':
+              operatingHours, 
           'gallery': galleryImages,
           'services': selectedServices,
+          'medicalServices': medicalServices,
           'appointmentDuration': appointmentDuration,
           'maxAdvanceBooking': maxAdvanceBooking,
           'emergencyContact': emergencyContactController.text.trim(),
@@ -1233,6 +1272,7 @@ Widget _buildDashboardImageSection() {
             operatingHours: operatingHours,
             gallery: galleryImages,
             services: selectedServices,
+            medicalServices: medicalServices,
             appointmentDuration: appointmentDuration,
             maxAdvanceBooking: maxAdvanceBooking,
             emergencyContact: emergencyContactController.text.trim(),

@@ -35,6 +35,8 @@ class _SuperAdminVetClinicDetailPageState
   int totalStaff = 0;
   Clinic? currentClinic;
   ClinicSettings? currentSettings;
+  List<String> clinicServices = [];
+  Map<String, bool> medicalServices = {}; 
 
   // Real-time subscriptions
   StreamSubscription? _clinicSubscription;
@@ -111,7 +113,7 @@ class _SuperAdminVetClinicDetailPageState
         }
       }
     });
-
+    
     // Subscribe to settings changes
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
@@ -125,29 +127,47 @@ class _SuperAdminVetClinicDetailPageState
     });
   }
 
-  Future<void> _refreshClinicData() async {
-    try {
-      print('🔄 Refreshing clinic data...');
+Future<void> _refreshClinicData() async {
+  try {
+    print('🔄 Refreshing clinic data...');
 
-      final clinicDoc =
-          await authRepository.getClinicById(currentClinic?.documentId ?? '');
-      final settingsDoc = await authRepository
-          .getClinicSettingsByClinicId(currentClinic?.documentId ?? '');
+    final clinicDoc =
+        await authRepository.getClinicById(currentClinic?.documentId ?? '');
+    final settingsDoc = await authRepository
+        .getClinicSettingsByClinicId(currentClinic?.documentId ?? '');
 
-      if (mounted && clinicDoc != null) {
-        setState(() {
-          currentClinic = Clinic.fromMap(clinicDoc.data);
-          currentClinic!.documentId = clinicDoc.$id;
-          currentSettings = settingsDoc;
-        });
+    if (mounted && clinicDoc != null) {
+      setState(() {
+        currentClinic = Clinic.fromMap(clinicDoc.data);
+        currentClinic!.documentId = clinicDoc.$id;
+        currentSettings = settingsDoc;
+        
+        if (currentClinic!.services.isNotEmpty) {
+          clinicServices = currentClinic!.services
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+          
+          print('>>> Services refreshed: $clinicServices');
+        }
+        
+        // Update medical services map
+        if (currentSettings != null) {
+          medicalServices = Map<String, bool>.from(
+            currentSettings!.medicalServices
+          );
+          
+          print('>>> Medical services refreshed: $medicalServices');
+        }
+      });
 
-        _showUpdateNotification('Clinic information updated');
-      }
-    } catch (e) {
-      print('❌ Error refreshing clinic data: $e');
+      _showUpdateNotification('Clinic information updated');
     }
+  } catch (e) {
+    print('❌ Error refreshing clinic data: $e');
   }
-
+}
  void _showUpdateNotification(String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -1590,13 +1610,7 @@ Widget _buildStatCard({
     );
   }
 
-  Widget _buildServicesSection(Clinic clinic, bool isMobile) {
-  final services = clinic.services
-      .split(',')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
-
+ Widget _buildServicesSection(Clinic clinic, bool isMobile) {
   return Container(
     padding: EdgeInsets.all(isMobile ? 20 : 24),
     decoration: BoxDecoration(
@@ -1659,7 +1673,7 @@ Widget _buildStatCard({
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${services.length} available services',
+                    '${clinicServices.length} available services',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey[600],
@@ -1673,68 +1687,200 @@ Widget _buildStatCard({
         ),
         const SizedBox(height: 20),
         
-        // Service Tags
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: services.map((service) {
-            return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 12,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF3B82F6).withOpacity(0.15),
-                    const Color(0xFF3B82F6).withOpacity(0.08),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6).withOpacity(0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+        // ✅ REPLACE EXISTING SERVICE TAGS WITH THIS (around line 1250)
+        // Service Tags with Medical Indicator
+        if (clinicServices.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6).withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_circle_rounded,
-                      size: 14,
-                      color: Color(0xFF3B82F6),
-                    ),
+                  Icon(
+                    Icons.medical_services_outlined,
+                    size: isMobile ? 48 : 64,
+                    color: Colors.grey[400],
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(height: 16),
                   Text(
-                    service,
-                    style: const TextStyle(
-                      color: Color(0xFF3B82F6),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      letterSpacing: 0.2,
+                    'No services listed',
+                    style: TextStyle(
+                      fontSize: isMobile ? 14 : 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: clinicServices.map((service) {
+              // ✅ Check if this service is marked as medical
+              final isMedical = medicalServices[service] ?? false;
+              
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF3B82F6).withOpacity(0.15),
+                      const Color(0xFF3B82F6).withOpacity(0.08),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6).withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_rounded,
+                        size: 14,
+                        color: Color(0xFF3B82F6),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      service,
+                      style: const TextStyle(
+                        color: Color(0xFF3B82F6),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    // ✅ Medical Service Badge
+                    if (isMedical) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.green[600]!,
+                              Colors.green[700]!,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.medical_services,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Medical',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        
+        // ✅ ADD THIS NEW SECTION (after the services list, around line 1350)
+        // Medical Services Legend
+        if (clinicServices.any((service) => medicalServices[service] == true)) ...[
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.green[50]!,
+                  Colors.green[100]!.withOpacity(0.3),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.green[300]!,
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.green[600],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.info_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Medical services are recorded in pet medical history after appointment completion',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.green[900],
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     ),
   );
