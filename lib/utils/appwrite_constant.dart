@@ -41,15 +41,15 @@ class AppwriteConstants {
     return ratingsAndReviewsCollectionID != "REPLACE_WITH_YOUR_COLLECTION_ID";
   }
 
-  static String argosProjectId = "xn67l316fg";
+  static String argosProjectId = "9fx2h6l4h2"; //"xn67l316fg"; old (testing)
   static String argosLiveformBaseUrl = "https://form.argosidentity.com/";
   static String argosApiBaseUrl = "https://rest-api.argosidentity.com/v3";
-  static String argosApiKey = "Ow8puWfGgo62Kj8jtcOIW8NTvab7JFXC8E6Dxa47";
+  static String argosApiKey = "dyzQ82mSKL71BYxUWN8Lt9qdJLIcPSas5lsphqN2"; //"Ow8puWfGgo62Kj8jtcOIW8NTvab7JFXC8E6Dxa47"; old (testing)
 
   // Webhook URL - This should be your backend endpoint that receives ARGOS webhooks
   // Example: https://your-backend.com/api/webhooks/argos
   static String argosWebhookUrl =
-      "https://cloud.appwrite.io/v1/functions/68e775150035eb381246/executions";
+      "https://68e775160017b8394bcc.fra.appwrite.run/";
 
   static bool get argosConfigured {
     return argosProjectId != "REPLACE_WITH_YOUR_ARGOS_PROJECT_ID" &&

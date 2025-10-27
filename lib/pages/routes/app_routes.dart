@@ -10,6 +10,9 @@ abstract class Routes {
   static const login = _Paths.login;
   static const createStaff = _Paths.createStaff;
   static const staffHome = _Paths.staffHome; // ADD THIS
+  static const oauthSuccess = _Paths.oauthSuccess;
+  static const oauthFailure = _Paths.oauthFailure;
+  static const oauthCallback = _Paths.oauthCallback;
 }
 
 abstract class _Paths {
@@ -21,4 +24,7 @@ abstract class _Paths {
   static const login = '/login';
   static const createStaff = '/createStaff';
   static const staffHome = '/staffHome'; // ADD THIS
+  static const oauthSuccess = '/oauthSuccess';
+  static const oauthFailure = '/oauthFailure';
+  static const oauthCallback = '/oauthCallback';
 }
