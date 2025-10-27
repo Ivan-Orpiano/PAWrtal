@@ -24,7 +24,7 @@ abstract class _Paths {
   static const login = '/login';
   static const createStaff = '/createStaff';
   static const staffHome = '/staffHome'; // ADD THIS
-  static const oauthSuccess = '/oauthSuccess';
-  static const oauthFailure = '/oauthFailure';
-  static const oauthCallback = '/oauthCallback';
+  static const oauthSuccess = '/auth/success';
+  static const oauthFailure = '/auth/failure';
+  static const oauthCallback = '/auth/callback';
 }
