@@ -27,8 +27,10 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
     with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late AnimationController _shimmerController;
+  late AnimationController _addressPulseController;
   late Animation<double> _pulseAnimation;
   late Animation<double> _shimmerAnimation;
+  late Animation<double> _addressPulseAnimation;
 
   bool _imageLoaded = false;
   bool _imageError = false;
@@ -56,6 +58,15 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
       CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
     );
 
+    _addressPulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _addressPulseAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(parent: _addressPulseController, curve: Curves.easeInOut),
+    );
+
     _updateImageUrl();
   }
 
@@ -63,6 +74,7 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   void dispose() {
     _pulseController.dispose();
     _shimmerController.dispose();
+    _addressPulseController.dispose();
     super.dispose();
   }
 
@@ -70,7 +82,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   void didUpdateWidget(SuperAdminVetClinicTile oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // ✅ CRITICAL: Check for dashboard image changes
     if (oldWidget.clinic.image != widget.clinic.image ||
         oldWidget.clinic.dashboardPic != widget.clinic.dashboardPic ||
         oldWidget.clinic.clinicName != widget.clinic.clinicName ||
@@ -88,7 +99,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   }
 
   void _updateImageUrl() {
-    // ✅ PRIORITY 1: Use dashboard image if available
     if (widget.clinic.dashboardPic != null &&
         widget.clinic.dashboardPic!.isNotEmpty) {
       final newUrl = getPetImageUrl(widget.clinic.dashboardPic!);
@@ -100,7 +110,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
       return;
     }
 
-    // ✅ PRIORITY 2: Use main clinic image
     if (widget.clinic.image.isNotEmpty) {
       final newUrl = getPetImageUrl(widget.clinic.image);
       if (newUrl != _cachedImageUrl) {
@@ -111,7 +120,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
       return;
     }
 
-    // ✅ PRIORITY 3: No image
     setState(() {
       _cachedImageUrl = null;
     });
@@ -121,16 +129,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   Widget build(BuildContext context) {
     final isOpen = widget.settings?.isOpenNow() ?? false;
     final detailedStatus = widget.settings?.getDetailedStatus() ?? 'Unknown';
-
-    final clinicServices = widget.clinic.services
-        .split(',')
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-    final settingsServices = widget.settings?.services ?? [];
-    final allServices =
-        <String>{...clinicServices, ...settingsServices}.toList();
-    final servicesCount = allServices.length;
-
     final galleryCount = widget.settings?.gallery.length ?? 0;
 
     return TweenAnimationBuilder<double>(
@@ -176,10 +174,10 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                         isOpen, detailedStatus, galleryCount),
                   ),
 
-                  // Info Section
+                  // Info Section - Redesigned
                   Expanded(
                     flex: widget.isTablet ? 5 : 4,
-                    child: _buildInfoSection(servicesCount),
+                    child: _buildInfoSection(),
                   ),
                 ],
               ),
@@ -666,246 +664,218 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
     );
   }
 
-  Widget _buildInfoSection(int servicesCount) {
+  Widget _buildInfoSection() {
     return Container(
       padding: EdgeInsets.all(
         widget.isMobile
             ? 20.0
             : widget.isTablet
-                ? 12.0
+                ? 14.0
                 : 18.0,
       ),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white,
-            Color(0xFFF8FAFC),
-          ],
-        ),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.vertical(
           bottom: Radius.circular(widget.isTablet ? 22.0 : 26.0),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              );
-            },
-            child: Text(
-              widget.clinic.clinicName,
-              key: ValueKey(widget.clinic.clinicName),
-              style: TextStyle(
-                fontSize: widget.isMobile
-                    ? 20
-                    : widget.isTablet
-                        ? 14
-                        : 16,
-                fontWeight: FontWeight.w900,
-                color: const Color.fromRGBO(81, 115, 153, 1),
-                height: 1.2,
-                letterSpacing: 0.3,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(
-              height: widget.isMobile
-                  ? 12
-                  : widget.isTablet
-                      ? 6
-                      : 10),
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate available space for dynamic layout
+          final availableHeight = constraints.maxHeight;
+          final availableWidth = constraints.maxWidth;
+          
+          // Dynamic font sizes based on available space
+          final clinicNameFontSize = widget.isMobile
+              ? (availableHeight > 120 ? 22.0 : 18.0)
+              : widget.isTablet
+                  ? (availableHeight > 100 ? 16.0 : 13.0)
+                  : (availableHeight > 110 ? 18.0 : 15.0);
+          
+          final locationLabelFontSize = widget.isMobile
+              ? (availableHeight > 120 ? 10.5 : 9.0)
+              : widget.isTablet
+                  ? (availableHeight > 100 ? 8.0 : 7.0)
+                  : (availableHeight > 110 ? 9.5 : 8.0);
+          
+          final addressFontSize = widget.isMobile
+              ? (availableHeight > 120 ? 14.5 : 12.0)
+              : widget.isTablet
+                  ? (availableHeight > 100 ? 10.5 : 9.0)
+                  : (availableHeight > 110 ? 12.5 : 10.5);
+          
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: EdgeInsets.all(widget.isTablet ? 5 : 8),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color.fromRGBO(81, 115, 153, 0.15),
-                      Color.fromRGBO(81, 115, 153, 0.08),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.location_on_rounded,
-                  size: widget.isTablet ? 14 : 18,
-                  color: const Color.fromRGBO(81, 115, 153, 1),
-                ),
-              ),
-              SizedBox(width: widget.isTablet ? 7 : 10),
-              Expanded(
-                child: Text(
-                  widget.clinic.address,
-                  style: TextStyle(
-                    fontSize: widget.isMobile
-                        ? 13.5
-                        : widget.isTablet
-                            ? 8.5
-                            : 10.5,
-                    color: Colors.grey[700],
-                    height: 1.3,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(
-              height: widget.isMobile
-                  ? 12
-                  : widget.isTablet
-                      ? 6
-                      : 10),
-          Row(
-            children: [
-              Expanded(
+              // Clinic Name
+              Flexible(
+                flex: 2,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   transitionBuilder: (child, animation) {
-                    return ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(
-                        opacity: animation,
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.1),
+                          end: Offset.zero,
+                        ).animate(animation),
                         child: child,
                       ),
                     );
                   },
-                  child: Container(
-                    key: ValueKey('services_$servicesCount'),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: widget.isTablet ? 7 : 12,
-                      vertical: widget.isTablet ? 6 : 10,
+                  child: Text(
+                    widget.clinic.clinicName,
+                    key: ValueKey(widget.clinic.clinicName),
+                    style: TextStyle(
+                      fontSize: clinicNameFontSize,
+                      fontWeight: FontWeight.w900,
+                      color: const Color.fromRGBO(81, 115, 153, 1),
+                      height: 1.2,
+                      letterSpacing: 0.3,
                     ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(81, 115, 153, 0.18),
-                          Color.fromRGBO(81, 115, 153, 0.10),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color.fromRGBO(81, 115, 153, 0.35),
-                        width: widget.isTablet ? 1.5 : 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromRGBO(81, 115, 153, 0.1),
-                          blurRadius: widget.isTablet ? 6 : 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.medical_services_rounded,
-                          size: widget.isTablet ? 14 : 18,
-                          color: const Color.fromRGBO(81, 115, 153, 1),
-                        ),
-                        SizedBox(width: widget.isTablet ? 4 : 7),
-                        Text(
-                          '$servicesCount',
-                          style: TextStyle(
-                            fontSize: widget.isTablet ? 12 : 15,
-                            fontWeight: FontWeight.w900,
-                            color: const Color.fromRGBO(81, 115, 153, 1),
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            'services',
-                            style: TextStyle(
-                              fontSize: widget.isTablet ? 8.5 : 10.5,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w700,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              SizedBox(width: widget.isTablet ? 7 : 10),
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: widget.isTablet ? 7 : 12,
-                    vertical: widget.isTablet ? 6 : 10,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.green[100]!,
-                        Colors.green[50]!,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.green[400]!,
-                      width: widget.isTablet ? 1.5 : 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.15),
-                        blurRadius: widget.isTablet ? 6 : 8,
-                        offset: const Offset(0, 2),
+              
+              SizedBox(
+                height: availableHeight > 120
+                    ? (widget.isMobile ? 16 : widget.isTablet ? 10 : 14)
+                    : (widget.isMobile ? 8 : widget.isTablet ? 6 : 8),
+              ),
+
+              // Creative Address Section with Animated Pin
+              Flexible(
+                flex: 3,
+                child: AnimatedBuilder(
+                  animation: _addressPulseAnimation,
+                  builder: (context, child) {
+                    return Container(
+                      padding: EdgeInsets.all(
+                        availableHeight > 120
+                            ? (widget.isMobile ? 16.0 : widget.isTablet ? 10.0 : 14.0)
+                            : (widget.isMobile ? 12.0 : widget.isTablet ? 8.0 : 10.0),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.phone_rounded,
-                        size: widget.isTablet ? 14 : 18,
-                        color: Colors.green[700],
-                      ),
-                      SizedBox(width: widget.isTablet ? 4 : 7),
-                      Flexible(
-                        child: Text(
-                          widget.clinic.contact,
-                          style: TextStyle(
-                            fontSize: widget.isTablet ? 8.5 : 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.green[800],
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color.fromRGBO(81, 115, 153, 0.12),
+                            const Color.fromRGBO(81, 115, 153, 0.06),
+                          ],
                         ),
+                        borderRadius: BorderRadius.circular(widget.isTablet ? 18 : 20),
+                        border: Border.all(
+                          color: const Color.fromRGBO(81, 115, 153, 0.25),
+                          width: widget.isTablet ? 1.5 : 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color.fromRGBO(81, 115, 153, 0.15),
+                            blurRadius: widget.isTablet ? 10 : 12,
+                            offset: const Offset(0, 4),
+                            spreadRadius: 1,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Animated Location Pin
+                          Transform.scale(
+                            scale: _addressPulseAnimation.value,
+                            child: Container(
+                              padding: EdgeInsets.all(
+                                availableHeight > 120
+                                    ? (widget.isTablet ? 8.0 : 10.0)
+                                    : (widget.isTablet ? 6.0 : 8.0),
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color.fromRGBO(81, 115, 153, 1),
+                                    Color.fromRGBO(81, 115, 153, 0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  widget.isTablet ? 12 : 14,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color.fromRGBO(81, 115, 153, 0.3),
+                                    blurRadius: widget.isTablet ? 6 : 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.location_on_rounded,
+                                size: availableHeight > 120
+                                    ? (widget.isMobile ? 24 : widget.isTablet ? 18 : 20)
+                                    : (widget.isMobile ? 20 : widget.isTablet ? 16 : 18),
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          
+                          SizedBox(
+                            width: availableHeight > 120
+                                ? (widget.isTablet ? 10 : 14)
+                                : (widget.isTablet ? 8 : 10),
+                          ),
+                          
+                          // Address Text
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'LOCATION',
+                                  style: TextStyle(
+                                    fontSize: locationLabelFontSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color.fromRGBO(81, 115, 153, 0.6),
+                                    letterSpacing: widget.isTablet ? 1.2 : 1.5,
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: availableHeight > 120
+                                      ? (widget.isTablet ? 4 : 6)
+                                      : (widget.isTablet ? 3 : 4),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    widget.clinic.address,
+                                    style: TextStyle(
+                                      fontSize: addressFontSize,
+                                      color: const Color.fromRGBO(81, 115, 153, 1),
+                                      height: 1.3,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    maxLines: availableHeight > 120 ? 3 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
