@@ -1,12 +1,11 @@
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/web/admin_web/components/appbar/admin_change_pass_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_feedback_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_pfp_controller.dart';
-import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_page.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
-import 'package:capstone_app/web/admin_web/components/appbar/admin_web_profile.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
+import 'package:capstone_app/web/admin_web/components/appbar/staff_change_pass_controller.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -2239,80 +2238,1028 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   }
 
   void _showChangePasswordDialog() {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
+    final storage = GetStorage();
+    final userRole = storage.read('role') ?? 'admin';
+
+    // Initialize appropriate controller based on role
+    if (userRole == 'staff') {
+      // Check if controller already exists, if not create it
+      final changePasswordController =
+          Get.isRegistered<StaffChangePasswordController>(
+                  tag: 'staff_change_password')
+              ? Get.find<StaffChangePasswordController>(
+                  tag: 'staff_change_password')
+              : Get.put(
+                  StaffChangePasswordController(Get.find<AuthRepository>()),
+                  tag: 'staff_change_password',
+                );
+      _buildPasswordChangeDialogForStaff(changePasswordController);
+    } else {
+      // Check if controller already exists, if not create it
+      final changePasswordController =
+          Get.isRegistered<AdminChangePasswordController>(
+                  tag: 'admin_change_password')
+              ? Get.find<AdminChangePasswordController>(
+                  tag: 'admin_change_password')
+              : Get.put(
+                  AdminChangePasswordController(Get.find<AuthRepository>()),
+                  tag: 'admin_change_password',
+                );
+      _buildPasswordChangeDialogForAdmin(changePasswordController);
+    }
+  }
+
+  void _buildPasswordChangeDialogForAdmin(
+      AdminChangePasswordController controller) {
+    // Clear any previous state
+    controller.clearFields();
 
     showDialog(
       context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: _isMobile ? double.infinity : 550,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Form(
+              key: controller.formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    _buildPasswordDialogHeader(dialogContext, controller),
+
+                    // Content - Wrap the entire content in Obx
+                    Obx(() => Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Error Message Banner
+                              if (controller.errorMessage.value.isNotEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.red[200]!),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.error_outline,
+                                          color: Colors.red[700], size: 20),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          controller.errorMessage.value,
+                                          style: TextStyle(
+                                            color: Colors.red[700],
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.close,
+                                            size: 18, color: Colors.red[700]),
+                                        onPressed: () {
+                                          controller.errorMessage.value = '';
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              // Current Password Field
+                              _buildPasswordFieldForAdmin(
+                                controller,
+                                'Current Password',
+                                'Enter your current password',
+                                controller.currentPasswordController,
+                                controller.isCurrentPasswordVisible,
+                                controller.toggleCurrentPasswordVisibility,
+                                controller.validateCurrentPassword,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // New Password Field
+                              _buildNewPasswordFieldForAdmin(controller),
+                              const SizedBox(height: 24),
+
+                              // Confirm Password Field
+                              _buildPasswordFieldForAdmin(
+                                controller,
+                                'Confirm New Password',
+                                'Re-enter your new password',
+                                controller.confirmPasswordController,
+                                controller.isConfirmPasswordVisible,
+                                controller.toggleConfirmPasswordVisibility,
+                                controller.validateConfirmPassword,
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Action Buttons
+                              _buildDialogActionsForAdmin(
+                                  dialogContext, controller),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _buildPasswordChangeDialogForStaff(
+      StaffChangePasswordController controller) {
+    // Clear any previous state
+    controller.clearFields();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: _isMobile ? double.infinity : 550,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Form(
+              key: controller.formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    _buildPasswordDialogHeaderForStaff(
+                        dialogContext, controller),
+
+                    // Content - Wrap the entire content in Obx
+                    Obx(() => Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Error Message Banner
+                              if (controller.errorMessage.value.isNotEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.red[200]!),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.error_outline,
+                                          color: Colors.red[700], size: 20),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          controller.errorMessage.value,
+                                          style: TextStyle(
+                                            color: Colors.red[700],
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.close,
+                                            size: 18, color: Colors.red[700]),
+                                        onPressed: () {
+                                          controller.errorMessage.value = '';
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              // Current Password Field
+                              _buildPasswordFieldForStaff(
+                                controller,
+                                'Current Password',
+                                'Enter your current password',
+                                controller.currentPasswordController,
+                                controller.isCurrentPasswordVisible,
+                                controller.toggleCurrentPasswordVisibility,
+                                controller.validateCurrentPassword,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // New Password Field
+                              _buildNewPasswordFieldForStaff(controller),
+                              const SizedBox(height: 24),
+
+                              // Confirm Password Field
+                              _buildPasswordFieldForStaff(
+                                controller,
+                                'Confirm New Password',
+                                'Re-enter your new password',
+                                controller.confirmPasswordController,
+                                controller.isConfirmPasswordVisible,
+                                controller.toggleConfirmPasswordVisibility,
+                                controller.validateConfirmPassword,
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Action Buttons
+                              _buildDialogActionsForStaff(
+                                  dialogContext, controller),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+// Helper widgets for Admin
+  Widget _buildPasswordDialogHeader(
+      BuildContext dialogContext, AdminChangePasswordController controller) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue[600]!, Colors.blue[400]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.lock_reset, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Change Password',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Create a strong, secure password',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              controller.clearFields();
+              Navigator.of(dialogContext).pop();
+            },
+            icon: const Icon(Icons.close, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordDialogHeaderForStaff(
+      BuildContext dialogContext, StaffChangePasswordController controller) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue[600]!, Colors.blue[400]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.lock_reset, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Change Password',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Create a strong, secure password',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              controller.clearFields();
+              Navigator.of(dialogContext).pop();
+            },
+            icon: const Icon(Icons.close, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordFieldForAdmin(
+    AdminChangePasswordController controller,
+    String label,
+    String hint,
+    TextEditingController textController,
+    RxBool isVisible,
+    VoidCallback toggleVisibility,
+    String? Function(String?)? validator,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Obx(() => TextFormField(
+              controller: textController,
+              obscureText: !isVisible.value,
+              style: const TextStyle(color: Colors.black87),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    isVisible.value ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey[600],
+                  ),
+                  onPressed: toggleVisibility,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              validator: validator,
+            )),
+      ],
+    );
+  }
+
+  Widget _buildPasswordFieldForStaff(
+    StaffChangePasswordController controller,
+    String label,
+    String hint,
+    TextEditingController textController,
+    RxBool isVisible,
+    VoidCallback toggleVisibility,
+    String? Function(String?)? validator,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Obx(() => TextFormField(
+              controller: textController,
+              obscureText: !isVisible.value,
+              style: const TextStyle(color: Colors.black87),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    isVisible.value ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey[600],
+                  ),
+                  onPressed: toggleVisibility,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              validator: validator,
+            )),
+      ],
+    );
+  }
+
+  Widget _buildNewPasswordFieldForAdmin(
+      AdminChangePasswordController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'New Password',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Obx(() => TextFormField(
+              controller: controller.newPasswordController,
+              obscureText: !controller.isNewPasswordVisible.value,
+              style: const TextStyle(color: Colors.black87),
+              onChanged: (value) => controller.checkPasswordRequirements(value),
+              decoration: InputDecoration(
+                hintText: 'Enter your new password',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isNewPasswordVisible.value
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.grey[600],
+                  ),
+                  onPressed: controller.toggleNewPasswordVisibility,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              validator: controller.validateNewPassword,
+            )),
+        const SizedBox(height: 16),
+        Obx(() {
+          if (controller.newPasswordController.text.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return _buildPasswordStrengthIndicatorForAdmin(controller);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildNewPasswordFieldForStaff(
+      StaffChangePasswordController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'New Password',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Obx(() => TextFormField(
+              controller: controller.newPasswordController,
+              obscureText: !controller.isNewPasswordVisible.value,
+              style: const TextStyle(color: Colors.black87),
+              onChanged: (value) => controller.checkPasswordRequirements(value),
+              decoration: InputDecoration(
+                hintText: 'Enter your new password',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isNewPasswordVisible.value
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.grey[600],
+                  ),
+                  onPressed: controller.toggleNewPasswordVisibility,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              validator: controller.validateNewPassword,
+            )),
+        const SizedBox(height: 16),
+        Obx(() {
+          if (controller.newPasswordController.text.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return _buildPasswordStrengthIndicatorForStaff(controller);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildPasswordStrengthIndicatorForAdmin(
+      AdminChangePasswordController controller) {
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: controller.getPasswordStrength() / 4,
+                      backgroundColor: Colors.grey[200],
+                      color: controller.getPasswordStrengthColor(),
+                      minHeight: 6,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  controller.getPasswordStrengthLabel(),
+                  style: TextStyle(
+                    color: controller.getPasswordStrengthColor(),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Password Requirements:',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPasswordRequirement(
+                      'At least 8 characters', controller.hasMinLength.value),
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirement('One uppercase letter (A-Z)',
+                      controller.hasUpperCase.value),
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirement(
+                      'One number (0-9)', controller.hasNumber.value),
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirement('One special character (!@#\$%^&*)',
+                      controller.hasSpecialChar.value),
+                ],
+              ),
+            ),
+          ],
+        ));
+  }
+
+  Widget _buildPasswordStrengthIndicatorForStaff(
+      StaffChangePasswordController controller) {
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: controller.getPasswordStrength() / 4,
+                      backgroundColor: Colors.grey[200],
+                      color: controller.getPasswordStrengthColor(),
+                      minHeight: 6,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  controller.getPasswordStrengthLabel(),
+                  style: TextStyle(
+                    color: controller.getPasswordStrengthColor(),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Password Requirements:',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPasswordRequirement(
+                      'At least 8 characters', controller.hasMinLength.value),
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirement('One uppercase letter (A-Z)',
+                      controller.hasUpperCase.value),
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirement(
+                      'One number (0-9)', controller.hasNumber.value),
+                  const SizedBox(height: 8),
+                  _buildPasswordRequirement('One special character (!@#\$%^&*)',
+                      controller.hasSpecialChar.value),
+                ],
+              ),
+            ),
+          ],
+        ));
+  }
+
+  Widget _buildPasswordRequirement(String text, bool isMet) {
+    return Row(
+      children: [
+        Icon(
+          isMet ? Icons.check_circle : Icons.cancel,
+          size: 16,
+          color: isMet ? Colors.green : Colors.grey[400],
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: isMet ? Colors.green[700] : Colors.grey[600],
+              fontSize: 12,
+              fontWeight: isMet ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDialogActionsForAdmin(
+      BuildContext dialogContext, AdminChangePasswordController controller) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () {
+              controller.clearFields();
+              Navigator.of(dialogContext).pop();
+            },
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.grey[400]!),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                  color: Colors.grey[700], fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Obx(() => ElevatedButton(
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () async {
+                        final success = await controller.changePassword();
+                        if (success) {
+                          Navigator.of(dialogContext).pop();
+                          _showPasswordChangeSuccessDialog();
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
+                  disabledBackgroundColor: Colors.grey[300],
+                ),
+                child: controller.isLoading.value
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Change Password',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+              )),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDialogActionsForStaff(
+      BuildContext dialogContext, StaffChangePasswordController controller) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () {
+              controller.clearFields();
+              Navigator.of(dialogContext).pop();
+            },
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.grey[400]!),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                  color: Colors.grey[700], fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Obx(() => ElevatedButton(
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () async {
+                        final success = await controller.changePassword();
+                        if (success) {
+                          Navigator.of(dialogContext).pop();
+                          _showPasswordChangeSuccessDialog();
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
+                  disabledBackgroundColor: Colors.grey[300],
+                ),
+                child: controller.isLoading.value
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Change Password',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+              )),
+        ),
+      ],
+    );
+  }
+
+  void _showPasswordChangeSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('Change Password',
-              style: TextStyle(color: Colors.black87)),
-          content: SizedBox(
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
             width: _isMobile ? double.infinity : 400,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: currentPasswordController,
-                  obscureText: true,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: const InputDecoration(
-                    labelText: 'Current Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
+                // Success Icon
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.green[400]!, Colors.green[600]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.white,
+                          size: 64,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: newPasswordController,
-                  obscureText: true,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: const InputDecoration(
-                    labelText: 'New Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Password Changed!',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Your password has been successfully changed. You can now use your new password to sign in.',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[600],
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Got it',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (newPasswordController.text ==
-                    confirmPasswordController.text) {
-                  Navigator.of(context).pop();
-                  _showSnackbar(
-                      'Success', 'Password changed successfully', Colors.green);
-                } else {
-                  _showSnackbar('Error', 'Passwords do not match', Colors.red);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Change Password'),
-            ),
-          ],
         );
       },
     );
