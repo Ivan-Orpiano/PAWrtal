@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/middleware/config/security_config.dart';
 import 'package:get/get.dart';
@@ -45,21 +46,23 @@ class SessionManager {
     }
     print('>>> ============================================');
 
-    // Clear all session data
-    await _storage.erase();
 
-    // Navigate to login
-    Get.offAllNamed(Routes.login);
+    LogoutHelper.logout();
+    // // Clear all session data
+    // await _storage.erase();
 
-    // Show message
-    if (reason != null) {
-      Get.snackbar(
-        'Session Ended',
-        reason,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 5),
-      );
-    }
+    // // Navigate to login
+    // Get.offAllNamed(Routes.login);
+
+    // // Show message
+    // if (reason != null) {
+    //   Get.snackbar(
+    //     'Session Ended',
+    //     reason,
+    //     snackPosition: SnackPosition.TOP,
+    //     duration: const Duration(seconds: 5),
+    //   );
+    // }
   }
 
   /// Refresh session (extend timeout)
@@ -116,7 +119,7 @@ class SessionManager {
   /// Set up periodic session validation
   static void _setupPeriodicValidation() {
     // Check session every 5 minutes
-    Future.delayed(const Duration(minutes: 5), () {
+    Future.delayed(const Duration(minutes: 30), () {
       if (!isSessionValid()) {
         forceLogout(reason: 'Session expired due to inactivity');
       } else {
