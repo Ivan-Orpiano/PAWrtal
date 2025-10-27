@@ -965,7 +965,7 @@ String _formatDateTime(DateTime dateTime) {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Archived feedback can be permanently deleted later.',
+                      'Archived feedback can be permanently deleted after few days.',
                       style: TextStyle(
                         color: Colors.orange[900],
                         fontSize: 12,

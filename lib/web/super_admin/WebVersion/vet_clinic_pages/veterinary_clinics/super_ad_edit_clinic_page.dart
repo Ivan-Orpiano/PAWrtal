@@ -250,7 +250,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                      ) 
                     : const Icon(Icons.upload),
                 label: Text(isLoadingImage ? 'Uploading...' : 'Change Image'),
                 style: ElevatedButton.styleFrom(

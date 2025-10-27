@@ -148,61 +148,232 @@ class _SuperAdminVetClinicDetailPageState
     }
   }
 
-  void _showUpdateNotification(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
+ void _showUpdateNotification(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
           children: [
-            const Icon(Icons.refresh, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _showDeletedDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.orange[700], size: 28),
-            const SizedBox(width: 12),
-            const Text('Clinic Archived'),
-          ],
-        ),
-        content: const Text(
-          'This clinic has been archived by developer.',
-          style: TextStyle(fontSize: 16),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop(true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10B981), Color(0xFF059669)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 20,
               ),
             ),
-            child: const Text('OK'),
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    );
-  }
+      backgroundColor: Colors.white,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: const Color(0xFF10B981).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      duration: const Duration(seconds: 3),
+      elevation: 8,
+    ),
+  );
+}
 
+void _showErrorSnackbar(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.error_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.2,
+                  color: Color(0xFFEF4444),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      backgroundColor: Colors.white,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: const Color(0xFFEF4444).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      duration: const Duration(seconds: 4),
+      elevation: 8,
+    ),
+  );
+}
+
+void _showDeletedDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 30,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.orange.withOpacity(0.2),
+                    Colors.orange.withOpacity(0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.info_outline_rounded,
+                color: Colors.orange[700],
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Clinic Archived',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: Colors.black87,
+                letterSpacing: 0.3,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This clinic has been archived by developer.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(true);
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromRGBO(81, 115, 153, 1),
+                        Color.fromRGBO(81, 115, 153, 0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromRGBO(81, 115, 153, 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Container(
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -413,102 +584,120 @@ class _SuperAdminVetClinicDetailPageState
     );
   }
 
-  Widget _buildQuickStatsCards(
-      Clinic clinic, ClinicSettings? settings, bool isMobile) {
-    final services =
-        clinic.services.split(',').where((s) => s.trim().isNotEmpty).toList();
-    final galleryCount = settings?.gallery.length ?? 0;
+Widget _buildQuickStatsCards(
+    Clinic clinic, ClinicSettings? settings, bool isMobile) {
+  final services =
+      clinic.services.split(',').where((s) => s.trim().isNotEmpty).toList();
+  final galleryCount = settings?.gallery.length ?? 0;
 
-    return Row(
+  return Row(
+    children: [
+      Expanded(
+        child: _buildStatCard(
+          icon: Icons.medical_services_rounded,
+          label: 'Services',
+          value: '${services.length}',
+          gradient: const LinearGradient(
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          isMobile: isMobile,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: _buildStatCard(
+          icon: Icons.photo_library_rounded,
+          label: 'Gallery',
+          value: '$galleryCount',
+          gradient: const LinearGradient(
+            colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          isMobile: isMobile,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: _buildStatCard(
+          icon: Icons.people_rounded,
+          label: 'Staff',
+          value: '$totalStaff',
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          isMobile: isMobile,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildStatCard({
+  required IconData icon,
+  required String label,
+  required String value,
+  required Gradient gradient,
+  required bool isMobile,
+}) {
+  return Container(
+    padding: EdgeInsets.all(isMobile ? 16 : 20),
+    decoration: BoxDecoration(
+      gradient: gradient,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.15),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
       children: [
-        Expanded(
-          child: _buildStatCard(
-            icon: Icons.medical_services,
-            label: 'Services',
-            value: '${services.length}',
-            color: const Color.fromRGBO(81, 115, 153, 1),
-            isMobile: isMobile,
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.25),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withOpacity(0.3),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: isMobile ? 26 : 30),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isMobile ? 28 : 32,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            icon: Icons.photo_library,
-            label: 'Gallery',
-            value: '$galleryCount',
-            color: Colors.purple,
-            isMobile: isMobile,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            icon: Icons.people,
-            label: 'Staff',
-            value: '$totalStaff',
-            color: Colors.orange,
-            isMobile: isMobile,
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isMobile ? 13 : 14,
+            color: Colors.white.withOpacity(0.95),
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    required bool isMobile,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: isMobile ? 24 : 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isMobile ? 24 : 28,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isMobile ? 12 : 13,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildActionButtons(
       BuildContext context, Clinic clinic, bool isMobile) {
@@ -808,7 +997,7 @@ class _SuperAdminVetClinicDetailPageState
                         ),
                       )
                     : Icon(
-                        icon,
+                        icon, 
                         color: color,
                         size: isMobile ? 18 : 20,
                       ),
@@ -1402,380 +1591,616 @@ class _SuperAdminVetClinicDetailPageState
   }
 
   Widget _buildServicesSection(Clinic clinic, bool isMobile) {
-    final services = clinic.services
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+  final services = clinic.services
+      .split(',')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
 
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 20 : 28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(81, 115, 153, 0.1),
-            blurRadius: 20,
-            offset: Offset(0, 4),
-          ),
-        ],
+  return Container(
+    padding: EdgeInsets.all(isMobile ? 20 : 24),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 248, 253, 255),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: const Color.fromRGBO(81, 115, 153, 0.15),
+        width: 1.5,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(81, 115, 153, 0.1),
-                  borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: const Color.fromRGBO(81, 115, 153, 0.08),
+          blurRadius: 20,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Enhanced Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: const Icon(
-                  Icons.medical_services,
-                  color: Color.fromRGBO(81, 115, 153, 1),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Services Offered',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromRGBO(81, 115, 153, 1),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: services.map((service) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color.fromRGBO(81, 115, 153, 0.15),
-                      const Color.fromRGBO(81, 115, 153, 0.05),
-                    ],
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: const Color.fromRGBO(81, 115, 153, 0.3),
-                    width: 2,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      size: 18,
-                      color: Color.fromRGBO(81, 115, 153, 1),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      service,
-                      style: const TextStyle(
-                        color: Color.fromRGBO(81, 115, 153, 1),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOperatingHoursSection(ClinicSettings settings, bool isMobile) {
-    final today = DateTime.now().weekday;
-    final todayName = _getDayName(today);
-
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 20 : 28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+                ],
+              ),
+              child: const Icon(
+                Icons.medical_services_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color.fromRGBO(81, 115, 153, 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.access_time,
-                      color: Color.fromRGBO(81, 115, 153, 1),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   const Text(
-                    'Operating Hours',
+                    'Services Offered',
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                       color: Color.fromRGBO(81, 115, 153, 1),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${services.length} available services',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: settings.isOpen
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFEF4444),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  settings.isOpen ? 'Accepting' : 'Not Accepting',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ...settings.operatingHours.entries.map((entry) {
-            final day = entry.key;
-            final hours = entry.value;
-            final isOpen = hours['isOpen'] as bool;
-            final openTime = hours['openTime'] as String;
-            final closeTime = hours['closeTime'] as String;
-            final isToday = day == todayName;
-
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        
+        // Service Tags
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: services.map((service) {
             return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 12,
+              ),
               decoration: BoxDecoration(
-                gradient: isToday
-                    ? LinearGradient(
-                        colors: [
-                          const Color.fromRGBO(81, 115, 153, 0.15),
-                          const Color.fromRGBO(81, 115, 153, 0.05),
-                        ],
-                      )
-                    : null,
-                color: isToday ? null : Colors.grey[50],
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isToday
-                      ? const Color.fromRGBO(81, 115, 153, 0.4)
-                      : Colors.grey[300]!,
-                  width: isToday ? 2.5 : 1.5,
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF3B82F6).withOpacity(0.15),
+                    const Color(0xFF3B82F6).withOpacity(0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: const Color(0xFF3B82F6).withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (isToday)
-                    Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(81, 115, 153, 1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        'TODAY',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withOpacity(0.2),
+                      shape: BoxShape.circle,
                     ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      day.substring(0, 1).toUpperCase() + day.substring(1),
-                      style: TextStyle(
-                        fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
-                        fontSize: 16,
-                        color: isToday
-                            ? const Color.fromRGBO(81, 115, 153, 1)
-                            : Colors.black87,
-                      ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      size: 14,
+                      color: Color(0xFF3B82F6),
                     ),
                   ),
-                  Expanded(
-                    flex: 3,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (isOpen) ...[
-                          Icon(
-                            Icons.schedule,
-                            size: 18,
-                            color: const Color(0xFF10B981),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$openTime - $closeTime',
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ] else ...[
-                          Icon(
-                            Icons.block,
-                            size: 18,
-                            color: Colors.red[600],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Closed',
-                            style: TextStyle(
-                              color: Colors.red[600],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ],
+                  const SizedBox(width: 8),
+                  Text(
+                    service,
+                    style: const TextStyle(
+                      color: Color(0xFF3B82F6),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
               ),
             );
-          }),
-        ],
-      ),
-    );
-  }
+          }).toList(),
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildContactSection(Clinic clinic, bool isMobile) {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 20 : 28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(81, 115, 153, 0.1),
-            blurRadius: 20,
-            offset: Offset(0, 4),
-          ),
-        ],
+  Widget _buildOperatingHoursSection(ClinicSettings settings, bool isMobile) {
+  final today = DateTime.now().weekday;
+  final todayName = _getDayName(today);
+
+  return Container(
+    padding: EdgeInsets.all(isMobile ? 20 : 24),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 248, 253, 255),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: const Color.fromRGBO(81, 115, 153, 0.15),
+        width: 1.5,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(81, 115, 153, 0.1),
-                  borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: const Color.fromRGBO(81, 115, 153, 0.08),
+          blurRadius: 20,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Enhanced Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        settings.isOpen
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFEF4444),
+                        settings.isOpen
+                            ? const Color(0xFF059669)
+                            : const Color(0xFFDC2626),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (settings.isOpen
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFEF4444))
+                            .withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.access_time_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.contact_phone,
-                  color: Color.fromRGBO(81, 115, 153, 1),
-                  size: 24,
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Operating Hours',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color.fromRGBO(81, 115, 153, 1),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Weekly schedule',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'Contact Information',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromRGBO(81, 115, 153, 1),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: settings.isOpen
+                      ? [const Color(0xFF10B981), const Color(0xFF059669)]
+                      : [const Color(0xFFEF4444), const Color(0xFFDC2626)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: (settings.isOpen
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFEF4444))
+                        .withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildContactRow(
-            Icons.location_on,
-            'Address',
-            clinic.address,
-            Colors.red,
-          ),
-          const Divider(height: 24),
-          _buildContactRow(
-            Icons.phone,
-            'Phone',
-            clinic.contact,
-            Colors.green,
-          ),
-          const Divider(height: 24),
-          _buildContactRow(
-            Icons.email,
-            'Email',
-            clinic.email,
-            Colors.blue,
-          ),
-          if (clinic.description.isNotEmpty) ...[
-            const Divider(height: 24),
-            _buildContactRow(
-              Icons.description,
-              'Description',
-              clinic.description,
-              Colors.orange,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 6,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    settings.isOpen ? 'Accepting' : 'Not Accepting',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 20),
+        
+        // Operating Hours List
+        ...settings.operatingHours.entries.map((entry) {
+          final day = entry.key;
+          final hours = entry.value;
+          final isOpen = hours['isOpen'] as bool;
+          final openTime = hours['openTime'] as String;
+          final closeTime = hours['closeTime'] as String;
+          final isToday = day == todayName;
 
-  Widget _buildContactRow(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Row(
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: isToday
+                  ? LinearGradient(
+                      colors: [
+                        const Color.fromRGBO(81, 115, 153, 0.2),
+                        const Color.fromRGBO(81, 115, 153, 0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: isToday ? null : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isToday
+                    ? const Color.fromRGBO(81, 115, 153, 0.5)
+                    : Colors.grey[200]!,
+                width: isToday ? 2 : 1.5,
+              ),
+              boxShadow: [
+                if (isToday)
+                  BoxShadow(
+                    color: const Color.fromRGBO(81, 115, 153, 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+              ],
+            ),
+            child: Row(
+              children: [
+                if (isToday)
+                  Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 1),
+                          Color.fromRGBO(81, 115, 153, 0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromRGBO(81, 115, 153, 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'TODAY',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    day.substring(0, 1).toUpperCase() + day.substring(1),
+                    style: TextStyle(
+                      fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
+                      fontSize: 16,
+                      color: isToday
+                          ? const Color.fromRGBO(81, 115, 153, 1)
+                          : Colors.black87,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (isOpen) ...[
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.schedule_rounded,
+                            size: 16,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '$openTime - $closeTime',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.block_rounded,
+                            size: 16,
+                            color: Color(0xFFEF4444),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Closed',
+                          style: TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    ),
+  );
+}
+ Widget _buildContactSection(Clinic clinic, bool isMobile) {
+  return Container(
+    padding: EdgeInsets.all(isMobile ? 20 : 24),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 248, 253, 255),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: const Color.fromRGBO(81, 115, 153, 0.15),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color.fromRGBO(81, 115, 153, 0.08),
+          blurRadius: 20,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Enhanced Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.contact_phone_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contact Information',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Color.fromRGBO(81, 115, 153, 1),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Get in touch',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        
+        // Contact Items
+        _buildContactRow(
+          Icons.location_on_rounded,
+          'Address',
+          clinic.address,
+          const LinearGradient(
+            colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildContactRow(
+          Icons.phone_rounded,
+          'Phone',
+          clinic.contact,
+          const LinearGradient(
+            colors: [Color(0xFF10B981), Color(0xFF059669)],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildContactRow(
+          Icons.email_rounded,
+          'Email',
+          clinic.email,
+          const LinearGradient(
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+          ),
+        ),
+        if (clinic.description.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildContactRow(
+            Icons.description_rounded,
+            'Description',
+            clinic.description,
+            const LinearGradient(
+              colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+Widget _buildContactRow(
+  IconData icon,
+  String label,
+  String value,
+  Gradient gradient,
+) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: Colors.grey[200]!,
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Icon(icon, size: 20, color: color),
+          child: Icon(icon, size: 20, color: Colors.white),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -1785,145 +2210,331 @@ class _SuperAdminVetClinicDetailPageState
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
                   color: Colors.grey[600],
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildAdminSection(Clinic clinic, bool isMobile) {
+  return Container(
+    padding: EdgeInsets.all(isMobile ? 20 : 24),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          const Color.fromRGBO(81, 115, 153, 0.08),
+          const Color.fromRGBO(81, 115, 153, 0.03),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: const Color.fromRGBO(81, 115, 153, 0.25),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color.fromRGBO(81, 115, 153, 0.1),
+          blurRadius: 20,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Enhanced Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromRGBO(81, 115, 153, 1),
+                    Color.fromRGBO(81, 115, 153, 0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromRGBO(81, 115, 153, 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.admin_panel_settings_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Administrator',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Color.fromRGBO(81, 115, 153, 1),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'System information',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        
+        // Admin Info Items
+        _buildAdminInfoRow(
+          'Admin ID',
+          clinic.adminId,
+          Icons.badge_rounded,
+          const LinearGradient(
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildAdminInfoRow(
+          'Created By',
+          clinic.createdBy,
+          Icons.person_rounded,
+          const LinearGradient(
+            colors: [Color(0xFF10B981), Color(0xFF059669)],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildAdminInfoRow(
+          'Role',
+          clinic.role,
+          Icons.verified_user_rounded,
+          const LinearGradient(
+            colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildAdminInfoRow(
+          'Created',
+          _formatDate(clinic.createdAt),
+          Icons.calendar_today_rounded,
+          const LinearGradient(
+            colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildAdminInfoRow(
+  String label,
+  String value,
+  IconData icon,
+  Gradient gradient,
+) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(
+        color: Colors.grey[200]!,
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[600],
+                  letterSpacing: 0.5,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   color: Colors.black87,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildAdminSection(Clinic clinic, bool isMobile) {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 20 : 28),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color.fromRGBO(81, 115, 153, 0.05),
-            const Color.fromRGBO(81, 115, 153, 0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color.fromRGBO(81, 115, 153, 0.2),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(81, 115, 153, 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.admin_panel_settings,
-                  color: Color.fromRGBO(81, 115, 153, 1),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Administrator',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromRGBO(81, 115, 153, 1),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildAdminInfoRow('Admin ID', clinic.adminId, Icons.badge),
-          const SizedBox(height: 12),
-          _buildAdminInfoRow('Created By', clinic.createdBy, Icons.person),
-          const SizedBox(height: 12),
-          _buildAdminInfoRow('Role', clinic.role, Icons.verified_user),
-          const SizedBox(height: 12),
-          _buildAdminInfoRow(
-            'Created',
-            _formatDate(clinic.createdAt),
-            Icons.calendar_today,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdminInfoRow(String label, String value, IconData icon) {
-    return Row(
-      children: [
         Icon(
-          icon,
-          size: 18,
-          color: const Color.fromRGBO(81, 115, 153, 0.7),
+          Icons.arrow_forward_ios_rounded,
+          size: 14,
+          color: Colors.grey[400],
         ),
-        const SizedBox(width: 12),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+      ],
+    ),
+  );
+}
+
+ Widget _buildImagePlaceholder() {
+  return Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFFF8FAFC),
+          const Color.fromRGBO(81, 115, 153, 0.05),
+        ],
+      ),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(40),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color.fromRGBO(81, 115, 153, 0.15),
+                const Color.fromRGBO(81, 115, 153, 0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color.fromRGBO(81, 115, 153, 0.3),
+              width: 3,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromRGBO(81, 115, 153, 0.2),
+                blurRadius: 30,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.pets_rounded,
+            size: 80,
+            color: const Color.fromRGBO(81, 115, 153, 0.6),
           ),
         ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: const Color.fromRGBO(81, 115, 153, 0.2),
+              width: 2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromRGBO(81, 115, 153, 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.image_not_supported_rounded,
+                size: 20,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'No Image Available',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildImagePlaceholder() {
-    return Container(
-      color: const Color(0xFFF8FAFC),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.pets,
-            size: 100,
-            color: const Color.fromRGBO(81, 115, 153, 0.3),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No Image Available',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
   String _getDayName(int weekday) {
     switch (weekday) {
@@ -1955,72 +2566,314 @@ class _SuperAdminVetClinicDetailPageState
     }
   }
 
-  void _showDeleteConfirmation(BuildContext context, Clinic clinic) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.archive_rounded, color: Colors.orange[700], size: 28),
-            const SizedBox(width: 12),
-            const Text('Archive Clinic'),
-          ],
+void _showDeleteConfirmation(BuildContext context, Clinic clinic) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+      ),
+      contentPadding: EdgeInsets.zero,
+      content: Container(
+        width: 400,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              const Color(0xFFF8FAFC),
+            ],
+          ),
         ),
-        content: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Are you sure you want to archive "${clinic.clinicName}"?',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
+            // Header with gradient
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange[200]!),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFEA580C).withOpacity(0.1),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
               ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEA580C).withOpacity(0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.archive_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Archive Clinic',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFEA580C),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Confirm action',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          size: 18, color: Colors.orange[700]),
-                      const SizedBox(width: 8),
-                      Text(
-                        'This will archive the clinic and:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('• All appointments'),
-                  const Text('• All medical records'),
-                  const Text('• All conversations'),
-                  const Text('• Staff accounts (deactivated)'),
-                  const Text('• Gallery images'),
-                  const SizedBox(height: 8),
                   Text(
-                    'The clinic will be PERMANENTLY DELETED in 30 days.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
+                    'Are you sure you want to archive "${clinic.clinicName}"?',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 1.5,
+                      color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'You can recover it within 30 days from the Archived Clinics page.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange[700],
+                  const SizedBox(height: 20),
+                  
+                  // Warning Box
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFEA580C).withOpacity(0.1),
+                          const Color(0xFFEA580C).withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFEA580C).withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEA580C).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.info_outline_rounded,
+                                size: 20,
+                                color: Color(0xFFEA580C),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'This will archive:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFEA580C),
+                                fontSize: 15,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _buildArchiveItem('All appointments'),
+                        _buildArchiveItem('All medical records'),
+                        _buildArchiveItem('All conversations'),
+                        _buildArchiveItem('Staff accounts (deactivated)'),
+                        _buildArchiveItem('Gallery images'),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEA580C).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFEA580C),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.warning_rounded,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Text(
+                                      'Permanently deleted in 30 days',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFFEA580C),
+                                        fontSize: 13,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'You can recover it within 30 days from the Archived Clinics page.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFEA580C),
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Actions
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(28),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: Colors.black87,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _archiveClinic(clinic);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEA580C).withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Container(
+                          alignment: Alignment.center,
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.archive_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Archive Clinic',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -2028,27 +2881,43 @@ class _SuperAdminVetClinicDetailPageState
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _archiveClinic(clinic); // CHANGED FROM _deleteClinic
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[700],
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Archive'),
-          ),
-        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
+
+Widget _buildArchiveItem(String text) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEA580C).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Icon(
+            Icons.close_rounded,
+            size: 12,
+            color: Color(0xFFEA580C),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
+      ],
+    ),
+  );
+}
   Future<void> _archiveClinic(Clinic clinic) async {
     setState(() {
       isDeleting = true;
@@ -2056,27 +2925,68 @@ class _SuperAdminVetClinicDetailPageState
 
     try {
       showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                color: Color.fromRGBO(81, 115, 153, 1),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Archiving clinic...',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
+  context: context,
+  barrierDismissible: false,
+  builder: (context) => Dialog(
+    backgroundColor: Colors.transparent,
+    child: Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 30,
+            spreadRadius: 5,
           ),
-        ),
-      );
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color.fromRGBO(81, 115, 153, 0.2),
+                  Color.fromRGBO(81, 115, 153, 0.1),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const CircularProgressIndicator(
+              strokeWidth: 4,
+              color: Color.fromRGBO(81, 115, 153, 1),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Archiving clinic...',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              color: Color.fromRGBO(81, 115, 153, 1),
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Please wait while we process your request',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ),
+);
 
       // Get current admin info
       final currentUser = await authRepository.getUser();
@@ -2191,23 +3101,6 @@ class _SuperAdminVetClinicDetailPageState
           Text(label),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
-      ),
-    );
-  }
-
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red[700],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
