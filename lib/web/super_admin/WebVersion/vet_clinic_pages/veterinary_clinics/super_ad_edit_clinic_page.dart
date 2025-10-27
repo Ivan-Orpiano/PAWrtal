@@ -67,6 +67,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   int maxAdvanceBooking = 30;
   bool autoAcceptAppointments = false;
   bool isOpen = true;
+  String? newDashboardImageId;
 
   @override
   void initState() {
@@ -200,110 +201,213 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   Widget _buildBasicInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildSectionCard(
-            title: "Clinic Image",
-            child: Column(
-              children: [
-                Container(
-                  height: 200,
-                  width: double.infinity,
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      children: [
+        _buildSectionCard(
+          title: "Clinic Image",
+          child: Column(
+            children: [
+              Center( 
+                child: Container(
+                  width: 300,  
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.grey[100],  
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: newMainImageId != null
-                        ? Image.network(
-                            getPetImageUrl(newMainImageId!),
-                            fit: BoxFit.cover,
-                          )
-                        : widget.clinic.image.isNotEmpty
-                            ? Image.network(
-                                getPetImageUrl(widget.clinic.image),
-                                fit: BoxFit.cover,
-                              )
-                            : Center(
-                                child: Icon(
-                                  Icons.image,
-                                  size: 64,
-                                  color: Colors.grey[400],
+                  child: AspectRatio(
+                    aspectRatio: 1.0,  
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: newMainImageId != null
+                          ? Image.network(
+                              getPetImageUrl(newMainImageId!),
+                              fit: BoxFit.cover,
+                            )
+                          : widget.clinic.image.isNotEmpty
+                              ? Image.network(
+                                  getPetImageUrl(widget.clinic.image),
+                                  fit: BoxFit.cover,
+                                )
+                              : Center(
+                                  child: Icon(
+                                    Icons.image,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
                                 ),
-                              ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: isLoadingImage ? null : _pickMainImage,
-                  icon: isLoadingImage
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.upload),
-                  label: Text(isLoadingImage ? 'Uploading...' : 'Change Image'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                    foregroundColor: Colors.white,
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: isLoadingImage ? null : _pickMainImage,
+                icon: isLoadingImage
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload),
+                label: Text(isLoadingImage ? 'Uploading...' : 'Change Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildDashboardImageSection(),
+        const SizedBox(height: 24),
+        _buildSectionCard(
+          title: "Basic Information",
+          child: Column(
+            children: [
+              _buildTextField(
+                controller: clinicNameController,
+                label: "Clinic Name",
+                icon: Icons.business,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: emailController,
+                label: "Email",
+                icon: Icons.email,
+                keyboardType: TextInputType.emailAddress,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: addressController,
+                label: "Address",
+                icon: Icons.location_on,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: contactController,
+                label: "Contact Number",
+                icon: Icons.phone,
+                keyboardType: TextInputType.phone,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: descriptionController,
+                label: "Description",
+                icon: Icons.description,
+                maxLines: 4,
+                hint: "Tell customers about your clinic...",
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+ 
+Widget _buildDashboardImageSection() {
+  return _buildSectionCard(
+    title: "Dashboard Image (Optional)",
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Dashboard image will be shown in the main dashboard. If not set, the main clinic image will be used.',
+                  style: TextStyle(
+                    color: Colors.blue[900],
+                    fontSize: 13,
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center( 
+          child: Container(
+            width: 300,  
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.grey[100], 
+            ),
+            child: AspectRatio(
+              aspectRatio: 1.0,  
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _buildDashboardImagePreview(),
+              ),
             ),
           ),
-          const SizedBox(height: 24),
-          _buildSectionCard(
-            title: "Basic Information",
-            child: Column(
-              children: [
-                _buildTextField(
-                  controller: clinicNameController,
-                  label: "Clinic Name",
-                  icon: Icons.business,
-                  required: true,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: isLoadingImage ? null : _pickDashboardImage,
+                icon: isLoadingImage
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload),
+                label: Text(isLoadingImage
+                    ? 'Uploading...'
+                    : 'Change Dashboard Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: emailController,
-                  label: "Email",
-                  icon: Icons.email,
-                  keyboardType: TextInputType.emailAddress,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: addressController,
-                  label: "Address",
-                  icon: Icons.location_on,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: contactController,
-                  label: "Contact Number",
-                  icon: Icons.phone,
-                  keyboardType: TextInputType.phone,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: descriptionController,
-                  label: "Description",
-                  icon: Icons.description,
-                  maxLines: 4,
-                  hint: "Tell customers about your clinic...",
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            if (newDashboardImageId != null ||
+                (widget.clinic.dashboardPic != null &&
+                    widget.clinic.dashboardPic!.isNotEmpty)) ...[
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _removeDashboardImage,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Remove'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 20,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildServicesAndHoursTab() {
     return SingleChildScrollView(
@@ -740,6 +844,130 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     );
   }
 
+  Widget _buildDashboardImagePreview() {
+
+
+     if (newDashboardImageId != null && newDashboardImageId!.isNotEmpty) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          getPetImageUrl(newDashboardImageId!),
+          fit: BoxFit.cover,
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green[700],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.new_releases, color: Colors.white, size: 16),
+                SizedBox(width: 4),
+                Text(
+                  'NEW',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  if (newDashboardImageId == '' &&
+      widget.clinic.dashboardPic != null &&
+      widget.clinic.dashboardPic!.isNotEmpty) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          getPetImageUrl(widget.clinic.dashboardPic!),
+          fit: BoxFit.cover,
+          color: Colors.red.withOpacity(0.3),
+          colorBlendMode: BlendMode.color,
+        ),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.red[700],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Will be removed on save',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+
+    if (widget.clinic.dashboardPic != null &&
+        widget.clinic.dashboardPic!.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            getPetImageUrl(widget.clinic.dashboardPic!),
+            fit: BoxFit.cover,
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(81, 115, 153, 1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.dashboard, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'CURRENT',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return const SizedBox();
+  }
+
   Widget _buildTimeField({
     required String value,
     required String label,
@@ -806,6 +1034,77 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     }
   }
 
+  Future<void> _pickDashboardImage() async {
+    try {
+      setState(() {
+        isLoadingImage = true;
+      });
+
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+
+        // Upload dashboard image
+        final uploadedFile = await authRepository.uploadImage(
+          file.bytes != null
+              ? InputFile.fromBytes(bytes: file.bytes!, filename: file.name)
+              : InputFile.fromPath(path: file.path!, filename: file.name),
+        );
+
+        setState(() {
+          newDashboardImageId = uploadedFile.$id;
+        });
+
+        _showSuccessSnackbar('Dashboard image uploaded successfully');
+      }
+    } catch (e) {
+      _showErrorSnackbar('Error uploading dashboard image: ${e.toString()}');
+    } finally {
+      setState(() {
+        isLoadingImage = false;
+      });
+    }
+  }
+
+  Future<void> _removeDashboardImage() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove Dashboard Image?'),
+        content: const Text(
+          'Are you sure you want to remove the dashboard image? The main clinic image will be used instead.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[700],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        newDashboardImageId = '';
+      });
+      _showSuccessSnackbar('Dashboard image will be removed on save');
+    }
+  }
+
   Future<void> _pickGalleryImages() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -861,6 +1160,41 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     });
 
     try {
+      // ✅ Handle dashboard image changes
+      String? finalDashboardImageId;
+
+      if (newDashboardImageId == '') {
+        // User wants to remove dashboard image
+        if (widget.clinic.dashboardPic != null &&
+            widget.clinic.dashboardPic!.isNotEmpty) {
+          try {
+            await authRepository.deleteImage(widget.clinic.dashboardPic!);
+            print('>>> Old dashboard image deleted');
+          } catch (e) {
+            print('>>> Warning: Could not delete old dashboard image: $e');
+          }
+        }
+        finalDashboardImageId = '';
+      } else if (newDashboardImageId != null) {
+        // User uploaded new dashboard image
+        finalDashboardImageId = newDashboardImageId;
+
+        // Delete old dashboard image if it exists
+        if (widget.clinic.dashboardPic != null &&
+            widget.clinic.dashboardPic!.isNotEmpty &&
+            widget.clinic.dashboardPic != newDashboardImageId) {
+          try {
+            await authRepository.deleteImage(widget.clinic.dashboardPic!);
+            print('>>> Old dashboard image replaced');
+          } catch (e) {
+            print('>>> Warning: Could not delete old dashboard image: $e');
+          }
+        }
+      } else {
+        // Keep existing dashboard image
+        finalDashboardImageId = widget.clinic.dashboardPic;
+      }
+
       // Update clinic basic info
       final clinicData = {
         'clinicName': clinicNameController.text.trim(),
@@ -870,6 +1204,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         'description': descriptionController.text.trim(),
         'services': selectedServices.join(', '),
         'image': newMainImageId ?? widget.clinic.image,
+        'dashboardPic': finalDashboardImageId ?? '', // ✅ Add dashboard image
       };
 
       await authRepository.updateClinic(
@@ -877,7 +1212,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         clinicData,
       );
 
-      // Update or create settings
+      // Update or create settings (existing code remains the same)
       if (widget.settings != null) {
         final settingsData = {
           'clinicId': widget.clinic.documentId!,

@@ -70,11 +70,13 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   void didUpdateWidget(SuperAdminVetClinicTile oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    // ✅ CRITICAL: Check for dashboard image changes
     if (oldWidget.clinic.image != widget.clinic.image ||
+        oldWidget.clinic.dashboardPic != widget.clinic.dashboardPic ||
         oldWidget.clinic.clinicName != widget.clinic.clinicName ||
         oldWidget.clinic.services != widget.clinic.services ||
         oldWidget.settings?.gallery != widget.settings?.gallery) {
-      print('🔄 Real-time update detected for: ${widget.clinic.clinicName}');
+      print('📄 Real-time update detected for: ${widget.clinic.clinicName}');
 
       setState(() {
         _imageLoaded = false;
@@ -86,6 +88,19 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   }
 
   void _updateImageUrl() {
+    // ✅ PRIORITY 1: Use dashboard image if available
+    if (widget.clinic.dashboardPic != null &&
+        widget.clinic.dashboardPic!.isNotEmpty) {
+      final newUrl = getPetImageUrl(widget.clinic.dashboardPic!);
+      if (newUrl != _cachedImageUrl) {
+        setState(() {
+          _cachedImageUrl = newUrl;
+        });
+      }
+      return;
+    }
+
+    // ✅ PRIORITY 2: Use main clinic image
     if (widget.clinic.image.isNotEmpty) {
       final newUrl = getPetImageUrl(widget.clinic.image);
       if (newUrl != _cachedImageUrl) {
@@ -93,11 +108,13 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
           _cachedImageUrl = newUrl;
         });
       }
-    } else {
-      setState(() {
-        _cachedImageUrl = null;
-      });
+      return;
     }
+
+    // ✅ PRIORITY 3: No image
+    setState(() {
+      _cachedImageUrl = null;
+    });
   }
 
   @override
@@ -152,14 +169,14 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image Section - FIXED: Adjusted flex for tablet
+                  // Image Section
                   Expanded(
                     flex: widget.isTablet ? 6 : 5,
                     child: _buildImageSection(
                         isOpen, detailedStatus, galleryCount),
                   ),
 
-                  // Info Section - FIXED: Adjusted flex for tablet
+                  // Info Section
                   Expanded(
                     flex: widget.isTablet ? 5 : 4,
                     child: _buildInfoSection(servicesCount),
