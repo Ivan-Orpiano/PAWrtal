@@ -1,6 +1,9 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 
 class VetDeletionRequestController extends GetxController {
@@ -11,6 +14,12 @@ class VetDeletionRequestController extends GetxController {
   // Observable lists
   var allRequests = <FeedbackDeletionRequest>[].obs;
   var filteredRequests = <FeedbackDeletionRequest>[].obs;
+
+  // Cache for reviews (to display review content)
+  var reviewsCache = <String, RatingAndReview>{}.obs;
+
+  // Cache for clinic names
+  var clinicNamesCache = <String, String>{}.obs;
 
   // Loading states
   var isLoading = false.obs;
@@ -34,50 +43,167 @@ class VetDeletionRequestController extends GetxController {
   Future<void> loadAllDeletionRequests() async {
     try {
       isLoading.value = true;
+      print('>>> ============================================');
+      print('>>> LOADING ALL DELETION REQUESTS');
+      print('>>> ============================================');
 
-      // Get all clinics first
+      // CHANGE: Get ALL deletion requests first (not filtered by clinic)
+      final allDeletionRequestDocs =
+          await authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: [
+          Query.orderDesc('requestedAt'),
+          Query.limit(500),
+        ],
+      );
+
+      print(
+          '>>> Found ${allDeletionRequestDocs.documents.length} total deletion requests');
+
+      if (allDeletionRequestDocs.documents.isEmpty) {
+        print('>>> No deletion requests found in database');
+        allRequests.value = [];
+        filterRequests();
+        calculateStatistics();
+        isLoading.value = false;
+        return;
+      }
+
+      // Get all clinics to map adminId to clinic
       final clinics = await authRepository.getAllClinics();
+      print('>>> Found ${clinics.length} clinics');
+
+      // Create a map: adminId -> Clinic
+      final Map<String, dynamic> adminIdToClinicMap = {};
+      for (var clinic in clinics) {
+        adminIdToClinicMap[clinic.adminId] = {
+          'documentId': clinic.documentId,
+          'clinicName': clinic.clinicName,
+        };
+        print(
+            '>>> Mapped Admin ID ${clinic.adminId} to Clinic: ${clinic.clinicName}');
+      }
 
       List<FeedbackDeletionRequest> allRequestsTemp = [];
 
-      // Fetch deletion requests for each clinic
-      for (var clinic in clinics) {
-        if (clinic.documentId != null) {
-          final requests = await authRepository.getClinicDeletionRequests(
-            clinic.documentId!,
-          );
+      // Process each deletion request
+      for (var doc in allDeletionRequestDocs.documents) {
+        try {
+          final request = FeedbackDeletionRequest.fromMap(doc.data);
+          final requestWithId = request.copyWith(documentId: doc.$id);
 
-          // Add clinic name to each request for display
-          for (var request in requests.cast<FeedbackDeletionRequest>()) {
-            // Store clinic name in a way we can access it
-            allRequestsTemp.add(request); 
-          }                                            
+          // The "clinicId" field in FeedbackDeletionRequest is actually the adminId
+          final adminId = requestWithId.clinicId;
+
+          print('>>> Processing deletion request ${doc.$id}');
+          print('>>>   - AdminId (stored as clinicId): $adminId');
+          print('>>>   - Reason: ${requestWithId.reason}');
+          print('>>>   - Status: ${requestWithId.status}');
+
+          // Check if we have a clinic for this admin
+          if (adminIdToClinicMap.containsKey(adminId)) {
+            final clinicInfo = adminIdToClinicMap[adminId];
+            final actualClinicDocId = clinicInfo['documentId'];
+            final clinicName = clinicInfo['clinicName'];
+
+            print(
+                '>>>   ✅ Found clinic: $clinicName (Doc ID: $actualClinicDocId)');
+
+            // Cache the clinic name using the ADMIN ID (which is stored as clinicId)
+            clinicNamesCache[adminId] = clinicName;
+
+            // Also cache using the actual clinic document ID for flexibility
+            clinicNamesCache[actualClinicDocId] = clinicName;
+
+            allRequestsTemp.add(requestWithId);
+
+            // Fetch and cache the review
+            await _fetchAndCacheReview(requestWithId.reviewId);
+          } else {
+            print('>>>   ⚠️ WARNING: No clinic found for admin ID: $adminId');
+            // Still add the request but mark clinic as unknown
+            clinicNamesCache[adminId] = 'Unknown Clinic';
+            allRequestsTemp.add(requestWithId);
+          }
+        } catch (e) {
+          print('>>>   ❌ Error processing deletion request ${doc.$id}: $e');
         }
       }
 
       allRequests.value = allRequestsTemp;
+      print('>>> ============================================');
+      print('>>> ✅ Total deletion requests loaded: ${allRequests.length}');
+      print('>>> ============================================');
+
       filterRequests();
       calculateStatistics();
-    } catch (e) {
-      print('Error loading deletion requests: $e');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR LOADING DELETION REQUESTS: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
       _showSnackBar('Failed to load deletion requests: $e', Colors.red);
     } finally {
       isLoading.value = false;
     }
   }
 
+  /// Fetch and cache a review by ID
+  Future<void> _fetchAndCacheReview(String reviewId) async {
+    try {
+      if (reviewsCache.containsKey(reviewId)) {
+        print('>>> Review $reviewId already cached');
+        return;
+      }
+
+      print('>>> Fetching review: $reviewId');
+
+      // Fetch review from ratings collection using reviewId as documentId
+      final reviewDoc =
+          await authRepository.appWriteProvider.databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+        documentId: reviewId,
+      );
+
+      if (reviewDoc != null) {
+        final review = RatingAndReview.fromMap(reviewDoc.data);
+        reviewsCache[reviewId] = review.copyWith(documentId: reviewDoc.$id);
+        print('>>> Review cached: ${review.userName} - ${review.rating} stars');
+      }
+    } catch (e) {
+      print('>>> Warning: Could not fetch review $reviewId: $e');
+      // Don't fail the entire operation if one review fetch fails
+    }
+  }
+
+  /// Get cached review or fetch it
+  Future<RatingAndReview?> getReview(String reviewId) async {
+    if (reviewsCache.containsKey(reviewId)) {
+      return reviewsCache[reviewId];
+    }
+
+    await _fetchAndCacheReview(reviewId);
+    return reviewsCache[reviewId];
+  }
+
   /// Filter requests based on search, status, and reason
   void filterRequests() {
     filteredRequests.value = allRequests.where((request) {
-      // Search filter
+      // Search filter - search in reason, clinic name, and cached review content
       bool matchesSearch = searchQuery.value.isEmpty ||
           request.reason
               .toLowerCase()
               .contains(searchQuery.value.toLowerCase()) ||
-          request.clinicId
+          (clinicNamesCache[request.clinicId] ?? '')
               .toLowerCase()
               .contains(searchQuery.value.toLowerCase()) ||
           request.requestedBy
+              .toLowerCase()
+              .contains(searchQuery.value.toLowerCase()) ||
+          // Also search in review content if cached
+          (reviewsCache[request.reviewId]?.reviewText ?? '')
               .toLowerCase()
               .contains(searchQuery.value.toLowerCase());
 
@@ -94,6 +220,8 @@ class VetDeletionRequestController extends GetxController {
 
     // Sort by date (newest first)
     filteredRequests.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+
+    print('>>> Filtered to ${filteredRequests.length} requests');
   }
 
   /// Calculate statistics
@@ -104,6 +232,8 @@ class VetDeletionRequestController extends GetxController {
       'approved': allRequests.where((r) => r.status == 'approved').length,
       'rejected': allRequests.where((r) => r.status == 'rejected').length,
     };
+
+    print('>>> Stats: ${stats.value}');
   }
 
   /// Update search query
@@ -133,6 +263,8 @@ class VetDeletionRequestController extends GetxController {
     try {
       isProcessing.value = true;
 
+      print('>>> Approving deletion request: ${request.documentId}');
+
       final result = await authRepository.approveDeletionRequest(
         request.documentId!,
         request.reviewId,
@@ -142,12 +274,17 @@ class VetDeletionRequestController extends GetxController {
 
       if (result['success'] == true) {
         _showSnackBar('Deletion request approved successfully', Colors.green);
+
+        // Remove the cached review since it's now archived
+        reviewsCache.remove(request.reviewId);
+
         await loadAllDeletionRequests(); // Reload data
       } else {
-        _showSnackBar('Failed to approve request', Colors.red);
+        _showSnackBar(
+            'Failed to approve request: ${result['error']}', Colors.red);
       }
     } catch (e) {
-      print('Error approving deletion request: $e');
+      print('>>> Error approving deletion request: $e');
       _showSnackBar('Error: $e', Colors.red);
     } finally {
       isProcessing.value = false;
@@ -163,6 +300,8 @@ class VetDeletionRequestController extends GetxController {
     try {
       isProcessing.value = true;
 
+      print('>>> Rejecting deletion request: ${request.documentId}');
+
       final result = await authRepository.rejectDeletionRequest(
         request.documentId!,
         reviewedBy,
@@ -173,10 +312,11 @@ class VetDeletionRequestController extends GetxController {
         _showSnackBar('Deletion request rejected', Colors.orange);
         await loadAllDeletionRequests(); // Reload data
       } else {
-        _showSnackBar('Failed to reject request', Colors.red);
+        _showSnackBar(
+            'Failed to reject request: ${result['error']}', Colors.red);
       }
     } catch (e) {
-      print('Error rejecting deletion request: $e');
+      print('>>> Error rejecting deletion request: $e');
       _showSnackBar('Error: $e', Colors.red);
     } finally {
       isProcessing.value = false;
@@ -188,8 +328,14 @@ class VetDeletionRequestController extends GetxController {
     try {
       isProcessing.value = true;
 
-      // Note: You'll need to add this method to your provider
-      // await authRepository.deleteFeedbackDeletionRequest(request.documentId!);
+      print('>>> Deleting processed request: ${request.documentId}');
+
+      // Delete the deletion request document
+      await authRepository.appWriteProvider.databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: request.documentId!,
+      );
 
       allRequests.removeWhere((r) => r.documentId == request.documentId);
       filterRequests();
@@ -197,21 +343,50 @@ class VetDeletionRequestController extends GetxController {
 
       _showSnackBar('Request deleted successfully', Colors.green);
     } catch (e) {
-      print('Error deleting request: $e');
+      print('>>> Error deleting request: $e');
       _showSnackBar('Error: $e', Colors.red);
     } finally {
       isProcessing.value = false;
     }
   }
 
-  /// Get clinic name by ID
-  Future<String> getClinicName(String clinicId) async {
-    try {
-      final clinic = await authRepository.getClinicById(clinicId);
-      return clinic?.data['clinicName'] ?? 'Unknown Clinic';
-    } catch (e) {
-      return 'Unknown Clinic';
+  /// Get clinic name by ID (handles both adminId and clinicDocumentId)
+  Future<String> getClinicName(String id) async {
+    // Check cache first (works for both adminId and clinicDocId)
+    if (clinicNamesCache.containsKey(id)) {
+      return clinicNamesCache[id]!;
     }
+
+    print('>>> Getting clinic name for ID: $id');
+
+    // Try to find clinic by adminId FIRST (since that's what's stored)
+    try {
+      final clinic = await authRepository.getClinicByAdminId(id);
+      if (clinic != null) {
+        final name = clinic.data['clinicName'] ?? 'Unknown Clinic';
+        clinicNamesCache[id] = name;
+        print('>>> Found clinic by adminId: $name');
+        return name;
+      }
+    } catch (e) {
+      print('>>> Not found by adminId, trying as clinic document ID...');
+    }
+
+    // If not found by adminId, try by document ID
+    try {
+      final clinic = await authRepository.getClinicById(id);
+      if (clinic != null) {
+        final name = clinic.data['clinicName'] ?? 'Unknown Clinic';
+        clinicNamesCache[id] = name;
+        print('>>> Found clinic by document ID: $name');
+        return name;
+      }
+    } catch (e) {
+      print('>>> Error fetching clinic by document ID: $e');
+    }
+
+    print('>>> Could not find clinic for ID: $id');
+    return 'Unknown Clinic';
   }
 
   void _showSnackBar(String message, Color color) {
@@ -223,5 +398,13 @@ class VetDeletionRequestController extends GetxController {
       colorText: Colors.white,
       duration: const Duration(seconds: 3),
     );
+  }
+
+  @override
+  void onClose() {
+    // Clear caches
+    reviewsCache.clear();
+    clinicNamesCache.clear();
+    super.onClose();
   }
 }

@@ -1,5 +1,7 @@
+import 'dart:convert';
+
 class FeedbackDeletionRequest {
-  final String? documentId; // Keep this - it's the document's $id from Appwrite
+  final String? documentId;
   final String reviewId;
   final String clinicId;
   final String userId;
@@ -35,6 +37,34 @@ class FeedbackDeletionRequest {
         updatedAt = updatedAt ?? DateTime.now();
 
   factory FeedbackDeletionRequest.fromMap(Map<String, dynamic> map) {
+    // CRITICAL FIX: Parse attachments properly
+    List<String> parseAttachments(dynamic attachmentsData) {
+      if (attachmentsData == null) return [];
+
+      // If it's already a List, convert it
+      if (attachmentsData is List) {
+        return attachmentsData.map((e) => e.toString()).toList();
+      }
+
+      // If it's a String (JSON), parse it
+      if (attachmentsData is String) {
+        if (attachmentsData.isEmpty || attachmentsData == '[]') {
+          return [];
+        }
+        try {
+          final decoded = jsonDecode(attachmentsData);
+          if (decoded is List) {
+            return decoded.map((e) => e.toString()).toList();
+          }
+        } catch (e) {
+          print('Error parsing attachments: $e');
+          return [];
+        }
+      }
+
+      return [];
+    }
+
     return FeedbackDeletionRequest(
       documentId: map['\$id'],
       reviewId: map['reviewId'] ?? '',
@@ -44,9 +74,7 @@ class FeedbackDeletionRequest {
       requestedBy: map['requestedBy'] ?? '',
       reason: map['reason'] ?? '',
       additionalDetails: map['additionalDetails'],
-      attachments: map['attachments'] != null
-          ? List<String>.from(map['attachments'])
-          : [],
+      attachments: parseAttachments(map['attachments']), // USE HELPER FUNCTION
       status: map['status'] ?? 'pending',
       requestedAt: map['requestedAt'] != null
           ? DateTime.parse(map['requestedAt'])
@@ -70,7 +98,7 @@ class FeedbackDeletionRequest {
       'requestedBy': requestedBy,
       'reason': reason,
       'additionalDetails': additionalDetails,
-      'attachments': attachments,
+      'attachments': jsonEncode(attachments), // ENCODE as JSON string
       'status': status,
       'requestedAt': requestedAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),

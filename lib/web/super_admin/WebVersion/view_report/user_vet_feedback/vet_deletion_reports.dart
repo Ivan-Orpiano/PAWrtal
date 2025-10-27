@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
@@ -10,7 +11,7 @@ import 'vet_deletion_request_controller.dart';
 
 class VeterinaryReport extends StatefulWidget {
   const VeterinaryReport({super.key});
-  
+
   @override
   State<VeterinaryReport> createState() => _VeterinaryReportState();
 }
@@ -26,7 +27,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize GetX controller
     _controller = Get.put(
       VetDeletionRequestController(
@@ -47,11 +48,14 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     super.dispose();
   }
 
-  /// Show request details dialog
   void _showRequestDetails(FeedbackDeletionRequest request) async {
-    // Get clinic name
-    final clinicName = await _controller.getClinicName(request.clinicId);
-    
+    // Get clinic name from cache (already loaded)
+    final clinicName = _controller.clinicNamesCache[request.clinicId] ??
+        await _controller.getClinicName(request.clinicId);
+
+    // Get review details
+    final review = await _controller.getReview(request.reviewId);
+
     if (!mounted) return;
 
     showDialog(
@@ -59,6 +63,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       builder: (context) => RequestDetailDialog(
         request: request,
         clinicName: clinicName,
+        review: review,
       ),
     );
   }
@@ -67,7 +72,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   void _handleDeletionRequest(FeedbackDeletionRequest request) async {
     // Get clinic name
     final clinicName = await _controller.getClinicName(request.clinicId);
-    
+
     if (!mounted) return;
 
     showDialog(
@@ -92,7 +97,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   /// Delete a processed request
   void _deleteRequest(FeedbackDeletionRequest request) async {
     final clinicName = await _controller.getClinicName(request.clinicId);
-    
+
     if (!mounted) return;
 
     showDialog(
@@ -138,7 +143,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   Widget _buildDashboardStats() {
     return Obx(() {
       final stats = _controller.stats;
-      
+
       return Container(
         color: const Color.fromRGBO(248, 253, 255, 1),
         padding: const EdgeInsets.all(16),
@@ -177,7 +182,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     });
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -248,7 +254,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               }),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color.fromRGBO(81, 115, 153, 1)),
+                borderSide:
+                    const BorderSide(color: Color.fromRGBO(81, 115, 153, 1)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -257,7 +264,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   width: 2,
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
           const SizedBox(height: 12),
@@ -286,7 +294,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
             borderSide: const BorderSide(color: Color(0xFF517399)),
             borderRadius: BorderRadius.circular(8),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
         items: ['All', 'pending', 'approved', 'rejected']
             .map((status) => DropdownMenuItem(
@@ -306,7 +315,10 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   Widget _buildReasonDropdown() {
     return Obx(() {
       // Get unique reasons from all requests
-      final reasons = ['All', ..._controller.allRequests.map((r) => r.reason).toSet()];
+      final reasons = [
+        'All',
+        ..._controller.allRequests.map((r) => r.reason).toSet()
+      ];
 
       return DropdownButtonFormField<String>(
         dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
@@ -319,10 +331,12 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
             borderSide: const BorderSide(color: Color(0xFF517399)),
             borderRadius: BorderRadius.circular(8),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
         items: reasons
-            .map((reason) => DropdownMenuItem(value: reason, child: Text(reason)))
+            .map((reason) =>
+                DropdownMenuItem(value: reason, child: Text(reason)))
             .toList(),
         onChanged: (value) {
           if (value != null) {
@@ -371,222 +385,312 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   }
 
   Widget _buildRequestCard(FeedbackDeletionRequest request) {
-    return FutureBuilder<String>(
-      future: _controller.getClinicName(request.clinicId),
-      builder: (context, snapshot) {
-        final clinicName = snapshot.data ?? 'Loading...';
+    return Obx(() {
+      // Get clinic name from cache (which was populated during load)
+      final clinicName =
+          _controller.clinicNamesCache[request.clinicId] ?? 'Loading...';
 
-        return Card(
-          color: const Color.fromRGBO(242, 250, 252, 1),
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _showRequestDetails(request),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Icon(Icons.business, size: 20, color: Colors.grey[600]),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                clinicName,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _buildStatusChip(request.status),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.orange[200]!),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.report_problem, size: 14, color: Colors.orange[700]),
-                        const SizedBox(width: 4),
-                        Text(
-                          request.reason,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[700],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (request.additionalDetails != null &&
-                      request.additionalDetails!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      request.additionalDetails!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Requested by admin',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  if (request.hasAttachments) ...[
-                    const SizedBox(height: 8),
+      return FutureBuilder<RatingAndReview?>(
+        future: _controller.getReview(request.reviewId),
+        builder: (context, reviewSnapshot) {
+          final review = reviewSnapshot.data;
+
+          return Card(
+            color: const Color.fromRGBO(242, 250, 252, 1),
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 4,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showRequestDetails(request),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.attach_file, size: 16, color: Colors.grey[500]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${request.attachments.length} attachment(s)',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (request.reviewNotes != null && request.reviewNotes!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: request.status == 'rejected'
-                            ? Colors.red[50]
-                            : Colors.green[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: request.status == 'rejected'
-                              ? Colors.red[200]!
-                              : Colors.green[200]!,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        Expanded(
+                          child: Row(
                             children: [
-                              Icon(
-                                request.status == 'rejected'
-                                    ? Icons.error_outline
-                                    : Icons.check_circle_outline,
-                                size: 16,
-                                color: request.status == 'rejected'
-                                    ? Colors.red[600]
-                                    : Colors.green[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Review Notes',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: request.status == 'rejected'
-                                      ? Colors.red[600]
-                                      : Colors.green[600],
+                              Icon(Icons.business,
+                                  size: 20, color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  clinicName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                        ),
+                        _buildStatusChip(request.status),
+                      ],
+                    ),
+
+                    // NEW: Show review information
+                    if (review != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.rate_review,
+                                    size: 14, color: Colors.blue),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Review Details',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  'By: ${review.userName}',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[700]),
+                                ),
+                                const SizedBox(width: 12),
+                                ...List.generate(5, (index) {
+                                  return Icon(
+                                    index < review.rating
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    size: 14,
+                                    color: Colors.amber,
+                                  );
+                                }),
+                                const SizedBox(width: 4),
+                                Text(
+                                  review.rating.toString(),
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[700]),
+                                ),
+                              ],
+                            ),
+                            if (review.reviewText != null &&
+                                review.reviewText!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                review.reviewText!,
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey[600]),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.report_problem,
+                              size: 14, color: Colors.orange[700]),
+                          const SizedBox(width: 4),
                           Text(
-                            request.reviewNotes!,
-                            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                            request.reason,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
+                    if (request.additionalDetails != null &&
+                        request.additionalDetails!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        request.additionalDetails!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.person, size: 16, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Requested by admin',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(Icons.access_time,
+                            size: 16, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year}',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    if (request.hasAttachments) ...[
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          if (request.isPending) ...[
-                            ElevatedButton.icon(
-                              onPressed: _controller.isProcessing.value
-                                  ? null
-                                  : () => _handleDeletionRequest(request),
-                              icon: const Icon(Icons.gavel, size: 16, color: Colors.white),
-                              label: const Text('Process'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (request.isApproved || request.isRejected) ...[
-                            ElevatedButton.icon(
-                              onPressed: _controller.isProcessing.value
-                                  ? null
-                                  : () => _deleteRequest(request),
-                              icon: const Icon(
-                                Icons.delete_forever,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              label: const Text('Delete Record'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE74C3C),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ],
+                          Icon(Icons.attach_file,
+                              size: 16, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${request.attachments.length} attachment(s)',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
+                          ),
                         ],
                       ),
                     ],
-                  ),
-                ],
+                    if (request.reviewNotes != null &&
+                        request.reviewNotes!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: request.status == 'rejected'
+                              ? Colors.red[50]
+                              : Colors.green[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: request.status == 'rejected'
+                                ? Colors.red[200]!
+                                : Colors.green[200]!,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  request.status == 'rejected'
+                                      ? Icons.error_outline
+                                      : Icons.check_circle_outline,
+                                  size: 16,
+                                  color: request.status == 'rejected'
+                                      ? Colors.red[600]
+                                      : Colors.green[600],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Review Notes',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: request.status == 'rejected'
+                                        ? Colors.red[600]
+                                        : Colors.green[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              request.reviewNotes!,
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            if (request.isPending) ...[
+                              ElevatedButton.icon(
+                                onPressed: _controller.isProcessing.value
+                                    ? null
+                                    : () => _handleDeletionRequest(request),
+                                icon: const Icon(Icons.gavel,
+                                    size: 16, color: Colors.white),
+                                label: const Text('Process'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 81, 115, 153),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (request.isApproved || request.isRejected) ...[
+                              ElevatedButton.icon(
+                                onPressed: _controller.isProcessing.value
+                                    ? null
+                                    : () => _deleteRequest(request),
+                                icon: const Icon(
+                                  Icons.delete_forever,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                label: const Text('Delete Record'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE74C3C),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    });
   }
 
   Widget _buildStatusChip(String status) {
@@ -630,7 +734,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       drawer: _buildDrawer(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: Color.fromRGBO(81, 115, 153, 1)),
+          icon: const Icon(Icons.menu_rounded,
+              color: Color.fromRGBO(81, 115, 153, 1)),
           onPressed: () {
             _scaffoldKey.currentState?.openDrawer();
           },
@@ -640,7 +745,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
         automaticallyImplyLeading: false,
         title: const Row(
           children: [
-            Icon(Icons.delete_forever, color: Color.fromARGB(255, 81, 115, 153)),
+            Icon(Icons.delete_forever,
+                color: Color.fromARGB(255, 81, 115, 153)),
             SizedBox(width: 8),
             Text(
               'Deletion Reports',
@@ -666,7 +772,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               );
             }
             return IconButton(
-              icon: const Icon(Icons.refresh, color: Color.fromRGBO(81, 115, 153, 1)),
+              icon: const Icon(Icons.refresh,
+                  color: Color.fromRGBO(81, 115, 153, 1)),
               onPressed: () => _controller.loadAllDeletionRequests(),
               tooltip: 'Refresh',
             );
@@ -754,7 +861,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SuperAdminVetClinicDashboard(),
+                        builder: (context) =>
+                            const SuperAdminVetClinicDashboard(),
                       ),
                     );
                   },
@@ -769,7 +877,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SuperAdminUserManagementScreen(),
+                        builder: (context) =>
+                            const SuperAdminUserManagementScreen(),
                       ),
                     );
                   },
@@ -832,7 +941,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           ),
                           SizedBox(width: 12),
@@ -993,11 +1103,13 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 class RequestDetailDialog extends StatelessWidget {
   final FeedbackDeletionRequest request;
   final String clinicName;
+  final RatingAndReview? review; // ADD THIS LINE
 
   const RequestDetailDialog({
     super.key,
     required this.request,
     required this.clinicName,
+    this.review, // ADD THIS LINE
   });
 
   @override
@@ -1016,12 +1128,14 @@ class RequestDetailDialog extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.delete_forever, color: Color(0xFF517399), size: 24),
+                  const Icon(Icons.delete_forever,
+                      color: Color(0xFF517399), size: 24),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
                       'Deletion Request Details',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   IconButton(
@@ -1032,6 +1146,129 @@ class RequestDetailDialog extends StatelessWidget {
               ),
               const Divider(),
               const SizedBox(height: 16),
+
+              // NEW: Show review details if available
+              if (review != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.rate_review, color: Colors.blue, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Review Being Requested for Deletion',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailRow('Reviewer:', review!.userName),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(
+                            width: 140,
+                            child: Text(
+                              'Rating:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF7F8C8D),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                ...List.generate(5, (index) {
+                                  return Icon(
+                                    index < review!.rating
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    size: 18,
+                                    color: Colors.amber,
+                                  );
+                                }),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${review!.rating}/5.0',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      _buildDetailRow('Service:', review!.serviceName),
+                      if (review!.petName != null)
+                        _buildDetailRow('Pet Name:', review!.petName!),
+                      _buildDetailRow('Posted:', review!.getTimeAgo()),
+                      if (review!.reviewText != null &&
+                          review!.reviewText!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Review Text:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF7F8C8D),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE0E6ED)),
+                          ),
+                          child: Text(
+                            review!.reviewText!,
+                            style: const TextStyle(fontSize: 14, height: 1.5),
+                          ),
+                        ),
+                      ],
+                      if (review!.hasImages) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.image,
+                                size: 16, color: Colors.blue),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${review!.images.length} image(s) attached',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.blue),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+              ],
+
+              // Original request details
+              const Text(
+                'Request Information',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
               _buildDetailRow('Vet Clinic:', clinicName),
               _buildDetailRow('Reason:', request.reason),
               _buildDetailRow('Status:', request.status.capitalize!),
@@ -1047,7 +1284,8 @@ class RequestDetailDialog extends StatelessWidget {
               if (request.reviewedBy != null)
                 _buildDetailRow('Reviewed By:', request.reviewedBy!),
               const SizedBox(height: 16),
-              if (request.additionalDetails != null && request.additionalDetails!.isNotEmpty) ...[
+              if (request.additionalDetails != null &&
+                  request.additionalDetails!.isNotEmpty) ...[
                 const Text(
                   'Additional Details:',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -1067,7 +1305,8 @@ class RequestDetailDialog extends StatelessWidget {
                   ),
                 ),
               ],
-              if (request.reviewNotes != null && request.reviewNotes!.isNotEmpty) ...[
+              if (request.reviewNotes != null &&
+                  request.reviewNotes!.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Text(
                   'Review Notes:',
@@ -1078,7 +1317,9 @@ class RequestDetailDialog extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: request.status == 'rejected' ? Colors.red[50] : Colors.green[50],
+                    color: request.status == 'rejected'
+                        ? Colors.red[50]
+                        : Colors.green[50],
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: request.status == 'rejected'
@@ -1096,7 +1337,8 @@ class RequestDetailDialog extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'Attachments (${request.attachments.length}):',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 ...request.attachments.map((attachmentId) {
@@ -1116,7 +1358,7 @@ class RequestDetailDialog extends StatelessWidget {
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
               const SizedBox(height: 24),
               Row(
@@ -1182,7 +1424,8 @@ class DeleteRequestActionDialog extends StatefulWidget {
   });
 
   @override
-  State<DeleteRequestActionDialog> createState() => _DeleteRequestActionDialogState();
+  State<DeleteRequestActionDialog> createState() =>
+      _DeleteRequestActionDialogState();
 }
 
 class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
@@ -1235,7 +1478,8 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
                   const SizedBox(height: 8),
                   if (widget.request.additionalDetails != null &&
                       widget.request.additionalDetails!.isNotEmpty) ...[
-                    const Text('Details:', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Text('Details:',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     Text(
                       widget.request.additionalDetails!,
                       style: const TextStyle(fontStyle: FontStyle.italic),
@@ -1270,7 +1514,8 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF517399), width: 2),
                   ),
                 ),
               ),
@@ -1282,7 +1527,8 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
         if (!_showReviewForm) ...[
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -1292,7 +1538,8 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
                 _isApproving = false;
               });
             },
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFE74C3C)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFE74C3C)),
             child: const Text('Reject Request'),
           ),
           ElevatedButton(
@@ -1316,7 +1563,8 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
                 _reviewNotesController.clear();
               });
             },
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFF95A5A6)),
             child: const Text('Back'),
           ),
           ElevatedButton(
@@ -1340,10 +1588,13 @@ class _DeleteRequestActionDialogState extends State<DeleteRequestActionDialog> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isApproving ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+              backgroundColor: _isApproving
+                  ? const Color(0xFF2ECC71)
+                  : const Color(0xFFE74C3C),
               foregroundColor: Colors.white,
             ),
-            child: Text(_isApproving ? 'Confirm Approval' : 'Confirm Rejection'),
+            child:
+                Text(_isApproving ? 'Confirm Approval' : 'Confirm Rejection'),
           ),
         ],
       ],
