@@ -1,5 +1,7 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
+import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_pet_card_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -69,14 +71,60 @@ class WebAppointmentModal extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                controller.getPetName(appointment.petId),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 81, 115, 153),
-                ),
+              // Pet name with View Card button
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      controller.getPetName(appointment.petId),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 81, 115, 153),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // View Pet Card button
+                  Tooltip(
+                    message: 'View Pet Card',
+                    child: InkWell(
+                      onTap: () => _showPetCardView(controller),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3498DB).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF3498DB).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.credit_card,
+                              size: 18,
+                              color: Color(0xFF3498DB),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'View Card',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF3498DB),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 4),
               Text(
                 'Owner: ${controller.getOwnerName(appointment.userId)}',
                 style: TextStyle(
@@ -120,6 +168,107 @@ class WebAppointmentModal extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  // NEW METHOD: Show Pet Card View Dialog
+  void _showPetCardView(WebAppointmentController controller) async {
+    // Show loading indicator
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      Pet? pet;
+
+      print('>>> Attempting to load pet with ID: ${appointment.petId}');
+      print('>>> User ID: ${appointment.userId}');
+
+      // Try fetching by userId to get all user's pets
+      final userPets =
+          await controller.authRepository.getUserPets(appointment.userId);
+
+      print('>>> Found ${userPets.length} pets for user');
+
+      // Find the pet by matching petId, name, or document ID
+      final petDoc = userPets.firstWhereOrNull(
+        (doc) {
+          final matchesPetId = doc.data['petId'] == appointment.petId;
+          final matchesName = doc.data['name'] == appointment.petId;
+          final matchesDocId = doc.$id == appointment.petId;
+
+          print(
+              '>>> Checking pet: ${doc.data['name']} (petId: ${doc.data['petId']}, docId: ${doc.$id})');
+          print('>>>   Matches petId: $matchesPetId');
+          print('>>>   Matches name: $matchesName');
+          print('>>>   Matches docId: $matchesDocId');
+
+          return matchesPetId || matchesName || matchesDocId;
+        },
+      );
+
+      if (petDoc != null) {
+        print('>>> Pet found! Converting to Pet model...');
+        pet = Pet.fromMap(petDoc.data);
+        pet.documentId = petDoc.$id;
+        print('>>> Pet loaded: ${pet.name}');
+      } else {
+        print('>>> No matching pet found');
+      }
+
+      // Close loading indicator
+      Get.back();
+
+      if (pet == null) {
+        print('>>> ERROR: Could not find pet');
+        Get.snackbar(
+          'Error',
+          'Could not load pet information. Pet ID: ${appointment.petId}',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      // Close current modal first
+      Navigator.of(Get.context!).pop();
+
+      // Small delay to ensure smooth transition
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Show the AdminPetCardView dialog
+      await showDialog(
+        context: Get.context!,
+        builder: (context) => AdminPetCardView(pet: pet!),
+      );
+
+      // Optional: Reopen the appointment modal after closing pet card
+      // Leave this commented out unless you want the behavior
+      await Future.delayed(const Duration(milliseconds: 100));
+      showDialog(
+        context: Get.context!,
+        builder: (context) => WebAppointmentModal(appointment: appointment),
+      );
+    } catch (e, stackTrace) {
+      print('>>> ERROR loading pet card: $e');
+      print('>>> Stack trace: $stackTrace');
+
+      // Close loading indicator if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Failed to load pet information: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   Widget _buildMobileLayout(WebAppointmentController controller) {
@@ -217,8 +366,154 @@ class WebAppointmentModal extends StatelessWidget {
               appointment.notes!,
             ),
           ],
+          // NEW: Display cancellation reason if appointment is cancelled
+          if (appointment.status == 'cancelled' &&
+              appointment.cancellationReason != null &&
+              appointment.cancellationReason!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.cancel_outlined,
+                          color: Colors.red[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cancellation Information',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCancellationDetailRow(
+                    Icons.person,
+                    'Cancelled By',
+                    appointment.cancelledBy == 'user'
+                        ? 'Patient/Owner'
+                        : 'Clinic',
+                  ),
+                  const SizedBox(height: 8),
+                  if (appointment.cancelledAt != null)
+                    _buildCancellationDetailRow(
+                      Icons.access_time,
+                      'Cancelled At',
+                      DateFormat('MMM dd, yyyy • hh:mm a')
+                          .format(appointment.cancelledAt!),
+                    ),
+                  const SizedBox(height: 8),
+                  _buildCancellationDetailRow(
+                    Icons.info_outline,
+                    'Reason',
+                    appointment.cancellationReason!,
+                    isReason: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          // Display declined reason if appointment is declined
+          if (appointment.status == 'declined' &&
+              appointment.cancellationReason != null &&
+              appointment.cancellationReason!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.block, color: Colors.orange[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Decline Information',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCancellationDetailRow(
+                    Icons.info_outline,
+                    'Decline Reason',
+                    appointment.cancellationReason!,
+                    isReason: true,
+                  ),
+                  if (appointment.cancelledAt != null) ...[
+                    const SizedBox(height: 8),
+                    _buildCancellationDetailRow(
+                      Icons.access_time,
+                      'Declined At',
+                      DateFormat('MMM dd, yyyy • hh:mm a')
+                          .format(appointment.cancelledAt!),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  // NEW: Helper method to build cancellation detail rows
+  Widget _buildCancellationDetailRow(IconData icon, String label, String value,
+      {bool isReason = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[700]),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: isReason ? 14 : 13,
+                  color: Colors.black87,
+                  fontWeight: isReason ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
