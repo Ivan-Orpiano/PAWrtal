@@ -1912,21 +1912,31 @@ class AuthRepository {
     return appWriteProvider.getFeedbackDeletionRequestById(requestId);
   }
 
-  Future<List<Object>> getClinicDeletionRequests(
+  Future<List<FeedbackDeletionRequest>> getClinicDeletionRequests(
     String clinicId, {
     String? status,
   }) async {
     try {
+      print('>>> REPOSITORY: Fetching deletion requests for clinic: $clinicId');
+
       final docs = await appWriteProvider.getClinicDeletionRequests(
         clinicId,
         status: status,
       );
-      return docs.map((doc) {
+
+      print('>>> REPOSITORY: Found ${docs.length} deletion request documents');
+
+      final requests = docs.map((doc) {
         final request = FeedbackDeletionRequest.fromMap(doc.data);
         return request.copyWith(documentId: doc.$id);
       }).toList();
-    } catch (e) {
-      print('Error getting clinic deletion requests: $e');
+
+      print('>>> REPOSITORY: Parsed ${requests.length} deletion requests');
+
+      return requests;
+    } catch (e, stackTrace) {
+      print('>>> REPOSITORY ERROR getting clinic deletion requests: $e');
+      print('>>> Stack trace: $stackTrace');
       return [];
     }
   }
@@ -2247,74 +2257,76 @@ class AuthRepository {
       return false;
     }
   }
+
   Future<bool> isUserVerifiedByIdCollection(String userId) async {
-  try {
-    final verificationDoc = await appWriteProvider.databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.idVerificationCollectionID,
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('status', 'approved'),
-        Query.limit(1),
-      ],
-    );
-    
-    final isVerified = verificationDoc.documents.isNotEmpty;
-    
-    print('>>> Verification check for user $userId: $isVerified');
-    
-    return isVerified;
-  } catch (e) {
-    print('>>> Error checking verification: $e');
-    return false;
-  }
-}
+    try {
+      final verificationDoc = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('status', 'approved'),
+          Query.limit(1),
+        ],
+      );
 
-/// Get all verified user IDs from ID Verification collection
-Future<Set<String>> getAllVerifiedUserIds() async {
-  try {
-    final verificationDocs = await appWriteProvider.databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.idVerificationCollectionID,
-      queries: [
-        Query.equal('status', 'approved'),
-        Query.limit(1000),
-      ],
-    );
-    
-    final verifiedIds = <String>{};
-    for (var doc in verificationDocs.documents) {
-      final userId = doc.data['userId'] as String?;
-      if (userId != null) {
-        verifiedIds.add(userId);
-      }
+      final isVerified = verificationDoc.documents.isNotEmpty;
+
+      print('>>> Verification check for user $userId: $isVerified');
+
+      return isVerified;
+    } catch (e) {
+      print('>>> Error checking verification: $e');
+      return false;
     }
-    
-    print('>>> Found ${verifiedIds.length} verified users in ID Verification collection');
-    
-    return verifiedIds;
-  } catch (e) {
-    print('>>> Error getting verified user IDs: $e');
-    return {};
   }
-}
 
-Future<bool> hasPendingDeletionRequest(String reviewId) async {
-  try {
-    final requests = await appWriteProvider.databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-      queries: [
-        Query.equal('reviewId', reviewId),
-        Query.equal('status', 'pending'),
-        Query.limit(1),
-      ],
-    );
-    
-    return requests.documents.isNotEmpty;
-  } catch (e) {
-    print('Error checking deletion request: $e');
-    return false;
+  /// Get all verified user IDs from ID Verification collection
+  Future<Set<String>> getAllVerifiedUserIds() async {
+    try {
+      final verificationDocs = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('status', 'approved'),
+          Query.limit(1000),
+        ],
+      );
+
+      final verifiedIds = <String>{};
+      for (var doc in verificationDocs.documents) {
+        final userId = doc.data['userId'] as String?;
+        if (userId != null) {
+          verifiedIds.add(userId);
+        }
+      }
+
+      print(
+          '>>> Found ${verifiedIds.length} verified users in ID Verification collection');
+
+      return verifiedIds;
+    } catch (e) {
+      print('>>> Error getting verified user IDs: $e');
+      return {};
+    }
   }
-}
+
+  Future<bool> hasPendingDeletionRequest(String reviewId) async {
+    try {
+      final requests = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: [
+          Query.equal('reviewId', reviewId),
+          Query.equal('status', 'pending'),
+          Query.limit(1),
+        ],
+      );
+
+      return requests.documents.isNotEmpty;
+    } catch (e) {
+      print('Error checking deletion request: $e');
+      return false;
+    }
+  }
 }

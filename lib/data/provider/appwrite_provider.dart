@@ -5655,20 +5655,24 @@ class AppWriteProvider {
   }
 
   /// Get all deletion requests for a clinic
+  /// Get all deletion requests for a clinic
   Future<List<Document>> getClinicDeletionRequests(
     String clinicId, {
     String? status,
     int limit = 100,
   }) async {
     try {
+      print('>>> PROVIDER: Fetching deletion requests for clinic: $clinicId');
+
       List<String> queries = [
         Query.equal('clinicId', clinicId),
         Query.orderDesc('requestedAt'),
         Query.limit(limit),
       ];
 
-      if (status != null) {
+      if (status != null && status != 'All') {
         queries.add(Query.equal('status', status));
+        print('>>> PROVIDER: Filtering by status: $status');
       }
 
       final result = await databases!.listDocuments(
@@ -5677,9 +5681,21 @@ class AppWriteProvider {
         queries: queries,
       );
 
+      print('>>> PROVIDER: Found ${result.documents.length} deletion requests');
+
+      // Debug: Print first request if exists
+      if (result.documents.isNotEmpty) {
+        print('>>> PROVIDER: Sample request data:');
+        print('>>>   - Document ID: ${result.documents.first.$id}');
+        print('>>>   - Review ID: ${result.documents.first.data['reviewId']}');
+        print('>>>   - Status: ${result.documents.first.data['status']}');
+        print('>>>   - Reason: ${result.documents.first.data['reason']}');
+      }
+
       return result.documents;
-    } catch (e) {
-      print('>>> Error getting clinic deletion requests: $e');
+    } catch (e, stackTrace) {
+      print('>>> PROVIDER ERROR getting clinic deletion requests: $e');
+      print('>>> Stack trace: $stackTrace');
       return [];
     }
   }
