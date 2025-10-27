@@ -9,10 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/session_manager.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 void main() async {
-  setUrlStrategy(PathUrlStrategy()); 
 
   WidgetsFlutterBinding.ensureInitialized();
   
