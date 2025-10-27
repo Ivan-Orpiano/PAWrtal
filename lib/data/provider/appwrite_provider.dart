@@ -336,19 +336,46 @@ class AppWriteProvider {
   }
 
   Future<bool> signInWithGoogle() async {
-    try {
-      final response = await account
-          ?.createOAuth2Session(provider: OAuthProvider.google, scopes: [
+  try {
+    print('>>> ============================================');
+    print('>>> STARTING GOOGLE SIGN-IN');
+    print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
+    print('>>> ============================================');
+
+    // Determine success and failure URLs based on environment
+    final String successUrl = kIsWeb 
+        ? '${Uri.base.origin}/auth/success'  // Uses current domain
+        : 'http://localhost:3000/auth/success';
+        
+    final String failureUrl = kIsWeb
+        ? '${Uri.base.origin}/auth/failure'
+        : 'http://localhost:3000/auth/failure';
+
+    print('>>> Success URL: $successUrl');
+    print('>>> Failure URL: $failureUrl');
+
+    final response = await account?.createOAuth2Session(
+      provider: OAuthProvider.google,
+      success: successUrl,
+      failure: failureUrl,
+      scopes: [
         "profile",
         "email",
-      ]);
-      print(response);
-      return true;
-    } catch (e) {
-      print("error: ${e.toString()}");
-      return false;
-    }
+      ],
+    );
+
+    print('>>> OAuth2 session created');
+    print('>>> Response: $response');
+    print('>>> ============================================');
+
+    return true;
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> GOOGLE SIGN-IN ERROR: $e');
+    print('>>> ============================================');
+    return false;
   }
+}
 
   Future<bool> sendVerificationEmail() async {
     try {
