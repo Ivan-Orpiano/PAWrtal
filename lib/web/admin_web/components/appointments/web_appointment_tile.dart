@@ -1,4 +1,6 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
+import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_pet_card_view.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_modal.dart';
 import 'package:flutter/material.dart';
@@ -71,13 +73,33 @@ class WebAppointmentTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    controller.getPetName(appointment.petId),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 81, 115, 153),
-                    ),
+                  // Pet name with View Card button
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          controller.getPetName(appointment.petId),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(255, 81, 115, 153),
+                          ),
+                        ),
+                      ),
+                      // View Pet Card button
+                      IconButton(
+                        onPressed: () => _showPetCardView(controller),
+                        icon: const Icon(Icons.credit_card),
+                        iconSize: 18,
+                        color: const Color(0xFF3498DB),
+                        tooltip: 'View Pet Card',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     controller.getOwnerName(appointment.userId),
@@ -134,14 +156,41 @@ class WebAppointmentTile extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      controller.getPetName(appointment.petId),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color.fromARGB(255, 81, 115, 153),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            controller.getPetName(appointment.petId),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 81, 115, 153),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // View Pet Card button
+                        Tooltip(
+                          message: 'View Pet Card',
+                          child: InkWell(
+                            onTap: () => _showPetCardView(controller),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3498DB).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.credit_card,
+                                size: 18,
+                                color: Color(0xFF3498DB),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   _buildStatusBadge(),
@@ -237,86 +286,84 @@ class WebAppointmentTile extends StatelessWidget {
     );
   }
 
-  Widget _buildPetAvatar() {
-  final controller = Get.find<WebAppointmentController>();
-  
-  // CRITICAL: Use composite key (userId + petId) to avoid conflicts
-  final cacheKey = '${appointment.userId}_${appointment.petId}';
-  
-  // Check cache FIRST before building FutureBuilder
-  if (controller.petProfilePictures.containsKey(cacheKey)) {
-    final cachedImageUrl = controller.petProfilePictures[cacheKey];
-    
-    if (cachedImageUrl != null && cachedImageUrl.isNotEmpty) {
-      // Show cached image
-      return Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: _getStatusBorderColor(appointment.status),
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: Image.network(
-            cachedImageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return _buildPetAvatarFallback();
-            },
-          ),
-        ),
+  // NEW METHOD: Show Pet Card View Dialog
+  void _showPetCardView(WebAppointmentController controller) async {
+    // Show loading indicator
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      Pet? pet;
+
+      // Try fetching by userId to get all user's pets
+      final userPets =
+          await controller.authRepository.getUserPets(appointment.userId);
+
+      // Find the pet by matching petId, name, or document ID
+      final petDoc = userPets.firstWhereOrNull(
+        (doc) =>
+            doc.data['petId'] == appointment.petId ||
+            doc.data['name'] == appointment.petId ||
+            doc.$id == appointment.petId,
       );
-    } else {
-      // Cached as null - show fallback immediately
-      return _buildPetAvatarFallback();
+
+      if (petDoc != null) {
+        pet = Pet.fromMap(petDoc.data);
+        pet.documentId = petDoc.$id;
+      }
+
+      // Close loading indicator
+      Get.back();
+
+      if (pet == null) {
+        Get.snackbar(
+          'Error',
+          'Could not load pet information. Pet ID: ${appointment.petId}',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      // Show the AdminPetCardView dialog
+      showDialog(
+        context: Get.context!,
+        builder: (context) => AdminPetCardView(pet: pet!),
+      );
+    } catch (e) {
+      // Close loading indicator if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      print('>>> Error loading pet card: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load pet information: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
     }
   }
-  
-  // Not cached yet - fetch once
-  return FutureBuilder<String?>(
-    future: controller.getPetImageByUserId(
-      appointment.petId,
-      appointment.userId,
-    ),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            color: Colors.grey[200],
-          ),
-          child: Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _getStatusBorderColor(appointment.status),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-      
-      final profilePictureUrl = snapshot.data;
-      
-      if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+
+  Widget _buildPetAvatar() {
+    final controller = Get.find<WebAppointmentController>();
+
+    // CRITICAL: Use composite key (userId + petId) to avoid conflicts
+    final cacheKey = '${appointment.userId}_${appointment.petId}';
+
+    // Check cache FIRST before building FutureBuilder
+    if (controller.petProfilePictures.containsKey(cacheKey)) {
+      final cachedImageUrl = controller.petProfilePictures[cacheKey];
+
+      if (cachedImageUrl != null && cachedImageUrl.isNotEmpty) {
+        // Show cached image
         return Container(
           width: 50,
           height: 50,
@@ -338,7 +385,7 @@ class WebAppointmentTile extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(25),
             child: Image.network(
-              profilePictureUrl,
+              cachedImageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return _buildPetAvatarFallback();
@@ -346,12 +393,80 @@ class WebAppointmentTile extends StatelessWidget {
             ),
           ),
         );
+      } else {
+        // Cached as null - show fallback immediately
+        return _buildPetAvatarFallback();
       }
-      
-      return _buildPetAvatarFallback();
-    },
-  );
-}
+    }
+
+    // Not cached yet - fetch once
+    return FutureBuilder<String?>(
+      future: controller.getPetImageByUserId(
+        appointment.petId,
+        appointment.userId,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              color: Colors.grey[200],
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _getStatusBorderColor(appointment.status),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final profilePictureUrl = snapshot.data;
+
+        if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+          return Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: _getStatusBorderColor(appointment.status),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(25),
+              child: Image.network(
+                profilePictureUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildPetAvatarFallback();
+                },
+              ),
+            ),
+          );
+        }
+
+        return _buildPetAvatarFallback();
+      },
+    );
+  }
 
   // 🆕 Helper method for fallback avatar
   Widget _buildPetAvatarFallback() {
