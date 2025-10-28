@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/id_verification/screens/id_verification_screen.dart';
+import 'package:capstone_app/data/id_verification/widgets/pre_verification_dialog.dart';
 import 'package:get/get.dart';
 
 /// Reusable widget to display verification status
-/// Can be used anywhere in the app (profile, settings, appointment pages, etc.)
 class VerificationStatusWidget extends StatefulWidget {
   final String userId;
   final String email;
+  final String userName;
   final String userRole;
   final bool showButton;
   final VoidCallback? onVerificationComplete;
+  final VoidCallback? onNavigateToProfileEdit;
 
   const VerificationStatusWidget({
     Key? key,
     required this.userId,
     required this.email,
+    required this.userName,
     required this.userRole,
     this.showButton = true,
     this.onVerificationComplete,
+    this.onNavigateToProfileEdit,
   }) : super(key: key);
 
   @override
@@ -54,19 +58,42 @@ class _VerificationStatusWidgetState extends State<VerificationStatusWidget> {
   }
 
   Future<void> _handleVerifyNow() async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => IdVerificationScreen(
-          userId: widget.userId,
-          email: widget.email,
-          authRepository: _authRepository,
-        ),
-      ),
+    // Show pre-verification dialog first
+    final proceed = await showPreVerificationDialog(
+      context: context,
+      accountName: widget.userName,
+      onUpdateName: () {
+        // Navigate to profile edit if callback provided
+        if (widget.onNavigateToProfileEdit != null) {
+          widget.onNavigateToProfileEdit!();
+        } else {
+          // Show message if no navigation callback
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please update your name in Profile Settings'),
+              backgroundColor: Color(0xFF1976D2),
+            ),
+          );
+        }
+      },
     );
 
-    if (result == true) {
-      _loadVerificationStatus();
-      widget.onVerificationComplete?.call();
+    // If user confirmed, proceed to verification
+    if (proceed == true) {
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => IdVerificationScreen(
+            userId: widget.userId,
+            email: widget.email,
+            authRepository: _authRepository,
+          ),
+        ),
+      );
+
+      if (result == true) {
+        _loadVerificationStatus();
+        widget.onVerificationComplete?.call();
+      }
     }
   }
 
@@ -77,14 +104,14 @@ class _VerificationStatusWidgetState extends State<VerificationStatusWidget> {
 
     switch (status) {
       case 'approved':
-        return const Color(0xFF4CAF50); // Green
+        return const Color(0xFF4CAF50);
       case 'pending':
       case 'in_progress':
-        return const Color(0xFFFF9800); // Orange
+        return const Color(0xFFFF9800);
       case 'rejected':
-        return const Color(0xFFF44336); // Red
+        return const Color(0xFFF44336);
       default:
-        return const Color(0xFF9E9E9E); // Grey
+        return const Color(0xFF9E9E9E);
     }
   }
 

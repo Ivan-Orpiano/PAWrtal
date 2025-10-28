@@ -28,7 +28,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
   final AppWriteProvider appWriteProvider = AppWriteProvider();
   final AuthRepository authRepository = Get.find<AuthRepository>();
   Size? _lastScreenSize;
-  
+
   User? currentUser;
   bool isIdVerified = false;
   bool isLoadingVerification = true;
@@ -47,12 +47,12 @@ class _WebProfileIconState extends State<WebProfileIcon> {
       if (user != null) {
         final verificationStatus =
             await appWriteProvider.getUserVerificationStatus(user.$id);
-        
+
         // Load profile picture
         final userDoc = await appWriteProvider.getUserById(user.$id);
         String? pfpId;
         String pfpUrl = '';
-        
+
         if (userDoc != null) {
           pfpId = userDoc.data['profilePictureId'] as String?;
           if (pfpId != null && pfpId.isNotEmpty) {
@@ -87,7 +87,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     if (_lastScreenSize != null && _overlayEntry != null) {
       final wasDesktop = _lastScreenSize!.width >= 800;
       final isNowDesktop = currentSize.width >= 800;
-      
+
       if (wasDesktop != isNowDesktop) {
         _closePopup();
       }
@@ -162,7 +162,8 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                 Navigator.of(context).pop();
               },
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -185,7 +186,8 @@ class _WebProfileIconState extends State<WebProfileIcon> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -207,13 +209,15 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
   void _navigateToSettings(int index) {
     _closePopup();
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => WebSettingsAndEverythingPageHandler(
           initialIndex: index,
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       // Refresh profile picture when returning from settings
       _loadUserData();
     });
@@ -221,9 +225,9 @@ class _WebProfileIconState extends State<WebProfileIcon> {
 
   Future<void> _handleVerifyNow() async {
     if (currentUser == null) return;
-    
+
     _closePopup();
-    
+
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => IdVerificationScreen(
@@ -272,7 +276,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     final userEmail = storage.read("email") ?? "user@example.com";
     final userName = storage.read("userName") ?? "User";
     final userRole = storage.read("role") ?? "user";
-    
+
     // Determine if user should show ID verification (only for regular users, not admin/staff)
     final shouldShowIdVerification =
         userRole == 'customer' || userRole == 'user';
@@ -327,14 +331,16 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                         children: [
                           // User Profile Header
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             child: Row(
                               children: [
                                 _buildProfileAvatar(userName),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         userName,
@@ -356,15 +362,20 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                                       ),
                                       const SizedBox(height: 4),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(4),
+                                          color: const Color.fromARGB(
+                                                  255, 81, 115, 153)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           userRole.toUpperCase(),
                                           style: const TextStyle(
-                                            color: Color.fromARGB(255, 81, 115, 153),
+                                            color: Color.fromARGB(
+                                                255, 81, 115, 153),
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
                                             letterSpacing: 0.5,
@@ -377,17 +388,20 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                               ],
                             ),
                           ),
-                          
+
                           // ID Verification Status (only for regular users)
-                          if (shouldShowIdVerification && !isLoadingVerification)
+                          if (shouldShowIdVerification &&
+                              !isLoadingVerification)
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: isIdVerified
                                       ? const Color(0xFF4CAF50).withOpacity(0.1)
-                                      : const Color(0xFFFF9800).withOpacity(0.1),
+                                      : const Color(0xFFFF9800)
+                                          .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: isIdVerified
@@ -410,7 +424,9 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        isIdVerified ? "ID Verified" : "ID Not Verified",
+                                        isIdVerified
+                                            ? "ID Verified"
+                                            : "ID Not Verified",
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -422,7 +438,11 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                                     ),
                                     if (!isIdVerified)
                                       GestureDetector(
-                                        onTap: _handleVerifyNow,
+                                        onTap: () {
+                                          _closePopup();
+                                          _navigateToSettings(
+                                              0); // Navigate to Profile tab
+                                        },
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 12,
@@ -430,7 +450,8 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFF1976D2),
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
                                           child: const Text(
                                             "Verify Now",
@@ -446,10 +467,12 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                                 ),
                               ),
                             ),
-                          
+
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Divider(color: Colors.grey.shade300, height: 1),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child:
+                                Divider(color: Colors.grey.shade300, height: 1),
                           ),
                           _popupItem(Icons.person_outline, "Profile", () {
                             _navigateToSettings(0);
@@ -460,12 +483,15 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                           _popupItem(Icons.help_outline, "Help", () {
                             _navigateToSettings(2);
                           }),
-                          _popupItem(Icons.feedback_outlined, "Give feedback", () {
+                          _popupItem(Icons.feedback_outlined, "Give feedback",
+                              () {
                             _navigateToSettings(3);
                           }),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            child: Divider(color: Colors.grey.shade300, height: 1),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            child:
+                                Divider(color: Colors.grey.shade300, height: 1),
                           ),
                           _popupItem(Icons.logout_rounded, "Sign out", () {
                             _showLogoutDialog(context);
@@ -484,7 +510,8 @@ class _WebProfileIconState extends State<WebProfileIcon> {
     );
   }
 
-  Widget _popupItem(IconData icon, String text, VoidCallback onTap, {bool isLogout = false}) {
+  Widget _popupItem(IconData icon, String text, VoidCallback onTap,
+      {bool isLogout = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
@@ -492,8 +519,8 @@ class _WebProfileIconState extends State<WebProfileIcon> {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          hoverColor: isLogout 
-              ? Colors.red.withOpacity(0.08) 
+          hoverColor: isLogout
+              ? Colors.red.withOpacity(0.08)
               : const Color.fromARGB(255, 81, 115, 153).withOpacity(0.08),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -524,7 +551,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
   @override
   Widget build(BuildContext context) {
     final userName = storage.read("userName") ?? "User";
-    
+
     return Padding(
       padding: const EdgeInsets.only(left: 16),
       child: InkWell(

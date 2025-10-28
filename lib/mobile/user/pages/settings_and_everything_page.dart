@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/id_verification/widgets/verification_status_widget.dart';
 import 'package:capstone_app/mobile/user/controllers/mobile_feedback_controller.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -225,6 +226,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
     final userPhone = storage.read("phone") ?? "+1 (555) 000-0000";
     final userBio = storage.read("bio") ?? "";
     final userJoinDate = storage.read("joinDate") ?? "January 2024";
+    final userId = storage.read("userId") ?? "";
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -414,7 +416,24 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
           ),
           
           const SizedBox(height: 16),
-          
+          VerificationStatusWidget(
+            userId: userId,
+            email: userEmail,
+            userName: userName,
+            userRole: userRole,
+            showButton: true,
+            onVerificationComplete: () {
+              // This callback is triggered when verification is completed
+              // You can refresh the page or show a success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Verification submitted successfully!'),
+                  backgroundColor: Color(0xFF4CAF50),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
           // Personal Information Card
           _buildModernCard(
             title: 'Personal Information',
