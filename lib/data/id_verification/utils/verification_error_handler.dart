@@ -626,4 +626,25 @@ class VerificationErrorHandler {
       },
     );
   }
+
+  /// NEW: Check if rejection is due to name mismatch
+  static bool isNameMismatchRejection(String? rejectionReason) {
+    if (rejectionReason == null) return false;
+    return rejectionReason.toLowerCase().contains('name') &&
+           (rejectionReason.toLowerCase().contains('match') ||
+            rejectionReason.toLowerCase().contains('mismatch'));
+  }
+
+  /// NEW: Extract names from rejection reason
+  static Map<String, String?> extractNamesFromRejection(String rejectionReason) {
+    // Try to extract account name and ID name from the rejection message
+    // Format: Account name "John Doe" does not match ID name "Jane Smith"
+    final accountNameMatch = RegExp(r'Account name "([^"]+)"').firstMatch(rejectionReason);
+    final idNameMatch = RegExp(r'ID name "([^"]+)"').firstMatch(rejectionReason);
+    
+    return {
+      'accountName': accountNameMatch?.group(1),
+      'idName': idNameMatch?.group(1),
+    };
+  }
 }

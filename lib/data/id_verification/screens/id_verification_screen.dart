@@ -6,6 +6,7 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/id_verification/services/argos_service.dart';
 import 'package:capstone_app/data/models/id_verification_model.dart';
+import 'package:capstone_app/data/id_verification/utils/verification_error_handler.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -123,7 +124,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
     );
   }
 
-  // FIXED: Web platform now creates verification record
   Future<void> _handleWebPlatform() async {
     try {
       print('>>> ============================================');
@@ -159,7 +159,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         }
       }
 
-      // CRITICAL FIX: Create verification record BEFORE opening browser
+      // Create verification record BEFORE opening browser
       print('>>> Creating new verification record...');
       final newVerification = IdVerification(
         userId: widget.userId,
@@ -256,13 +256,12 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         email: widget.email,
       );
 
-      // SIMPLER SOLUTION: Just open in system browser
       print('>>> Opening verification in system browser');
       final uri = Uri.parse(url);
 
       final launched = await launchUrl(
         uri,
-        mode: LaunchMode.externalApplication, // Forces system browser
+        mode: LaunchMode.externalApplication,
       );
 
       if (launched) {
@@ -273,7 +272,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           _isLoading = false;
         });
 
-        // Show instructions screen
         _showBrowserOpenedScreen();
       } else {
         print('>>> Failed to open system browser');
@@ -295,99 +293,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         ),
       ),
     );
-  }
-
-  /// CRITICAL: Force ARGOS to use camera mode instead of file upload
-  void _forceCameraMode() async {
-    try {
-      // Wait a bit for the page to fully render
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      final script = '''
-        (function() {
-          console.log('=== FORCING CAMERA MODE ===');
-          
-          // Override mobile detection
-          Object.defineProperty(navigator, 'userAgent', {
-            get: function() { 
-              return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            }
-          });
-          
-          // Force desktop mode
-          if (window.matchMedia) {
-            window.matchMedia = function(query) {
-              return {
-                matches: query === '(min-width: 1024px)',
-                media: query,
-                addListener: function() {},
-                removeListener: function() {}
-              };
-            };
-          }
-          
-          // Grant camera permission
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            console.log('Requesting camera access...');
-            
-            navigator.mediaDevices.getUserMedia({ 
-              video: { 
-                facingMode: 'environment',
-                width: { min: 640, ideal: 1920, max: 1920 },
-                height: { min: 480, ideal: 1080, max: 1080 }
-              },
-              audio: false
-            }).then(function(stream) {
-              console.log('✓ Camera access granted!');
-              
-              // Find video elements and attach stream
-              const videos = document.getElementsByTagName('video');
-              if (videos.length > 0) {
-                for (let i = 0; i < videos.length; i++) {
-                  videos[i].srcObject = stream;
-                  videos[i].play();
-                  console.log('✓ Video stream attached to element', i);
-                }
-              }
-              
-              // Hide file input if it exists
-              const fileInputs = document.querySelectorAll('input[type="file"]');
-              fileInputs.forEach(function(input) {
-                input.style.display = 'none';
-                console.log('✓ Hidden file input');
-              });
-              
-            }).catch(function(err) {
-              console.error('✗ Camera access error:', err.name, err.message);
-            });
-          }
-          
-          // Click any "Use Camera" button if it exists
-          setTimeout(function() {
-            const cameraButtons = document.querySelectorAll('button');
-            cameraButtons.forEach(function(btn) {
-              const text = btn.textContent.toLowerCase();
-              if (text.includes('camera') || text.includes('scan')) {
-                console.log('✓ Clicking camera button:', btn.textContent);
-                btn.click();
-              }
-            });
-          }, 1000);
-          
-          console.log('=== CAMERA MODE SCRIPT COMPLETE ===');
-        })();
-      ''';
-
-      await _webViewController.runJavaScript(script);
-      print('>>> Camera mode script executed');
-
-      // Run again after a delay to ensure it takes effect
-      await Future.delayed(const Duration(milliseconds: 2000));
-      await _webViewController.runJavaScript(script);
-      print('>>> Camera mode script executed (second attempt)');
-    } catch (e) {
-      print('>>> Error forcing camera mode: $e');
-    }
   }
 
   void _handleVerificationComplete() {
@@ -431,29 +336,72 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
   }
 
   void _showRejectedScreen() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => _ResponsiveVerificationScreen(
-          child: _VerificationResultContent(
-            success: false,
-            message:
-                'Your ID verification was rejected. ${_currentVerification?.rejectionReason ?? "Please try again with a valid ID."}',
-            onComplete: () => Navigator.of(context).pop(false),
-            onRetry: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => IdVerificationScreen(
-                    userId: widget.userId,
-                    email: widget.email,
-                    authRepository: widget.authRepository,
-                  ),
+    // Check if rejection is due to name mismatch
+    final rejectionReason = _currentVerification?.rejectionReason ?? '';
+    final isNameMismatch = VerificationErrorHandler.isNameMismatchRejection(rejectionReason);
+
+    if (isNameMismatch) {
+      // Extract names from rejection message
+      final names = VerificationErrorHandler.extractNamesFromRejection(rejectionReason);
+      final accountName = names['accountName'];
+      final idName = names['idName'];
+
+      // Show specialized name mismatch dialog
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        VerificationErrorHandler.showNameMismatchDialog(
+          context: context,
+          accountName: accountName ?? 'Unknown',
+          idName: idName ?? 'Unknown',
+          additionalInfo: 'For security purposes, your account name must match the name on your government-issued ID.',
+          onUpdateAccountName: () {
+            // Navigate to profile settings to update name
+            Navigator.of(context).pop(); // Close verification screen
+            // TODO: Navigate to profile edit screen
+            // You can add navigation logic here based on your routing
+          },
+          onRetry: () {
+            // Retry verification with same account
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => IdVerificationScreen(
+                  userId: widget.userId,
+                  email: widget.email,
+                  authRepository: widget.authRepository,
                 ),
-              );
-            },
+              ),
+            );
+          },
+          onCancel: () {
+            Navigator.of(context).pop(false);
+          },
+        );
+      });
+    } else {
+      // Show regular rejection screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => _ResponsiveVerificationScreen(
+            child: _VerificationResultContent(
+              success: false,
+              message:
+                  'Your ID verification was rejected. ${_currentVerification?.rejectionReason ?? "Please try again with a valid ID."}',
+              onComplete: () => Navigator.of(context).pop(false),
+              onRetry: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => IdVerificationScreen(
+                      userId: widget.userId,
+                      email: widget.email,
+                      authRepository: widget.authRepository,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _showErrorScreen(String error) {
@@ -483,16 +431,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         title: const Text('ID Verification'),
         backgroundColor: const Color(0xFF1976D2),
         foregroundColor: Colors.white,
-        actions: [
-          // Add refresh button to retry camera mode
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _forceCameraMode();
-            },
-            tooltip: 'Retry Camera',
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(
@@ -540,7 +478,6 @@ class _ResponsiveVerificationScreen extends StatelessWidget {
           final isDesktop = constraints.maxWidth >= 800;
           
           if (isDesktop) {
-            // Desktop layout - center content with max width
             return Center(
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 600),
@@ -549,7 +486,6 @@ class _ResponsiveVerificationScreen extends StatelessWidget {
               ),
             );
           } else {
-            // Mobile layout - full width
             return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),

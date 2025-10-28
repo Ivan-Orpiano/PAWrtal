@@ -363,21 +363,14 @@ class _MyDrawerState extends State<MyDrawer>
                                   minSize: 0.6)),
                           GestureDetector(
                             onTap: () async {
-                              Navigator.of(context).pop();
-                              final result = await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => IdVerificationScreen(
-                                    userId: currentUser.$id,
-                                    email: currentUser.email,
-                                    authRepository: authRepository,
-                                  ),
-                                ),
-                              );
-
-                              // Refresh user data if verification was completed
-                              if (result == true) {
-                                _loadUserData();
-                              }
+                                    Navigator.of(context).pop();
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const WebSettingsAndEverythingPageHandler(
+                                                initialIndex: 0),
+                                      ),
+                                    );
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
