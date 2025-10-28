@@ -246,4 +246,11 @@ class AdminChangePasswordController extends GetxController {
       return false;
     }
   }
+
+  // Check if form has unsaved changes
+  bool hasUnsavedChanges() {
+    return currentPasswordController.text.isNotEmpty ||
+        newPasswordController.text.isNotEmpty ||
+        confirmPasswordController.text.isNotEmpty;
+  }
 }

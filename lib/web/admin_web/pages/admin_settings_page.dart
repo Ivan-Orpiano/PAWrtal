@@ -553,7 +553,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   }
 
   Widget _buildProfileContent() {
-    final userEmail = storage.read("email") ?? "admin@example.com";
     final userName = storage.read("name") ?? "Admin";
     final userRole = storage.read("role") ?? "admin";
     final clinicName = storage.read("clinicName") ?? "N/A";
@@ -563,6 +562,12 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     // Determine if user is staff
     final isStaff = userRole == 'staff';
 
+    print('>>> ============================================');
+    print('>>> BUILDING PROFILE CONTENT');
+    print('>>> User Role: $userRole');
+    print('>>> Is Staff: $isStaff');
+    print('>>> ============================================');
+
     // Initialize profile picture controller with unique tag
     final profilePictureController = Get.put(
       AdminPfpController(authRepository: Get.find<AuthRepository>()),
@@ -570,36 +575,304 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           'profile_picture_${userRole}_${DateTime.now().millisecondsSinceEpoch}',
     );
 
-    // Fetch and set profile picture based on role
-    String? profilePictureId;
+    // CRITICAL: Fetch staff data immediately on widget build
     if (isStaff) {
-      // For staff: Use staffId (documentId) to fetch profile picture
       final staffId = storage.read("staffId") as String?;
       print('>>> Staff ID from storage: $staffId');
 
       if (staffId != null && staffId.isNotEmpty) {
-        // Fetch staff profile picture asynchronously
-        _fetchAndSetStaffProfilePicture(staffId, profilePictureController);
-        // Read from storage (will be updated by the fetch method)
-        profilePictureId = storage.read("staffProfilePictureId") as String?;
-        print('>>> Staff profile picture ID from storage: $profilePictureId');
+        // Fetch staff data synchronously using FutureBuilder
+        return FutureBuilder<Staff?>(
+          future: Get.find<AuthRepository>().getStaffByDocumentId(staffId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              print('>>> Loading staff data...');
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Colors.blue[600]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Loading profile...',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            String profilePictureId = '';
+            String userEmail = "N/A";
+
+            if (snapshot.hasData && snapshot.data != null) {
+              final staff = snapshot.data!;
+              profilePictureId = staff.image;
+              userEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
+
+              print('>>> ============================================');
+              print('>>> STAFF DATA LOADED');
+              print('>>> Staff Name: ${staff.name}');
+              print('>>> Staff Email: $userEmail');
+              print('>>> Staff Image ID: $profilePictureId');
+              print('>>> Staff Username: ${staff.username}');
+              print('>>> ============================================');
+
+              // Update storage
+              storage.write('staffProfilePictureId', profilePictureId);
+              storage.write('email', userEmail);
+              storage.write('name', staff.name);
+
+              // Set profile picture in controller
+              if (profilePictureId.isNotEmpty) {
+                profilePictureController
+                    .setCurrentProfilePicture(profilePictureId);
+                print(
+                    '>>> Profile picture set in controller: $profilePictureId');
+              } else {
+                print('>>> No profile picture for staff');
+              }
+            } else {
+              print('>>> No staff data found or error occurred');
+              // Fallback to storage values
+              profilePictureId =
+                  storage.read("staffProfilePictureId") as String? ?? '';
+              userEmail = storage.read("email") as String? ?? "N/A";
+            }
+
+            // BUILD THE ACTUAL PROFILE UI
+            return _buildProfileUI(
+              userName: userName,
+              userEmail: userEmail,
+              userRole: userRole,
+              clinicName: clinicName,
+              clinicId: clinicId,
+              userJoinDate: userJoinDate,
+              isStaff: isStaff,
+              profilePictureController: profilePictureController,
+            );
+          },
+        );
       } else {
-        print('>>> No staff ID found in storage');
+        print('>>> No staff ID in storage, using fallback values');
       }
     } else {
-      // For admin: Use clinic profile picture
-      profilePictureId = storage.read("clinicProfilePictureId") as String?;
-      print('>>> Admin profile picture ID from storage: $profilePictureId');
+      // ADMIN: Use clinic profile picture
+      final profilePictureId =
+          storage.read("clinicProfilePictureId") as String?;
+      final userEmail = storage.read("email") as String? ?? "admin@example.com";
+
+      print('>>> Admin profile picture ID: $profilePictureId');
+
+      // Set current profile picture if available
+      if (profilePictureId != null && profilePictureId.isNotEmpty) {
+        profilePictureController.setCurrentProfilePicture(profilePictureId);
+      }
     }
 
-    // Set current profile picture if available
-    if (profilePictureId != null && profilePictureId.isNotEmpty) {
-      profilePictureController.setCurrentProfilePicture(profilePictureId);
-      print('>>> Set profile picture: $profilePictureId');
-    } else {
-      print('>>> No profile picture ID available');
-    }
+    // Fallback UI (for admin or staff without ID)
+    final fallbackEmail = storage.read("email") as String? ?? "N/A";
 
+    return _buildProfileUI(
+      userName: userName,
+      userEmail: fallbackEmail,
+      userRole: userRole,
+      clinicName: clinicName,
+      clinicId: clinicId,
+      userJoinDate: userJoinDate,
+      isStaff: isStaff,
+      profilePictureController: profilePictureController,
+    );
+  }
+
+  Widget _buildProfileImagePreview(
+    AdminPfpController controller,
+    bool isStaff,
+  ) {
+    return Obx(() {
+      print('>>> ============================================');
+      print('>>> BUILDING PROFILE IMAGE PREVIEW');
+      print('>>> Has selected file: ${controller.selectedFile.value != null}');
+      print(
+          '>>> Current picture ID: ${controller.currentProfilePictureId.value}');
+      print('>>> Is Staff: $isStaff');
+
+      // If a new file is selected, show it
+      if (controller.selectedFile.value != null &&
+          controller.selectedFile.value!.bytes != null) {
+        print('>>> Showing selected file preview');
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(60),
+          child: Image.memory(
+            controller.selectedFile.value!.bytes!,
+            width: 96,
+            height: 96,
+            fit: BoxFit.cover,
+          ),
+        );
+      }
+
+      // If there's a current profile picture from database
+      var currentPictureId = controller.currentProfilePictureId.value;
+
+      // ✅ CRITICAL: Clean the picture ID using the helper method
+      if (currentPictureId.isNotEmpty) {
+        final cleanedId = _extractFileIdFromUrl(currentPictureId);
+
+        if (currentPictureId != cleanedId) {
+          print('>>> ⚠️ WARNING: Picture ID was a URL, cleaned it');
+          print('>>> Original: $currentPictureId');
+          print('>>> Cleaned: $cleanedId');
+          currentPictureId = cleanedId;
+
+          // Update the controller with the cleaned ID
+          controller.currentProfilePictureId.value = cleanedId;
+        }
+
+        if (currentPictureId.isNotEmpty) {
+          final imageUrl =
+              Get.find<AuthRepository>().getImageUrl(currentPictureId);
+
+          print('>>> Showing current profile picture');
+          print('>>> Clean File ID: $currentPictureId');
+          print('>>> Image URL: $imageUrl');
+
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(60),
+            child: Image.network(
+              imageUrl,
+              width: 96,
+              height: 96,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  print('>>> Current profile picture loaded successfully');
+                  return child;
+                }
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: Colors.purple,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('>>> ============================================');
+                print('>>> ERROR LOADING PROFILE PICTURE');
+                print('>>> Error: $error');
+                print('>>> Clean File ID: $currentPictureId');
+                print('>>> URL: $imageUrl');
+                print('>>> ============================================');
+                return _buildPlaceholderAvatar(isStaff);
+              },
+            ),
+          );
+        }
+      }
+
+      // Show placeholder
+      print('>>> Showing placeholder avatar');
+      return _buildPlaceholderAvatar(isStaff);
+    });
+  }
+
+  Widget _buildPlaceholderAvatar(bool isStaff) {
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Colors.purple.withOpacity(0.7), Colors.purple],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(
+        isStaff ? Icons.person : Icons.local_hospital,
+        color: Colors.white,
+        size: 40,
+      ),
+    );
+  }
+
+  Future<void> _fetchAndSetStaffProfilePicture(
+    String staffId,
+    AdminPfpController controller,
+  ) async {
+    try {
+      print('>>> ============================================');
+      print('>>> FETCHING STAFF PROFILE PICTURE');
+      print('>>> Staff Document ID: $staffId');
+      print('>>> ============================================');
+
+      final authRepository = Get.find<AuthRepository>();
+
+      // SIMPLIFIED: Use the new direct method
+      final staff = await authRepository.getStaffByDocumentId(staffId);
+
+      if (staff != null) {
+        print('>>> Staff found: ${staff.name}');
+        print('>>> Staff username: ${staff.username}');
+        print('>>> Staff email: ${staff.email}');
+        print('>>> Staff image field: ${staff.image}');
+
+        // Store and set the staff's profile picture ID from the "image" field
+        if (staff.image.isNotEmpty) {
+          // ✅ Clean the ID before storing
+          final cleanedId = _extractFileIdFromUrl(staff.image);
+
+          if (cleanedId != staff.image) {
+            print('>>> Staff image was a URL, cleaned it');
+            print('>>> Original: ${staff.image}');
+            print('>>> Cleaned: $cleanedId');
+          }
+
+          storage.write('staffProfilePictureId', cleanedId);
+          controller.setCurrentProfilePicture(cleanedId);
+          print('>>> Staff profile picture set successfully');
+          print('>>> Image ID stored: $cleanedId');
+        } else {
+          print('>>> Staff has no profile picture (image field is empty)');
+          storage.write('staffProfilePictureId', '');
+        }
+
+        // ALSO UPDATE EMAIL IN STORAGE
+        final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
+        storage.write('email', staffEmail);
+        print('>>> Staff email stored: $staffEmail');
+      } else {
+        print('>>> Staff not found');
+        storage.write('staffProfilePictureId', '');
+        storage.write('email', 'N/A');
+      }
+
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR FETCHING STAFF PROFILE PICTURE: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+
+      // Set defaults on error
+      storage.write('staffProfilePictureId', '');
+      storage.write('email', 'N/A');
+    }
+  }
+
+  Widget _buildProfileUI({
+    required String userName,
+    required String userEmail,
+    required String userRole,
+    required String clinicName,
+    required String clinicId,
+    required String userJoinDate,
+    required bool isStaff,
+    required AdminPfpController profilePictureController,
+  }) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(_isMobile ? 16 : 32),
       child: Column(
@@ -740,7 +1013,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _buildModernInfoTile(
                 icon: Icons.email_outlined,
                 label: 'Email Address',
-                value: userEmail,
+                value: userEmail, // NOW CORRECTLY SHOWS STAFF EMAIL OR "N/A"
                 iconColor: Colors.blue,
               ),
               _buildModernInfoTile(
@@ -781,85 +1054,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         ],
       ),
     );
-  }
-
-  Future<void> _fetchAndSetStaffProfilePicture(
-    String staffId,
-    AdminPfpController controller,
-  ) async {
-    try {
-      final authRepository = Get.find<AuthRepository>();
-      final clinicId = storage.read("clinicId") as String?;
-
-      if (clinicId == null || clinicId.isEmpty) {
-        print('>>> No clinic ID found for staff');
-        return;
-      }
-
-      print('>>> ============================================');
-      print('>>> FETCHING STAFF PROFILE PICTURE');
-      print('>>> Staff Document ID: $staffId');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
-
-      // Get all staff for the clinic
-      final staffList = await authRepository.getClinicStaff(clinicId);
-      print('>>> Total staff found: ${staffList.length}');
-
-      // Find the current staff member by documentId
-      Staff? currentStaff;
-      try {
-        currentStaff = staffList.firstWhere(
-          (staff) => staff.documentId == staffId,
-        );
-        print('>>> Current staff found: ${currentStaff.name}');
-        print('>>> Staff username: ${currentStaff.username}');
-        print('>>> Staff image field: ${currentStaff.image}');
-      } catch (e) {
-        print('>>> Staff not found in list with documentId: $staffId');
-
-        // Try finding by userId as fallback
-        final userId = storage.read("userId") as String?;
-        if (userId != null) {
-          print('>>> Attempting to find by userId: $userId');
-          try {
-            currentStaff = staffList.firstWhere(
-              (staff) => staff.userId == userId,
-            );
-            print('>>> Staff found by userId: ${currentStaff.name}');
-            print('>>> Staff image field: ${currentStaff.image}');
-          } catch (e2) {
-            print('>>> Staff not found by userId either');
-            currentStaff = null;
-          }
-        } else {
-          currentStaff = null;
-        }
-      }
-
-      if (currentStaff != null) {
-        // Store and set the staff's profile picture ID from the "image" field
-        if (currentStaff.image.isNotEmpty) {
-          storage.write('staffProfilePictureId', currentStaff.image);
-          controller.setCurrentProfilePicture(currentStaff.image);
-          print('>>> Staff profile picture set successfully');
-          print('>>> Image ID stored: ${currentStaff.image}');
-        } else {
-          print('>>> Staff has no profile picture (image field is empty)');
-          storage.write('staffProfilePictureId', '');
-        }
-      } else {
-        print('>>> Current staff not found in list');
-        storage.write('staffProfilePictureId', '');
-      }
-
-      print('>>> ============================================');
-    } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR FETCHING STAFF PROFILE PICTURE: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
-    }
   }
 
 // NEW METHOD: Build profile picture save buttons
@@ -959,7 +1153,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     );
   }
 
-// NEW METHOD: Build mobile profile header
   Widget _buildMobileProfileHeader(
     String userName,
     String userEmail,
@@ -988,10 +1181,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 child: InkWell(
                   onTap: () => profilePictureController.pickProfilePicture(),
                   borderRadius: BorderRadius.circular(60),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(60),
-                    child: profilePictureController.getPreviewImage(size: 96),
-                  ),
+                  child: _buildProfileImagePreview(
+                      profilePictureController, isStaff),
                 ),
               ),
             ),
@@ -1080,10 +1271,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 child: InkWell(
                   onTap: () => profilePictureController.pickProfilePicture(),
                   borderRadius: BorderRadius.circular(60),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(60),
-                    child: profilePictureController.getPreviewImage(size: 96),
-                  ),
+                  child: _buildProfileImagePreview(
+                      profilePictureController, isStaff),
                 ),
               ),
             ),
@@ -2394,58 +2583,78 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   }) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
-        width: _isMobile ? double.infinity : 550,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Form(
-          key: controller.formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                _buildPasswordDialogHeader(dialogContext, controller, isStaff),
+      child: PopScope(
+        canPop: false, // Prevent back button from closing without confirmation
+        onPopInvokedWithResult: (bool didPop, Object? result) async {
+          if (!didPop) {
+            // Check if there are unsaved changes
+            if (controller.hasUnsavedChanges()) {
+              final shouldDiscard =
+                  await _showDiscardChangesDialog(dialogContext);
+              if (shouldDiscard == true) {
+                controller.clearFields();
+                Navigator.of(dialogContext).pop();
+              }
+            } else {
+              controller.clearFields();
+              Navigator.of(dialogContext).pop();
+            }
+          }
+        },
+        child: Container(
+          width: _isMobile ? double.infinity : 550,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Form(
+            key: controller.formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  _buildPasswordDialogHeader(
+                      dialogContext, controller, isStaff),
 
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Error Message
-                      _buildErrorMessage(controller),
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Error Message
+                        _buildErrorMessage(controller),
 
-                      // Current Password
-                      _buildCurrentPasswordField(controller),
-                      const SizedBox(height: 24),
+                        // Current Password
+                        _buildCurrentPasswordField(controller),
+                        const SizedBox(height: 24),
 
-                      // New Password
-                      _buildNewPasswordField(controller),
-                      const SizedBox(height: 24),
+                        // New Password
+                        _buildNewPasswordField(controller),
+                        const SizedBox(height: 24),
 
-                      // Confirm Password
-                      _buildConfirmPasswordField(controller),
-                      const SizedBox(height: 32),
+                        // Confirm Password
+                        _buildConfirmPasswordField(controller),
+                        const SizedBox(height: 32),
 
-                      // Action Buttons
-                      _buildDialogActions(dialogContext, controller),
-                    ],
+                        // Action Buttons
+                        _buildDialogActions(dialogContext, controller),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -2542,9 +2751,19 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             ),
           ),
           IconButton(
-            onPressed: () {
-              controller.clearFields();
-              Navigator.of(dialogContext).pop();
+            onPressed: () async {
+              // Check for unsaved changes before closing
+              if (controller.hasUnsavedChanges()) {
+                final shouldDiscard =
+                    await _showDiscardChangesDialog(dialogContext);
+                if (shouldDiscard == true) {
+                  controller.clearFields();
+                  Navigator.of(dialogContext).pop();
+                }
+              } else {
+                controller.clearFields();
+                Navigator.of(dialogContext).pop();
+              }
             },
             icon: const Icon(Icons.close, color: Colors.white),
           ),
@@ -2820,9 +3039,19 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: () {
-              controller.clearFields();
-              Navigator.of(dialogContext).pop();
+            onPressed: () async {
+              // Check for unsaved changes before canceling
+              if (controller.hasUnsavedChanges()) {
+                final shouldDiscard =
+                    await _showDiscardChangesDialog(dialogContext);
+                if (shouldDiscard == true) {
+                  controller.clearFields();
+                  Navigator.of(dialogContext).pop();
+                }
+              } else {
+                controller.clearFields();
+                Navigator.of(dialogContext).pop();
+              }
             },
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Colors.grey[400]!),
@@ -2882,6 +3111,184 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               )),
         ),
       ],
+    );
+  }
+
+  Future<bool?> _showDiscardChangesDialog(BuildContext context) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: _isMobile ? double.infinity : 400,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Warning Header
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.orange[400]!, Colors.orange[600]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.warning_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Discard Changes?',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Your progress will be lost',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.orange.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.orange[700],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'You have unsaved changes. Are you sure you want to discard them?',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey[400]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: Text(
+                                'Keep Editing',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Discard',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -3026,5 +3433,26 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         );
       },
     );
+  }
+
+  String _extractFileIdFromUrl(String urlOrId) {
+    // If it's already just an ID, return it
+    if (!urlOrId.contains('http')) {
+      return urlOrId;
+    }
+
+    // If it's a URL, extract the file ID
+    try {
+      final uri = Uri.parse(urlOrId);
+      final pathSegments = uri.pathSegments;
+      final filesIndex = pathSegments.indexOf('files');
+      if (filesIndex != -1 && filesIndex + 1 < pathSegments.length) {
+        return pathSegments[filesIndex + 1];
+      }
+    } catch (e) {
+      print('>>> Error extracting file ID from URL: $e');
+    }
+
+    return urlOrId;
   }
 }
