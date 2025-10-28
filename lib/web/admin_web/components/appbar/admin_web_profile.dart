@@ -158,6 +158,17 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     final userEmail = storage.read("email") as String? ?? "user@example.com";
     final userName = storage.read("name") as String? ?? "User";
     final userRole = storage.read("role") as String? ?? "user";
+    final isStaff = userRole == 'staff';
+
+    // CRITICAL FIX: Get correct profile picture based on role
+    String? profilePictureId;
+    if (isStaff) {
+      profilePictureId = storage.read("staffProfilePictureId") as String?;
+      print('>>> Staff profile picture ID in overlay: $profilePictureId');
+    } else {
+      profilePictureId = storage.read("clinicProfilePictureId") as String?;
+      print('>>> Admin profile picture ID in overlay: $profilePictureId');
+    }
 
     return OverlayEntry(
       builder: (context) => Stack(
@@ -184,11 +195,13 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ListTile(
-                      leading: _buildProfileAvatar(_cachedProfilePictureId),
+                      leading: _buildProfileAvatar(profilePictureId, isStaff),
                       title: Text(
                         userName,
                         style: const TextStyle(
-                            color: Colors.black87, fontWeight: FontWeight.w600),
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +280,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     );
   }
 
-  Widget _buildProfileAvatar(String? profilePictureId) {
+  Widget _buildProfileAvatar(String? profilePictureId, bool isStaff) {
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
       return CircleAvatar(
         radius: 20,
@@ -276,16 +289,19 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           _getProfilePictureUrl(profilePictureId),
         ),
         onBackgroundImageError: (exception, stackTrace) {
-          print('Error loading profile picture: $exception');
+          print('>>> Error loading profile picture: $exception');
+          print('>>> Profile picture ID: $profilePictureId');
+          print('>>> URL: ${_getProfilePictureUrl(profilePictureId)}');
         },
       );
     }
 
+    // Default avatar if no profile picture
     return CircleAvatar(
       radius: 20,
       backgroundColor: Colors.purple.withOpacity(0.7),
-      child: const Icon(
-        Icons.local_hospital,
+      child: Icon(
+        isStaff ? Icons.person : Icons.local_hospital,
         color: Colors.white,
         size: 18,
       ),
@@ -333,6 +349,16 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   @override
   Widget build(BuildContext context) {
     final userName = storage.read("name") as String? ?? "User";
+    final userRole = storage.read("role") as String? ?? "user";
+    final isStaff = userRole == 'staff';
+
+    // Get correct profile picture based on role
+    String? profilePictureId;
+    if (isStaff) {
+      profilePictureId = storage.read("staffProfilePictureId") as String?;
+    } else {
+      profilePictureId = _cachedProfilePictureId;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(right: 16),
@@ -341,7 +367,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         child: InkWell(
           onTap: () => _togglePopup(context),
           borderRadius: BorderRadius.circular(50),
-          child: _buildProfileAvatar(_cachedProfilePictureId),
+          child: _buildProfileAvatar(profilePictureId, isStaff),
         ),
       ),
     );

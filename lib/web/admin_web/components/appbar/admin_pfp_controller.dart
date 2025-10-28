@@ -55,7 +55,8 @@ class AdminPfpController extends GetxController {
         // Create temporary preview URL for web (using bytes)
         if (file.bytes != null) {
           // For web, we can create a data URL from bytes
-          previewUrl.value = 'data:image/${file.extension};base64,${_bytesToBase64(file.bytes!)}';
+          previewUrl.value =
+              'data:image/${file.extension};base64,${_bytesToBase64(file.bytes!)}';
         }
       }
     } catch (e) {
@@ -150,8 +151,7 @@ class AdminPfpController extends GetxController {
       // Delete old profile picture if it exists
       if (currentProfilePictureId.isNotEmpty) {
         try {
-          await authRepository
-              .deleteImage(currentProfilePictureId.value);
+          await authRepository.deleteImage(currentProfilePictureId.value);
         } catch (e) {
           print('Warning: Failed to delete old profile picture: $e');
         }
@@ -160,7 +160,7 @@ class AdminPfpController extends GetxController {
       // Convert PlatformFile to InputFile for upload
       final file = selectedFile.value!;
       final fileName = file.name;
-      
+
       InputFile inputFile;
       if (file.bytes != null) {
         // Web upload
@@ -179,8 +179,8 @@ class AdminPfpController extends GetxController {
       }
 
       // Upload new profile picture
-      final uploadedFile = await authRepository
-          .uploadClinicProfilePicture(inputFile);
+      final uploadedFile =
+          await authRepository.uploadClinicProfilePicture(inputFile);
 
       // Update clinic record with new profile picture ID
       await authRepository.updateClinic(clinicId, {
@@ -229,5 +229,106 @@ class AdminPfpController extends GetxController {
     selectedFile.value = null;
     previewUrl.value = '';
     super.onClose();
+  }
+
+  Future<String?> saveStaffProfilePicture(String staffDocumentId) async {
+    if (selectedFile.value == null) {
+      Get.snackbar(
+        'Error',
+        'No image selected',
+        backgroundColor: Colors.red,
+      );
+      return null;
+    }
+
+    try {
+      isUploading.value = true;
+
+      print('>>> ============================================');
+      print('>>> SAVING STAFF PROFILE PICTURE');
+      print('>>> Staff Document ID: $staffDocumentId');
+      print('>>> ============================================');
+
+      // Delete old profile picture if it exists
+      if (currentProfilePictureId.isNotEmpty) {
+        try {
+          print(
+              '>>> Deleting old profile picture: ${currentProfilePictureId.value}');
+          await authRepository.deleteImage(currentProfilePictureId.value);
+          print('>>> Old profile picture deleted');
+        } catch (e) {
+          print('>>> Warning: Failed to delete old profile picture: $e');
+        }
+      }
+
+      // Convert PlatformFile to InputFile for upload
+      final file = selectedFile.value!;
+      final fileName = file.name;
+
+      InputFile inputFile;
+      if (file.bytes != null) {
+        // Web upload
+        inputFile = InputFile.fromBytes(
+          bytes: file.bytes!,
+          filename: fileName,
+        );
+      } else if (file.path != null) {
+        // Mobile upload
+        inputFile = InputFile.fromPath(
+          path: file.path!,
+          filename: fileName,
+        );
+      } else {
+        throw Exception('File has neither bytes nor path');
+      }
+
+      print('>>> Uploading new profile picture...');
+
+      // Upload new profile picture (use the same image bucket)
+      final uploadedFile = await authRepository.uploadImage(inputFile);
+
+      print('>>> Profile picture uploaded: ${uploadedFile.$id}');
+
+      // Update staff record with new profile picture ID
+      // The Staff model has an 'image' field for the profile picture
+      print('>>> Updating staff record...');
+      await authRepository.updateStaffInfo(
+        staffDocumentId: staffDocumentId,
+        image: uploadedFile.$id,
+      );
+
+      print('>>> Staff record updated successfully');
+
+      // Update local state
+      currentProfilePictureId.value = uploadedFile.$id;
+      selectedFile.value = null;
+      previewUrl.value = '';
+
+      Get.snackbar(
+        'Success',
+        'Profile picture updated successfully',
+        backgroundColor: Colors.green,
+      );
+
+      print('>>> ============================================');
+      print('>>> STAFF PROFILE PICTURE SAVE COMPLETE');
+      print('>>> New File ID: ${uploadedFile.$id}');
+      print('>>> ============================================');
+
+      isUploading.value = false;
+      return uploadedFile.$id;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR SAVING STAFF PROFILE PICTURE: $e');
+      print('>>> ============================================');
+
+      isUploading.value = false;
+      Get.snackbar(
+        'Error',
+        'Failed to save profile picture: $e',
+        backgroundColor: Colors.red,
+      );
+      return null;
+    }
   }
 }
