@@ -217,13 +217,13 @@ class _NotificationPageState extends State<NotificationPage> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         elevation: notification.isUnread ? 2 : 0,
         color: notification.isUnread
-            ? const Color.fromARGB(255, 81, 115, 153).withOpacity(0.05)
+            ? const Color.fromARGB(255, 234, 236, 238)
             : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
             color: notification.isUnread
-                ? const Color.fromARGB(255, 81, 115, 153).withOpacity(0.2)
+                ? const Color.fromARGB(255, 81, 115, 153).withOpacity(0.05)
                 : Colors.grey.shade200,
           ),
         ),
@@ -296,21 +296,21 @@ class _NotificationPageState extends State<NotificationPage> {
                           if (notification.priority == NotificationPriority.high ||
                               notification.priority == NotificationPriority.urgent) ...[
                             const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                notification.priorityLabel,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.orange[800],
-                                ),
-                              ),
-                            ),
+                            // Container(
+                            //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            //   decoration: BoxDecoration(
+                            //     color: Colors.orange.withOpacity(0.2),
+                            //     borderRadius: BorderRadius.circular(6),
+                            //   ),
+                            //   child: Text(
+                            //     notification.priorityLabel,
+                            //     style: TextStyle(
+                            //       fontSize: 11,
+                            //       fontWeight: FontWeight.w600,
+                            //       color: Colors.orange[800],
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ],
                       ),
@@ -362,7 +362,7 @@ class _NotificationPageState extends State<NotificationPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withOpacity(0.1  ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, size: 24, color: color),

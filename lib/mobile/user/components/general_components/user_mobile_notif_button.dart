@@ -31,17 +31,17 @@ class MyNotifButton extends StatelessWidget {
             if (unreadCount == 0) return const SizedBox.shrink();
 
             return Positioned(
-              right: 8,
-              top: 8,
+              right: 4,
+              top: 2,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
-                  color: Colors.red,
+                  color: Color.fromARGB(255, 81, 115, 153),
                   shape: BoxShape.circle,
                 ),
                 constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
+                  minWidth: 16,
+                  minHeight: 16,
                 ),
                 child: Center(
                   child: Text(
