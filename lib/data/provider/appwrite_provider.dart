@@ -5,6 +5,7 @@ import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -7077,6 +7078,119 @@ class AppWriteProvider {
     } catch (e) {
       print('>>> ERROR in debug: $e');
       print('>>> Stack trace: ${StackTrace.current}');
+    }
+  }
+
+  /// Get staff member by document ID with complete profile information
+  Future<Staff?> getStaffByDocumentId(String staffDocumentId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> GET STAFF BY DOCUMENT ID');
+      print('>>> Staff Document ID: $staffDocumentId');
+
+      final doc = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: staffDocumentId,
+      );
+
+      print('>>> Staff found!');
+      print('>>> Name: ${doc.data['name']}');
+      print('>>> Username: ${doc.data['username']}');
+      print('>>> Email: ${doc.data['email']}');
+      print('>>> Image ID: ${doc.data['image']}');
+      print('>>> ============================================');
+
+      final staff = Staff.fromMap(doc.data);
+      staff.documentId = doc.$id;
+      return staff;
+    } catch (e) {
+      print('>>> Error getting staff by document ID: $e');
+      print('>>> ============================================');
+      return null;
+    }
+  }
+
+  Future<void> fixStaffImageUrls() async {
+    try {
+      print('>>> ============================================');
+      print('>>> FIXING STAFF IMAGE URLs');
+      print('>>> Converting URLs to file IDs');
+      print('>>> ============================================');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+      );
+
+      print('>>> Found ${result.documents.length} staff records');
+
+      int fixed = 0;
+      int alreadyCorrect = 0;
+
+      for (var doc in result.documents) {
+        try {
+          final currentImage = doc.data['image']?.toString() ?? '';
+
+          // Skip if empty
+          if (currentImage.isEmpty) {
+            print('>>> Staff ${doc.data['name']}: No image');
+            continue;
+          }
+
+          // Check if it's a URL
+          if (currentImage.contains('http')) {
+            print(
+                '>>> Staff ${doc.data['name']}: Has URL, extracting file ID...');
+            print('>>>   Current: $currentImage');
+
+            // Extract file ID from URL
+            String? fileId;
+            try {
+              final uri = Uri.parse(currentImage);
+              final pathSegments = uri.pathSegments;
+              final filesIndex = pathSegments.indexOf('files');
+              if (filesIndex != -1 && filesIndex + 1 < pathSegments.length) {
+                fileId = pathSegments[filesIndex + 1];
+              }
+            } catch (e) {
+              print('>>>   âœ— Failed to parse URL: $e');
+              continue;
+            }
+
+            if (fileId != null && fileId.isNotEmpty) {
+              print('>>>   âœ… Extracted file ID: $fileId');
+
+              // Update the staff record
+              await databases!.updateDocument(
+                databaseId: AppwriteConstants.dbID,
+                collectionId: AppwriteConstants.staffCollectionID,
+                documentId: doc.$id,
+                data: {
+                  'image': fileId,
+                  'updatedAt': DateTime.now().toIso8601String(),
+                },
+              );
+
+              print('>>>   âœ… Updated successfully');
+              fixed++;
+            }
+          } else {
+            print('>>> Staff ${doc.data['name']}: Already has file ID');
+            alreadyCorrect++;
+          }
+        } catch (e) {
+          print('>>> Error fixing staff ${doc.$id}: $e');
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> CLEANUP COMPLETE');
+      print('>>> Fixed: $fixed');
+      print('>>> Already correct: $alreadyCorrect');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Error in fixStaffImageUrls: $e');
     }
   }
 }

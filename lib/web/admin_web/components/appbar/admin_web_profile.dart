@@ -32,71 +32,220 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     super.initState();
     _authRepository = Get.find<AuthRepository>();
     _loadClinicDataFromStorage();
-    // Load clinic data from database immediately on init
-    _initializeClinicData();
   }
 
   void _loadClinicDataFromStorage() {
-    _cachedClinicName = storage.read("clinicName") as String? ?? 'Clinic';
-    _cachedProfilePictureId =
-        storage.read("clinicProfilePictureId") as String? ?? '';
+    final userRole = storage.read("role") as String? ?? "admin";
+    final isStaff = userRole == 'staff';
+
+    if (isStaff) {
+      // STAFF: Load staff profile picture
+      String? staffProfilePictureId =
+          storage.read("staffProfilePictureId") as String? ?? '';
+
+      // ✅ Clean the ID if it's a URL
+      if (staffProfilePictureId.isNotEmpty) {
+        final cleanedId = _extractFileIdFromUrl(staffProfilePictureId);
+        if (cleanedId != staffProfilePictureId) {
+          print('>>> Cleaned staff profile picture ID from storage');
+          print('>>> Original: $staffProfilePictureId');
+          print('>>> Cleaned: $cleanedId');
+          staffProfilePictureId = cleanedId;
+          // Update storage with cleaned ID
+          storage.write("staffProfilePictureId", cleanedId);
+        }
+      }
+
+      _cachedProfilePictureId = staffProfilePictureId;
+      print(
+          '>>> INIT: Loaded staff profile picture from storage: $_cachedProfilePictureId');
+    } else {
+      // ADMIN: Load clinic data
+      _cachedClinicName = storage.read("clinicName") as String? ?? 'Clinic';
+
+      String? clinicProfilePictureId =
+          storage.read("clinicProfilePictureId") as String? ?? '';
+
+      // ✅ Clean the ID if it's a URL
+      if (clinicProfilePictureId.isNotEmpty) {
+        final cleanedId = _extractFileIdFromUrl(clinicProfilePictureId);
+        if (cleanedId != clinicProfilePictureId) {
+          print('>>> Cleaned clinic profile picture ID from storage');
+          print('>>> Original: $clinicProfilePictureId');
+          print('>>> Cleaned: $cleanedId');
+          clinicProfilePictureId = cleanedId;
+          // Update storage with cleaned ID
+          storage.write("clinicProfilePictureId", cleanedId);
+        }
+      }
+
+      _cachedProfilePictureId = clinicProfilePictureId;
+      print('>>> INIT: Loaded clinic data from storage');
+    }
   }
 
-  /// Initialize clinic data from database on first load
-  Future<void> _initializeClinicData() async {
+  Future<void> _initializeProfileData() async {
     try {
-      final clinicId = storage.read("clinicId") as String?;
-      if (clinicId == null || clinicId.isEmpty) {
-        _isInitialized = true;
-        return;
-      }
+      final userRole = storage.read("role") as String? ?? "admin";
+      final isStaff = userRole == 'staff';
 
-      final clinicDoc = await _authRepository.getClinicById(clinicId);
-      if (clinicDoc != null) {
-        final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
-        final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+      print('>>> ============================================');
+      print('>>> INITIALIZING PROFILE DATA');
+      print('>>> User Role: $userRole');
+      print('>>> Is Staff: $isStaff');
+      print('>>> ============================================');
 
-        if (mounted) {
-          setState(() {
-            _cachedClinicName = newClinicName;
-            _cachedProfilePictureId = newProfilePictureId;
+      if (isStaff) {
+        // STAFF: Fetch staff data from database
+        final staffId = storage.read("staffId") as String?;
+        print('>>> Staff ID from storage: $staffId');
+
+        if (staffId != null && staffId.isNotEmpty) {
+          print('>>> Fetching staff data from database...');
+
+          final staff = await _authRepository.getStaffByDocumentId(staffId);
+
+          if (staff != null) {
+            final staffProfilePictureId = staff.image;
+            final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
+            final staffName = staff.name;
+
+            print('>>> Staff Data Retrieved:');
+            print('>>>   Name: $staffName');
+            print('>>>   Email: $staffEmail');
+            print('>>>   Image ID: $staffProfilePictureId');
+            print('>>>   Image ID Length: ${staffProfilePictureId.length}');
+
+            if (mounted) {
+              setState(() {
+                _cachedProfilePictureId = staffProfilePictureId;
+                _isInitialized = true;
+              });
+            }
+
+            // CRITICAL: Update storage with fresh data
+            storage.write('staffProfilePictureId', staffProfilePictureId);
+            storage.write('email', staffEmail);
+            storage.write('name', staffName);
+
+            print('>>> Staff profile initialized successfully');
+            print('>>> Updated storage with fresh data');
+          } else {
+            print('>>> ERROR: Staff document not found');
             _isInitialized = true;
-          });
+          }
+        } else {
+          print('>>> ERROR: No staff ID in storage');
+          _isInitialized = true;
+        }
+      } else {
+        // ADMIN: Fetch clinic data from database
+        final clinicId = storage.read("clinicId") as String?;
+        print('>>> Clinic ID from storage: $clinicId');
+
+        if (clinicId == null || clinicId.isEmpty) {
+          _isInitialized = true;
+          return;
         }
 
-        // Update storage for next time
-        storage.write('clinicName', newClinicName);
-        storage.write('clinicProfilePictureId', newProfilePictureId);
-      } else {
-        _isInitialized = true;
+        final clinicDoc = await _authRepository.getClinicById(clinicId);
+        if (clinicDoc != null) {
+          final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
+          final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+
+          print('>>> Clinic Data Retrieved:');
+          print('>>>   Name: $newClinicName');
+          print('>>>   Profile Picture ID: $newProfilePictureId');
+
+          if (mounted) {
+            setState(() {
+              _cachedClinicName = newClinicName;
+              _cachedProfilePictureId = newProfilePictureId;
+              _isInitialized = true;
+            });
+          }
+
+          storage.write('clinicName', newClinicName);
+          storage.write('clinicProfilePictureId', newProfilePictureId);
+        } else {
+          _isInitialized = true;
+        }
       }
-    } catch (e) {
-      print('Error initializing clinic data: $e');
+
+      print('>>> ============================================');
+      print('>>> PROFILE DATA INITIALIZATION COMPLETE');
+      print('>>> Cached Profile Picture ID: $_cachedProfilePictureId');
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ERROR INITIALIZING PROFILE DATA: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
       _isInitialized = true;
     }
   }
 
   Future<void> _refreshClinicDataInBackground() async {
     try {
-      final clinicId = storage.read("clinicId") as String?;
-      if (clinicId == null || clinicId.isEmpty) return;
+      final userRole = storage.read("role") as String? ?? "admin";
+      final isStaff = userRole == 'staff';
 
-      final clinicDoc = await _authRepository.getClinicById(clinicId);
-      if (clinicDoc != null) {
-        final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
-        final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+      print('>>> ============================================');
+      print('>>> REFRESHING PROFILE DATA IN BACKGROUND');
+      print('>>> User Role: $userRole');
+      print('>>> ============================================');
 
-        if (mounted) {
-          setState(() {
-            _cachedClinicName = newClinicName;
-            _cachedProfilePictureId = newProfilePictureId;
-          });
+      if (isStaff) {
+        // STAFF: Refresh staff data
+        final staffId = storage.read("staffId") as String?;
+        if (staffId != null && staffId.isNotEmpty) {
+          print('>>> Refreshing staff data for: $staffId');
+
+          final staff = await _authRepository.getStaffByDocumentId(staffId);
+          if (staff != null) {
+            final staffProfilePictureId = staff.image;
+            final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
+
+            print('>>> Refreshed Staff Data:');
+            print('>>>   Image ID: $staffProfilePictureId');
+            print('>>>   Email: $staffEmail');
+
+            if (mounted) {
+              setState(() {
+                _cachedProfilePictureId = staffProfilePictureId;
+              });
+            }
+
+            storage.write('staffProfilePictureId', staffProfilePictureId);
+            storage.write('email', staffEmail);
+
+            print('>>> Staff data refreshed successfully');
+          }
         }
-        storage.write('clinicName', newClinicName);
-        storage.write('clinicProfilePictureId', newProfilePictureId);
+      } else {
+        // ADMIN: Refresh clinic data
+        final clinicId = storage.read("clinicId") as String?;
+        if (clinicId == null || clinicId.isEmpty) return;
+
+        final clinicDoc = await _authRepository.getClinicById(clinicId);
+        if (clinicDoc != null) {
+          final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
+          final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
+
+          if (mounted) {
+            setState(() {
+              _cachedClinicName = newClinicName;
+              _cachedProfilePictureId = newProfilePictureId;
+            });
+          }
+          storage.write('clinicName', newClinicName);
+          storage.write('clinicProfilePictureId', newProfilePictureId);
+        }
       }
+
+      print('>>> ============================================');
     } catch (e) {
-      print('Error refreshing clinic data: $e');
+      print('>>> Error refreshing profile data: $e');
     }
   }
 
@@ -155,12 +304,14 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   OverlayEntry _createOverlayEntry(BuildContext context) {
-    final userEmail = storage.read("email") as String? ?? "user@example.com";
     final userName = storage.read("name") as String? ?? "User";
     final userRole = storage.read("role") as String? ?? "user";
     final isStaff = userRole == 'staff';
 
-    // CRITICAL FIX: Get correct profile picture based on role
+    // Get email from storage (now correctly updated for staff)
+    final userEmail = storage.read("email") as String? ?? "N/A";
+
+    // Get correct profile picture based on role
     String? profilePictureId;
     if (isStaff) {
       profilePictureId = storage.read("staffProfilePictureId") as String?;
@@ -213,6 +364,17 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                               fontSize: 11,
                             ),
                           ),
+                          // SHOW EMAIL (NOW CORRECT FOR STAFF)
+                          if (userEmail != "N/A")
+                            Text(
+                              userEmail,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 10,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),
@@ -281,22 +443,97 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   Widget _buildProfileAvatar(String? profilePictureId, bool isStaff) {
+    print('>>> ============================================');
+    print('>>> BUILDING PROFILE AVATAR');
+    print('>>> Profile Picture ID: $profilePictureId');
+    print('>>> Is Staff: $isStaff');
+    print(
+        '>>> ID Empty: ${profilePictureId == null || profilePictureId.isEmpty}');
+
+    // ✅ CRITICAL: Clean the profile picture ID using the helper method
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      final cleanedId = _extractFileIdFromUrl(profilePictureId);
+      print('>>> Original ID: $profilePictureId');
+      print('>>> Cleaned ID: $cleanedId');
+      profilePictureId = cleanedId; // Use the cleaned ID
+    }
+
+    print('>>> Final Profile Picture ID: $profilePictureId');
+    print('>>> ============================================');
+
+    if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      final imageUrl = _getProfilePictureUrl(profilePictureId);
+      print('>>> Generated Image URL: $imageUrl');
+
       return CircleAvatar(
         radius: 20,
         backgroundColor: Colors.grey[200],
-        backgroundImage: NetworkImage(
-          _getProfilePictureUrl(profilePictureId),
+        child: ClipOval(
+          child: Image.network(
+            imageUrl,
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) {
+                print('>>> Image loaded successfully');
+                return child;
+              }
+              print(
+                  '>>> Loading image... ${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes}');
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                  strokeWidth: 2,
+                  color: Colors.purple,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('>>> ============================================');
+              print('>>> ERROR LOADING IMAGE');
+              print('>>> Error: $error');
+              print('>>> Profile Picture ID: $profilePictureId');
+              print('>>> URL: $imageUrl');
+              print('>>> Stack trace: $stackTrace');
+              print('>>> ============================================');
+
+              return _buildDefaultAvatar(isStaff);
+            },
+          ),
         ),
-        onBackgroundImageError: (exception, stackTrace) {
-          print('>>> Error loading profile picture: $exception');
-          print('>>> Profile picture ID: $profilePictureId');
-          print('>>> URL: ${_getProfilePictureUrl(profilePictureId)}');
-        },
       );
     }
 
-    // Default avatar if no profile picture
+    print('>>> No profile picture ID, showing default avatar');
+    return _buildDefaultAvatar(isStaff);
+  }
+
+  String _extractFileIdFromUrl(String urlOrId) {
+    // If it's already just an ID, return it
+    if (!urlOrId.contains('http')) {
+      return urlOrId;
+    }
+
+    // If it's a URL, extract the file ID
+    try {
+      final uri = Uri.parse(urlOrId);
+      final pathSegments = uri.pathSegments;
+      final filesIndex = pathSegments.indexOf('files');
+      if (filesIndex != -1 && filesIndex + 1 < pathSegments.length) {
+        return pathSegments[filesIndex + 1];
+      }
+    } catch (e) {
+      print('>>> Error extracting file ID from URL: $e');
+    }
+
+    return urlOrId;
+  }
+
+  Widget _buildDefaultAvatar(bool isStaff) {
     return CircleAvatar(
       radius: 20,
       backgroundColor: Colors.purple.withOpacity(0.7),
@@ -352,12 +589,27 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     final userRole = storage.read("role") as String? ?? "user";
     final isStaff = userRole == 'staff';
 
+    print('>>> ============================================');
+    print('>>> BUILDING ADMIN WEB PROFILE');
+    print('>>> User Name: $userName');
+    print('>>> User Role: $userRole');
+    print('>>> Is Staff: $isStaff');
+    print('>>> Cached Profile Picture ID: $_cachedProfilePictureId');
+    print('>>> Is Initialized: $_isInitialized');
+    print('>>> ============================================');
+
     // Get correct profile picture based on role
     String? profilePictureId;
     if (isStaff) {
-      profilePictureId = storage.read("staffProfilePictureId") as String?;
+      // CRITICAL: For staff, ALWAYS use _cachedProfilePictureId (fetched from DB)
+      profilePictureId =
+          _cachedProfilePictureId.isNotEmpty ? _cachedProfilePictureId : null;
+      print('>>> Using staff profile picture: $profilePictureId');
     } else {
-      profilePictureId = _cachedProfilePictureId;
+      // For admin, use cached clinic profile picture
+      profilePictureId =
+          _cachedProfilePictureId.isNotEmpty ? _cachedProfilePictureId : null;
+      print('>>> Using clinic profile picture: $profilePictureId');
     }
 
     return Padding(

@@ -267,13 +267,11 @@ class AdminPfpController extends GetxController {
 
       InputFile inputFile;
       if (file.bytes != null) {
-        // Web upload
         inputFile = InputFile.fromBytes(
           bytes: file.bytes!,
           filename: fileName,
         );
       } else if (file.path != null) {
-        // Mobile upload
         inputFile = InputFile.fromPath(
           path: file.path!,
           filename: fileName,
@@ -284,22 +282,22 @@ class AdminPfpController extends GetxController {
 
       print('>>> Uploading new profile picture...');
 
-      // Upload new profile picture (use the same image bucket)
+      // Upload new profile picture
       final uploadedFile = await authRepository.uploadImage(inputFile);
 
       print('>>> Profile picture uploaded: ${uploadedFile.$id}');
+      print('>>> âœ… CRITICAL: File ID is: ${uploadedFile.$id}');
 
-      // Update staff record with new profile picture ID
-      // The Staff model has an 'image' field for the profile picture
-      print('>>> Updating staff record...');
+      // âœ… CRITICAL FIX: Save ONLY the file ID, NOT a URL
+      print('>>> Updating staff record with FILE ID ONLY...');
       await authRepository.updateStaffInfo(
         staffDocumentId: staffDocumentId,
-        image: uploadedFile.$id,
+        image: uploadedFile.$id, // âœ… SAVE FILE ID ONLY
       );
 
       print('>>> Staff record updated successfully');
 
-      // Update local state
+      // Update local state with FILE ID
       currentProfilePictureId.value = uploadedFile.$id;
       selectedFile.value = null;
       previewUrl.value = '';
@@ -316,7 +314,7 @@ class AdminPfpController extends GetxController {
       print('>>> ============================================');
 
       isUploading.value = false;
-      return uploadedFile.$id;
+      return uploadedFile.$id; // âœ… RETURN FILE ID ONLY
     } catch (e) {
       print('>>> ============================================');
       print('>>> ERROR SAVING STAFF PROFILE PICTURE: $e');

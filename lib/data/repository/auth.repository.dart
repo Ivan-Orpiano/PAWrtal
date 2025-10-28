@@ -11,6 +11,7 @@ import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_staff_management_page.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/appointment_model.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
@@ -2328,5 +2329,103 @@ class AuthRepository {
       print('Error checking deletion request: $e');
       return false;
     }
+  }
+
+  Future<Staff?> getStaffByDocumentId(String staffDocumentId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> AUTH REPO: GET STAFF BY DOCUMENT ID');
+      print('>>> Staff Document ID: $staffDocumentId');
+      print('>>> ============================================');
+
+      final staff =
+          await appWriteProvider.getStaffByDocumentId(staffDocumentId);
+
+      if (staff != null) {
+        print('>>> âœ" Staff found successfully');
+        print('>>>   Name: ${staff.name}');
+        print('>>>   Email: ${staff.email}');
+        print('>>>   Username: ${staff.username}');
+        print('>>>   Image ID: ${staff.image}');
+        print('>>>   Image ID Length: ${staff.image.length}');
+        print('>>>   Image ID isEmpty: ${staff.image.isEmpty}');
+        print('>>>   Department: ${staff.department}');
+        print('>>>   Role: ${staff.role}');
+        print('>>> ============================================');
+        return staff;
+      }
+
+      print('>>> âœ— No staff found with document ID: $staffDocumentId');
+      print('>>> ============================================');
+      return null;
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> âŒ ERROR IN AUTH REPO: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+      return null;
+    }
+  }
+
+  String getStaffProfilePictureUrl(String imageId) {
+    if (imageId.isEmpty) {
+      print('>>> Empty image ID provided');
+      return '';
+    }
+
+    final url = authRepository.getImageUrl(imageId);
+    print('>>> Generated staff profile picture URL: $url');
+    return url;
+  }
+
+  Future<void> debugStaffProfilePicture(String staffDocumentId) async {
+    try {
+      print('>>> ============================================');
+      print('>>> DEBUG: STAFF PROFILE PICTURE');
+      print('>>> Staff Document ID: $staffDocumentId');
+      print('>>> ============================================');
+
+      final staff = await getStaffByDocumentId(staffDocumentId);
+
+      if (staff != null) {
+        print('>>> Staff Data:');
+        print('>>>   Name: ${staff.name}');
+        print('>>>   Image Field: "${staff.image}"');
+        print('>>>   Image Length: ${staff.image.length}');
+        print('>>>   Image isEmpty: ${staff.image.isEmpty}');
+
+        if (staff.image.isNotEmpty) {
+          final imageUrl = getStaffProfilePictureUrl(staff.image);
+          print('>>> Generated URL: $imageUrl');
+
+          // Try to verify the image exists
+          print('>>> Attempting to verify image exists...');
+          try {
+            final imageDoc = await appWriteProvider.storage!.getFile(
+              bucketId: AppwriteConstants.imageBucketID,
+              fileId: staff.image,
+            );
+            print('>>> âœ" Image file exists in bucket');
+            print('>>>   File ID: ${imageDoc.$id}');
+            print('>>>   File Name: ${imageDoc.name}');
+            print('>>>   File Size: ${imageDoc.sizeOriginal} bytes');
+          } catch (e) {
+            print('>>> âœ— Image file NOT found in bucket: $e');
+          }
+        } else {
+          print('>>> âš ï¸ Staff has NO image field value');
+        }
+      } else {
+        print('>>> âœ— Staff not found');
+      }
+
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR in debug: $e');
+    }
+  }
+
+  Future<void> fixStaffImageUrls() {
+    return appWriteProvider.fixStaffImageUrls();
   }
 }
