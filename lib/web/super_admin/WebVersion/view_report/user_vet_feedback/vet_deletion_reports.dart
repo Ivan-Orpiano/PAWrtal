@@ -4,6 +4,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:get/get.dart';
@@ -20,22 +21,16 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggingOut = false;
-
-  // Initialize controller
   late final VetDeletionRequestController _controller;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize GetX controller
     _controller = Get.put(
       VetDeletionRequestController(
         authRepository: Get.find<AuthRepository>(),
       ),
     );
-
-    // Listen to search controller changes
     _searchController.addListener(() {
       _controller.updateSearchQuery(_searchController.text);
     });
@@ -48,12 +43,19 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     super.dispose();
   }
 
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < mobileWidth;
+
+  bool _isTablet(BuildContext context) =>
+      MediaQuery.of(context).size.width >= mobileWidth &&
+      MediaQuery.of(context).size.width < tabletWidth;
+
+  bool _isDesktop(BuildContext context) =>
+      MediaQuery.of(context).size.width >= tabletWidth;
+
   void _showRequestDetails(FeedbackDeletionRequest request) async {
-    // Get clinic name from cache (already loaded)
     final clinicName = _controller.clinicNamesCache[request.clinicId] ??
         await _controller.getClinicName(request.clinicId);
-
-    // Get review details
     final review = await _controller.getReview(request.reviewId);
 
     if (!mounted) return;
@@ -68,9 +70,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     );
   }
 
-  /// Handle deletion request (Approve/Reject)
   void _handleDeletionRequest(FeedbackDeletionRequest request) async {
-    // Get clinic name
     final clinicName = await _controller.getClinicName(request.clinicId);
 
     if (!mounted) return;
@@ -82,7 +82,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
         clinicName: clinicName,
         onApprove: (reviewNotes) => _controller.approveDeletionRequest(
           request,
-          'Super Admin', // You can get this from GetStorage
+          'Super Admin',
           reviewNotes,
         ),
         onDeny: (reviewNotes) => _controller.rejectDeletionRequest(
@@ -94,7 +94,6 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     );
   }
 
-  /// Delete a processed request
   void _deleteRequest(FeedbackDeletionRequest request) async {
     final clinicName = await _controller.getClinicName(request.clinicId);
 
@@ -105,16 +104,23 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.delete_forever, color: Color(0xFFE74C3C)),
-            SizedBox(width: 8),
-            Text('Confirm Deletion'),
+            const Icon(Icons.delete_forever, color: Color(0xFFE74C3C)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Confirm Deletion',
+                style: TextStyle(
+                  fontSize: _isMobile(context) ? 16 : 18,
+                ),
+              ),
+            ),
           ],
         ),
         content: Text(
           'Are you sure you want to permanently delete the ${request.status} request for "$clinicName"?\n\nThis action cannot be undone.',
-          style: const TextStyle(fontSize: 16),
+          style: TextStyle(fontSize: _isMobile(context) ? 14 : 16),
         ),
         actions: [
           TextButton(
@@ -143,50 +149,113 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   Widget _buildDashboardStats() {
     return Obx(() {
       final stats = _controller.stats;
+      final isMobile = _isMobile(context);
+      final isTablet = _isTablet(context);
 
       return Container(
         color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _buildStatCard(
-              'Total Requests',
-              stats['total'].toString(),
-              Icons.delete_forever,
-              const Color(0xFF4A90E2),
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Pending',
-              stats['pending'].toString(),
-              Icons.pending,
-              const Color(0xFFF39C12),
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Approved',
-              stats['approved'].toString(),
-              Icons.check_circle,
-              const Color(0xFF2ECC71),
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Rejected',
-              stats['rejected'].toString(),
-              Icons.cancel,
-              const Color(0xFFE74C3C),
-            ),
-          ],
-        ),
+        padding: EdgeInsets.all(isMobile ? 12 : 16),
+        child: isMobile
+            ? Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          'Total',
+                          stats['total'].toString(),
+                          Icons.delete_forever,
+                          const Color(0xFF4A90E2),
+                          isCompact: true,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Pending',
+                          stats['pending'].toString(),
+                          Icons.pending,
+                          const Color(0xFFF39C12),
+                          isCompact: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          'Approved',
+                          stats['approved'].toString(),
+                          Icons.check_circle,
+                          const Color(0xFF2ECC71),
+                          isCompact: true,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Rejected',
+                          stats['rejected'].toString(),
+                          Icons.cancel,
+                          const Color(0xFFE74C3C),
+                          isCompact: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  _buildStatCard(
+                    'Total Requests',
+                    stats['total'].toString(),
+                    Icons.delete_forever,
+                    const Color(0xFF4A90E2),
+                    isCompact: isTablet,
+                  ),
+                  SizedBox(width: isTablet ? 8 : 12),
+                  _buildStatCard(
+                    'Pending',
+                    stats['pending'].toString(),
+                    Icons.pending,
+                    const Color(0xFFF39C12),
+                    isCompact: isTablet,
+                  ),
+                  SizedBox(width: isTablet ? 8 : 12),
+                  _buildStatCard(
+                    'Approved',
+                    stats['approved'].toString(),
+                    Icons.check_circle,
+                    const Color(0xFF2ECC71),
+                    isCompact: isTablet,
+                  ),
+                  SizedBox(width: isTablet ? 8 : 12),
+                  _buildStatCard(
+                    'Rejected',
+                    stats['rejected'].toString(),
+                    Icons.cancel,
+                    const Color(0xFFE74C3C),
+                    isCompact: isTablet,
+                  ),
+                ],
+              ),
       );
     });
   }
 
   Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+    String title,
+    String value,
+    IconData icon,
+    Color color, {
+    bool isCompact = false,
+  }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isCompact ? 12 : 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -204,25 +273,27 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: color, size: 24),
+                Icon(icon, color: color, size: isCompact ? 20 : 24),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: isCompact ? 20 : 24,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isCompact ? 4 : 8),
             Text(
               title,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: isCompact ? 11 : 14,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -231,20 +302,26 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   }
 
   Widget _buildSearchAndFilters() {
+    final isMobile = _isMobile(context);
+
     return Container(
       color: const Color.fromRGBO(248, 253, 255, 1),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: 8,
+      ),
       child: Column(
         children: [
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Search by clinic, requester, or reason...',
-              prefixIcon: const Icon(Icons.search),
+              hintText: isMobile ? 'Search...' : 'Search by clinic, requester, or reason...',
+              hintStyle: TextStyle(fontSize: isMobile ? 13 : 14),
+              prefixIcon: Icon(Icons.search, size: isMobile ? 20 : 24),
               suffixIcon: Obx(() {
                 return _controller.searchQuery.value.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: Icon(Icons.clear, size: isMobile ? 20 : 24),
                         onPressed: () {
                           _searchController.clear();
                           _controller.updateSearchQuery('');
@@ -264,38 +341,60 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   width: 2,
                 ),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 16,
+                vertical: isMobile ? 10 : 12,
+              ),
             ),
+            style: TextStyle(fontSize: isMobile ? 13 : 14),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _buildStatusDropdown()),
-              const SizedBox(width: 12),
-              Expanded(child: _buildReasonDropdown()),
-            ],
-          ),
+          isMobile
+              ? Column(
+                  children: [
+                    _buildStatusDropdown(),
+                    const SizedBox(height: 8),
+                    _buildReasonDropdown(),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: _buildStatusDropdown()),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildReasonDropdown()),
+                  ],
+                ),
         ],
       ),
     );
   }
 
   Widget _buildStatusDropdown() {
+    final isMobile = _isMobile(context);
+
     return Obx(() {
       return DropdownButtonFormField<String>(
         dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
         value: _controller.selectedStatus.value,
         decoration: InputDecoration(
           labelText: 'Status',
-          labelStyle: const TextStyle(color: Colors.black),
+          labelStyle: TextStyle(
+            color: Colors.black,
+            fontSize: isMobile ? 13 : 14,
+          ),
           floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
           border: OutlineInputBorder(
             borderSide: const BorderSide(color: Color(0xFF517399)),
             borderRadius: BorderRadius.circular(8),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 10 : 12,
+            vertical: isMobile ? 6 : 8,
+          ),
+        ),
+        style: TextStyle(
+          fontSize: isMobile ? 13 : 14,
+          color: Colors.black,
         ),
         items: ['All', 'pending', 'approved', 'rejected']
             .map((status) => DropdownMenuItem(
@@ -313,8 +412,9 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   }
 
   Widget _buildReasonDropdown() {
+    final isMobile = _isMobile(context);
+
     return Obx(() {
-      // Get unique reasons from all requests
       final reasons = [
         'All',
         ..._controller.allRequests.map((r) => r.reason).toSet()
@@ -325,14 +425,23 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
         value: _controller.selectedReason.value,
         decoration: InputDecoration(
           labelText: 'Reason',
-          labelStyle: const TextStyle(color: Colors.black),
+          labelStyle: TextStyle(
+            color: Colors.black,
+            fontSize: isMobile ? 13 : 14,
+          ),
           floatingLabelStyle: const TextStyle(color: Color(0xFF517399)),
           border: OutlineInputBorder(
             borderSide: const BorderSide(color: Color(0xFF517399)),
             borderRadius: BorderRadius.circular(8),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 10 : 12,
+            vertical: isMobile ? 6 : 8,
+          ),
+        ),
+        style: TextStyle(
+          fontSize: isMobile ? 13 : 14,
+          color: Colors.black,
         ),
         items: reasons
             .map((reason) =>
@@ -374,7 +483,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       }
 
       return ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(_isMobile(context) ? 12 : 16),
         itemCount: _controller.filteredRequests.length,
         itemBuilder: (context, index) {
           final request = _controller.filteredRequests[index];
@@ -386,9 +495,9 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 
   Widget _buildRequestCard(FeedbackDeletionRequest request) {
     return Obx(() {
-      // Get clinic name from cache (which was populated during load)
       final clinicName =
           _controller.clinicNamesCache[request.clinicId] ?? 'Loading...';
+      final isMobile = _isMobile(context);
 
       return FutureBuilder<RatingAndReview?>(
         future: _controller.getReview(request.reviewId),
@@ -397,7 +506,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 
           return Card(
             color: const Color.fromRGBO(242, 250, 252, 1),
-            margin: const EdgeInsets.only(bottom: 12),
+            margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
             elevation: 4,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -405,24 +514,28 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _showRequestDetails(request),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Header with clinic name and status
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: Row(
                             children: [
-                              Icon(Icons.business,
-                                  size: 20, color: Colors.grey[600]),
+                              Icon(
+                                Icons.business,
+                                size: isMobile ? 18 : 20,
+                                color: Colors.grey[600],
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   clinicName,
-                                  style: const TextStyle(
-                                    fontSize: 16,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
                                     fontWeight: FontWeight.w600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -435,11 +548,11 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                       ],
                     ),
 
-                    // NEW: Show review information
+                    // Review information
                     if (review != null) ...[
-                      const SizedBox(height: 12),
+                      SizedBox(height: isMobile ? 8 : 12),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(isMobile ? 10 : 12),
                         decoration: BoxDecoration(
                           color: Colors.blue[50],
                           borderRadius: BorderRadius.circular(8),
@@ -450,42 +563,55 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.rate_review,
-                                    size: 14, color: Colors.blue),
+                                Icon(
+                                  Icons.rate_review,
+                                  size: isMobile ? 12 : 14,
+                                  color: Colors.blue,
+                                ),
                                 const SizedBox(width: 4),
-                                const Text(
+                                Text(
                                   'Review Details',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isMobile ? 11 : 12,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.blue,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Row(
+                            SizedBox(height: isMobile ? 6 : 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
                                 Text(
                                   'By: ${review.userName}',
                                   style: TextStyle(
-                                      fontSize: 12, color: Colors.grey[700]),
+                                    fontSize: isMobile ? 11 : 12,
+                                    color: Colors.grey[700],
+                                  ),
                                 ),
-                                const SizedBox(width: 12),
-                                ...List.generate(5, (index) {
-                                  return Icon(
-                                    index < review.rating
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    size: 14,
-                                    color: Colors.amber,
-                                  );
-                                }),
-                                const SizedBox(width: 4),
-                                Text(
-                                  review.rating.toString(),
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey[700]),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ...List.generate(5, (index) {
+                                      return Icon(
+                                        index < review.rating
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        size: isMobile ? 12 : 14,
+                                        color: Colors.amber,
+                                      );
+                                    }),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      review.rating.toString(),
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 11 : 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -495,7 +621,9 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                               Text(
                                 review.reviewText!,
                                 style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[600]),
+                                  fontSize: isMobile ? 11 : 12,
+                                  color: Colors.grey[600],
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -505,10 +633,14 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                       ),
                     ],
 
-                    const SizedBox(height: 12),
+                    SizedBox(height: isMobile ? 8 : 12),
+
+                    // Reason badge
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 8 : 10,
+                        vertical: isMobile ? 4 : 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange[50],
                         borderRadius: BorderRadius.circular(6),
@@ -517,74 +649,107 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.report_problem,
-                              size: 14, color: Colors.orange[700]),
+                          Icon(
+                            Icons.report_problem,
+                            size: isMobile ? 12 : 14,
+                            color: Colors.orange[700],
+                          ),
                           const SizedBox(width: 4),
-                          Text(
-                            request.reason,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange[700],
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              request.reason,
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                color: Colors.orange[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ),
+
+                    // Additional details
                     if (request.additionalDetails != null &&
                         request.additionalDetails!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      SizedBox(height: isMobile ? 8 : 12),
                       Text(
                         request.additionalDetails!,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isMobile ? 12 : 14,
                           color: Colors.grey[600],
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    Row(
+
+                    SizedBox(height: isMobile ? 8 : 12),
+
+                    // Meta information
+                    Wrap(
+                      spacing: isMobile ? 8 : 16,
+                      runSpacing: 4,
                       children: [
-                        Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Requested by admin',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Admin',
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Icon(Icons.access_time,
-                            size: 16, color: Colors.grey[500]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year}',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.access_time,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year}',
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
+                        if (request.hasAttachments)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.attach_file,
+                                  size: isMobile ? 14 : 16,
+                                  color: Colors.grey[500]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${request.attachments.length} file(s)',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 11 : 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
-                    if (request.hasAttachments) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.attach_file,
-                              size: 16, color: Colors.grey[500]),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${request.attachments.length} attachment(s)',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    ],
+
+                    // Review notes
                     if (request.reviewNotes != null &&
                         request.reviewNotes!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      SizedBox(height: isMobile ? 8 : 12),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(isMobile ? 10 : 12),
                         decoration: BoxDecoration(
                           color: request.status == 'rejected'
                               ? Colors.red[50]
@@ -605,7 +770,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                                   request.status == 'rejected'
                                       ? Icons.error_outline
                                       : Icons.check_circle_outline,
-                                  size: 16,
+                                  size: isMobile ? 14 : 16,
                                   color: request.status == 'rejected'
                                       ? Colors.red[600]
                                       : Colors.green[600],
@@ -614,7 +779,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                                 Text(
                                   'Review Notes',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isMobile ? 11 : 12,
                                     fontWeight: FontWeight.w600,
                                     color: request.status == 'rejected'
                                         ? Colors.red[600]
@@ -623,64 +788,78 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: isMobile ? 6 : 8),
                             Text(
                               request.reviewNotes!,
                               style: TextStyle(
-                                  fontSize: 13, color: Colors.grey[700]),
+                                fontSize: isMobile ? 11 : 13,
+                                color: Colors.grey[700],
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
+
+                    SizedBox(height: isMobile ? 8 : 12),
+
+                    // Action buttons
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Row(
-                          children: [
-                            if (request.isPending) ...[
-                              ElevatedButton.icon(
-                                onPressed: _controller.isProcessing.value
-                                    ? null
-                                    : () => _handleDeletionRequest(request),
-                                icon: const Icon(Icons.gavel,
-                                    size: 16, color: Colors.white),
-                                label: const Text('Process'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromARGB(255, 81, 115, 153),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
+                        if (request.isPending) ...[
+                          Flexible(
+                            child: ElevatedButton.icon(
+                              onPressed: _controller.isProcessing.value
+                                  ? null
+                                  : () => _handleDeletionRequest(request),
+                              icon: Icon(
+                                Icons.gavel,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.white,
+                              ),
+                              label: Text(
+                                'Process',
+                                style: TextStyle(fontSize: isMobile ? 12 : 14),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    const Color.fromARGB(255, 81, 115, 153),
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isMobile ? 12 : 16,
+                                  vertical: isMobile ? 6 : 8,
                                 ),
                               ),
-                            ],
-                            if (request.isApproved || request.isRejected) ...[
-                              ElevatedButton.icon(
-                                onPressed: _controller.isProcessing.value
-                                    ? null
-                                    : () => _deleteRequest(request),
-                                icon: const Icon(
-                                  Icons.delete_forever,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                                label: const Text('Delete Record'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE74C3C),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
+                            ),
+                          ),
+                        ],
+                        if (request.isApproved || request.isRejected) ...[
+                          Flexible(
+                            child: ElevatedButton.icon(
+                              onPressed: _controller.isProcessing.value
+                                  ? null
+                                  : () => _deleteRequest(request),
+                              icon: Icon(
+                                Icons.delete_forever,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.white,
+                              ),
+                              label: Text(
+                                isMobile ? 'Delete' : 'Delete Record',
+                                style: TextStyle(fontSize: isMobile ? 12 : 14),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE74C3C),
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isMobile ? 12 : 16,
+                                  vertical: isMobile ? 6 : 8,
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -694,6 +873,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   }
 
   Widget _buildStatusChip(String status) {
+    final isMobile = _isMobile(context);
     Color color;
     switch (status) {
       case 'approved':
@@ -710,7 +890,10 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 6 : 8,
+        vertical: isMobile ? 3 : 4,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -720,7 +903,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
         status.capitalize!,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: isMobile ? 10 : 11,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -729,13 +912,18 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = _isMobile(context);
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildDrawer(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.menu_rounded,
-              color: Color.fromRGBO(81, 115, 153, 1)),
+          icon: Icon(
+            Icons.menu_rounded,
+            color: const Color.fromRGBO(81, 115, 153, 1),
+            size: isMobile ? 22 : 24,
+          ),
           onPressed: () {
             _scaffoldKey.currentState?.openDrawer();
           },
@@ -743,16 +931,23 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
         ),
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.delete_forever,
-                color: Color.fromARGB(255, 81, 115, 153)),
-            SizedBox(width: 8),
-            Text(
-              'Deletion Reports',
-              style: TextStyle(
-                color: Color.fromARGB(255, 81, 115, 153),
-                fontWeight: FontWeight.bold,
+            Icon(
+              Icons.delete_forever,
+              color: const Color.fromARGB(255, 81, 115, 153),
+              size: isMobile ? 20 : 24,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isMobile ? 'Deletion Reports' : 'Deletion Reports',
+                style: TextStyle(
+                  color: const Color.fromARGB(255, 81, 115, 153),
+                  fontWeight: FontWeight.bold,
+                  fontSize: isMobile ? 16 : 20,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -762,18 +957,21 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
         actions: [
           Obx(() {
             if (_controller.isLoading.value) {
-              return const Padding(
-                padding: EdgeInsets.all(16.0),
+              return Padding(
+                padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
                 child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  width: isMobile ? 18 : 20,
+                  height: isMobile ? 18 : 20,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
                 ),
               );
             }
             return IconButton(
-              icon: const Icon(Icons.refresh,
-                  color: Color.fromRGBO(81, 115, 153, 1)),
+              icon: Icon(
+                Icons.refresh,
+                color: const Color.fromRGBO(81, 115, 153, 1),
+                size: isMobile ? 22 : 24,
+              ),
               onPressed: () => _controller.loadAllDeletionRequests(),
               tooltip: 'Refresh',
             );
@@ -792,6 +990,8 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   }
 
   Widget _buildDrawer(BuildContext context) {
+    final isMobile = _isMobile(context);
+
     return Drawer(
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       child: Column(
@@ -799,7 +999,12 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           // Header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+            padding: EdgeInsets.fromLTRB(
+              isMobile ? 16 : 24,
+              isMobile ? 48 : 60,
+              isMobile ? 16 : 24,
+              isMobile ? 16 : 24,
+            ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -814,23 +1019,23 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isMobile ? 10 : 12),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.admin_panel_settings_rounded,
                     color: Colors.white,
-                    size: 32,
+                    size: isMobile ? 28 : 32,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: isMobile ? 12 : 16),
+                Text(
                   'Developer',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: isMobile ? 20 : 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -839,7 +1044,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                   'Management Panel',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
-                    fontSize: 14,
+                    fontSize: isMobile ? 12 : 14,
                   ),
                 ),
               ],
@@ -849,7 +1054,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           // Menu Items
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 4 : 8),
               children: [
                 _buildDrawerItem(
                   context,
@@ -898,9 +1103,12 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                     );
                   },
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Divider(),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 16,
+                    vertical: isMobile ? 4 : 8,
+                  ),
+                  child: const Divider(),
                 ),
               ],
             ),
@@ -908,7 +1116,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 
           // Logout Button
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -923,7 +1131,9 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
               top: false,
               child: _isLoggingOut
                   ? Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(
+                        vertical: isMobile ? 14 : 16,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
@@ -933,24 +1143,24 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
+                            width: isMobile ? 18 : 20,
+                            height: isMobile ? 18 : 20,
+                            child: const CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor:
                                   AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           Text(
                             'Logging Out...',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: isMobile ? 14 : 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -976,7 +1186,9 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(
+                          vertical: isMobile ? 14 : 16,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
@@ -993,20 +1205,20 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                             ),
                           ],
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.logout_rounded,
                               color: Colors.white,
-                              size: 20,
+                              size: isMobile ? 18 : 20,
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
                               'Log Out',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: isMobile ? 14 : 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1028,13 +1240,18 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final isMobile = _isMobile(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 6 : 8,
+        vertical: isMobile ? 2 : 4,
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -1045,7 +1262,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(isMobile ? 8 : 10),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
@@ -1058,37 +1275,37 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
                 child: Icon(
                   icon,
                   color: const Color.fromRGBO(81, 115, 153, 1),
-                  size: 24,
+                  size: isMobile ? 20 : 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isMobile ? 12 : 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 15,
+                      style: TextStyle(
+                        fontSize: isMobile ? 13 : 15,
                         fontWeight: FontWeight.w600,
-                        color: Color.fromRGBO(81, 115, 153, 1),
+                        color: const Color.fromRGBO(81, 115, 153, 1),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: isMobile ? 11 : 12,
                         color: Colors.grey[600],
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: Color.fromRGBO(81, 115, 153, 0.5),
+                size: isMobile ? 14 : 16,
+                color: const Color.fromRGBO(81, 115, 153, 0.5),
               ),
             ],
           ),
@@ -1098,29 +1315,38 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
   }
 }
 
-// ============= DIALOG WIDGETS =============
+// ============= RESPONSIVE DIALOG WIDGETS =============
 
 class RequestDetailDialog extends StatelessWidget {
   final FeedbackDeletionRequest request;
   final String clinicName;
-  final RatingAndReview? review; // ADD THIS LINE
+  final RatingAndReview? review;
 
   const RequestDetailDialog({
     super.key,
     required this.request,
     required this.clinicName,
-    this.review, // ADD THIS LINE
+    this.review,
   });
+
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < mobileWidth;
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = _isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Dialog(
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxWidth: 600),
-        padding: const EdgeInsets.all(24),
+        width: isMobile ? screenWidth * 0.95 : screenWidth * 0.9,
+        constraints: BoxConstraints(
+          maxWidth: isMobile ? 500 : 600,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1128,29 +1354,37 @@ class RequestDetailDialog extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.delete_forever,
-                      color: Color(0xFF517399), size: 24),
+                  Icon(
+                    Icons.delete_forever,
+                    color: const Color(0xFF517399),
+                    size: isMobile ? 20 : 24,
+                  ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Deletion Request Details',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: isMobile ? 16 : 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: Icon(
+                      Icons.close,
+                      size: isMobile ? 20 : 24,
+                    ),
                   ),
                 ],
               ),
               const Divider(),
-              const SizedBox(height: 16),
+              SizedBox(height: isMobile ? 12 : 16),
 
-              // NEW: Show review details if available
+              // Review details if available
               if (review != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isMobile ? 12 : 16),
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(12),
@@ -1159,76 +1393,104 @@ class RequestDetailDialog extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.rate_review, color: Colors.blue, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Review Being Requested for Deletion',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                          Icon(
+                            Icons.rate_review,
+                            color: Colors.blue,
+                            size: isMobile ? 18 : 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Review Being Requested for Deletion',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      _buildDetailRow('Reviewer:', review!.userName),
+                      SizedBox(height: isMobile ? 10 : 12),
+                      _buildDetailRow(
+                        context,
+                        'Reviewer:',
+                        review!.userName,
+                      ),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(
-                            width: 140,
+                          SizedBox(
+                            width: isMobile ? 100 : 140,
                             child: Text(
                               'Rating:',
                               style: TextStyle(
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF7F8C8D),
+                                color: const Color(0xFF7F8C8D),
+                                fontSize: isMobile ? 12 : 14,
                               ),
                             ),
                           ),
                           Expanded(
-                            child: Row(
+                            child: Wrap(
+                              spacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 ...List.generate(5, (index) {
                                   return Icon(
                                     index < review!.rating
                                         ? Icons.star
                                         : Icons.star_border,
-                                    size: 18,
+                                    size: isMobile ? 16 : 18,
                                     color: Colors.amber,
                                   );
                                 }),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 4),
                                 Text(
                                   '${review!.rating}/5.0',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      _buildDetailRow('Service:', review!.serviceName),
+                      _buildDetailRow(
+                        context,
+                        'Service:',
+                        review!.serviceName,
+                      ),
                       if (review!.petName != null)
-                        _buildDetailRow('Pet Name:', review!.petName!),
-                      _buildDetailRow('Posted:', review!.getTimeAgo()),
+                        _buildDetailRow(
+                          context,
+                          'Pet Name:',
+                          review!.petName!,
+                        ),
+                      _buildDetailRow(
+                        context,
+                        'Posted:',
+                        review!.getTimeAgo(),
+                      ),
                       if (review!.reviewText != null &&
                           review!.reviewText!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        const Text(
+                        SizedBox(height: isMobile ? 6 : 8),
+                        Text(
                           'Review Text:',
                           style: TextStyle(
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF7F8C8D),
+                            color: const Color(0xFF7F8C8D),
+                            fontSize: isMobile ? 12 : 14,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.all(isMobile ? 10 : 12),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
@@ -1236,21 +1498,29 @@ class RequestDetailDialog extends StatelessWidget {
                           ),
                           child: Text(
                             review!.reviewText!,
-                            style: const TextStyle(fontSize: 14, height: 1.5),
+                            style: TextStyle(
+                              fontSize: isMobile ? 12 : 14,
+                              height: 1.5,
+                            ),
                           ),
                         ),
                       ],
                       if (review!.hasImages) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: isMobile ? 6 : 8),
                         Row(
                           children: [
-                            const Icon(Icons.image,
-                                size: 16, color: Colors.blue),
+                            Icon(
+                              Icons.image,
+                              size: isMobile ? 14 : 16,
+                              color: Colors.blue,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${review!.images.length} image(s) attached',
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.blue),
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                color: Colors.blue,
+                              ),
                             ),
                           ],
                         ),
@@ -1258,42 +1528,56 @@ class RequestDetailDialog extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isMobile ? 12 : 16),
                 const Divider(),
-                const SizedBox(height: 16),
+                SizedBox(height: isMobile ? 12 : 16),
               ],
 
-              // Original request details
-              const Text(
+              // Request information
+              Text(
                 'Request Information',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: isMobile ? 14 : 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildDetailRow('Vet Clinic:', clinicName),
-              _buildDetailRow('Reason:', request.reason),
-              _buildDetailRow('Status:', request.status.capitalize!),
+              SizedBox(height: isMobile ? 10 : 12),
+              _buildDetailRow(context, 'Vet Clinic:', clinicName),
+              _buildDetailRow(context, 'Reason:', request.reason),
               _buildDetailRow(
+                context,
+                'Status:',
+                request.status.capitalize!,
+              ),
+              _buildDetailRow(
+                context,
                 'Date Requested:',
                 '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year} ${request.requestedAt.hour}:${request.requestedAt.minute.toString().padLeft(2, '0')}',
               ),
               if (request.reviewedAt != null)
                 _buildDetailRow(
+                  context,
                   'Date Processed:',
                   '${request.reviewedAt!.day}/${request.reviewedAt!.month}/${request.reviewedAt!.year} ${request.reviewedAt!.hour}:${request.reviewedAt!.minute.toString().padLeft(2, '0')}',
                 ),
               if (request.reviewedBy != null)
-                _buildDetailRow('Reviewed By:', request.reviewedBy!),
-              const SizedBox(height: 16),
+                _buildDetailRow(context, 'Reviewed By:', request.reviewedBy!),
+              SizedBox(height: isMobile ? 12 : 16),
+
+              // Additional details
               if (request.additionalDetails != null &&
                   request.additionalDetails!.isNotEmpty) ...[
-                const Text(
+                Text(
                   'Additional Details:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isMobile ? 14 : 16,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 6 : 8),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isMobile ? 10 : 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FDFF),
                     borderRadius: BorderRadius.circular(8),
@@ -1301,21 +1585,29 @@ class RequestDetailDialog extends StatelessWidget {
                   ),
                   child: Text(
                     request.additionalDetails!,
-                    style: const TextStyle(fontSize: 14, height: 1.5),
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
+
+              // Review notes
               if (request.reviewNotes != null &&
                   request.reviewNotes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: isMobile ? 12 : 16),
+                Text(
                   'Review Notes:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isMobile ? 14 : 16,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 6 : 8),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isMobile ? 10 : 12),
                   decoration: BoxDecoration(
                     color: request.status == 'rejected'
                         ? Colors.red[50]
@@ -1329,29 +1621,39 @@ class RequestDetailDialog extends StatelessWidget {
                   ),
                   child: Text(
                     request.reviewNotes!,
-                    style: const TextStyle(fontSize: 14, height: 1.5),
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
+
+              // Attachments
               if (request.hasAttachments) ...[
-                const SizedBox(height: 16),
+                SizedBox(height: isMobile ? 12 : 16),
                 Text(
                   'Attachments (${request.attachments.length}):',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isMobile ? 14 : 16,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 6 : 8),
                 ...request.attachments.map((attachmentId) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        const Icon(Icons.attach_file, size: 16),
+                        Icon(
+                          Icons.attach_file,
+                          size: isMobile ? 14 : 16,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Attachment ID: $attachmentId',
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: isMobile ? 11 : 12),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -1360,7 +1662,8 @@ class RequestDetailDialog extends StatelessWidget {
                   );
                 }),
               ],
-              const SizedBox(height: 24),
+
+              SizedBox(height: isMobile ? 20 : 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -1369,8 +1672,15 @@ class RequestDetailDialog extends StatelessWidget {
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0xFF517399),
                       foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16 : 24,
+                        vertical: isMobile ? 10 : 12,
+                      ),
                     ),
-                    child: const Text('Close'),
+                    child: Text(
+                      'Close',
+                      style: TextStyle(fontSize: isMobile ? 13 : 14),
+                    ),
                   ),
                 ],
               ),
@@ -1381,26 +1691,32 @@ class RequestDetailDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    final isMobile = _isMobile(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 140,
+            width: isMobile ? 100 : 140,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF7F8C8D),
+                color: const Color(0xFF7F8C8D),
+                fontSize: isMobile ? 12 : 14,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: isMobile ? 12 : 14,
+              ),
             ),
           ),
         ],
