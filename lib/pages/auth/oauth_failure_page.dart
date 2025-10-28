@@ -8,19 +8,28 @@ class OAuthFailurePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('>>> OAuth Failed - Redirecting to login...');
+      
       Get.offAllNamed(Routes.login);
+      
       Get.snackbar(
-        'Sign In Failed',
-        'Google Sign-In was cancelled or failed',
+        'Sign In Cancelled',
+        'Google Sign-In was cancelled or failed. Please try again.',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade900,
+        backgroundColor: Colors.orange.shade100,
+        colorText: Colors.orange.shade900,
+        duration: const Duration(seconds: 4),
       );
     });
 
     return const Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
-        child: Text('Redirecting...'),
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color.fromARGB(255, 81, 115, 153),
+          ),
+        ),
       ),
     );
   }
