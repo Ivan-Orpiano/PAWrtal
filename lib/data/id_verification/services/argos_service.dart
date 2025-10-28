@@ -12,12 +12,6 @@ class ArgosService {
     final baseUrl = AppwriteConstants.argosLiveformBaseUrl;
     final pid = AppwriteConstants.argosProjectId;
 
-    print('>>> ============================================');
-    print('>>> GENERATING ARGOS URL');
-    print('>>> User ID: $userId');
-    print('>>> Email: $email');
-    print('>>> ============================================');
-
     // Build URL with query parameters
     final uri = Uri.parse(baseUrl).replace(
       queryParameters: {
@@ -31,9 +25,7 @@ class ArgosService {
       },
     );
 
-    print('>>> Generated URL: $uri');
-    print('>>> ============================================');
-    
+    print('>>> ARGOS Verification URL generated: $uri');
     return uri.toString();
   }
 

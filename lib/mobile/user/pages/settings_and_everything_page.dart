@@ -419,7 +419,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
           VerificationStatusWidget(
             userId: userId,
             email: userEmail,
-            userName: userName,
             userRole: userRole,
             showButton: true,
             onVerificationComplete: () {

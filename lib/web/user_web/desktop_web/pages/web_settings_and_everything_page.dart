@@ -382,7 +382,6 @@ class _WebSettingsAndEverythingPageState
           VerificationStatusWidget(
             userId: userId,
             email: userEmail,
-            userName: userName,
             userRole: userRole,
             showButton: true,
             onVerificationComplete: () {
