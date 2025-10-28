@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:capstone_app/pages/auth/oauth_callback_page.dart';
+import 'package:capstone_app/pages/routes/app_pages.dart';
 
 class OAuthSuccessPage extends StatelessWidget {
   const OAuthSuccessPage({super.key});
@@ -9,12 +9,18 @@ class OAuthSuccessPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Immediately redirect to callback handler
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.off(() => const OAuthCallbackPage());
+      print('>>> OAuth Success - Redirecting to callback...');
+      Get.offNamed(Routes.oauthCallback);
     });
 
     return const Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color.fromARGB(255, 81, 115, 153),
+          ),
+        ),
       ),
     );
   }

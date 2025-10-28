@@ -385,28 +385,7 @@ class _LoginPageState extends State<LoginPage> {
                           onTap: controller.isGoogleLoading.value
                               ? null
                               : () async {
-                                  try {
-                                    controller.isGoogleLoading.value = true;
-                                    final value = await appWriteProvider
-                                        .signInWithGoogle();
-                                    if (value) {
-                                      CustomSnackBar.showInfoSnackBar(
-                                        context: Get.overlayContext,
-                                        title: "Success",
-                                        message:
-                                            "Logged in with Google successfully",
-                                      );
-                                      Get.toNamed(Routes.userHome);
-                                    } else {
-                                      CustomSnackBar.showErrorSnackBar(
-                                        context: Get.overlayContext,
-                                        title: "Error",
-                                        message: "Failed to login with Google",
-                                      );
-                                    }
-                                  } finally {
-                                    controller.isGoogleLoading.value = false;
-                                  }
+                                  await controller.signInWithGoogle();
                                 },
                           child: Container(
                             width: 50,

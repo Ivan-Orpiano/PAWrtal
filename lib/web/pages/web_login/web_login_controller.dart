@@ -248,25 +248,23 @@ class WebLoginController extends GetxController {
 
     try {
       isGoogleLoading.value = true;
+      errorMessage.value = '';
 
-      // CRITICAL FIX: Clear existing controllers before Google sign-in
-      _clearExistingControllers();
+      print('>>> WEB LOGIN: Initiating Google Sign-In...');
 
-      final appWriteProvider = AppWriteProvider();
-      final success = await appWriteProvider.signInWithGoogle();
+      final appWriteProvider = Get.find<AppWriteProvider>();
 
-      if (success) {
-        await _getStorage.write("role", "user");
-        _navigateBasedOnRole("user");
+      // This will redirect to Google OAuth
+      await appWriteProvider.signInWithGoogle();
 
-        WebErrorHandler.handleSuccess('Logged in with Google successfully');
-      } else {
-        WebErrorHandler.handleError('Failed to login with Google');
-      }
+      // Code won't reach here due to redirect
     } catch (e) {
-      WebErrorHandler.handleError(e, context: 'Google Sign In');
-    } finally {
-      isLoading.value = false;
+      print('>>> WEB LOGIN: Google Sign-In error: $e');
+
+      isGoogleLoading.value = false;
+
+      errorMessage.value =
+          'Google Sign-In failed. Please try again or use email/password.';
     }
   }
 

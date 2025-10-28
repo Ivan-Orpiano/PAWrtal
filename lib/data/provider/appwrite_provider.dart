@@ -336,46 +336,46 @@ class AppWriteProvider {
   }
 
   Future<bool> signInWithGoogle() async {
-  try {
-    print('>>> ============================================');
-    print('>>> STARTING GOOGLE SIGN-IN');
-    print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
-    print('>>> ============================================');
+    try {
+      print('>>> ============================================');
+      print('>>> STARTING GOOGLE OAUTH');
+      print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
+      print('>>> ============================================');
 
-    // Determine success and failure URLs based on environment
-    final String successUrl = kIsWeb 
-        ? '${Uri.base.origin}/#/auth/success'  // Uses current domain
-        : 'http://localhost:3000/#/auth/success';
-        
-    final String failureUrl = kIsWeb
-        ? '${Uri.base.origin}/#/auth/failure'
-        : 'http://localhost:3000/#/auth/failure';
+      // Get current origin for redirect URLs
+      final String baseUrl = kIsWeb ? Uri.base.origin : 'http://localhost:3000';
 
-    print('>>> Success URL: $successUrl');
-    print('>>> Failure URL: $failureUrl');
+      final String successUrl = '$baseUrl/#/auth/success';
+      final String failureUrl = '$baseUrl/#/auth/failure';
 
-    final response = await account?.createOAuth2Session(
-      provider: OAuthProvider.google,
-      success: successUrl,
-      failure: failureUrl,
-      scopes: [
-        "profile",
-        "email",
-      ],
-    );
+      print('>>> Base URL: $baseUrl');
+      print('>>> Success URL: $successUrl');
+      print('>>> Failure URL: $failureUrl');
 
-    print('>>> OAuth2 session created');
-    print('>>> Response: $response');
-    print('>>> ============================================');
+      // CRITICAL: This will redirect the current window to Google OAuth
+      // After authentication, Google will redirect to successUrl
+      await account?.createOAuth2Session(
+        provider: OAuthProvider.google,
+        success: successUrl,
+        failure: failureUrl,
+        scopes: [
+          "profile",
+          "email",
+        ],
+      );
 
-    return true;
-  } catch (e) {
-    print('>>> ============================================');
-    print('>>> GOOGLE SIGN-IN ERROR: $e');
-    print('>>> ============================================');
-    return false;
+      print('>>> OAuth session creation initiated');
+      print('>>> Browser will redirect to Google...');
+      print('>>> ============================================');
+
+      return true;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> GOOGLE OAUTH ERROR: $e');
+      print('>>> ============================================');
+      return false;
+    }
   }
-}
 
   Future<bool> sendVerificationEmail() async {
     try {

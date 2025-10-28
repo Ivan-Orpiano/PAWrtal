@@ -408,6 +408,32 @@ class LoginController extends GetxController {
     }
   }
 
+  Future<void> signInWithGoogle() async {
+    if (isGoogleLoading.value) return;
+
+    try {
+      isGoogleLoading.value = true;
+      errorMessage.value = '';
+
+      print('>>> LOGIN: Initiating Google Sign-In...');
+
+      final appWriteProvider = Get.find<AppWriteProvider>();
+
+      // This will redirect to Google OAuth
+      // After success, user will land on /auth/success -> /auth/callback
+      await appWriteProvider.signInWithGoogle();
+
+      // Code won't reach here due to redirect
+    } catch (e) {
+      print('>>> LOGIN: Google Sign-In error: $e');
+
+      isGoogleLoading.value = false;
+
+      errorMessage.value =
+          'Google Sign-In failed. Please try again or use email/password.';
+    }
+  }
+
   void moveToSignUp() {
     clearTextEditingControllers();
     Get.toNamed(Routes.signup);

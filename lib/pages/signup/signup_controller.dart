@@ -361,19 +361,22 @@ class SignUpController extends GetxController {
       isGoogleLoading.value = true;
       _clearAllErrors();
 
-      final appWriteProvider = AppWriteProvider();
-      final success = await appWriteProvider.signInWithGoogle();
+      print('>>> WEB SIGNUP: Initiating Google Sign-Up...');
 
-      if (success) {
-        Get.offAllNamed(Routes.userHome);
-      } else {
-        generalError.value =
-            'Failed to create account with Google. Please try again.';
-      }
+      final appWriteProvider = Get.find<AppWriteProvider>();
+
+      // This will redirect to Google OAuth
+      // The callback page will create user in database if new
+      await appWriteProvider.signInWithGoogle();
+
+      // Code won't reach here due to redirect
     } catch (e) {
-      generalError.value = 'Google sign-up error';
-    } finally {
+      print('>>> WEB SIGNUP: Google Sign-Up error: $e');
+
       isGoogleLoading.value = false;
+
+      generalError.value =
+          'Google Sign-Up failed. Please try again or use email/password.';
     }
   }
 
