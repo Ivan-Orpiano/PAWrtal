@@ -1,4 +1,6 @@
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
+import 'package:capstone_app/web/dimensions.dart';
+import 'package:capstone_app/web/responsive_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -9,7 +11,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterin
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
-import 'dart:async'; 
+import 'dart:async';
 
 class AdminFeedbackManagement extends StatefulWidget {
   const AdminFeedbackManagement({super.key});
@@ -22,40 +24,584 @@ class AdminFeedbackManagement extends StatefulWidget {
 class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   late WebFeedbackController controller;
   final TextEditingController searchController = TextEditingController();
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggingOut = false;
+  Timer? _timeUpdateTimer;
 
-    Timer? _timeUpdateTimer; 
-
-    @override
-    void initState() {
-      super.initState();
-         _timeUpdateTimer?.cancel(); 
-      controller = Get.put(WebFeedbackController(
-        authRepository: Get.find<AuthRepository>(),
-        session: Get.find<UserSessionService>(),
-      ));
-      controller.loadAllFeedback();
-        _timeUpdateTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+  @override
+  void initState() {
+    super.initState();
+    _timeUpdateTimer?.cancel();
+    controller = Get.put(WebFeedbackController(
+      authRepository: Get.find<AuthRepository>(),
+      session: Get.find<UserSessionService>(),
+    ));
+    controller.loadAllFeedback();
+    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
-        setState(() {}); 
+        setState(() {});
       }
     });
-    }
+  }
 
+  @override
+  void dispose() {
+    _timeUpdateTimer?.cancel();
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(
+      mobileBody: () => _buildMobileLayout(),
+      tabletBody: () => _buildTabletLayout(),
+      desktopBody: () => _buildDesktopLayout(),
+    );
+  }
+
+  // ==================== MOBILE LAYOUT ====================
+  Widget _buildMobileLayout() {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded, color: Color(0xFF517399)),
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
-          },
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          tooltip: 'Menu',
+        ),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'System Reports',
+              style: TextStyle(
+                color: Color(0xFF517399),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF517399), size: 20),
+            onPressed: () => controller.loadAllFeedback(),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(context),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      body: Column(
+        children: [
+          _buildMobileStatsCards(),
+          _buildMobileFiltersSection(),
+          Expanded(child: _buildFeedbackList(isMobile: true)),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => controller.clearFilters(),
+        backgroundColor: const Color(0xFF517399),
+        child: const Icon(Icons.filter_list_off, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildMobileStatsCards() {
+    return Obx(() => Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Total',
+                      controller.feedbackStats['total']?.toString() ?? '0',
+                      Colors.blue,
+                      Icons.feedback,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Pending',
+                      controller.feedbackStats['pending']?.toString() ?? '0',
+                      Colors.orange,
+                      Icons.schedule,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Progress',
+                      controller.feedbackStats['inProgress']?.toString() ?? '0',
+                      Colors.blue,
+                      Icons.autorenew,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Resolved',
+                      controller.feedbackStats['resolved']?.toString() ?? '0',
+                      Colors.green,
+                      Icons.check_circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Critical',
+                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      Colors.red,
+                      Icons.warning,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ));
+  }
+
+  Widget _buildCompactStatCard(
+      String title, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileFiltersSection() {
+    return Container(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Search feedback...',
+              hintStyle: const TextStyle(fontSize: 14),
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        searchController.clear();
+                        controller.updateSearchQuery('');
+                      },
+                    )
+                  : const SizedBox()),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF517399)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (value) => controller.updateSearchQuery(value),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Obx(() => _buildCompactFilterChip<FeedbackStatus>(
+                      'Status',
+                      controller.statusFilter.value,
+                      FeedbackStatus.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearStatus: true);
+                        } else {
+                          controller.updateFilters(status: value);
+                        }
+                      },
+                      (status) => status.displayName,
+                    )),
+                const SizedBox(width: 8),
+                Obx(() => _buildCompactFilterChip<FeedbackType>(
+                      'Type',
+                      controller.typeFilter.value,
+                      FeedbackType.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearType: true);
+                        } else {
+                          controller.updateFilters(type: value);
+                        }
+                      },
+                      (type) => type.displayName,
+                    )),
+                const SizedBox(width: 8),
+                Obx(() => _buildCompactFilterChip<FeedbackCategory>(
+                      'Category',
+                      controller.categoryFilter.value,
+                      FeedbackCategory.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearCategory: true);
+                        } else {
+                          controller.updateFilters(category: value);
+                        }
+                      },
+                      (category) => category.displayName,
+                    )),
+                const SizedBox(width: 8),
+                Obx(() => _buildCompactFilterChip<Priority>(
+                      'Priority',
+                      controller.priorityFilter.value,
+                      Priority.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearPriority: true);
+                        } else {
+                          controller.updateFilters(priority: value);
+                        }
+                      },
+                      (priority) => priority.displayName,
+                    )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactFilterChip<T>(
+    String label,
+    T? selectedValue,
+    List<T> items,
+    Function(T?) onChanged,
+    String Function(T) getText,
+  ) {
+    return PopupMenuButton<T>(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      offset: const Offset(0, 40),
+      onSelected: onChanged,
+      itemBuilder: (context) => [
+        PopupMenuItem<T>(
+          value: null,
+          child: Text('All $label', style: const TextStyle(fontSize: 13)),
+        ),
+        ...items.map((item) => PopupMenuItem<T>(
+              value: item,
+              child: Text(getText(item), style: const TextStyle(fontSize: 13)),
+            )),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selectedValue != null ? const Color(0xFF517399) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selectedValue != null ? const Color(0xFF517399) : Colors.grey[300]!,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              selectedValue != null ? getText(selectedValue) : label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selectedValue != null ? Colors.white : Colors.grey[700],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.arrow_drop_down,
+              size: 16,
+              color: selectedValue != null ? Colors.white : Colors.grey[700],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== TABLET LAYOUT ====================
+  Widget _buildTabletLayout() {
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.menu_rounded, color: Color(0xFF517399)),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          tooltip: 'Menu',
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.feedback, color: Color(0xFF517399)),
+            SizedBox(width: 8),
+            Text(
+              'System Reports',
+              style: TextStyle(
+                color: Color(0xFF517399),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF517399)),
+            onPressed: () => controller.loadAllFeedback(),
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list_off, color: Color(0xFF517399)),
+            onPressed: () => controller.clearFilters(),
+            tooltip: 'Clear Filters',
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+      drawer: _buildDrawer(context),
+      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+      body: Column(
+        children: [
+          _buildTabletStatsCards(),
+          _buildTabletFiltersSection(),
+          Expanded(child: _buildFeedbackList(isTablet: true)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletStatsCards() {
+    return Obx(() => Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total',
+                      controller.feedbackStats['total']?.toString() ?? '0',
+                      Colors.blue,
+                      Icons.feedback,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Pending',
+                      controller.feedbackStats['pending']?.toString() ?? '0',
+                      Colors.orange,
+                      Icons.schedule,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildStatCard(
+                      'In Progress',
+                      controller.feedbackStats['inProgress']?.toString() ?? '0',
+                      Colors.blue,
+                      Icons.autorenew,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Resolved',
+                      controller.feedbackStats['resolved']?.toString() ?? '0',
+                      Colors.green,
+                      Icons.check_circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Critical',
+                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      Colors.red,
+                      Icons.warning,
+                    ),
+                  ),
+                  const Expanded(child: SizedBox()),
+                ],
+              ),
+            ],
+          ),
+        ));
+  }
+
+  Widget _buildTabletFiltersSection() {
+    return Container(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Search feedback...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        searchController.clear();
+                        controller.updateSearchQuery('');
+                      },
+                    )
+                  : const SizedBox()),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF517399)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+            onChanged: (value) => controller.updateSearchQuery(value),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() => _buildFilterDropdown<FeedbackStatus>(
+                      'Status',
+                      controller.statusFilter.value,
+                      FeedbackStatus.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearStatus: true);
+                        } else {
+                          controller.updateFilters(status: value);
+                        }
+                      },
+                      (status) => status.displayName,
+                    )),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Obx(() => _buildFilterDropdown<FeedbackType>(
+                      'Type',
+                      controller.typeFilter.value,
+                      FeedbackType.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearType: true);
+                        } else {
+                          controller.updateFilters(type: value);
+                        }
+                      },
+                      (type) => type.displayName,
+                    )),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() => _buildFilterDropdown<FeedbackCategory>(
+                      'Category',
+                      controller.categoryFilter.value,
+                      FeedbackCategory.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearCategory: true);
+                        } else {
+                          controller.updateFilters(category: value);
+                        }
+                      },
+                      (category) => category.displayName,
+                    )),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Obx(() => _buildFilterDropdown<Priority>(
+                      'Priority',
+                      controller.priorityFilter.value,
+                      Priority.values,
+                      (value) {
+                        if (value == null) {
+                          controller.updateFilters(clearPriority: true);
+                        } else {
+                          controller.updateFilters(priority: value);
+                        }
+                      },
+                      (priority) => priority.displayName,
+                    )),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== DESKTOP LAYOUT ====================
+  Widget _buildDesktopLayout() {
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.menu_rounded, color: Color(0xFF517399)),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           tooltip: 'Menu',
         ),
         title: const Row(
@@ -99,52 +645,51 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   }
 
   Widget _buildStatsCards() {
-  return Obx(() => Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _buildStatCard(
-              'Total',
-              controller.feedbackStats['total']?.toString() ?? '0',
-              Colors.blue,
-              Icons.feedback,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Pending',
-              controller.feedbackStats['pending']?.toString() ?? '0',
-              Colors.orange,
-              Icons.schedule, 
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'In Progress',
-              controller.feedbackStats['inProgress']?.toString() ?? '0',
-              Colors.blue,
-              Icons.autorenew,             
+    return Obx(() => Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _buildStatCard(
+                'Total',
+                controller.feedbackStats['total']?.toString() ?? '0',
+                Colors.blue,
+                Icons.feedback,
               ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Resolved',
-              controller.feedbackStats['resolved']?.toString() ?? '0',
-              Colors.green,
-              Icons.check_circle,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Critical',
-              controller.feedbackStats['critical']?.toString() ?? '0',
-              Colors.red,
-              Icons.warning,
-            ),
-          ],
-        ),
-      ));
-}
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Pending',
+                controller.feedbackStats['pending']?.toString() ?? '0',
+                Colors.orange,
+                Icons.schedule,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'In Progress',
+                controller.feedbackStats['inProgress']?.toString() ?? '0',
+                Colors.blue,
+                Icons.autorenew,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Resolved',
+                controller.feedbackStats['resolved']?.toString() ?? '0',
+                Colors.green,
+                Icons.check_circle,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Critical',
+                controller.feedbackStats['critical']?.toString() ?? '0',
+                Colors.red,
+                Icons.warning,
+              ),
+            ],
+          ),
+        ));
+  }
 
-  Widget _buildStatCard(
-      String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -197,7 +742,6 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          // Search Bar
           TextField(
             controller: searchController,
             decoration: InputDecoration(
@@ -218,18 +762,13 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide:
-                    const BorderSide(color: Color(0xFF517399), width: 2),
+                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             onChanged: (value) => controller.updateSearchQuery(value),
           ),
           const SizedBox(height: 12),
-
-          // Filter Dropdowns
-
           Row(
             children: [
               Expanded(
@@ -238,7 +777,6 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                       controller.statusFilter.value,
                       FeedbackStatus.values,
                       (value) {
-                        // If value is null (All selected), clear the filter
                         if (value == null) {
                           controller.updateFilters(clearStatus: true);
                         } else {
@@ -302,20 +840,6 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       ),
     );
   }
-  IconData _getStatusIcon(FeedbackStatus status) {
-  switch (status) {
-    case FeedbackStatus.pending:
-      return Icons.schedule; // ✅ Pending icon
-    case FeedbackStatus.inProgress:
-      return Icons.autorenew; // ✅ In Progress icon (rotating arrows)
-    case FeedbackStatus.resolved:
-      return Icons.check_circle; // ✅ Resolved icon
-    case FeedbackStatus.closed:
-      return Icons.lock; // ✅ Closed icon
-    case FeedbackStatus.archived:
-      return Icons.inventory_2; // ✅ Archived icon (box)
-  }
-}
 
   Widget _buildFilterDropdown<T>(
     String label,
@@ -351,7 +875,22 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildFeedbackList() {
+  IconData _getStatusIcon(FeedbackStatus status) {
+    switch (status) {
+      case FeedbackStatus.pending:
+        return Icons.schedule;
+      case FeedbackStatus.inProgress:
+        return Icons.autorenew;
+      case FeedbackStatus.resolved:
+        return Icons.check_circle;
+      case FeedbackStatus.closed:
+        return Icons.lock;
+      case FeedbackStatus.archived:
+        return Icons.inventory_2;
+    }
+  }
+
+  Widget _buildFeedbackList({bool isMobile = false, bool isTablet = false}) {
     return Obx(() {
       if (controller.isLoadingFeedback.value) {
         return const Center(child: CircularProgressIndicator());
@@ -378,355 +917,640 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       }
 
       return ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 12 : 16),
         itemCount: controller.filteredFeedback.length,
         itemBuilder: (context, index) {
           final feedback = controller.filteredFeedback[index];
+          if (isMobile) {
+            return _buildMobileFeedbackCard(feedback);
+          } else if (isTablet) {
+            return _buildTabletFeedbackCard(feedback);
+          }
           return _buildFeedbackCard(feedback);
         },
       );
     });
   }
-  
 
- Widget _buildFeedbackCard(FeedbackAndReport feedback) {
- 
-  return Obx(() {
-    // ✅ Get fresh pin status from controller
-    final feedbackItem = controller.allFeedback.firstWhere(
-      (f) => f.documentId == feedback.documentId,
-      orElse: () => feedback,
-    );
-    final isPinned = feedbackItem.isPinned;
-    
-    return Card(
-      color: isPinned 
-        ? const Color.fromRGBO(255, 248, 225, 1) // Light yellow for pinned
-        : const Color.fromRGBO(242, 250, 252, 1),
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isPinned ? 8 : 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isPinned 
-          ? const BorderSide(color: Colors.amber, width: 2)
-          : BorderSide.none,
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _showFeedbackDetails(feedback),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Pin button and Badges Row
-              Row(
-                children: [
-                  // Pin Button
-                  InkWell(
-                    onTap: () => controller.togglePin(feedback.documentId!),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isPinned 
-                          ? Colors.amber.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                        size: 18,
-                        color: isPinned ? Colors.amber[800] : Colors.grey[600],
+  // ==================== MOBILE FEEDBACK CARD ====================
+  Widget _buildMobileFeedbackCard(FeedbackAndReport feedback) {
+    return Obx(() {
+      final feedbackItem = controller.allFeedback.firstWhere(
+        (f) => f.documentId == feedback.documentId,
+        orElse: () => feedback,
+      );
+      final isPinned = feedbackItem.isPinned;
+
+      return Card(
+        color: isPinned
+            ? const Color.fromRGBO(255, 248, 225, 1)
+            : const Color.fromRGBO(242, 250, 252, 1),
+        margin: const EdgeInsets.only(bottom: 10),
+        elevation: isPinned ? 6 : 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isPinned
+              ? const BorderSide(color: Colors.amber, width: 2)
+              : BorderSide.none,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showFeedbackDetails(feedback),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () => controller.togglePin(feedback.documentId!),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isPinned
+                              ? Colors.amber.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                          size: 14,
+                          color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    _buildClickablePriorityBadge(feedback),
+                    const Spacer(),
+                    _buildClickableStatusBadge(feedback),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  feedback.subject,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
                   ),
-                  const SizedBox(width: 8),
-                  
-                  // Priority Badge - Clickable
-                  _buildClickablePriorityBadge(feedback),
-                  const SizedBox(width: 8),
-                  
-                  _buildTypeBadge(feedback.feedbackType),
-                  const SizedBox(width: 8),
-                  
-                  _buildCategoryBadge(feedback.category),
-                  const Spacer(),
-                  
-                  // Status Badge - Clickable
-                  _buildClickableStatusBadge(feedback),
-                ],
-              ),
-              
-              // Pin indicator text
-              if (isPinned) ...[
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  feedback.description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildTypeBadge(feedback.feedbackType),
+                    _buildCategoryBadge(feedback.category),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.push_pin, size: 12, color: Colors.amber[800]),
+                    Icon(Icons.person, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 4),
-                    Text(
-                      'Pinned',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.amber[800],
+                    Expanded(
+                      child: Text(
+                        feedback.userName,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ],
-                ),
-              ],
-              
-              const SizedBox(height: 12),
-
-              // Subject
-              Text(
-                feedback.subject,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Description
-              Text(
-                feedback.description,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-
-              // Meta Information
-              Row(
-                children: [
-                  Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(
-                    feedback.userName,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(
-                    _formatDateTime(feedback.submittedAt),
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                  if (feedback.attachments.isNotEmpty) ...[
-                    const SizedBox(width: 16),
-                    Icon(Icons.attachment, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Text(
-                      '${feedback.attachments.length}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      _formatDateTime(feedback.submittedAt),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
+                ),
+                if (feedback.attachments.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.attachment, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${feedback.attachments.length} attachment(s)',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
-              
-
-              // Quick Actions for Closed/Resolved
-              if (feedback.status == FeedbackStatus.closed ||
-                  feedback.status == FeedbackStatus.resolved) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    if (feedback.status == FeedbackStatus.closed)
-                      ElevatedButton.icon(
+                if (feedback.status == FeedbackStatus.closed ||
+                    feedback.status == FeedbackStatus.resolved) ...[
+                  const SizedBox(height: 10),
+                  if (feedback.status == FeedbackStatus.closed)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
                         onPressed: () => _archiveFeedback(feedback),
-                        icon: const Icon(Icons.archive, size: 16, color: Colors.white),
-                        label: const Text('Archive'),
+                        icon: const Icon(Icons.archive, size: 14, color: Colors.white),
+                        label: const Text('Archive', style: TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange[600],
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  // ==================== TABLET FEEDBACK CARD ====================
+  Widget _buildTabletFeedbackCard(FeedbackAndReport feedback) {
+    return Obx(() {
+      final feedbackItem = controller.allFeedback.firstWhere(
+        (f) => f.documentId == feedback.documentId,
+        orElse: () => feedback,
+      );
+      final isPinned = feedbackItem.isPinned;
+
+      return Card(
+        color: isPinned
+            ? const Color.fromRGBO(255, 248, 225, 1)
+            : const Color.fromRGBO(242, 250, 252, 1),
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: isPinned ? 7 : 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isPinned
+              ? const BorderSide(color: Colors.amber, width: 2)
+              : BorderSide.none,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showFeedbackDetails(feedback),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () => controller.togglePin(feedback.documentId!),
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: isPinned
+                              ? Colors.amber.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Icon(
+                          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                          size: 16,
+                          color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildClickablePriorityBadge(feedback),
+                    const SizedBox(width: 8),
+                    _buildTypeBadge(feedback.feedbackType),
+                    const SizedBox(width: 8),
+                    _buildCategoryBadge(feedback.category),
+                    const Spacer(),
+                    _buildClickableStatusBadge(feedback),
                   ],
                 ),
+                if (isPinned) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.push_pin, size: 12, color: Colors.amber[800]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pinned',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  feedback.subject,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  feedback.description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.person, size: 15, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      feedback.userName,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(Icons.access_time, size: 15, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDateTime(feedback.submittedAt),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    if (feedback.attachments.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      Icon(Icons.attachment, size: 15, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${feedback.attachments.length}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ],
+                ),
+                if (feedback.status == FeedbackStatus.closed ||
+                    feedback.status == FeedbackStatus.resolved) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (feedback.status == FeedbackStatus.closed)
+                        ElevatedButton.icon(
+                          onPressed: () => _archiveFeedback(feedback),
+                          icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                          label: const Text('Archive'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange[600],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
+        ),
+      );
+    });
+  }
+
+  // ==================== DESKTOP FEEDBACK CARD ====================
+  Widget _buildFeedbackCard(FeedbackAndReport feedback) {
+    return Obx(() {
+      final feedbackItem = controller.allFeedback.firstWhere(
+        (f) => f.documentId == feedback.documentId,
+        orElse: () => feedback,
+      );
+      final isPinned = feedbackItem.isPinned;
+
+      return Card(
+        color: isPinned
+            ? const Color.fromRGBO(255, 248, 225, 1)
+            : const Color.fromRGBO(242, 250, 252, 1),
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: isPinned ? 8 : 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isPinned
+              ? const BorderSide(color: Colors.amber, width: 2)
+              : BorderSide.none,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showFeedbackDetails(feedback),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () => controller.togglePin(feedback.documentId!),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isPinned
+                              ? Colors.amber.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                          size: 18,
+                          color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildClickablePriorityBadge(feedback),
+                    const SizedBox(width: 8),
+                    _buildTypeBadge(feedback.feedbackType),
+                    const SizedBox(width: 8),
+                    _buildCategoryBadge(feedback.category),
+                    const Spacer(),
+                    _buildClickableStatusBadge(feedback),
+                  ],
+                ),
+                if (isPinned) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.push_pin, size: 12, color: Colors.amber[800]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pinned',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  feedback.subject,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  feedback.description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.person, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      feedback.userName,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDateTime(feedback.submittedAt),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    if (feedback.attachments.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      Icon(Icons.attachment, size: 16, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${feedback.attachments.length}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ],
+                ),
+                if (feedback.status == FeedbackStatus.closed ||
+                    feedback.status == FeedbackStatus.resolved) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (feedback.status == FeedbackStatus.closed)
+                        ElevatedButton.icon(
+                          onPressed: () => _archiveFeedback(feedback),
+                          icon:
+                              const Icon(Icons.archive, size: 16, color: Colors.white),
+                          label: const Text('Archive'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange[600],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildClickablePriorityBadge(FeedbackAndReport feedback) {
+    Color color = _getPriorityColor(feedback.priority);
+    IconData icon = _getPriorityIcon(feedback.priority);
+
+    return PopupMenuButton<Priority>(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      tooltip: 'Change Priority',
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!),
+      ),
+      onSelected: (Priority newPriority) {
+        if (newPriority != feedback.priority) {
+          controller.updatePriority(feedback.documentId!, newPriority);
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return Priority.values.map((Priority priority) {
+          final isSelected = priority == feedback.priority;
+          final priorityColor = _getPriorityColor(priority);
+          final priorityIcon = _getPriorityIcon(priority);
+
+          return PopupMenuItem<Priority>(
+            value: priority,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: priorityColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    priorityIcon,
+                    size: 16,
+                    color: priorityColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    priority.displayName,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected ? priorityColor : Colors.grey[800],
+                    ),
+                  ),
+                ),
+                if (isSelected) Icon(Icons.check, size: 18, color: priorityColor),
+              ],
+            ),
+          );
+        }).toList();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              feedback.priority.displayName,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_drop_down, size: 16, color: color),
+          ],
         ),
       ),
     );
-  });
-  
-}
- Widget _buildClickablePriorityBadge(FeedbackAndReport feedback) {
-  Color color = _getPriorityColor(feedback.priority);
-  IconData icon = _getPriorityIcon(feedback.priority);
+  }
 
-  return PopupMenuButton<Priority>(
-    color: const Color.fromRGBO(248, 253, 255, 1),
-    tooltip: 'Change Priority',
-    offset: const Offset(0, 40),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(color: Colors.grey[300]!),
-    ),
-    onSelected: (Priority newPriority) {
-      if (newPriority != feedback.priority) {
-        controller.updatePriority(feedback.documentId!, newPriority);
-      }
-    },
-    itemBuilder: (BuildContext context) {
-      return Priority.values.map((Priority priority) {
-        final isSelected = priority == feedback.priority;
-        final priorityColor = _getPriorityColor(priority);
-        final priorityIcon = _getPriorityIcon(priority);
+  Widget _buildClickableStatusBadge(FeedbackAndReport feedback) {
+    Color color = _getStatusColor(feedback.status);
 
-        return PopupMenuItem<Priority>(
-          value: priority,
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: priorityColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  priorityIcon,
-                  size: 16,
-                  color: priorityColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  priority.displayName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? priorityColor : Colors.grey[800],
+    return PopupMenuButton<FeedbackStatus>(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      tooltip: 'Change Status',
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!),
+      ),
+      onSelected: (FeedbackStatus newStatus) {
+        if (newStatus != feedback.status) {
+          controller.updateStatus(feedback.documentId!, newStatus);
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return FeedbackStatus.values.map((FeedbackStatus status) {
+          final isSelected = status == feedback.status;
+          final statusColor = _getStatusColor(status);
+          final statusIcon = _getStatusIcon(status);
+
+          return PopupMenuItem<FeedbackStatus>(
+            value: status,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    statusIcon,
+                    size: 16,
+                    color: statusColor,
                   ),
                 ),
-              ),
-              if (isSelected)
-                Icon(Icons.check, size: 18, color: priorityColor),
-            ],
-          ),
-        );
-      }).toList();
-    },
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(
-            feedback.priority.displayName,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.arrow_drop_down, size: 16, color: color),
-        ],
-      ),
-    ),
-  );
-}
-Widget _buildClickableStatusBadge(FeedbackAndReport feedback) {
-  Color color = _getStatusColor(feedback.status);
-
-  return PopupMenuButton<FeedbackStatus>(
-    color: const Color.fromRGBO(248, 253, 255, 1),
-    tooltip: 'Change Status',
-    offset: const Offset(0, 40),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(color: Colors.grey[300]!),
-    ),
-    onSelected: (FeedbackStatus newStatus) {
-      if (newStatus != feedback.status) {
-        controller.updateStatus(feedback.documentId!, newStatus);
-      }
-    },
-    itemBuilder: (BuildContext context) {
-      return FeedbackStatus.values.map((FeedbackStatus status) {
-        final isSelected = status == feedback.status;
-        final statusColor = _getStatusColor(status);
-        final statusIcon = _getStatusIcon(status);
-
-        return PopupMenuItem<FeedbackStatus>(
-          value: status,
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  statusIcon,
-                  size: 16,
-                  color: statusColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  status.displayName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? statusColor : Colors.grey[800],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    status.displayName,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected ? statusColor : Colors.grey[800],
+                    ),
                   ),
                 ),
-              ),
-              if (isSelected)
-                Icon(Icons.check, size: 18, color: statusColor),
-            ],
-          ),
-        );
-      }).toList();
-    },
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            feedback.status.displayName,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
+                if (isSelected) Icon(Icons.check, size: 18, color: statusColor),
+              ],
             ),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.arrow_drop_down, size: 16, color: color),
-        ],
+          );
+        }).toList();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              feedback.status.displayName,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_drop_down, size: 16, color: color),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildTypeBadge(FeedbackType type) {
     Color color = _getTypeColor(type);
@@ -843,39 +1667,38 @@ Widget _buildClickableStatusBadge(FeedbackAndReport feedback) {
         return Colors.blueGrey;
     }
   }
-  
 
-String _formatDateTime(DateTime dateTime) {
-  final now = DateTime.now();
-  final difference = now.difference(dateTime);
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
 
-  if (difference.inDays > 0) {
-    if (difference.inDays == 1) {
-      return '1 day ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return weeks == 1 ? '1 week ago' : '$weeks weeks ago';
-    } else if (difference.inDays < 365) {
-      final months = (difference.inDays / 30).floor();
-      return months == 1 ? '1 month ago' : '$months months ago';
+    if (difference.inDays > 0) {
+      if (difference.inDays == 1) {
+        return '1 day ago';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return weeks == 1 ? '1 week ago' : '$weeks weeks ago';
+      } else if (difference.inDays < 365) {
+        final months = (difference.inDays / 30).floor();
+        return months == 1 ? '1 month ago' : '$months months ago';
+      } else {
+        final years = (difference.inDays / 365).floor();
+        return years == 1 ? '1 year ago' : '$years years ago';
+      }
+    } else if (difference.inHours > 0) {
+      return difference.inHours == 1
+          ? '1 hour ago'
+          : '${difference.inHours} hours ago';
+    } else if (difference.inMinutes > 0) {
+      return difference.inMinutes == 1
+          ? '1 minute ago'
+          : '${difference.inMinutes} minutes ago';
     } else {
-      final years = (difference.inDays / 365).floor();
-      return years == 1 ? '1 year ago' : '$years years ago';
+      return 'Just now';
     }
-  } else if (difference.inHours > 0) {
-    return difference.inHours == 1 
-        ? '1 hour ago' 
-        : '${difference.inHours} hours ago';
-  } else if (difference.inMinutes > 0) {
-    return difference.inMinutes == 1 
-        ? '1 minute ago' 
-        : '${difference.inMinutes} minutes ago';
-  } else {
-    return 'Just now';
   }
-}
   void _archiveFeedback(FeedbackAndReport feedback) {
     showDialog(
       context: context,
