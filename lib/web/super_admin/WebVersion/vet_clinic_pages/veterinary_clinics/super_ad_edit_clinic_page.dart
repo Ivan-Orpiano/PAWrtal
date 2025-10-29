@@ -260,12 +260,12 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                         borderRadius: BorderRadius.circular(12),
                         child: newMainImageId != null
                             ? Image.network(
-                                getPetImageUrl(newMainImageId!),
+                                getDashImageUrl(newMainImageId!),
                                 fit: BoxFit.cover,
                               )
                             : widget.clinic.image.isNotEmpty
                                 ? Image.network(
-                                    getPetImageUrl(widget.clinic.image),
+                                    getDashImageUrl(widget.clinic.image),
                                     fit: BoxFit.cover,
                                   )
                                 : Center(
@@ -666,7 +666,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(7),
                               child: Image.network(
-                                getPetImageUrl(galleryImages[index]),
+                                getDashImageUrl(galleryImages[index]),
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
@@ -891,7 +891,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         fit: StackFit.expand,
         children: [
           Image.network(
-            getPetImageUrl(newDashboardImageId!),
+            getDashImageUrl(newDashboardImageId!),
             fit: BoxFit.cover,
           ),
           Positioned(
@@ -931,7 +931,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         fit: StackFit.expand,
         children: [
           Image.network(
-            getPetImageUrl(widget.clinic.dashboardPic!),
+            getDashImageUrl(widget.clinic.dashboardPic!),
             fit: BoxFit.cover,
             color: Colors.red.withOpacity(0.3),
             colorBlendMode: BlendMode.color,
@@ -970,7 +970,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         fit: StackFit.expand,
         children: [
           Image.network(
-            getPetImageUrl(widget.clinic.dashboardPic!),
+            getDashImageUrl(widget.clinic.dashboardPic!),
             fit: BoxFit.cover,
           ),
           Positioned(
