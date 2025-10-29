@@ -15,14 +15,17 @@ class VetDeletionRequestController extends GetxController {
   var allRequests = <FeedbackDeletionRequest>[].obs;
   var filteredRequests = <FeedbackDeletionRequest>[].obs;
 
-  // Cache for reviews (to display review content)
+  // Cache for reviews
   var reviewsCache = <String, RatingAndReview>{}.obs;
 
-  // FIXED: Cache for clinic names using adminId as key
+  // Cache for clinic names using adminId as key
   var clinicNamesCache = <String, String>{}.obs;
   
-  // NEW: Cache mapping adminId -> actual clinic document ID
+  // Cache mapping adminId -> actual clinic document ID
   var adminToClinicDocIdCache = <String, String>{}.obs;
+
+  // NEW: Pinned request IDs for quick access
+  var pinnedRequestIds = <String>{}.obs;
 
   // Loading states
   var isLoading = false.obs;
@@ -39,56 +42,54 @@ class VetDeletionRequestController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _runMigration();
     _initializeClinicCache().then((_) => loadAllDeletionRequests());
   }
 
-  /// CRITICAL FIX: Initialize clinic name cache by loading all clinics first
+  /// Run migration to add pin fields
+  Future<void> _runMigration() async {
+    try {
+      await authRepository.appWriteProvider.migrateDeletionRequestPinFields();
+    } catch (e) {
+      print('>>> Migration error: $e');
+    }
+  }
+
+  /// Initialize clinic name cache
   Future<void> _initializeClinicCache() async {
     try {
-      print('>>> ============================================');
-      print('>>> INITIALIZING CLINIC NAME CACHE');
-      print('>>> ============================================');
-
-      // Get all clinics
+      print('>>> Initializing clinic name cache');
+      
       final clinics = await authRepository.getAllClinics();
       print('>>> Found ${clinics.length} clinics');
 
-      // Build cache: adminId -> clinicName AND adminId -> clinicDocumentId
       for (var clinic in clinics) {
         final adminId = clinic.adminId;
         final clinicName = clinic.clinicName;
         final clinicDocId = clinic.documentId;
 
-        // Store clinic name by adminId (this is what's used in FeedbackDeletionRequest.clinicId)
         clinicNamesCache[adminId] = clinicName;
         
-        // Store mapping for later use
         if (clinicDocId != null) {
           adminToClinicDocIdCache[adminId] = clinicDocId;
-          // Also store by document ID for flexibility
           clinicNamesCache[clinicDocId] = clinicName;
         }
 
-        print('>>> Cached: $adminId -> $clinicName (DocId: $clinicDocId)');
+        print('>>> Cached: $adminId -> $clinicName');
       }
 
-      print('>>> ============================================');
       print('>>> Cache initialized with ${clinicNamesCache.length} entries');
-      print('>>> ============================================');
     } catch (e) {
       print('>>> ERROR initializing clinic cache: $e');
     }
   }
 
-  /// Load all deletion requests from all clinics
+  /// Load all deletion requests
   Future<void> loadAllDeletionRequests() async {
     try {
       isLoading.value = true;
-      print('>>> ============================================');
-      print('>>> LOADING ALL DELETION REQUESTS');
-      print('>>> ============================================');
+      print('>>> Loading all deletion requests');
 
-      // Get ALL deletion requests
       final allDeletionRequestDocs =
           await authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -99,10 +100,9 @@ class VetDeletionRequestController extends GetxController {
         ],
       );
 
-      print('>>> Found ${allDeletionRequestDocs.documents.length} total deletion requests');
+      print('>>> Found ${allDeletionRequestDocs.documents.length} deletion requests');
 
       if (allDeletionRequestDocs.documents.isEmpty) {
-        print('>>> No deletion requests found in database');
         allRequests.value = [];
         filterRequests();
         calculateStatistics();
@@ -112,91 +112,137 @@ class VetDeletionRequestController extends GetxController {
 
       List<FeedbackDeletionRequest> allRequestsTemp = [];
 
-      // Process each deletion request
       for (var doc in allDeletionRequestDocs.documents) {
         try {
           final request = FeedbackDeletionRequest.fromMap(doc.data);
           final requestWithId = request.copyWith(documentId: doc.$id);
 
-          // CRITICAL: The clinicId field in FeedbackDeletionRequest is actually adminId
           final adminId = requestWithId.clinicId;
 
           print('>>> Processing deletion request ${doc.$id}');
-          print('>>>   - AdminId (stored as clinicId): $adminId');
-          print('>>>   - Reason: ${requestWithId.reason}');
-          print('>>>   - Status: ${requestWithId.status}');
+          print('>>>   - Pinned: ${requestWithId.isPinned}');
 
-          // FIXED: Get clinic name from pre-initialized cache
+          // NEW: Track pinned requests
+          if (requestWithId.isPinned) {
+            pinnedRequestIds.add(doc.$id);
+          }
+
           final clinicName = clinicNamesCache[adminId] ?? 'Unknown Clinic';
           
           if (clinicName == 'Unknown Clinic') {
-            print('>>>   ⚠️ WARNING: No clinic found for admin ID: $adminId');
-            // Try to fetch it on-demand
             final fetchedName = await _fetchClinicNameByAdminId(adminId);
             if (fetchedName != 'Unknown Clinic') {
               clinicNamesCache[adminId] = fetchedName;
-              print('>>>   ✅ Fetched clinic name on-demand: $fetchedName');
             }
-          } else {
-            print('>>>   ✅ Found cached clinic: $clinicName');
           }
 
           allRequestsTemp.add(requestWithId);
 
-          // Fetch and cache the review
           await _fetchAndCacheReview(requestWithId.reviewId);
         } catch (e) {
-          print('>>>   ❌ Error processing deletion request ${doc.$id}: $e');
+          print('>>>   ✗ Error processing deletion request ${doc.$id}: $e');
         }
       }
 
       allRequests.value = allRequestsTemp;
-      print('>>> ============================================');
       print('>>> ✅ Total deletion requests loaded: ${allRequests.length}');
-      print('>>> ============================================');
+      print('>>> Pinned requests: ${pinnedRequestIds.length}');
 
       filterRequests();
       calculateStatistics();
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ❌ ERROR LOADING DELETION REQUESTS: $e');
+      print('>>> ✗ ERROR LOADING DELETION REQUESTS: $e');
       print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
       _showSnackBar('Failed to load deletion requests: $e', Colors.red);
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// NEW: Fetch clinic name by adminId on-demand (fallback)
+  /// NEW: Toggle pin status with database persistence
+  Future<void> togglePin(String requestId) async {
+    try {
+      print('>>> Toggling pin for deletion request: $requestId');
+
+      final requestIndex = allRequests.indexWhere((r) => r.documentId == requestId);
+
+      if (requestIndex == -1) {
+        print('>>> Error: Request not found');
+        return;
+      }
+
+      final request = allRequests[requestIndex];
+      final newPinStatus = !request.isPinned;
+
+      final pinnedBy = 'Super Admin'; // You can get this from session/storage
+
+      print('>>> New pin status: $newPinStatus');
+      print('>>> Pinned by: $pinnedBy');
+
+      // Update in database
+      await authRepository.toggleDeletionRequestPin(
+        requestId,
+        newPinStatus,
+        pinnedBy,
+      );
+
+      // Update local state
+      if (newPinStatus) {
+        pinnedRequestIds.add(requestId);
+      } else {
+        pinnedRequestIds.remove(requestId);
+      }
+
+      // Update the request object
+      allRequests[requestIndex] = request.copyWith(
+        isPinned: newPinStatus,
+        pinnedAt: newPinStatus ? DateTime.now() : null,
+        pinnedBy: newPinStatus ? pinnedBy : null,
+      );
+
+      allRequests.refresh();
+      filterRequests();
+
+      _showSnackBar(
+        newPinStatus ? 'Request pinned successfully' : 'Request unpinned successfully',
+        newPinStatus ? Colors.amber : Colors.grey,
+      );
+
+      print('>>> Pin toggle successful');
+    } catch (e) {
+      print('>>> Error toggling pin: $e');
+      _showSnackBar('Failed to toggle pin: $e', Colors.red);
+    }
+  }
+
+  /// NEW: Check if request is pinned
+  bool isPinned(String requestId) {
+    return pinnedRequestIds.contains(requestId);
+  }
+
+  /// Fetch clinic name by adminId
   Future<String> _fetchClinicNameByAdminId(String adminId) async {
     try {
-      print('>>> Fetching clinic for admin ID: $adminId');
-      
       final clinic = await authRepository.getClinicByAdminId(adminId);
       
       if (clinic != null) {
         final clinicName = clinic.data['clinicName'] ?? 'Unknown Clinic';
         final clinicDocId = clinic.$id;
         
-        // Cache it
         clinicNamesCache[adminId] = clinicName;
         adminToClinicDocIdCache[adminId] = clinicDocId;
         clinicNamesCache[clinicDocId] = clinicName;
         
-        print('>>> Found clinic: $clinicName');
         return clinicName;
       }
       
-      print('>>> No clinic found for admin ID: $adminId');
       return 'Unknown Clinic';
     } catch (e) {
-      print('>>> Error fetching clinic by admin ID: $e');
       return 'Unknown Clinic';
     }
   }
 
-  /// Fetch and cache a review by ID
+  /// Fetch and cache a review
   Future<void> _fetchAndCacheReview(String reviewId) async {
     try {
       if (reviewsCache.containsKey(reviewId)) {
@@ -218,7 +264,7 @@ class VetDeletionRequestController extends GetxController {
     }
   }
 
-  /// Get cached review or fetch it
+  /// Get cached review
   Future<RatingAndReview?> getReview(String reviewId) async {
     if (reviewsCache.containsKey(reviewId)) {
       return reviewsCache[reviewId];
@@ -228,10 +274,9 @@ class VetDeletionRequestController extends GetxController {
     return reviewsCache[reviewId];
   }
 
-  /// Filter requests based on search, status, and reason
+  /// Filter requests - UPDATED to sort pinned first
   void filterRequests() {
     filteredRequests.value = allRequests.where((request) {
-      // FIXED: Search using correct clinic name from cache
       final clinicName = clinicNamesCache[request.clinicId] ?? 'Unknown Clinic';
       
       bool matchesSearch = searchQuery.value.isEmpty ||
@@ -251,7 +296,15 @@ class VetDeletionRequestController extends GetxController {
       return matchesSearch && matchesStatus && matchesReason;
     }).toList();
 
-    filteredRequests.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    // NEW: Sort pinned items first, then by date
+    filteredRequests.sort((a, b) {
+      // Primary sort: Pinned first
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+
+      // Secondary sort: By requested date
+      return b.requestedAt.compareTo(a.requestedAt);
+    });
   }
 
   /// Calculate statistics
@@ -349,6 +402,7 @@ class VetDeletionRequestController extends GetxController {
       );
 
       allRequests.removeWhere((r) => r.documentId == request.documentId);
+      pinnedRequestIds.remove(request.documentId);
       filterRequests();
       calculateStatistics();
 
@@ -360,14 +414,12 @@ class VetDeletionRequestController extends GetxController {
     }
   }
 
-  /// FIXED: Get clinic name - now uses pre-initialized cache
+  /// Get clinic name
   Future<String> getClinicName(String adminId) async {
-    // Check cache first
     if (clinicNamesCache.containsKey(adminId)) {
       return clinicNamesCache[adminId]!;
     }
 
-    // If not in cache, fetch on-demand
     return await _fetchClinicNameByAdminId(adminId);
   }
 
@@ -387,6 +439,7 @@ class VetDeletionRequestController extends GetxController {
     reviewsCache.clear();
     clinicNamesCache.clear();
     adminToClinicDocIdCache.clear();
+    pinnedRequestIds.clear();
     super.onClose();
   }
 }

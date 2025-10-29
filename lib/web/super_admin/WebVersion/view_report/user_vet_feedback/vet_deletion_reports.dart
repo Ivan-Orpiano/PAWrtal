@@ -493,385 +493,443 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     });
   }
 
-  Widget _buildRequestCard(FeedbackDeletionRequest request) {
-    return Obx(() {
-      final clinicName =
-          _controller.clinicNamesCache[request.clinicId] ?? 'Loading...';
-      final isMobile = _isMobile(context);
+Widget _buildRequestCard(FeedbackDeletionRequest request) {
+  return Obx(() {
+    final clinicName =
+        _controller.clinicNamesCache[request.clinicId] ?? 'Loading...';
+    final isMobile = _isMobile(context);
+    final isPinned = request.isPinned;
 
-      return FutureBuilder<RatingAndReview?>(
-        future: _controller.getReview(request.reviewId),
-        builder: (context, reviewSnapshot) {
-          final review = reviewSnapshot.data;
+    return FutureBuilder<RatingAndReview?>(
+      future: _controller.getReview(request.reviewId),
+      builder: (context, reviewSnapshot) {
+        final review = reviewSnapshot.data;
 
-          return Card(
-            color: const Color.fromRGBO(242, 250, 252, 1),
-            margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
-            elevation: 4,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _showRequestDetails(request),
-              child: Padding(
-                padding: EdgeInsets.all(isMobile ? 12 : 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with clinic name and status
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.business,
-                                size: isMobile ? 18 : 20,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  clinicName,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 14 : 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+        return Card(
+          // NEW: Change card color if pinned
+          color: isPinned
+              ? const Color.fromRGBO(255, 248, 225, 1) // Amber/yellow tint
+              : const Color.fromRGBO(242, 250, 252, 1),
+          margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
+          // NEW: Increase elevation if pinned
+          elevation: isPinned ? 6 : 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            // NEW: Add border if pinned
+            side: isPinned
+                ? const BorderSide(color: Colors.amber, width: 2)
+                : BorderSide.none,
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showRequestDetails(request),
+            child: Padding(
+              padding: EdgeInsets.all(isMobile ? 12 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with clinic name, status, and PIN BUTTON
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // NEW: Pin button at the start
+                      InkWell(
+                        onTap: () => _controller.togglePin(request.documentId!),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: EdgeInsets.all(isMobile ? 6 : 8),
+                          decoration: BoxDecoration(
+                            color: isPinned
+                                ? Colors.amber.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                            size: isMobile ? 14 : 16,
+                            color: isPinned ? Colors.amber[800] : Colors.grey[600],
                           ),
                         ),
-                        _buildStatusChip(request.status),
-                      ],
-                    ),
-
-                    // Review information
-                    if (review != null) ...[
-                      SizedBox(height: isMobile ? 8 : 12),
-                      Container(
-                        padding: EdgeInsets.all(isMobile ? 10 : 12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue[200]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.rate_review,
-                                  size: isMobile ? 12 : 14,
-                                  color: Colors.blue,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Review Details',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 11 : 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                              ],
+                            Icon(
+                              Icons.business,
+                              size: isMobile ? 18 : 20,
+                              color: Colors.grey[600],
                             ),
-                            SizedBox(height: isMobile ? 6 : 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
-                              children: [
-                                Text(
-                                  'By: ${review.userName}',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 11 : 12,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ...List.generate(5, (index) {
-                                      return Icon(
-                                        index < review.rating
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        size: isMobile ? 12 : 14,
-                                        color: Colors.amber,
-                                      );
-                                    }),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      review.rating.toString(),
-                                      style: TextStyle(
-                                        fontSize: isMobile ? 11 : 12,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            if (review.reviewText != null &&
-                                review.reviewText!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                review.reviewText!,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                clinicName,
                                 style: TextStyle(
-                                  fontSize: isMobile ? 11 : 12,
-                                  color: Colors.grey[600],
+                                  fontSize: isMobile ? 14 : 16,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
+                      _buildStatusChip(request.status),
                     ],
+                  ),
 
-                    SizedBox(height: isMobile ? 8 : 12),
-
-                    // Reason badge
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 8 : 10,
-                        vertical: isMobile ? 4 : 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.orange[200]!),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.report_problem,
-                            size: isMobile ? 12 : 14,
-                            color: Colors.orange[700],
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              request.reason,
-                              style: TextStyle(
-                                fontSize: isMobile ? 11 : 12,
-                                color: Colors.orange[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Additional details
-                    if (request.additionalDetails != null &&
-                        request.additionalDetails!.isNotEmpty) ...[
-                      SizedBox(height: isMobile ? 8 : 12),
-                      Text(
-                        request.additionalDetails!,
-                        style: TextStyle(
-                          fontSize: isMobile ? 12 : 14,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-
-                    SizedBox(height: isMobile ? 8 : 12),
-
-                    // Meta information
-                    Wrap(
-                      spacing: isMobile ? 8 : 16,
-                      runSpacing: 4,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.person,
-                                size: isMobile ? 14 : 16,
-                                color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Admin',
-                              style: TextStyle(
-                                fontSize: isMobile ? 11 : 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.access_time,
-                                size: isMobile ? 14 : 16,
-                                color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year}',
-                              style: TextStyle(
-                                fontSize: isMobile ? 11 : 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (request.hasAttachments)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.attach_file,
-                                  size: isMobile ? 14 : 16,
-                                  color: Colors.grey[500]),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${request.attachments.length} file(s)',
-                                style: TextStyle(
-                                  fontSize: isMobile ? 11 : 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-
-                    // Review notes
-                    if (request.reviewNotes != null &&
-                        request.reviewNotes!.isNotEmpty) ...[
-                      SizedBox(height: isMobile ? 8 : 12),
-                      Container(
-                        padding: EdgeInsets.all(isMobile ? 10 : 12),
-                        decoration: BoxDecoration(
-                          color: request.status == 'rejected'
-                              ? Colors.red[50]
-                              : Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: request.status == 'rejected'
-                                ? Colors.red[200]!
-                                : Colors.green[200]!,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  request.status == 'rejected'
-                                      ? Icons.error_outline
-                                      : Icons.check_circle_outline,
-                                  size: isMobile ? 14 : 16,
-                                  color: request.status == 'rejected'
-                                      ? Colors.red[600]
-                                      : Colors.green[600],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Review Notes',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 11 : 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: request.status == 'rejected'
-                                        ? Colors.red[600]
-                                        : Colors.green[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: isMobile ? 6 : 8),
-                            Text(
-                              request.reviewNotes!,
-                              style: TextStyle(
-                                fontSize: isMobile ? 11 : 13,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    SizedBox(height: isMobile ? 8 : 12),
-
-                    // Action buttons
+                  // NEW: Show pinned indicator
+                  if (isPinned) ...[
+                    SizedBox(height: isMobile ? 6 : 8),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        if (request.isPending) ...[
-                          Flexible(
-                            child: ElevatedButton.icon(
-                              onPressed: _controller.isProcessing.value
-                                  ? null
-                                  : () => _handleDeletionRequest(request),
-                              icon: Icon(
-                                Icons.gavel,
-                                size: isMobile ? 14 : 16,
-                                color: Colors.white,
-                              ),
-                              label: Text(
-                                'Process',
-                                style: TextStyle(fontSize: isMobile ? 12 : 14),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color.fromARGB(255, 81, 115, 153),
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isMobile ? 12 : 16,
-                                  vertical: isMobile ? 6 : 8,
-                                ),
-                              ),
-                            ),
+                        Icon(Icons.push_pin, size: 12, color: Colors.amber[800]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Pinned',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber[800],
                           ),
-                        ],
-                        if (request.isApproved || request.isRejected) ...[
-                          Flexible(
-                            child: ElevatedButton.icon(
-                              onPressed: _controller.isProcessing.value
-                                  ? null
-                                  : () => _deleteRequest(request),
-                              icon: Icon(
-                                Icons.delete_forever,
-                                size: isMobile ? 14 : 16,
-                                color: Colors.white,
-                              ),
-                              label: Text(
-                                isMobile ? 'Delete' : 'Delete Record',
-                                style: TextStyle(fontSize: isMobile ? 12 : 14),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE74C3C),
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isMobile ? 12 : 16,
-                                  vertical: isMobile ? 6 : 8,
-                                ),
-                              ),
+                        ),
+                        if (request.pinnedBy != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            'by ${request.pinnedBy}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],
                       ],
                     ),
                   ],
-                ),
+
+                  // Review information
+                  if (review != null) ...[
+                    SizedBox(height: isMobile ? 8 : 12),
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 10 : 12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.rate_review,
+                                size: isMobile ? 12 : 14,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Review Details',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 11 : 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isMobile ? 6 : 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                'By: ${review.userName}',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 11 : 12,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ...List.generate(5, (index) {
+                                    return Icon(
+                                      index < review.rating
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      size: isMobile ? 12 : 14,
+                                      color: Colors.amber,
+                                    );
+                                  }),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    review.rating.toString(),
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 11 : 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (review.reviewText != null &&
+                              review.reviewText!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              review.reviewText!,
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  SizedBox(height: isMobile ? 8 : 12),
+
+                  // Reason badge
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 10,
+                      vertical: isMobile ? 4 : 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.report_problem,
+                          size: isMobile ? 12 : 14,
+                          color: Colors.orange[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            request.reason,
+                            style: TextStyle(
+                              fontSize: isMobile ? 11 : 12,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Additional details
+                  if (request.additionalDetails != null &&
+                      request.additionalDetails!.isNotEmpty) ...[
+                    SizedBox(height: isMobile ? 8 : 12),
+                    Text(
+                      request.additionalDetails!,
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 14,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+
+                  SizedBox(height: isMobile ? 8 : 12),
+
+                  // Meta information
+                  Wrap(
+                    spacing: isMobile ? 8 : 16,
+                    runSpacing: 4,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.person,
+                              size: isMobile ? 14 : 16,
+                              color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Admin',
+                            style: TextStyle(
+                              fontSize: isMobile ? 11 : 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.access_time,
+                              size: isMobile ? 14 : 16,
+                              color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${request.requestedAt.day}/${request.requestedAt.month}/${request.requestedAt.year}',
+                            style: TextStyle(
+                              fontSize: isMobile ? 11 : 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (request.hasAttachments)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.attach_file,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${request.attachments.length} file(s)',
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+
+                  // Review notes
+                  if (request.reviewNotes != null &&
+                      request.reviewNotes!.isNotEmpty) ...[
+                    SizedBox(height: isMobile ? 8 : 12),
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 10 : 12),
+                      decoration: BoxDecoration(
+                        color: request.status == 'rejected'
+                            ? Colors.red[50]
+                            : Colors.green[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: request.status == 'rejected'
+                              ? Colors.red[200]!
+                              : Colors.green[200]!,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                request.status == 'rejected'
+                                    ? Icons.error_outline
+                                    : Icons.check_circle_outline,
+                                size: isMobile ? 14 : 16,
+                                color: request.status == 'rejected'
+                                    ? Colors.red[600]
+                                    : Colors.green[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Review Notes',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 11 : 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: request.status == 'rejected'
+                                      ? Colors.red[600]
+                                      : Colors.green[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isMobile ? 6 : 8),
+                          Text(
+                            request.reviewNotes!,
+                            style: TextStyle(
+                              fontSize: isMobile ? 11 : 13,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  SizedBox(height: isMobile ? 8 : 12),
+
+                  // Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (request.isPending) ...[
+                        Flexible(
+                          child: ElevatedButton.icon(
+                            onPressed: _controller.isProcessing.value
+                                ? null
+                                : () => _handleDeletionRequest(request),
+                            icon: Icon(
+                              Icons.gavel,
+                              size: isMobile ? 14 : 16,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              'Process',
+                              style: TextStyle(fontSize: isMobile ? 12 : 14),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 81, 115, 153),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 12 : 16,
+                                vertical: isMobile ? 6 : 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (request.isApproved || request.isRejected) ...[
+                        Flexible(
+                          child: ElevatedButton.icon(
+                            onPressed: _controller.isProcessing.value
+                                ? null
+                                : () => _deleteRequest(request),
+                            icon: Icon(
+                              Icons.delete_forever,
+                              size: isMobile ? 14 : 16,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              isMobile ? 'Delete' : 'Delete Record',
+                              style: TextStyle(fontSize: isMobile ? 12 : 14),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFE74C3C),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 12 : 16,
+                                vertical: isMobile ? 6 : 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ),
             ),
-          );
-        },
-      );
-    });
-  }
-
+          ),
+        );
+      },
+    );
+  });
+}
   Widget _buildStatusChip(String status) {
     final isMobile = _isMobile(context);
     Color color;
