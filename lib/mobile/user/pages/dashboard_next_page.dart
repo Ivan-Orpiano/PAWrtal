@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -33,7 +34,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
   bool _isSaved = false;
-  
+
   // Review related state
   List<RatingAndReview> reviews = [];
   ClinicRatingStats? stats;
@@ -73,11 +74,13 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
 
   Future<void> _loadReviews() async {
     setState(() => _isLoadingReviews = true);
-    
+
     try {
-      final fetchedReviews = await _authRepo.getClinicReviews(widget.clinic.documentId!);
-      final fetchedStats = await _authRepo.getClinicRatingStats(widget.clinic.documentId!);
-      
+      final fetchedReviews =
+          await _authRepo.getClinicReviews(widget.clinic.documentId!);
+      final fetchedStats =
+          await _authRepo.getClinicRatingStats(widget.clinic.documentId!);
+
       setState(() {
         reviews = fetchedReviews;
         stats = fetchedStats;
@@ -114,7 +117,20 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
 
     final isOpen = _clinicSettings!.isOpen;
     final isOpenNow = _clinicSettings!.isOpenNow();
-    final todayHours = _clinicSettings!.getTodayHours();
+
+    // Get today's hours in 12-hour format
+    final today = DateTime.now().weekday;
+    final dayName = _getDayName(today);
+    final dayHours = _clinicSettings!.operatingHours[dayName];
+
+    String todayHours = 'Closed';
+    if (dayHours?['isOpen'] == true) {
+      final openTime =
+          Appointment.formatTime24To12(dayHours?['openTime'] ?? '09:00');
+      final closeTime =
+          Appointment.formatTime24To12(dayHours?['closeTime'] ?? '17:00');
+      todayHours = '$openTime - $closeTime';
+    }
 
     Color statusColor;
     String statusText;
@@ -581,7 +597,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             ],
           ),
         ),
-
         if (reviews.isEmpty)
           _buildNoReviews()
         else ...[
@@ -605,10 +620,12 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
-              children: displayReviews.map((review) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildReviewCard(review),
-              )).toList(),
+              children: displayReviews
+                  .map((review) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildReviewCard(review),
+                      ))
+                  .toList(),
             ),
           ),
 
@@ -628,7 +645,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.black),
@@ -667,50 +685,50 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
     }
 
     return (ratingPercentages.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key)))
+          ..sort((a, b) => b.key.compareTo(a.key)))
         .map((entry) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 20,
-                  child: Text(
-                    entry.key.toString(),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              child: Text(
+                entry.key.toString(),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(3),
-                        ),
+                  FractionallySizedBox(
+                    widthFactor: entry.value,
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(3),
                       ),
-                      FractionallySizedBox(
-                        widthFactor: entry.value,
-                        child: Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          );
-        }).toList();
+          ],
+        ),
+      );
+    }).toList();
   }
 
   Widget _buildNoReviews() {
@@ -768,7 +786,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                backgroundColor:
+                    const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
                 child: Text(
                   review.userName[0].toUpperCase(),
                   style: const TextStyle(
@@ -803,9 +822,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
               _buildStarRating(review.rating, size: 16),
             ],
           ),
-          
           const SizedBox(height: 10),
-          
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -821,7 +838,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
               ),
             ),
           ),
-          
           if (review.hasReview) ...[
             const SizedBox(height: 10),
             Text(
@@ -834,7 +850,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          
           if (review.hasImages) ...[
             const SizedBox(height: 10),
             SizedBox(
@@ -844,7 +859,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 itemCount: review.images.length > 3 ? 3 : review.images.length,
                 itemBuilder: (context, index) {
                   final imageUrl = _authRepo.getImageUrl(review.images[index]);
-                  
+
                   return Container(
                     margin: const EdgeInsets.only(right: 8),
                     child: ClipRRect(
@@ -859,7 +874,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                             width: 70,
                             height: 70,
                             color: Colors.grey.shade200,
-                            child: const Icon(Icons.image_not_supported, size: 24),
+                            child:
+                                const Icon(Icons.image_not_supported, size: 24),
                           );
                         },
                       ),
@@ -913,6 +929,14 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
               final openTime = dayData?['openTime'] ?? '';
               final closeTime = dayData?['closeTime'] ?? '';
 
+              // Convert to 12-hour format using the Appointment model's static method
+              final formattedOpenTime = openTime.isNotEmpty
+                  ? Appointment.formatTime24To12(openTime)
+                  : '';
+              final formattedCloseTime = closeTime.isNotEmpty
+                  ? Appointment.formatTime24To12(closeTime)
+                  : '';
+
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
@@ -929,7 +953,9 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                       ),
                     ),
                     Text(
-                      isOpen ? '$openTime - $closeTime' : 'Closed',
+                      isOpen
+                          ? '$formattedOpenTime - $formattedCloseTime'
+                          : 'Closed',
                       style: TextStyle(
                         fontSize: 14,
                         color: isOpen ? Colors.black87 : Colors.grey[500],
@@ -943,6 +969,27 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         ),
       ],
     );
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
+    }
   }
 
   Widget _buildEmergencyContact() {
