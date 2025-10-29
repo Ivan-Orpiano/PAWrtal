@@ -24,7 +24,7 @@ import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
 import '../models/feedback_and_report_model.dart';
-
+import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
   AuthRepository(this.appWriteProvider);
@@ -2428,4 +2428,12 @@ class AuthRepository {
   Future<void> fixStaffImageUrls() {
     return appWriteProvider.fixStaffImageUrls();
   }
+
+  Future<Document> toggleDeletionRequestPin(
+  String requestId,
+  bool isPinned,
+  String pinnedBy,
+) {
+  return appWriteProvider.toggleDeletionRequestPin(requestId, isPinned, pinnedBy);
+}
 }

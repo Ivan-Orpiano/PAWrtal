@@ -7114,4 +7114,83 @@ class AppWriteProvider {
       print('>>> Error in fixStaffImageUrls: $e');
     }
   }
+
+  Future<Document> toggleDeletionRequestPin(
+  String requestId,
+  bool isPinned,
+  String pinnedBy,
+) async {
+  try {
+    print('>>> Toggling deletion request pin: $requestId to $isPinned');
+
+    final data = <String, dynamic>{
+      'isPinned': isPinned,
+      'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
+      'pinnedBy': isPinned ? pinnedBy : null,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    return await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      documentId: requestId,
+      data: data,
+    );
+  } catch (e) {
+    print('>>> Error toggling deletion request pin: $e');
+    rethrow;
+  }
+}
+
+/// Migrate existing deletion requests to add pin fields
+Future<void> migrateDeletionRequestPinFields() async {
+  try {
+    print('>>> ============================================');
+    print('>>> MIGRATING DELETION REQUEST PIN FIELDS');
+    print('>>> Adding isPinned, pinnedAt, pinnedBy fields');
+    print('>>> ============================================');
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      queries: [Query.limit(500)],
+    );
+
+    print('>>> Found ${result.documents.length} deletion request records');
+
+    int updated = 0;
+    for (var doc in result.documents) {
+      try {
+        // Check if pin fields exist
+        if (!doc.data.containsKey('isPinned')) {
+          print('>>> Updating deletion request: ${doc.$id}');
+
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+            documentId: doc.$id,
+            data: {
+              'isPinned': false,
+              'pinnedAt': null,
+              'pinnedBy': null,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+          );
+
+          updated++;
+          print('>>>   ✓ Migration successful');
+        }
+      } catch (e) {
+        print('>>> Error updating deletion request ${doc.$id}: $e');
+      }
+    }
+
+    print('>>> ============================================');
+    print('>>> MIGRATION COMPLETE');
+    print('>>> Updated $updated deletion request records');
+    print('>>> ============================================');
+  } catch (e) {
+    print('>>> Migration error: $e');
+  }
+}
 }
