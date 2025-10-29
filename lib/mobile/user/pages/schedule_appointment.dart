@@ -116,16 +116,18 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     List<String> slots = [];
 
     if (widget.clinicSettings != null) {
+      // Get slots from clinic settings (these should already be in 12-hour format)
       slots = widget.clinicSettings!.getAvailableTimeSlots(today);
     } else {
+      // Fallback slots in 12-hour format
       slots = [
-        '09:00',
-        '10:00',
-        '11:00',
-        '13:00',
-        '14:00',
-        '15:00',
-        '16:00',
+        '09:00 AM',
+        '10:00 AM',
+        '11:00 AM',
+        '01:00 PM',
+        '02:00 PM',
+        '03:00 PM',
+        '04:00 PM',
       ];
     }
 
@@ -134,7 +136,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       slots = _filterPastTimeSlots(slots);
     }
 
-    // IMPORTANT: Filter out occupied time slots
+    // Filter out occupied time slots
     final filteredSlots = slots.where((slot) {
       final isOccupied = occupiedTimeSlots.contains(slot);
       if (isOccupied) {
@@ -258,27 +260,34 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   }
 
   DateTime parseTimeStringToDateTime(DateTime date, String timeString) {
-    // Handle both 12-hour and 24-hour formats
-    if (timeString.contains('AM') || timeString.contains('PM')) {
-      final timeParts = timeString.split(" ");
-      final hourMinute = timeParts[0].split(":");
-      int hour = int.parse(hourMinute[0]);
-      final int minute = int.parse(hourMinute[1]);
-      final meridian = timeParts[1].toUpperCase();
+    try {
+      // Handle 12-hour format (e.g., "09:00 AM" or "02:30 PM")
+      if (timeString.contains('AM') || timeString.contains('PM')) {
+        final parts = timeString.trim().split(' ');
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        final period = parts[1].toUpperCase();
 
-      if (meridian == 'PM' && hour != 12) {
-        hour += 12;
-      } else if (meridian == 'AM' && hour == 12) {
-        hour = 0;
+        if (period == 'PM' && hour != 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
+
+        return DateTime(date.year, date.month, date.day, hour, minute);
       }
-
-      return DateTime(date.year, date.month, date.day, hour, minute);
-    } else {
-      // 24-hour format (HH:MM)
-      final timeParts = timeString.split(":");
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      return DateTime(date.year, date.month, date.day, hour, minute);
+      // Handle 24-hour format (e.g., "09:00" or "14:30")
+      else {
+        final timeParts = timeString.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        return DateTime(date.year, date.month, date.day, hour, minute);
+      }
+    } catch (e) {
+      print('Error parsing time string: $timeString - $e');
+      // Fallback: return current date with 9 AM
+      return DateTime(date.year, date.month, date.day, 9, 0);
     }
   }
 

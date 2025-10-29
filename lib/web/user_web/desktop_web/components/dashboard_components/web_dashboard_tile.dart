@@ -231,16 +231,76 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
       return const SizedBox.shrink();
     }
 
-    final todayHours = _clinicSettings!.getTodayHours();
+    // Get today's hours in 24-hour format
+    final today = DateTime.now().weekday;
+    final dayName = _getDayName(today);
+    final daySchedule = _clinicSettings!.operatingHours[dayName];
+
+    if (daySchedule?['isOpen'] != true) {
+      return Text(
+        'Closed',
+        style: TextStyle(
+          color: Colors.grey[600],
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+
+    final openTime = daySchedule?['openTime'] ?? '';
+    final closeTime = daySchedule?['closeTime'] ?? '';
+
+    // Convert to 12-hour format
+    final openTime12 = _formatTimeTo12Hour(openTime);
+    final closeTime12 = _formatTimeTo12Hour(closeTime);
 
     return Text(
-      todayHours,
+      '$openTime12 - $closeTime12',
       style: TextStyle(
         color: Colors.grey[600],
         fontSize: 11,
         fontWeight: FontWeight.w500,
       ),
     );
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
+    }
+  }
+
+  String _formatTimeTo12Hour(String time24) {
+    if (time24.isEmpty) return '';
+
+    try {
+      final parts = time24.split(':');
+      if (parts.length != 2) return time24;
+
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+      return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+    } catch (e) {
+      return time24;
+    }
   }
 
   String _getProfileImage() {

@@ -2077,8 +2077,15 @@ class AppWriteProvider {
       final List<String> occupiedSlots = [];
       for (var doc in result.documents) {
         final appointmentDateTime = DateTime.parse(doc.data['dateTime']);
+
+        // Convert to 12-hour format
+        final hour = appointmentDateTime.hour;
+        final minute = appointmentDateTime.minute;
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
         final timeString =
-            '${appointmentDateTime.hour.toString().padLeft(2, '0')}:${appointmentDateTime.minute.toString().padLeft(2, '0')}';
+            '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
         occupiedSlots.add(timeString);
       }
 

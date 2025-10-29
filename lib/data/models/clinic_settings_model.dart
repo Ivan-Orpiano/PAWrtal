@@ -216,7 +216,9 @@ class ClinicSettings {
     final dayHours = operatingHours[dayName];
 
     if (dayHours?['isOpen'] == true) {
-      return '${dayHours?['openTime']} - ${dayHours?['closeTime']}';
+      final openTime = _formatTime24To12(dayHours?['openTime'] ?? '09:00');
+      final closeTime = _formatTime24To12(dayHours?['closeTime'] ?? '17:00');
+      return '$openTime - $closeTime';
     }
     return 'Closed';
   }
@@ -228,7 +230,7 @@ class ClinicSettings {
       final today = DateTime.now().weekday;
       final dayName = _getDayName(today);
       final dayHours = operatingHours[dayName];
-      final openTime = dayHours?['openTime'] ?? '';
+      final openTime = _formatTime24To12(dayHours?['openTime'] ?? '');
       return 'Closed now (Opens at $openTime)';
     }
     return 'Open now';
@@ -276,8 +278,16 @@ class ClinicSettings {
         DateTime(date.year, date.month, date.day, closeHour, closeMinute);
 
     while (currentTime.isBefore(endTime)) {
-      slots.add(
-          '${currentTime.hour.toString().padLeft(2, '0')}:${currentTime.minute.toString().padLeft(2, '0')}');
+      // Convert to 12-hour format
+      final hour = currentTime.hour;
+      final minute = currentTime.minute;
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+      final formattedTime =
+          '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+      slots.add(formattedTime);
+
       currentTime = currentTime.add(Duration(minutes: appointmentDuration));
     }
 
@@ -306,9 +316,19 @@ class ClinicSettings {
 
     return timeSlots.where((timeSlot) {
       try {
-        final timeParts = timeSlot.split(':');
-        final hour = int.parse(timeParts[0]);
+        // Parse 12-hour format time
+        final parts = timeSlot.split(' ');
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
         final minute = int.parse(timeParts[1]);
+        final period = parts[1];
+
+        // Convert to 24-hour format for comparison
+        if (period == 'PM' && hour != 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
 
         final slotDateTime =
             DateTime(date.year, date.month, date.day, hour, minute);
@@ -356,5 +376,40 @@ class ClinicSettings {
       updatedAt: updatedAt ?? this.updatedAt,
       dashboardPic: dashboardPic ?? this.dashboardPic,
     );
+  }
+
+  String _formatTime24To12(String time24) {
+    try {
+      final parts = time24.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+      return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+    } catch (e) {
+      return time24;
+    }
+  }
+
+  // Helper method to convert 12-hour time to 24-hour format
+  String _formatTime12To24(String time12) {
+    try {
+      final parts = time12.trim().split(' ');
+      final timeParts = parts[0].split(':');
+      int hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      final period = parts.length > 1 ? parts[1].toUpperCase() : 'AM';
+
+      if (period == 'PM' && hour != 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+
+      return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return time12;
+    }
   }
 }

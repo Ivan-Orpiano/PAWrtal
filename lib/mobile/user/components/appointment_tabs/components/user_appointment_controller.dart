@@ -514,4 +514,13 @@ class EnhancedUserAppointmentController extends GetxController {
     await _checkAppointmentReview(appointmentId);
     appointments.refresh();
   }
+
+  String getFormattedAppointmentTime(Appointment appointment) {
+    return appointment.formattedTime; // Uses the helper from Appointment model
+  }
+
+  String getFormattedAppointmentDateTime(Appointment appointment) {
+    return appointment
+        .formattedDateTime; // Uses the helper from Appointment model
+  }
 }

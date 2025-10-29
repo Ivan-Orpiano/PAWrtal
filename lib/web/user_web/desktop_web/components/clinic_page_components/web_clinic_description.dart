@@ -9,14 +9,16 @@ import 'package:get/get.dart';
 
 class WebClinicDescriptionUpdated extends StatefulWidget {
   final Clinic clinic;
-  
+
   const WebClinicDescriptionUpdated({super.key, required this.clinic});
 
   @override
-  State<WebClinicDescriptionUpdated> createState() => _WebClinicDescriptionUpdatedState();
+  State<WebClinicDescriptionUpdated> createState() =>
+      _WebClinicDescriptionUpdatedState();
 }
 
-class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdated> {
+class _WebClinicDescriptionUpdatedState
+    extends State<WebClinicDescriptionUpdated> {
   bool _showFullDescription = false;
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
@@ -30,7 +32,8 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
   Future<void> _loadClinicSettings() async {
     try {
       final authRepository = Get.find<AuthRepository>();
-      final settings = await authRepository.getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
+      final settings = await authRepository
+          .getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
       setState(() {
         _clinicSettings = settings;
         _isLoadingSettings = false;
@@ -85,7 +88,20 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
 
     final isOpen = _clinicSettings!.isOpen;
     final isOpenNow = _clinicSettings!.isOpenNow();
-    final todayHours = _clinicSettings!.getTodayHours();
+
+    // Get today's hours
+    final today = DateTime.now().weekday;
+    final dayName = _getDayName(today);
+    final daySchedule = _clinicSettings!.operatingHours[dayName];
+
+    String todayHours = 'Closed';
+    if (daySchedule?['isOpen'] == true) {
+      final openTime = daySchedule?['openTime'] ?? '';
+      final closeTime = daySchedule?['closeTime'] ?? '';
+      final openTime12 = _formatTimeTo12Hour(openTime);
+      final closeTime12 = _formatTimeTo12Hour(closeTime);
+      todayHours = '$openTime12 - $closeTime12';
+    }
 
     Color statusColor;
     String statusText;
@@ -142,7 +158,6 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
               ],
             ),
           ),
-          // Message button added here
           OutlinedButton.icon(
             onPressed: () => _startConversationWithClinic(context),
             icon: const Icon(Icons.message_rounded, size: 18),
@@ -158,86 +173,128 @@ class _WebClinicDescriptionUpdatedState extends State<WebClinicDescriptionUpdate
     );
   }
 
-Future<void> _startConversationWithClinic(BuildContext context) async {
-  try {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF5173B8)),
-      ),
-    );
-
-    // Check if controller exists, if not create it
-    final MessagingController messagingController = Get.isRegistered<MessagingController>()
-        ? Get.find<MessagingController>()
-        : Get.put(MessagingController());
-    
-    final UserSessionService userSession = Get.find<UserSessionService>();
-
-    if (userSession.userId.isEmpty) {
-      Navigator.pop(context);
-      _showLoginRequiredDialog(context);
-      return;
-    }
-
-    print('=== Starting conversation with clinic ===');
-    
-    // Start or get existing conversation
-    final conversation = await messagingController.startConversationWithClinic(
-        widget.clinic.documentId!);
-
-    if (conversation == null) {
-      Navigator.pop(context);
-      if (context.mounted) {
-        _showErrorDialog(context, 'Failed to start conversation. Please try again.');
-      }
-      return;
-    }
-
-    print('Conversation created/found: ${conversation.documentId}');
-
-    // CRITICAL: Ensure conversation is set as current and data is loaded
-    // The startConversationWithClinic already does this, but we wait a bit
-    // to ensure real-time subscriptions are set up
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    Navigator.pop(context);
-
-    if (context.mounted) {
-      print('Navigating to messages tab...');
-      
-      // Navigate to messages page using the home controller
-      final homeController = Get.isRegistered<WebUserHomeController>()
-          ? Get.find<WebUserHomeController>()
-          : Get.put(WebUserHomeController());
-      
-      // Switch to Messages tab (index 2)
-      homeController.onItemSelected(2);
-      
-      // Wait a bit for tab to switch
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      // Close the clinic page
-      Navigator.pop(context);
-      
-      print('Navigation complete');
-    }
-  } catch (e) {
-    print('Error in _startConversationWithClinic: $e');
-    if (context.mounted) {
-      Navigator.pop(context);
-      _showErrorDialog(context, 'Error starting conversation: $e');
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
     }
   }
-}
+
+  String _formatTimeTo12Hour(String time24) {
+    if (time24.isEmpty) return '';
+
+    try {
+      final parts = time24.split(':');
+      if (parts.length != 2) return time24;
+
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+      return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+    } catch (e) {
+      return time24;
+    }
+  }
+
+  Future<void> _startConversationWithClinic(BuildContext context) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF5173B8)),
+        ),
+      );
+
+      // Check if controller exists, if not create it
+      final MessagingController messagingController =
+          Get.isRegistered<MessagingController>()
+              ? Get.find<MessagingController>()
+              : Get.put(MessagingController());
+
+      final UserSessionService userSession = Get.find<UserSessionService>();
+
+      if (userSession.userId.isEmpty) {
+        Navigator.pop(context);
+        _showLoginRequiredDialog(context);
+        return;
+      }
+
+      print('=== Starting conversation with clinic ===');
+
+      // Start or get existing conversation
+      final conversation = await messagingController
+          .startConversationWithClinic(widget.clinic.documentId!);
+
+      if (conversation == null) {
+        Navigator.pop(context);
+        if (context.mounted) {
+          _showErrorDialog(
+              context, 'Failed to start conversation. Please try again.');
+        }
+        return;
+      }
+
+      print('Conversation created/found: ${conversation.documentId}');
+
+      // CRITICAL: Ensure conversation is set as current and data is loaded
+      // The startConversationWithClinic already does this, but we wait a bit
+      // to ensure real-time subscriptions are set up
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      Navigator.pop(context);
+
+      if (context.mounted) {
+        print('Navigating to messages tab...');
+
+        // Navigate to messages page using the home controller
+        final homeController = Get.isRegistered<WebUserHomeController>()
+            ? Get.find<WebUserHomeController>()
+            : Get.put(WebUserHomeController());
+
+        // Switch to Messages tab (index 2)
+        homeController.onItemSelected(2);
+
+        // Wait a bit for tab to switch
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        // Close the clinic page
+        Navigator.pop(context);
+
+        print('Navigation complete');
+      }
+    } catch (e) {
+      print('Error in _startConversationWithClinic: $e');
+      if (context.mounted) {
+        Navigator.pop(context);
+        _showErrorDialog(context, 'Error starting conversation: $e');
+      }
+    }
+  }
 
   void _showLoginRequiredDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Login Required'),
-        content: const Text('Please log in to start a conversation with this clinic.'),
+        content: const Text(
+            'Please log in to start a conversation with this clinic.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -279,7 +336,15 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
     }
 
     final operatingHours = _clinicSettings!.operatingHours;
-    final days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    final days = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -312,7 +377,11 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
             final isOpen = dayData?['isOpen'] ?? false;
             final openTime = dayData?['openTime'] ?? '';
             final closeTime = dayData?['closeTime'] ?? '';
-            
+
+            // Convert to 12-hour format
+            final openTime12 = _formatTimeTo12Hour(openTime);
+            final closeTime12 = _formatTimeTo12Hour(closeTime);
+
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
@@ -329,7 +398,7 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
                     ),
                   ),
                   Text(
-                    isOpen ? '$openTime - $closeTime' : 'Closed',
+                    isOpen ? '$openTime12 - $closeTime12' : 'Closed',
                     style: TextStyle(
                       fontSize: 14,
                       color: isOpen ? Colors.black87 : Colors.grey[500],
@@ -345,8 +414,8 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
   }
 
   Widget _buildEmergencyContact() {
-    if (_isLoadingSettings || 
-        _clinicSettings == null || 
+    if (_isLoadingSettings ||
+        _clinicSettings == null ||
         _clinicSettings!.emergencyContact.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -393,8 +462,8 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
   }
 
   Widget _buildSpecialInstructions() {
-    if (_isLoadingSettings || 
-        _clinicSettings == null || 
+    if (_isLoadingSettings ||
+        _clinicSettings == null ||
         _clinicSettings!.specialInstructions.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -443,11 +512,11 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
 
   @override
   Widget build(BuildContext context) {
-    String description = widget.clinic.description.isNotEmpty 
-        ? widget.clinic.description 
+    String description = widget.clinic.description.isNotEmpty
+        ? widget.clinic.description
         : "This veterinary clinic provides comprehensive pet care services. "
-          "We are committed to ensuring the health and well-being of your pets "
-          "through professional veterinary care and compassionate service.";
+            "We are committed to ensuring the health and well-being of your pets "
+            "through professional veterinary care and compassionate service.";
 
     return Column(
       children: [
@@ -457,18 +526,15 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
             children: [
               Text(
                 'About this veterinary clinic',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 22
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 22),
               ),
             ],
           ),
         ),
-        
+
         // Clinic status with message button
         _buildClinicStatus(),
-        
+
         // Contact Information Section
         Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -480,9 +546,11 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
           ),
           child: Column(
             children: [
-              _buildInfoRow(Icons.location_on_outlined, 'Address', widget.clinic.address),
+              _buildInfoRow(
+                  Icons.location_on_outlined, 'Address', widget.clinic.address),
               const SizedBox(height: 8),
-              _buildInfoRow(Icons.phone_outlined, 'Contact', widget.clinic.contact),
+              _buildInfoRow(
+                  Icons.phone_outlined, 'Contact', widget.clinic.contact),
               const SizedBox(height: 8),
               _buildInfoRow(Icons.email_outlined, 'Email', widget.clinic.email),
             ],
@@ -502,8 +570,8 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            _showFullDescription || !_hasLongDescription 
-                ? description 
+            _showFullDescription || !_hasLongDescription
+                ? description
                 : _truncatedDescription,
             textAlign: TextAlign.justify,
             style: const TextStyle(
@@ -512,7 +580,7 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
             ),
           ),
         ),
-        
+
         if (_hasLongDescription)
           InkWell(
             onTap: () {
@@ -525,14 +593,13 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
                 Text(
                   _showFullDescription ? "Show less" : "Show more",
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline
-                  ),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline),
                 ),
                 Icon(
-                  _showFullDescription 
-                      ? Icons.keyboard_arrow_up_rounded 
+                  _showFullDescription
+                      ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_right_rounded,
                   size: 24,
                 ),
@@ -566,7 +633,8 @@ Future<void> _startConversationWithClinic(BuildContext context) async {
                 value.isNotEmpty ? value : 'Not provided',
                 style: TextStyle(
                   fontSize: 15,
-                  color: value.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
+                  color:
+                      value.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
                 ),
               ),
             ],
