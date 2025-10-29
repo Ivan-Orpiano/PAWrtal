@@ -3,6 +3,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/image_helper.dart';
 import 'package:get/get.dart';
 
 import 'dart:async';
@@ -44,23 +45,31 @@ class SuperAdminHomeController extends GetxController {
     super.onClose();
   }
 
-  Future<void> fetchAllClinics() async {
-    try {
-      isLoading.value = true;
-      errorMessage.value = '';
+ Future<void> fetchAllClinics() async {
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
 
-      final clinicsData = await authRepository.getClinicsWithSettings();
-      clinicsWithSettings.value = clinicsData;
+    print('>>> Fetching all clinics with dashboard pictures...');
 
-      // Apply current sorting after fetching
-      sortClinics();
-    } catch (e) {
-      errorMessage.value = 'Error fetching clinics: ${e.toString()}';
-      print('Error in fetchAllClinics: $e');
-    } finally {
-      isLoading.value = false;
-    }
+    // Use the enhanced method
+    final clinicsData = await getClinicsWithDashboardPictures();
+    
+    clinicsWithSettings.value = clinicsData;
+
+    // Apply current sorting after fetching
+    sortClinics();
+    
+    print('>>> Successfully loaded ${clinicsData.length} clinics');
+    
+  } catch (e) {
+    errorMessage.value = 'Error fetching clinics: ${e.toString()}';
+    print('Error in fetchAllClinics: $e');
+  } finally {
+    isLoading.value = false;
   }
+}
+
 
   void setupRealtimeListeners() {
     try {
@@ -115,6 +124,73 @@ class SuperAdminHomeController extends GetxController {
       print('Error setting up realtime listeners: $e');
     }
   }
+
+  Future<List<Map<String, dynamic>>> getClinicsWithDashboardPictures() async {
+  try {
+    print('>>> ============================================');
+    print('>>> FETCHING CLINICS WITH DASHBOARD PICTURES');
+    print('>>> ============================================');
+
+    // Get all clinics with settings
+    final clinicsData = await authRepository.getClinicsWithSettings();
+    
+    print('>>> Found ${clinicsData.length} clinics');
+
+    // Process each clinic to ensure dashboard picture is included
+    for (var clinicData in clinicsData) {
+      final settings = clinicData['settings'] as ClinicSettings?;
+      final clinic = clinicData['clinic'] as Clinic;
+
+      if (settings != null && settings.dashboardPic.isNotEmpty) {
+        print('>>> Clinic: ${clinic.clinicName}');
+        print('>>>   Has dashboard pic: ${settings.dashboardPic}');
+        
+        // CRITICAL: Update the clinic object with dashboard picture from settings
+        clinic.dashboardPic = settings.dashboardPic;
+        clinicData['clinic'] = clinic;
+      } else {
+        print('>>> Clinic: ${clinic.clinicName}');
+        print('>>>   No dashboard pic - will use clinic.image');
+      }
+      
+    }
+
+    print('>>> ============================================');
+    return clinicsData;
+  } catch (e) {
+    print('>>> ERROR fetching clinics with dashboard pictures: $e');
+    return [];
+  }
+}
+Future<void> debugDashboardPictures() async {
+  try {
+    print('>>> ============================================');
+    print('>>> DEBUG: CHECKING DASHBOARD PICTURES');
+    print('>>> ============================================');
+
+    for (var clinicData in clinicsWithSettings) {
+      final clinic = clinicData['clinic'] as Clinic;
+      final settings = clinicData['settings'] as ClinicSettings?;
+
+      print('>>> Clinic: ${clinic.clinicName}');
+      print('>>>   Clinic.dashboardPic: ${clinic.dashboardPic}');
+      print('>>>   Clinic.image: ${clinic.image}');
+      print('>>>   Settings.dashboardPic: ${settings?.dashboardPic}');
+      print('>>>   Settings exists: ${settings != null}');
+      
+      if (clinic.dashboardPic != null && clinic.dashboardPic!.isNotEmpty) {
+        final url = getDashImageUrl(clinic.dashboardPic!);
+        print('>>>   Generated URL: $url');
+      }
+      
+      print('>>> ---');
+    }
+
+    print('>>> ============================================');
+  } catch (e) {
+    print('>>> DEBUG ERROR: $e');
+  }
+}
 
   void updateSearchQuery(String query) {
     searchQuery.value = query.toLowerCase().trim();

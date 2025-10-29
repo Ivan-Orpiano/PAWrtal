@@ -16,6 +16,9 @@ class FeedbackDeletionRequest {
   final String? reviewedBy;
   final DateTime? reviewedAt;
   final String? reviewNotes;
+  final bool isPinned;
+  final DateTime? pinnedAt;
+  final String? pinnedBy;
 
   FeedbackDeletionRequest({
     this.documentId,
@@ -33,6 +36,9 @@ class FeedbackDeletionRequest {
     this.reviewedBy,
     this.reviewedAt,
     this.reviewNotes,
+    this.isPinned = false, 
+    this.pinnedAt, 
+    this.pinnedBy, 
   })  : requestedAt = requestedAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -86,6 +92,9 @@ class FeedbackDeletionRequest {
       reviewedAt:
           map['reviewedAt'] != null ? DateTime.parse(map['reviewedAt']) : null,
       reviewNotes: map['reviewNotes'],
+      isPinned: map['isPinned'] ?? false,
+      pinnedAt: map['pinnedAt'] != null ? DateTime.parse(map['pinnedAt']) : null,
+      pinnedBy: map['pinnedBy'],
     );
   }
 
@@ -105,6 +114,9 @@ class FeedbackDeletionRequest {
       'reviewedBy': reviewedBy,
       'reviewedAt': reviewedAt?.toIso8601String(),
       'reviewNotes': reviewNotes,
+      'isPinned': isPinned,
+      'pinnedAt': pinnedAt?.toIso8601String(),
+      'pinnedBy': pinnedBy,
     };
   }
 
@@ -124,6 +136,9 @@ class FeedbackDeletionRequest {
     String? reviewedBy,
     DateTime? reviewedAt,
     String? reviewNotes,
+    bool? isPinned, 
+    DateTime? pinnedAt, 
+    String? pinnedBy
   }) {
     return FeedbackDeletionRequest(
       documentId: documentId ?? this.documentId,
@@ -141,6 +156,9 @@ class FeedbackDeletionRequest {
       reviewedBy: reviewedBy ?? this.reviewedBy,
       reviewedAt: reviewedAt ?? this.reviewedAt,
       reviewNotes: reviewNotes ?? this.reviewNotes,
+      isPinned: isPinned ?? this.isPinned, 
+      pinnedAt: pinnedAt ?? this.pinnedAt, 
+      pinnedBy: pinnedBy ?? this.pinnedBy,
     );
   }
 

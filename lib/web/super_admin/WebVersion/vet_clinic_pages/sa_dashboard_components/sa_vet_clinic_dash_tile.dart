@@ -98,33 +98,34 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
     }
   }
 
-  void _updateImageUrl() {
-    if (widget.clinic.dashboardPic != null &&
-        widget.clinic.dashboardPic!.isNotEmpty) {
-      final newUrl = getPetImageUrl(widget.clinic.dashboardPic!);
-      if (newUrl != _cachedImageUrl) {
-        setState(() {
-          _cachedImageUrl = newUrl;
-        });
-      }
-      return;
+ void _updateImageUrl() {
+  // PRIORITY 1: Check for dashboardPic
+  if (widget.clinic.dashboardPic != null &&
+      widget.clinic.dashboardPic!.isNotEmpty) {
+    final newUrl = getDashImageUrl(widget.clinic.dashboardPic!);
+    if (newUrl != _cachedImageUrl) {
+      setState(() {
+        _cachedImageUrl = newUrl;
+      });
     }
-
-    if (widget.clinic.image.isNotEmpty) {
-      final newUrl = getPetImageUrl(widget.clinic.image);
-      if (newUrl != _cachedImageUrl) {
-        setState(() {
-          _cachedImageUrl = newUrl;
-        });
-      }
-      return;
-    }
-
-    setState(() {
-      _cachedImageUrl = null;
-    });
+    return;
   }
 
+  // PRIORITY 2: Fallback to regular clinic image
+  if (widget.clinic.image.isNotEmpty) {
+    final newUrl = getDashImageUrl(widget.clinic.image);
+    if (newUrl != _cachedImageUrl) {
+      setState(() {
+        _cachedImageUrl = newUrl;
+      });
+    }
+    return;
+  }
+
+  setState(() {
+    _cachedImageUrl = null;
+  });
+}
   @override
   Widget build(BuildContext context) {
     final isOpen = widget.settings?.isOpenNow() ?? false;
