@@ -520,7 +520,7 @@ void _showDeletedDialog() {
             // Hero Image
             clinic.image.isNotEmpty
                 ? Image.network(
-                    getPetImageUrl(clinic.image),
+                    getDashImageUrl(clinic.image),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return _buildImagePlaceholder();
@@ -1312,7 +1312,7 @@ Widget _buildStatCard({
                         fit: StackFit.expand,
                         children: [
                           Image.network(
-                            getPetImageUrl(imageId),
+                            getDashImageUrl(imageId),
                             fit: BoxFit.cover,
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
@@ -1560,7 +1560,7 @@ Widget _buildStatCard({
                         fit: StackFit.expand,
                         children: [
                           Image.network(
-                            getPetImageUrl(imageId),
+                            getDashImageUrl(imageId),
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(

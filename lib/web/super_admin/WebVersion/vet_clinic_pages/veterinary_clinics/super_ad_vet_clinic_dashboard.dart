@@ -42,6 +42,12 @@ class _SuperAdminVetClinicDashboardState
   void initState() {
     super.initState();
     _setupRealtimeListeners();
+
+    Future.delayed(const Duration(seconds: 1), () {
+    if (mounted) {
+      controller.debugDashboardPictures();
+    }
+  });
   }
 
   @override

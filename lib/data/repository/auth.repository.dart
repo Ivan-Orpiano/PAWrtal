@@ -896,26 +896,43 @@ class AuthRepository {
   void disposeMessageSubscriptions() =>
       appWriteProvider.disposeMessageSubscriptions();
 
-  Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
-    try {
-      final clinics = await getAllClinics();
-      final List<Map<String, dynamic>> clinicsWithSettings = [];
+Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
+  try {
+    print('>>> ============================================');
+    print('>>> REPOSITORY: Getting clinics with settings');
+    print('>>> ============================================');
 
-      for (final clinic in clinics) {
-        final settings =
-            await getClinicSettingsByClinicId(clinic.documentId ?? '');
-        clinicsWithSettings.add({
-          'clinic': clinic,
-          'settings': settings,
-        });
+    final clinics = await getAllClinics();
+    final List<Map<String, dynamic>> clinicsWithSettings = [];
+
+    for (final clinic in clinics) {
+      print('>>> Processing clinic: ${clinic.clinicName}');
+      
+      final settings = await getClinicSettingsByClinicId(clinic.documentId ?? '');
+      
+      // CRITICAL: Pass dashboard picture from settings to clinic
+      if (settings != null && settings.dashboardPic.isNotEmpty) {
+        print('>>>   âœ" Found dashboard picture: ${settings.dashboardPic}');
+        clinic.dashboardPic = settings.dashboardPic;
+      } else {
+        print('>>>   - No dashboard picture, using clinic image');
       }
 
-      return clinicsWithSettings;
-    } catch (e) {
-      print("Error fetching clinics with settings: $e");
-      return [];
+      clinicsWithSettings.add({
+        'clinic': clinic,
+        'settings': settings,
+      });
     }
+
+    print('>>> Total clinics processed: ${clinicsWithSettings.length}');
+    print('>>> ============================================');
+
+    return clinicsWithSettings;
+  } catch (e) {
+    print(">>> ERROR fetching clinics with settings: $e");
+    return [];
   }
+}
 
   Stream<RealtimeMessage> subscribeToUserAppointments(String userId) {
     return appWriteProvider.subscribeToUserAppointments(userId);

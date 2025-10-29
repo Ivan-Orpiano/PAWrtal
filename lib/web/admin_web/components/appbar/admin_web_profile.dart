@@ -32,6 +32,9 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     super.initState();
     _authRepository = Get.find<AuthRepository>();
     _loadClinicDataFromStorage();
+
+    // ✅ CRITICAL FIX: Initialize profile data immediately on widget creation
+    _initializeProfileData();
   }
 
   void _loadClinicDataFromStorage() {
@@ -43,7 +46,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       String? staffProfilePictureId =
           storage.read("staffProfilePictureId") as String? ?? '';
 
-      // ✅ Clean the ID if it's a URL
+      // Clean the ID if it's a URL
       if (staffProfilePictureId.isNotEmpty) {
         final cleanedId = _extractFileIdFromUrl(staffProfilePictureId);
         if (cleanedId != staffProfilePictureId) {
@@ -51,7 +54,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           print('>>> Original: $staffProfilePictureId');
           print('>>> Cleaned: $cleanedId');
           staffProfilePictureId = cleanedId;
-          // Update storage with cleaned ID
           storage.write("staffProfilePictureId", cleanedId);
         }
       }
@@ -66,7 +68,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       String? clinicProfilePictureId =
           storage.read("clinicProfilePictureId") as String? ?? '';
 
-      // ✅ Clean the ID if it's a URL
+      // Clean the ID if it's a URL
       if (clinicProfilePictureId.isNotEmpty) {
         final cleanedId = _extractFileIdFromUrl(clinicProfilePictureId);
         if (cleanedId != clinicProfilePictureId) {
@@ -74,7 +76,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           print('>>> Original: $clinicProfilePictureId');
           print('>>> Cleaned: $cleanedId');
           clinicProfilePictureId = cleanedId;
-          // Update storage with cleaned ID
           storage.write("clinicProfilePictureId", cleanedId);
         }
       }
@@ -308,10 +309,8 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     final userRole = storage.read("role") as String? ?? "user";
     final isStaff = userRole == 'staff';
 
-    // Get email from storage (now correctly updated for staff)
     final userEmail = storage.read("email") as String? ?? "N/A";
 
-    // Get correct profile picture based on role
     String? profilePictureId;
     if (isStaff) {
       profilePictureId = storage.read("staffProfilePictureId") as String?;
@@ -364,7 +363,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                               fontSize: 11,
                             ),
                           ),
-                          // SHOW EMAIL (NOW CORRECT FOR STAFF)
                           if (userEmail != "N/A")
                             Text(
                               userEmail,
@@ -450,12 +448,12 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     print(
         '>>> ID Empty: ${profilePictureId == null || profilePictureId.isEmpty}');
 
-    // ✅ CRITICAL: Clean the profile picture ID using the helper method
+    // Clean the profile picture ID
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
       final cleanedId = _extractFileIdFromUrl(profilePictureId);
       print('>>> Original ID: $profilePictureId');
       print('>>> Cleaned ID: $cleanedId');
-      profilePictureId = cleanedId; // Use the cleaned ID
+      profilePictureId = cleanedId;
     }
 
     print('>>> Final Profile Picture ID: $profilePictureId');
@@ -513,12 +511,10 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   String _extractFileIdFromUrl(String urlOrId) {
-    // If it's already just an ID, return it
     if (!urlOrId.contains('http')) {
       return urlOrId;
     }
 
-    // If it's a URL, extract the file ID
     try {
       final uri = Uri.parse(urlOrId);
       final pathSegments = uri.pathSegments;
@@ -598,18 +594,11 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     print('>>> Is Initialized: $_isInitialized');
     print('>>> ============================================');
 
-    // Get correct profile picture based on role
+    // Use the cached profile picture ID that was loaded/initialized
     String? profilePictureId;
-    if (isStaff) {
-      // CRITICAL: For staff, ALWAYS use _cachedProfilePictureId (fetched from DB)
-      profilePictureId =
-          _cachedProfilePictureId.isNotEmpty ? _cachedProfilePictureId : null;
-      print('>>> Using staff profile picture: $profilePictureId');
-    } else {
-      // For admin, use cached clinic profile picture
-      profilePictureId =
-          _cachedProfilePictureId.isNotEmpty ? _cachedProfilePictureId : null;
-      print('>>> Using clinic profile picture: $profilePictureId');
+    if (_cachedProfilePictureId.isNotEmpty) {
+      profilePictureId = _cachedProfilePictureId;
+      print('>>> Using cached profile picture: $profilePictureId');
     }
 
     return Padding(

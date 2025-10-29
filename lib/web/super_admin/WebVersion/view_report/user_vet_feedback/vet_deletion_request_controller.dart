@@ -174,7 +174,7 @@ class VetDeletionRequestController extends GetxController {
       final request = allRequests[requestIndex];
       final newPinStatus = !request.isPinned;
 
-      final pinnedBy = 'Super Admin'; // You can get this from session/storage
+      final pinnedBy = 'Developer'; // You can get this from session/storage
 
       print('>>> New pin status: $newPinStatus');
       print('>>> Pinned by: $pinnedBy');

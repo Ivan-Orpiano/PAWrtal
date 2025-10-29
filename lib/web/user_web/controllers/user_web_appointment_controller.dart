@@ -232,21 +232,51 @@ class WebAppointmentController extends GetxController {
 
     return timeSlots.where((timeSlot) {
       try {
-        final timeParts = timeSlot.split(':');
-        final hour = int.parse(timeParts[0]);
-        final minute = int.parse(timeParts[1]);
+        // Handle both 24-hour and 12-hour format
+        DateTime slotDateTime;
 
-        final slotDateTime = DateTime(
+        if (timeSlot.contains('AM') || timeSlot.contains('PM')) {
+          // 12-hour format (e.g., "02:00 PM")
+          final parts = timeSlot.trim().split(' ');
+          final timeParts = parts[0].split(':');
+          int hour = int.parse(timeParts[0]);
+          final minute = int.parse(timeParts[1]);
+          final period = parts.length > 1 ? parts[1].toUpperCase() : 'AM';
+
+          // Convert to 24-hour
+          if (period == 'PM' && hour != 12) {
+            hour += 12;
+          } else if (period == 'AM' && hour == 12) {
+            hour = 0;
+          }
+
+          slotDateTime = DateTime(
             selectedDateTime.value!.year,
             selectedDateTime.value!.month,
             selectedDateTime.value!.day,
             hour,
-            minute);
-        // Add a 30-minute buffer - don't allow booking slots that start within 30 minutes
+            minute,
+          );
+        } else {
+          // 24-hour format (e.g., "14:00")
+          final timeParts = timeSlot.split(':');
+          final hour = int.parse(timeParts[0]);
+          final minute = int.parse(timeParts[1]);
+
+          slotDateTime = DateTime(
+            selectedDateTime.value!.year,
+            selectedDateTime.value!.month,
+            selectedDateTime.value!.day,
+            hour,
+            minute,
+          );
+        }
+
+        // Add a 30-minute buffer
         return slotDateTime.isAfter(now.add(const Duration(minutes: 30)));
       } catch (e) {
-        // If parsing fails, include the slot (better to be permissive)
-        return true;
+        print('Error parsing time slot "$timeSlot": $e');
+        return true; // Include if parsing fails
       }
     }).toList();
   }
@@ -326,12 +356,53 @@ class WebAppointmentController extends GetxController {
       print('>>> BOOKING APPOINTMENT');
       print('>>> Service selected: ${selectedService.value}');
       print('>>> Clinic ID: ${clinic.documentId}');
+      print('>>> Selected time: ${selectedTime.value}');
       print('>>> ============================================');
 
-      // Parse time and create DateTime
-      final timeParts = selectedTime.value!.split(':');
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
+      // ✅ FIXED: Parse time correctly handling both 12-hour and 24-hour formats
+      final timeString = selectedTime.value!;
+      int hour;
+      int minute;
+
+      try {
+        if (timeString.contains('AM') || timeString.contains('PM')) {
+          // 12-hour format (e.g., "02:30 PM")
+          final parts = timeString.trim().split(' ');
+          final timeParts = parts[0].split(':');
+          hour = int.parse(timeParts[0]);
+          minute = int.parse(timeParts[1]);
+          final period = parts.length > 1 ? parts[1].toUpperCase() : 'AM';
+
+          // Convert to 24-hour format
+          if (period == 'PM' && hour != 12) {
+            hour += 12;
+          } else if (period == 'AM' && hour == 12) {
+            hour = 0;
+          }
+
+          print(
+              '>>> Parsed 12-hour time: $timeString → ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
+        } else {
+          // 24-hour format (e.g., "14:30")
+          final timeParts = timeString.split(':');
+          hour = int.parse(timeParts[0]);
+          minute = int.parse(timeParts[1]);
+
+          print('>>> Parsed 24-hour time: $timeString → $hour:$minute');
+        }
+      } catch (e) {
+        print('>>> ❌ ERROR parsing time: $e');
+        print('>>> Time string was: $timeString');
+
+        _showCompactNotification(
+          "Invalid time format. Please try again.",
+          bgColor: Colors.red[600]!,
+          icon: Icons.error_outline,
+          iconColor: Colors.white,
+        );
+        isBooking.value = false;
+        return;
+      }
 
       final appointmentDateTime = DateTime(
         selectedDateTime.value!.year,
@@ -340,6 +411,8 @@ class WebAppointmentController extends GetxController {
         hour,
         minute,
       );
+
+      print('>>> Final appointment datetime: $appointmentDateTime');
 
       // CRITICAL: Check if service is medical from clinic settings
       bool isMedicalService = false;
@@ -362,7 +435,7 @@ class WebAppointmentController extends GetxController {
       final appointment = Appointment(
         userId: userId,
         clinicId: clinic.documentId ?? '',
-        petId: selectedPet.value!.name, // ← CHANGED: Use name instead of petId
+        petId: selectedPet.value!.name, // Use name instead of petId
         service: selectedService.value!,
         dateTime: appointmentDateTime,
         status: clinicSettings.value?.autoAcceptAppointments == true
@@ -373,6 +446,7 @@ class WebAppointmentController extends GetxController {
 
       print('>>> Appointment object created:');
       print('>>>   - Service: ${appointment.service}');
+      print('>>>   - DateTime: ${appointment.dateTime}');
       print('>>>   - isMedicalService: ${appointment.isMedicalService}');
       print('>>> ============================================');
 
