@@ -1729,6 +1729,9 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     required Function(String) onChanged,
     bool isMobile = false,
   }) {
+    // Convert stored 24-hour format to 12-hour for display
+    String displayValue = _convert24To12Hour(value);
+
     return TextField(
       readOnly: true,
       style: TextStyle(fontSize: isMobile ? 12 : 13),
@@ -1740,21 +1743,48 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
         contentPadding: EdgeInsets.symmetric(
             horizontal: isMobile ? 8 : 10, vertical: isMobile ? 10 : 12),
       ),
-      controller: TextEditingController(text: value),
+      controller: TextEditingController(text: displayValue),
       onTap: () async {
+        // Parse current time (24-hour format from storage)
+        final parts = value.split(':');
+        final currentHour = int.parse(parts[0]);
+        final currentMinute = int.parse(parts[1]);
+
         final TimeOfDay? time = await showTimePicker(
           context: context,
-          initialTime: TimeOfDay(
-            hour: int.parse(value.split(':')[0]),
-            minute: int.parse(value.split(':')[1]),
-          ),
+          initialTime: TimeOfDay(hour: currentHour, minute: currentMinute),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                alwaysUse24HourFormat: false, // Force 12-hour format in picker
+              ),
+              child: child!,
+            );
+          },
         );
+
         if (time != null) {
-          final formattedTime =
+          // Store in 24-hour format (for backend compatibility)
+          final formattedTime24 =
               '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-          onChanged(formattedTime);
+          onChanged(formattedTime24);
         }
       },
     );
+  }
+
+  // Helper method to convert 24-hour to 12-hour format for display
+  String _convert24To12Hour(String time24) {
+    try {
+      final parts = time24.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+      return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+    } catch (e) {
+      return time24;
+    }
   }
 }

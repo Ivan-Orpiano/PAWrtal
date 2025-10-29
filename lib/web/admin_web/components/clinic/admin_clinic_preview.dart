@@ -2001,6 +2001,10 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
             final openTime = dayData?['openTime'] ?? '';
             final closeTime = dayData?['closeTime'] ?? '';
 
+            // Convert to 12-hour format
+            final openTime12 = _formatTimeTo12Hour(openTime);
+            final closeTime12 = _formatTimeTo12Hour(closeTime);
+
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
@@ -2014,7 +2018,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                             color: Colors.grey[700])),
                   ),
                   Text(
-                    isOpen ? '$openTime - $closeTime' : 'Closed',
+                    isOpen ? '$openTime12 - $closeTime12' : 'Closed',
                     style: TextStyle(
                         fontSize: isMobile ? 12 : 14,
                         color: isOpen ? Colors.black87 : Colors.grey[500]),
@@ -2026,6 +2030,25 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
         ],
       ),
     );
+  }
+
+  String _formatTimeTo12Hour(String time24) {
+    if (time24.isEmpty) return '';
+
+    try {
+      final parts = time24.split(':');
+      if (parts.length != 2) return time24;
+
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+      return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+    } catch (e) {
+      print('Error formatting time: $e');
+      return time24;
+    }
   }
 
   Widget _buildDescriptionSection(bool isMobile) {

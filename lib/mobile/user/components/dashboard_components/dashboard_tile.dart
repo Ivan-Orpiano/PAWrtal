@@ -13,7 +13,7 @@ class MyDashboardTile extends StatefulWidget {
   final ClinicSettings? clinicSettings;
 
   const MyDashboardTile({
-    super.key, 
+    super.key,
     required this.clinic,
     this.clinicSettings,
   });
@@ -56,10 +56,10 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
   Widget _buildStatusBadge() {
     final isOpen = widget.clinicSettings?.isOpen ?? true;
     final isOpenNow = widget.clinicSettings?.isOpenNow() ?? true;
-    
+
     Color statusColor;
     String statusText;
-    
+
     if (!isOpen) {
       statusColor = Colors.red;
       statusText = "CLOSED";
@@ -151,8 +151,20 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
       return const SizedBox.shrink();
     }
 
-    final todayHours = widget.clinicSettings!.getTodayHours();
-    
+    // Get today's operating hours
+    final now = DateTime.now();
+    final dayName = _getDayName(now.weekday);
+    final dayHours = widget.clinicSettings!.operatingHours[dayName];
+
+    String todayHours;
+    if (dayHours?['isOpen'] == true) {
+      final openTime = dayHours?['openTime'] ?? '09:00';
+      final closeTime = dayHours?['closeTime'] ?? '17:00';
+      todayHours = _formatTimeRange(openTime, closeTime);
+    } else {
+      todayHours = 'Closed';
+    }
+
     return Row(
       children: [
         Icon(
@@ -178,8 +190,9 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
 
   List<String> _getServicesList() {
     List<String> services = [];
-    
-    if (widget.clinicSettings != null && widget.clinicSettings!.services.isNotEmpty) {
+
+    if (widget.clinicSettings != null &&
+        widget.clinicSettings!.services.isNotEmpty) {
       services = widget.clinicSettings!.services.take(2).toList();
     } else if (widget.clinic.services.isNotEmpty) {
       services = widget.clinic.services
@@ -189,17 +202,20 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
           .take(2)
           .toList();
     }
-    
+
     return services;
   }
 
   IconData _getServiceIcon(String service) {
     String serviceLower = service.toLowerCase();
-    if (serviceLower.contains('vaccination') || serviceLower.contains('vaccine')) {
+    if (serviceLower.contains('vaccination') ||
+        serviceLower.contains('vaccine')) {
       return Icons.vaccines_outlined;
-    } else if (serviceLower.contains('surgery') || serviceLower.contains('operation')) {
+    } else if (serviceLower.contains('surgery') ||
+        serviceLower.contains('operation')) {
       return Icons.local_hospital_outlined;
-    } else if (serviceLower.contains('checkup') || serviceLower.contains('examination')) {
+    } else if (serviceLower.contains('checkup') ||
+        serviceLower.contains('examination')) {
       return Icons.health_and_safety_outlined;
     } else if (serviceLower.contains('grooming')) {
       return Icons.pets_outlined;
@@ -214,11 +230,13 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
 
   String _getImageUrl() {
     // Use dashboardPic from settings if available
-    if (widget.clinicSettings != null && widget.clinicSettings!.dashboardPic.isNotEmpty) {
+    if (widget.clinicSettings != null &&
+        widget.clinicSettings!.dashboardPic.isNotEmpty) {
       return widget.clinicSettings!.dashboardPic;
     }
     // Fallback to first gallery image from settings
-    if (widget.clinicSettings != null && widget.clinicSettings!.gallery.isNotEmpty) {
+    if (widget.clinicSettings != null &&
+        widget.clinicSettings!.gallery.isNotEmpty) {
       return widget.clinicSettings!.gallery.first;
     }
     // Final fallback to clinic.image
@@ -229,14 +247,14 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
   Widget build(BuildContext context) {
     final services = _getServicesList();
     final imageUrl = _getImageUrl();
-    
+
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => WebClinicPageHandlerUpdated(clinic: widget.clinic)
-          ),
+              builder: (context) =>
+                  WebClinicPageHandlerUpdated(clinic: widget.clinic)),
         );
       },
       child: Container(
@@ -386,5 +404,45 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
         ),
       ),
     );
+  }
+
+  String _formatTimeRange(String openTime, String closeTime) {
+    // Convert 24-hour times to 12-hour format
+    String format24To12(String time24) {
+      try {
+        final parts = time24.split(':');
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+        return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+      } catch (e) {
+        return time24;
+      }
+    }
+
+    return '${format24To12(openTime)} - ${format24To12(closeTime)}';
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return 'monday';
+    }
   }
 }
