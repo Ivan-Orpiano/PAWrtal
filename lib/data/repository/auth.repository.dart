@@ -24,7 +24,7 @@ import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
 import '../models/feedback_and_report_model.dart';
-import 'package:capstone_app/data/models/feedback_deletion_request_model.dart';
+
 class AuthRepository {
   final AppWriteProvider appWriteProvider;
   AuthRepository(this.appWriteProvider);
@@ -761,12 +761,6 @@ class AuthRepository {
     try {
       print('>>> REPOSITORY: Marking message as read: $messageId');
 
-      final message = Message(
-        conversationId: '',
-        senderId: '',
-        messageText: '',
-      );
-
       await appWriteProvider.updateMessage(messageId, {
         'isRead': true,
         'updatedAt': DateTime.now().toIso8601String(),
@@ -896,43 +890,44 @@ class AuthRepository {
   void disposeMessageSubscriptions() =>
       appWriteProvider.disposeMessageSubscriptions();
 
-Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
-  try {
-    print('>>> ============================================');
-    print('>>> REPOSITORY: Getting clinics with settings');
-    print('>>> ============================================');
+  Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
+    try {
+      print('>>> ============================================');
+      print('>>> REPOSITORY: Getting clinics with settings');
+      print('>>> ============================================');
 
-    final clinics = await getAllClinics();
-    final List<Map<String, dynamic>> clinicsWithSettings = [];
+      final clinics = await getAllClinics();
+      final List<Map<String, dynamic>> clinicsWithSettings = [];
 
-    for (final clinic in clinics) {
-      print('>>> Processing clinic: ${clinic.clinicName}');
-      
-      final settings = await getClinicSettingsByClinicId(clinic.documentId ?? '');
-      
-      // CRITICAL: Pass dashboard picture from settings to clinic
-      if (settings != null && settings.dashboardPic.isNotEmpty) {
-        print('>>>   âœ" Found dashboard picture: ${settings.dashboardPic}');
-        clinic.dashboardPic = settings.dashboardPic;
-      } else {
-        print('>>>   - No dashboard picture, using clinic image');
+      for (final clinic in clinics) {
+        print('>>> Processing clinic: ${clinic.clinicName}');
+
+        final settings =
+            await getClinicSettingsByClinicId(clinic.documentId ?? '');
+
+        // CRITICAL: Pass dashboard picture from settings to clinic
+        if (settings != null && settings.dashboardPic.isNotEmpty) {
+          print('>>>   âœ" Found dashboard picture: ${settings.dashboardPic}');
+          clinic.dashboardPic = settings.dashboardPic;
+        } else {
+          print('>>>   - No dashboard picture, using clinic image');
+        }
+
+        clinicsWithSettings.add({
+          'clinic': clinic,
+          'settings': settings,
+        });
       }
 
-      clinicsWithSettings.add({
-        'clinic': clinic,
-        'settings': settings,
-      });
+      print('>>> Total clinics processed: ${clinicsWithSettings.length}');
+      print('>>> ============================================');
+
+      return clinicsWithSettings;
+    } catch (e) {
+      print(">>> ERROR fetching clinics with settings: $e");
+      return [];
     }
-
-    print('>>> Total clinics processed: ${clinicsWithSettings.length}');
-    print('>>> ============================================');
-
-    return clinicsWithSettings;
-  } catch (e) {
-    print(">>> ERROR fetching clinics with settings: $e");
-    return [];
   }
-}
 
   Stream<RealtimeMessage> subscribeToUserAppointments(String userId) {
     return appWriteProvider.subscribeToUserAppointments(userId);
@@ -2447,10 +2442,173 @@ Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
   }
 
   Future<Document> toggleDeletionRequestPin(
-  String requestId,
-  bool isPinned,
-  String pinnedBy,
-) {
-  return appWriteProvider.toggleDeletionRequestPin(requestId, isPinned, pinnedBy);
-}
+    String requestId,
+    bool isPinned,
+    String pinnedBy,
+  ) {
+    return appWriteProvider.toggleDeletionRequestPin(
+        requestId, isPinned, pinnedBy);
+  }
+
+  /// Get closed dates for a clinic within a date range
+  Future<List<String>> getClinicClosedDates(
+    String clinicId,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    return appWriteProvider.getClinicClosedDates(clinicId, startDate, endDate);
+  }
+
+  /// Check if a specific date is closed for a clinic
+  Future<bool> isClinicClosedOnDate(String clinicId, DateTime date) {
+    return appWriteProvider.isClinicClosedOnDate(clinicId, date);
+  }
+
+  /// Add a closed date to clinic settings
+  Future<void> addClosedDateToClinic(String clinicId, DateTime date) {
+    return appWriteProvider.addClosedDateToClinic(clinicId, date);
+  }
+
+  /// Remove a closed date from clinic settings
+  Future<void> removeClosedDateFromClinic(String clinicId, DateTime date) {
+    return appWriteProvider.removeClosedDateFromClinic(clinicId, date);
+  }
+
+  /// Clear all closed dates for a clinic
+  Future<void> clearAllClosedDatesForClinic(String clinicId) {
+    return appWriteProvider.clearAllClosedDatesForClinic(clinicId);
+  }
+
+  /// Remove past closed dates (cleanup utility)
+  Future<void> removePastClosedDatesForClinic(String clinicId) {
+    return appWriteProvider.removePastClosedDatesForClinic(clinicId);
+  }
+
+  /// Get available time slots excluding closed dates
+  Future<List<String>> getAvailableTimeSlotsExcludingClosedDates(
+    String clinicId,
+    DateTime date,
+  ) {
+    return appWriteProvider.getAvailableTimeSlotsExcludingClosedDates(
+      clinicId,
+      date,
+    );
+  }
+
+  /// Bulk add closed dates
+  Future<void> bulkAddClosedDates(String clinicId, List<DateTime> dates) {
+    return appWriteProvider.bulkAddClosedDates(clinicId, dates);
+  }
+
+  /// Get clinic settings with closed dates information
+  Future<Map<String, dynamic>> getClinicSettingsWithClosedDatesInfo(
+    String clinicId,
+  ) async {
+    try {
+      final settings = await getClinicSettingsByClinicId(clinicId);
+
+      if (settings == null) {
+        return {
+          'hasClosedDates': false,
+          'totalClosedDates': 0,
+          'upcomingClosedDates': 0,
+          'pastClosedDates': 0,
+        };
+      }
+
+      final today = DateTime.now();
+      final todayStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+      int upcoming = 0;
+      int past = 0;
+
+      for (var dateStr in settings.closedDates) {
+        if (dateStr.compareTo(todayStr) >= 0) {
+          upcoming++;
+        } else {
+          past++;
+        }
+      }
+
+      return {
+        'hasClosedDates': settings.closedDates.isNotEmpty,
+        'totalClosedDates': settings.closedDates.length,
+        'upcomingClosedDates': upcoming,
+        'pastClosedDates': past,
+        'closedDates': settings.closedDates,
+        'settings': settings,
+      };
+    } catch (e) {
+      print('Error getting clinic settings with closed dates info: $e');
+      return {
+        'hasClosedDates': false,
+        'totalClosedDates': 0,
+        'upcomingClosedDates': 0,
+        'pastClosedDates': 0,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Validate closed date before adding (business logic)
+  Future<Map<String, dynamic>> validateClosedDate(
+    String clinicId,
+    DateTime date,
+  ) async {
+    try {
+      // Check if date is in the past
+      final today = DateTime.now();
+      if (date.isBefore(DateTime(today.year, today.month, today.day))) {
+        return {
+          'isValid': false,
+          'error': 'Cannot add past dates as closed dates',
+        };
+      }
+
+      // Check if date is already closed
+      final isAlreadyClosed = await isClinicClosedOnDate(clinicId, date);
+      if (isAlreadyClosed) {
+        return {
+          'isValid': false,
+          'error': 'This date is already marked as closed',
+        };
+      }
+
+      // Check if there are existing appointments on this date
+      final appointments = await getClinicAppointments(clinicId);
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      final appointmentsOnDate = appointments.where((apt) {
+        // FIXED: apt.dateTime is already a DateTime object
+        final aptDate = apt.dateTime; // Remove DateTime.parse()
+        final aptDateStr =
+            '${aptDate.year}-${aptDate.month.toString().padLeft(2, '0')}-${aptDate.day.toString().padLeft(2, '0')}';
+        return aptDateStr == dateStr &&
+            (apt.status == 'pending' || apt.status == 'accepted');
+      }).toList();
+
+      if (appointmentsOnDate.isNotEmpty) {
+        return {
+          'isValid': false,
+          'error':
+              'There are ${appointmentsOnDate.length} active appointment(s) on this date',
+          'appointmentCount': appointmentsOnDate.length,
+          'hasConflicts': true,
+        };
+      }
+
+      return {
+        'isValid': true,
+        'message': 'Date can be marked as closed',
+      };
+    } catch (e) {
+      print('Error validating closed date: $e');
+      return {
+        'isValid': false,
+        'error': 'Validation failed: ${e.toString()}',
+      };
+    }
+  }
 }

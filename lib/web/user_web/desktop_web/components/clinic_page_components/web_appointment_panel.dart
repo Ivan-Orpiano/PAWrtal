@@ -14,23 +14,26 @@ class EnhancedWebAppointmentPanel extends StatefulWidget {
   final bool compact;
 
   const EnhancedWebAppointmentPanel({
-    super.key, 
+    super.key,
     required this.clinic,
     this.maxHeight,
     this.compact = false,
   });
 
   @override
-  State<EnhancedWebAppointmentPanel> createState() => _EnhancedWebAppointmentPanelState();
+  State<EnhancedWebAppointmentPanel> createState() =>
+      _EnhancedWebAppointmentPanelState();
 }
 
-class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPanel> {
+class _EnhancedWebAppointmentPanelState
+    extends State<EnhancedWebAppointmentPanel> {
   late WebAppointmentController controller;
 
   @override
   void initState() {
     super.initState();
-    if (!Get.isRegistered<WebAppointmentController>(tag: widget.clinic.documentId)) {
+    if (!Get.isRegistered<WebAppointmentController>(
+        tag: widget.clinic.documentId)) {
       controller = Get.put(
         WebAppointmentController(
           authRepository: Get.find<AuthRepository>(),
@@ -40,7 +43,8 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         tag: widget.clinic.documentId,
       );
     } else {
-      controller = Get.find<WebAppointmentController>(tag: widget.clinic.documentId);
+      controller =
+          Get.find<WebAppointmentController>(tag: widget.clinic.documentId);
     }
   }
 
@@ -60,7 +64,6 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     );
   }
 
-
   Widget _buildCalendarSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,60 +77,161 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
           ),
         ),
         const SizedBox(height: 16),
-        Obx(() => Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey[200]!),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: TableCalendar(
-            focusedDay: controller.selectedDateTime.value ?? DateTime.now(),
-            firstDay: DateTime.now(),
-            lastDay: DateTime.now().add(Duration(
-              days: controller.clinicSettings.value?.maxAdvanceBooking ?? 30,
-            )),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: Colors.grey[800],
-              ),
-              leftChevronIcon: Icon(Icons.chevron_left, color: Colors.grey[600], size: 24),
-              rightChevronIcon: Icon(Icons.chevron_right, color: Colors.grey[600], size: 24),
+        Obx(() {
+          // Get closed dates from controller
+          final closedDates = controller.closedDates.toSet();
+
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[200]!),
+              borderRadius: BorderRadius.circular(12),
             ),
-            calendarStyle: CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: const Color(0xFF5173B8).withOpacity(0.6),
-                border: Border.all(color: Color(0xFF5173B8)),
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: const BoxDecoration(
-                color: Color(0xFF5173B8),
-                shape: BoxShape.circle,
-              ),
-              weekendTextStyle: TextStyle(color: Colors.grey[600]),
-              outsideDaysVisible: false,
-              cellMargin: const EdgeInsets.all(4),
-              disabledTextStyle: TextStyle(color: Colors.grey[400]),
-              defaultTextStyle: const TextStyle(fontSize: 14),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Legend for closed dates
+                if (closedDates.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.red[100],
+                            border: Border.all(color: Colors.red[300]!),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Clinic Closed',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                TableCalendar(
+                  focusedDay:
+                      controller.selectedDateTime.value ?? DateTime.now(),
+                  firstDay: DateTime.now(),
+                  lastDay: DateTime.now().add(Duration(
+                    days: controller.clinicSettings.value?.maxAdvanceBooking ??
+                        30,
+                  )),
+                  headerStyle: HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Colors.grey[800],
+                    ),
+                    leftChevronIcon: Icon(Icons.chevron_left,
+                        color: Colors.grey[600], size: 24),
+                    rightChevronIcon: Icon(Icons.chevron_right,
+                        color: Colors.grey[600], size: 24),
+                  ),
+                  calendarStyle: CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                      color: const Color(0xFF5173B8).withOpacity(0.6),
+                      border: Border.all(color: Color(0xFF5173B8)),
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: const BoxDecoration(
+                      color: Color(0xFF5173B8),
+                      shape: BoxShape.circle,
+                    ),
+                    weekendTextStyle: TextStyle(color: Colors.grey[600]),
+                    outsideDaysVisible: false,
+                    cellMargin: const EdgeInsets.all(4),
+                    disabledTextStyle: TextStyle(color: Colors.grey[400]),
+                    defaultTextStyle: const TextStyle(fontSize: 14),
+                  ),
+                  calendarBuilders: CalendarBuilders(
+                    defaultBuilder: (context, day, focusedDay) {
+                      final dateStr =
+                          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+                      if (closedDates.contains(dateStr)) {
+                        // Show closed dates with red background
+                        return Container(
+                          margin: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            border: Border.all(color: Colors.red[200]!),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${day.day}',
+                            style: TextStyle(
+                              color: Colors.red[400],
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        );
+                      }
+                      return null;
+                    },
+                    disabledBuilder: (context, day, focusedDay) {
+                      final dateStr =
+                          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+                      if (closedDates.contains(dateStr)) {
+                        // Show closed dates with red background even if disabled
+                        return Container(
+                          margin: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            border: Border.all(color: Colors.red[200]!),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${day.day}',
+                            style: TextStyle(
+                              color: Colors.red[300],
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+                  daysOfWeekStyle: const DaysOfWeekStyle(
+                    weekdayStyle:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    weekendStyle:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  enabledDayPredicate: controller.isDateSelectable,
+                  onDaySelected: (selectedDay, focusedDay) {
+                    if (controller.isDateSelectable(selectedDay)) {
+                      controller.onDateSelected(selectedDay);
+                    } else {
+                      // Check if it's a closed date
+                      final dateStr =
+                          '${selectedDay.year}-${selectedDay.month.toString().padLeft(2, '0')}-${selectedDay.day.toString().padLeft(2, '0')}';
+                      if (closedDates.contains(dateStr)) {
+                        _showClosedDateMessage();
+                      }
+                    }
+                  },
+                  selectedDayPredicate: (day) =>
+                      isSameDay(day, controller.selectedDateTime.value),
+                ),
+              ],
             ),
-            daysOfWeekStyle: const DaysOfWeekStyle(
-              weekdayStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              weekendStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-            enabledDayPredicate: controller.isDateSelectable,
-            onDaySelected: (selectedDay, focusedDay) {
-              if (controller.isDateSelectable(selectedDay)) {
-                controller.onDateSelected(selectedDay);
-              }
-            },
-            selectedDayPredicate: (day) =>
-                isSameDay(day, controller.selectedDateTime.value),
-          ),
-        )),
+          );
+        }),
       ],
     );
   }
@@ -170,45 +274,47 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         ),
         const SizedBox(height: 8),
         Obx(() => Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: controller.selectedTime.value,
-              hint: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.access_time, size: 20),
-                    SizedBox(width: 8),
-                    Text('Select time', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
               ),
-              isExpanded: true,
-              items: controller.availableTimes.map((time) {
-                return DropdownMenuItem<String>(
-                  value: time,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: controller.selectedTime.value,
+                  hint: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(
                       children: [
-                        const SizedBox(width: 8),
-                        Text(time, style: const TextStyle(fontSize: 14)),
+                        Icon(Icons.access_time, size: 20),
+                        SizedBox(width: 8),
+                        Text('Select time', style: TextStyle(fontSize: 14)),
                       ],
                     ),
                   ),
-                );
-              }).toList(),
-              onChanged: controller.availableTimes.isEmpty ? null : controller.onTimeSelected,
-            ),
-          ),
-        )),
+                  isExpanded: true,
+                  items: controller.availableTimes.map((time) {
+                    return DropdownMenuItem<String>(
+                      value: time,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 8),
+                            Text(time, style: const TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: controller.availableTimes.isEmpty
+                      ? null
+                      : controller.onTimeSelected,
+                ),
+              ),
+            )),
         Obx(() {
-          if (controller.selectedDateTime.value != null && 
+          if (controller.selectedDateTime.value != null &&
               controller.availableTimes.isEmpty &&
               controller.clinicSettings.value != null) {
             return Padding(
@@ -239,36 +345,37 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
         ),
         const SizedBox(height: 8),
         Obx(() => Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: controller.selectedService.value,
-              hint: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Text('Choose service', style: TextStyle(fontSize: 14)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
               ),
-              isExpanded: true,
-              items: controller.services.map((service) {
-                return DropdownMenuItem<String>(
-                  value: service,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      service,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 14),
-                    ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: controller.selectedService.value,
+                  hint: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child:
+                        Text('Choose service', style: TextStyle(fontSize: 14)),
                   ),
-                );
-              }).toList(),
-              onChanged: controller.onServiceSelected,
-            ),
-          ),
-        )),
+                  isExpanded: true,
+                  items: controller.services.map((service) {
+                    return DropdownMenuItem<String>(
+                      value: service,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          service,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: controller.onServiceSelected,
+                ),
+              ),
+            )),
       ],
     );
   }
@@ -356,15 +463,17 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                   return DropdownMenuItem<Pet>(
                     value: pet,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 16,
                             backgroundColor: Colors.grey[200],
-                            backgroundImage: pet.image != null && pet.image!.isNotEmpty
-                                ? NetworkImage(pet.image!)
-                                : null,
+                            backgroundImage:
+                                pet.image != null && pet.image!.isNotEmpty
+                                    ? NetworkImage(pet.image!)
+                                    : null,
                             child: pet.image == null || pet.image!.isEmpty
                                 ? const Icon(Icons.pets, size: 16)
                                 : null,
@@ -412,7 +521,7 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     return Obx(() {
       final validationMessage = controller.bookingValidationMessage;
       final isEnabled = controller.canBookAppointment;
-      
+
       return Column(
         children: [
           if (validationMessage != null && !controller.isBooking.value)
@@ -440,14 +549,14 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                 ],
               ),
             ),
-          
           SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
               onPressed: isEnabled ? controller.bookAppointment : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: isEnabled ? const Color(0xFF5173B8) : Colors.grey[300],
+                backgroundColor:
+                    isEnabled ? const Color(0xFF5173B8) : Colors.grey[300],
                 disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -463,7 +572,8 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
                         SizedBox(width: 12),
@@ -492,4 +602,29 @@ class _EnhancedWebAppointmentPanelState extends State<EnhancedWebAppointmentPane
     });
   }
 
+  void _showClosedDateMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.event_busy, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'This clinic is closed on the selected date. Please choose another day.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
 }

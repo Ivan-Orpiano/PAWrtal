@@ -349,9 +349,6 @@ class _PetsNextPageState extends State<PetsNextPage>
                               ),
                             ],
                           ),
-
-                    const SizedBox(height: 20),
-
                     const SizedBox(height: 20),
                   ],
                 ),

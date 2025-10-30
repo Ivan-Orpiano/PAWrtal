@@ -86,6 +86,9 @@ class _WebClinicDescriptionUpdatedState
       return const SizedBox.shrink();
     }
 
+    // CRITICAL: Check if today is a closed date FIRST
+    final isTodayClosedDate = _isTodayClosedDate();
+
     final isOpen = _clinicSettings!.isOpen;
     final isOpenNow = _clinicSettings!.isOpenNow();
 
@@ -95,7 +98,7 @@ class _WebClinicDescriptionUpdatedState
     final daySchedule = _clinicSettings!.operatingHours[dayName];
 
     String todayHours = 'Closed';
-    if (daySchedule?['isOpen'] == true) {
+    if (daySchedule?['isOpen'] == true && !isTodayClosedDate) {
       final openTime = daySchedule?['openTime'] ?? '';
       final closeTime = daySchedule?['closeTime'] ?? '';
       final openTime12 = _formatTimeTo12Hour(openTime);
@@ -107,7 +110,12 @@ class _WebClinicDescriptionUpdatedState
     String statusText;
     IconData statusIcon;
 
-    if (!isOpen) {
+    // CRITICAL: Prioritize closed date status
+    if (isTodayClosedDate) {
+      statusColor = Colors.red;
+      statusText = "Closed Today";
+      statusIcon = Icons.event_busy;
+    } else if (!isOpen) {
       statusColor = Colors.red;
       statusText = "Currently Closed";
       statusIcon = Icons.cancel;
@@ -145,10 +153,20 @@ class _WebClinicDescriptionUpdatedState
                     color: statusColor,
                   ),
                 ),
-                if (isOpen) ...[
+                if (!isTodayClosedDate && isOpen) ...[
                   const SizedBox(height: 4),
                   Text(
                     "Hours: $todayHours",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+                if (isTodayClosedDate) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    "This clinic is closed today",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[700],
@@ -642,5 +660,15 @@ class _WebClinicDescriptionUpdatedState
         ),
       ],
     );
+  }
+
+  bool _isTodayClosedDate() {
+    if (_clinicSettings == null) return false;
+
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return _clinicSettings!.closedDates.contains(todayStr);
   }
 }

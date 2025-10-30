@@ -35,6 +35,8 @@ class WebAppointmentController extends GetxController {
   var occupiedTimeSlots = <String>[].obs;
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
 
+  var closedDates = <String>[].obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -92,6 +94,12 @@ class WebAppointmentController extends GetxController {
       final settings = await authRepository
           .getClinicSettingsByClinicId(clinic.documentId ?? '');
       clinicSettings.value = settings;
+
+      // Load closed dates
+      if (settings != null) {
+        closedDates.value = settings.closedDates;
+        print('>>> Loaded ${closedDates.length} closed dates for clinic');
+      }
     } catch (e) {
       print("Error loading clinic settings: $e");
     }
@@ -127,7 +135,11 @@ class WebAppointmentController extends GetxController {
 
   bool isDateSelectable(DateTime day) {
     // Check if date is in the past
-    if (day.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final checkDate = DateTime(day.year, day.month, day.day);
+
+    if (checkDate.isBefore(startOfToday)) {
       return false;
     }
 
@@ -138,6 +150,13 @@ class WebAppointmentController extends GetxController {
         return false;
       }
 
+      // CRITICAL: Check if date is in closed dates
+      final dateStr = _formatDateToString(day);
+      if (closedDates.contains(dateStr)) {
+        print('>>> Date $dateStr is in closed dates list');
+        return false;
+      }
+
       // Check max advance booking
       final maxAdvanceDate = DateTime.now()
           .add(Duration(days: clinicSettings.value!.maxAdvanceBooking));
@@ -145,7 +164,7 @@ class WebAppointmentController extends GetxController {
         return false;
       }
 
-      // Check if clinic is open on this day
+      // Check if clinic is open on this day of week
       final dayName = _getDayName(day.weekday);
       final daySchedule = clinicSettings.value!.operatingHours[dayName];
       if (daySchedule?['isOpen'] != true) {
@@ -155,6 +174,10 @@ class WebAppointmentController extends GetxController {
 
     return true;
   }
+
+  String _formatDateToString(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  } 
 
   String _getDayName(int weekday) {
     switch (weekday) {

@@ -31,6 +31,10 @@ class ClinicSettingsController extends GetxController {
   // Flag to track if controllers are initialized
   var _controllersInitialized = false;
 
+  // NEW: Observable for closed dates
+  var closedDates = <String>[].obs;
+  var selectedClosedDates = <DateTime>[].obs;
+
   // Form controllers - Make them nullable initially
   TextEditingController? _clinicNameController;
   TextEditingController? _addressController;
@@ -287,9 +291,101 @@ class ClinicSettingsController extends GetxController {
 
       // NEW: Populate medical services
       medicalServices.assignAll(settings.medicalServices);
+
+      closedDates.assignAll(settings.closedDates);
+      selectedClosedDates.assignAll(settings.closedDates
+          .map((dateStr) => DateTime.parse(dateStr))
+          .toList());
     } catch (e) {
       print('Error populating settings fields: $e');
     }
+  }
+
+  // NEW: Add a closed date
+  void addClosedDate(DateTime date) {
+    final dateStr = _formatDateToString(date);
+
+    if (!closedDates.contains(dateStr)) {
+      closedDates.add(dateStr);
+      selectedClosedDates.add(date);
+
+      // Sort dates in ascending order
+      selectedClosedDates.sort((a, b) => a.compareTo(b));
+      closedDates.sort();
+
+      _showSnackBar("Closed date added: ${_formatDateForDisplay(date)}");
+    } else {
+      _showSnackBar("This date is already marked as closed", isError: true);
+    }
+  }
+
+  // NEW: Remove a closed date
+  void removeClosedDate(DateTime date) {
+    final dateStr = _formatDateToString(date);
+
+    closedDates.remove(dateStr);
+    selectedClosedDates.removeWhere((d) => _formatDateToString(d) == dateStr);
+
+    _showSnackBar("Closed date removed: ${_formatDateForDisplay(date)}");
+  }
+
+  // NEW: Clear all closed dates
+  void clearAllClosedDates() {
+    closedDates.clear();
+    selectedClosedDates.clear();
+    _showSnackBar("All closed dates cleared");
+  }
+
+  // NEW: Check if a date is closed
+  bool isDateClosed(DateTime date) {
+    final dateStr = _formatDateToString(date);
+    return closedDates.contains(dateStr);
+  }
+
+  // NEW: Remove past closed dates (cleanup)
+  void removePastClosedDates() {
+    final today = DateTime.now();
+    final todayStr = _formatDateToString(today);
+
+    final futureDates = closedDates.where((dateStr) {
+      return dateStr.compareTo(todayStr) >= 0;
+    }).toList();
+
+    final removedCount = closedDates.length - futureDates.length;
+
+    if (removedCount > 0) {
+      closedDates.assignAll(futureDates);
+      selectedClosedDates.assignAll(
+          futureDates.map((dateStr) => DateTime.parse(dateStr)).toList());
+
+      _showSnackBar("Removed $removedCount past closed date(s)");
+    } else {
+      _showSnackBar("No past dates to remove");
+    }
+  }
+
+  // NEW: Helper to format date to YYYY-MM-DD string
+  String _formatDateToString(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // NEW: Helper to format date for display
+  String _formatDateForDisplay(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
   // NEW: Toggle medical service status
@@ -442,6 +538,7 @@ class ClinicSettingsController extends GetxController {
         emergencyContact: _safeGetText(emergencyContactController).trim(),
         specialInstructions: _safeGetText(specialInstructionsController).trim(),
         dashboardPic: tempDashboardPic.value,
+        closedDates: closedDates.toList(),
       );
 
       await authRepository.updateClinicSettings(updatedSettings);

@@ -19,11 +19,13 @@ class ClinicSettings {
   late String createdAt;
   late String updatedAt;
   late String dashboardPic;
+  late List<String> closedDates; // NEW: List of ISO date strings (YYYY-MM-DD)
 
   ClinicSettings({
     this.documentId,
     required this.clinicId,
     this.isOpen = true,
+    List<String>? closedDates,
     Map<String, Map<String, dynamic>>? operatingHours,
     List<String>? gallery,
     this.location,
@@ -42,7 +44,8 @@ class ClinicSettings {
         services = services ?? [],
         medicalServices = medicalServices ?? {}, // NEW
         createdAt = createdAt ?? DateTime.now().toIso8601String(),
-        updatedAt = updatedAt ?? DateTime.now().toIso8601String();
+        updatedAt = updatedAt ?? DateTime.now().toIso8601String(),
+        closedDates = closedDates ?? [];
 
   static Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
     return {
@@ -65,7 +68,7 @@ class ClinicSettings {
       gallery: List<String>.from(map['gallery'] ?? []),
       location: _parseLocation(map['location']),
       services: List<String>.from(map['services'] ?? []),
-      medicalServices: _parseMedicalServices(map['medicalServices']), // NEW
+      medicalServices: _parseMedicalServices(map['medicalServices']),
       appointmentDuration: map['appointmentDuration'] ?? 30,
       maxAdvanceBooking: map['maxAdvanceBooking'] ?? 30,
       emergencyContact: map['emergencyContact'] ?? '',
@@ -74,7 +77,28 @@ class ClinicSettings {
       createdAt: map['createdAt'] ?? DateTime.now().toIso8601String(),
       updatedAt: map['updatedAt'] ?? DateTime.now().toIso8601String(),
       dashboardPic: map['dashboardPic'] ?? '',
+      // FIX: Parse closedDates from JSON string
+      closedDates: _parseClosedDates(map['closedDates']),
     );
+  }
+
+// Add this helper method
+  static List<String> _parseClosedDates(dynamic closedDates) {
+    if (closedDates == null) return [];
+    if (closedDates is String) {
+      try {
+        final decoded = json.decode(closedDates);
+        if (decoded is List) {
+          return List<String>.from(decoded);
+        }
+      } catch (e) {
+        print('Error parsing closed dates: $e');
+      }
+    }
+    if (closedDates is List) {
+      return List<String>.from(closedDates);
+    }
+    return [];
   }
 
   // NEW: Parse medical services map
@@ -146,7 +170,6 @@ class ClinicSettings {
       'gallery': gallery,
       'location': location != null ? json.encode(location) : null,
       'services': services,
-      // CRITICAL FIX: Ensure we're sending a JSON string, not a Map
       'medicalServices':
           json.encode(medicalServices.isEmpty ? {} : medicalServices),
       'appointmentDuration': appointmentDuration,
@@ -157,7 +180,20 @@ class ClinicSettings {
       'createdAt': createdAt,
       'updatedAt': DateTime.now().toIso8601String(),
       'dashboardPic': dashboardPic,
+      // FIX: Convert closedDates array to JSON string
+      'closedDates': json.encode(closedDates),
     };
+  }
+
+  // NEW: Check if a specific date is closed
+  bool isDateClosed(DateTime date) {
+    final dateStr = _formatDateToString(date);
+    return closedDates.contains(dateStr);
+  }
+
+  // NEW: Helper to format date to YYYY-MM-DD
+  String _formatDateToString(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   // NEW: Helper method to check if a service is medical
@@ -356,6 +392,7 @@ class ClinicSettings {
     String? createdAt,
     String? updatedAt,
     String? dashboardPic,
+    List<String>? closedDates,
   }) {
     return ClinicSettings(
       documentId: documentId ?? this.documentId,
@@ -375,6 +412,7 @@ class ClinicSettings {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       dashboardPic: dashboardPic ?? this.dashboardPic,
+      closedDates: closedDates ?? this.closedDates,
     );
   }
 
