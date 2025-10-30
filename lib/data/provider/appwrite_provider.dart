@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:appwrite/appwrite.dart';
-import 'package:web/web.dart' as html;
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
@@ -10,6 +9,7 @@ import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/platform_html_helper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -338,47 +338,58 @@ class AppWriteProvider {
   }
 
   Future<bool> signInWithGoogle() async {
-  try {
-    print('>>> ============================================');
-    print('>>> STARTING GOOGLE OAUTH');
-    print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
-    print('>>> ============================================');
+    try {
+      print('>>> ============================================');
+      print('>>> STARTING GOOGLE OAUTH');
+      print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
+      print('>>> ============================================');
 
-    final String baseUrl = kIsWeb ? Uri.base.origin : Uri.base.origin;
-    final String successUrl = '$baseUrl/#/auth/success';
-    final String failureUrl = '$baseUrl/#/auth/failure';
+      if (kIsWeb) {
+        // WEB: Redirect in same tab using platform helper
+        final htmlHelper = PlatformHtmlHelper.instance;
+        final String baseUrl = htmlHelper.getBaseUrl();
+        final String successUrl = '$baseUrl#/auth/success';
+        final String failureUrl = '$baseUrl#/auth/failure';
 
-    print('>>> Base URL: $baseUrl');
-    print('>>> Success URL: $successUrl');
-    print('>>> Failure URL: $failureUrl');
+        print('>>> Base URL: $baseUrl');
+        print('>>> Success URL: $successUrl');
+        print('>>> Failure URL: $failureUrl');
 
-    final oauthUrl =
-        '${AppwriteConstants.endPoint}/account/sessions/oauth2/google'
-        '?project=${AppwriteConstants.projectID}'
-        '&success=${Uri.encodeComponent(successUrl)}'
-        '&failure=${Uri.encodeComponent(failureUrl)}';
+        final oauthUrl =
+            '${AppwriteConstants.endPoint}/account/sessions/oauth2/google'
+            '?project=${AppwriteConstants.projectID}'
+            '&success=${Uri.encodeComponent(successUrl)}'
+            '&failure=${Uri.encodeComponent(failureUrl)}';
 
-    if (kIsWeb) {
-      print('>>> Web platform: redirecting current browser tab...');
-      html.window.location.href = oauthUrl; // ✅ Works properly on web
-      return true;
-    } else {
-      print('>>> Mobile platform: using Appwrite SDK');
-      await account?.createOAuth2Session(
-        provider: OAuthProvider.google,
-        success: successUrl,
-        failure: failureUrl,
-        scopes: ['profile', 'email'],
-      );
-      return true;
+        print('>>> Web: Redirecting in current tab...');
+        htmlHelper.redirectToUrl(oauthUrl);
+        return true;
+      } else {
+        // MOBILE: Use deep link redirect
+        const String scheme = 'https://www.pawrtal.online'; // Your app's custom scheme
+        const String successUrl = '$scheme#/auth/success';
+        const String failureUrl = '$scheme#/auth/failure';
+
+        print('>>> Mobile Success URL: $successUrl');
+        print('>>> Mobile Failure URL: $failureUrl');
+
+        await account?.createOAuth2Session(
+          provider: OAuthProvider.google,
+          success: successUrl,
+          failure: failureUrl,
+          scopes: ['profile', 'email'],
+        );
+
+        print('>>> Mobile: OAuth session initiated');
+        return true;
+      }
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> GOOGLE OAUTH ERROR: $e');
+      print('>>> ============================================');
+      return false;
     }
-  } catch (e) {
-    print('>>> ============================================');
-    print('>>> GOOGLE OAUTH ERROR: $e');
-    print('>>> ============================================');
-    return false;
   }
-}
 
   Future<bool> sendVerificationEmail() async {
     try {
@@ -7125,81 +7136,82 @@ class AppWriteProvider {
   }
 
   Future<Document> toggleDeletionRequestPin(
-  String requestId,
-  bool isPinned,
-  String pinnedBy,
-) async {
-  try {
-    print('>>> Toggling deletion request pin: $requestId to $isPinned');
+    String requestId,
+    bool isPinned,
+    String pinnedBy,
+  ) async {
+    try {
+      print('>>> Toggling deletion request pin: $requestId to $isPinned');
 
-    final data = <String, dynamic>{
-      'isPinned': isPinned,
-      'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
-      'pinnedBy': isPinned ? pinnedBy : null,
-      'updatedAt': DateTime.now().toIso8601String(),
-    };
+      final data = <String, dynamic>{
+        'isPinned': isPinned,
+        'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
+        'pinnedBy': isPinned ? pinnedBy : null,
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
 
-    return await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-      documentId: requestId,
-      data: data,
-    );
-  } catch (e) {
-    print('>>> Error toggling deletion request pin: $e');
-    rethrow;
-  }
-}
-
-/// Migrate existing deletion requests to add pin fields
-Future<void> migrateDeletionRequestPinFields() async {
-  try {
-    print('>>> ============================================');
-    print('>>> MIGRATING DELETION REQUEST PIN FIELDS');
-    print('>>> Adding isPinned, pinnedAt, pinnedBy fields');
-    print('>>> ============================================');
-
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-      queries: [Query.limit(500)],
-    );
-
-    print('>>> Found ${result.documents.length} deletion request records');
-
-    int updated = 0;
-    for (var doc in result.documents) {
-      try {
-        // Check if pin fields exist
-        if (!doc.data.containsKey('isPinned')) {
-          print('>>> Updating deletion request: ${doc.$id}');
-
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-            documentId: doc.$id,
-            data: {
-              'isPinned': false,
-              'pinnedAt': null,
-              'pinnedBy': null,
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
-
-          updated++;
-          print('>>>   ✓ Migration successful');
-        }
-      } catch (e) {
-        print('>>> Error updating deletion request ${doc.$id}: $e');
-      }
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: requestId,
+        data: data,
+      );
+    } catch (e) {
+      print('>>> Error toggling deletion request pin: $e');
+      rethrow;
     }
-
-    print('>>> ============================================');
-    print('>>> MIGRATION COMPLETE');
-    print('>>> Updated $updated deletion request records');
-    print('>>> ============================================');
-  } catch (e) {
-    print('>>> Migration error: $e');
   }
-}
+
+  /// Migrate existing deletion requests to add pin fields
+  Future<void> migrateDeletionRequestPinFields() async {
+    try {
+      print('>>> ============================================');
+      print('>>> MIGRATING DELETION REQUEST PIN FIELDS');
+      print('>>> Adding isPinned, pinnedAt, pinnedBy fields');
+      print('>>> ============================================');
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: [Query.limit(500)],
+      );
+
+      print('>>> Found ${result.documents.length} deletion request records');
+
+      int updated = 0;
+      for (var doc in result.documents) {
+        try {
+          // Check if pin fields exist
+          if (!doc.data.containsKey('isPinned')) {
+            print('>>> Updating deletion request: ${doc.$id}');
+
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId:
+                  AppwriteConstants.feedbackDeletionRequestCollectionID,
+              documentId: doc.$id,
+              data: {
+                'isPinned': false,
+                'pinnedAt': null,
+                'pinnedBy': null,
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
+
+            updated++;
+            print('>>>   ✓ Migration successful');
+          }
+        } catch (e) {
+          print('>>> Error updating deletion request ${doc.$id}: $e');
+        }
+      }
+
+      print('>>> ============================================');
+      print('>>> MIGRATION COMPLETE');
+      print('>>> Updated $updated deletion request records');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Migration error: $e');
+    }
+  }
 }

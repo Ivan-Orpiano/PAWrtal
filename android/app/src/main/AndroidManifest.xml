@@ -51,6 +51,16 @@
                 <action android:name="FLUTTER_NOTIFICATION_CLICK" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- CRITICAL: Your custom scheme for OAuth -->
+                <data
+                    android:scheme="https"
+                    android:host="pawrtal.online" />
+            </intent-filter>
         </activity>
         <service
             android:name="com.google.firebase.messaging.FirebaseMessagingService"

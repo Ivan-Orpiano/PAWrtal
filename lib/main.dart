@@ -2,6 +2,7 @@ import 'package:capstone_app/firebase_options.dart';
 import 'package:capstone_app/mobile/mobile_main.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/dependency_injection.dart';
+import 'package:capstone_app/utils/mobile_oauth_handler.dart';
 import 'package:capstone_app/web/web_main.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -11,18 +12,22 @@ import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/session_manager.dart';
 
 void main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   NotificationService().initializeNotifications();
 
   await GetStorage.init();
-  
+
   await initializeDependencies();
-  
+
   await _initializeSecurity();
-  
+
+  if (!kIsWeb) {
+    await MobileOAuthHandler.initialize();
+    print('>>> Mobile OAuth handler initialized');
+  }
+
   runApp(kIsWeb ? const WebMain() : const MobileMain());
 }
 
@@ -52,7 +57,7 @@ Future<void> _initializeSecurity() async {
 /// Check and clean up expired sessions
 Future<void> _checkExpiredSessions() async {
   final storage = GetStorage();
-  
+
   final sessionId = storage.read('sessionId');
   if (sessionId == null) {
     print('>>> No active session found');
@@ -90,6 +95,14 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
+  void dispose() {
+    // Cleanup OAuth handler
+    if (!kIsWeb) {
+      MobileOAuthHandler.dispose();
+    }
+    super.dispose();
+  }
+
   Widget build(BuildContext context) {
     return const GetMaterialApp(
       debugShowCheckedModeBanner: false,
