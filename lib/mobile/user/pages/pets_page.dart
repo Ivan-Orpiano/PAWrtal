@@ -1,6 +1,7 @@
 import 'package:capstone_app/mobile/user/components/pets_components/floating_action_button.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_tile.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
+import 'package:capstone_app/mobile/user/controllers/mobile_pets_controller.dart';
 import 'package:capstone_app/mobile/user/pages/pets_next_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -13,7 +14,8 @@ class PetsPage extends StatefulWidget {
   State<PetsPage> createState() => _PetsPageState();
 }
 
-class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin {
+class _PetsPageState extends State<PetsPage>
+    with SingleTickerProviderStateMixin {
   late final PetsController petsController;
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _animationController;
@@ -23,7 +25,7 @@ class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -34,6 +36,7 @@ class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Initialize PetsController
       if (!Get.isRegistered<PetsController>()) {
         petsController = Get.put(PetsController(
           authRepository: Get.find(),
@@ -42,6 +45,15 @@ class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin
       } else {
         petsController = Get.find();
       }
+
+      // ✅ ADD THIS: Initialize MobilePetsController
+      if (!Get.isRegistered<MobilePetsController>()) {
+        Get.put(MobilePetsController(
+          authRepository: Get.find(),
+          session: Get.find(),
+        ));
+      }
+
       _animationController.forward();
       setState(() {});
     });
@@ -155,7 +167,7 @@ class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin
                           ],
                         ),
                       ),
-                      
+
                       // Search Bar
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -235,7 +247,8 @@ class _PetsPageState extends State<PetsPage> with SingleTickerProviderStateMixin
                     return Padding(
                       padding: const EdgeInsets.all(20),
                       child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,

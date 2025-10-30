@@ -25,43 +25,47 @@ class FAQItem {
 
 List<FAQItem> faqItems = [
   FAQItem(
-    question: 'Log into your Facebook account',
-    answer: '''Log in using your Facebook login information
+    question: 'How do I book an appointment?',
+    answer: '''To book an appointment:
 
-  1. Go to facebook.com
-  2. Click Email or phone number and enter one of the following:
-    • Email: You can log in with any email that's listed on your Facebook account.
-    • Phone number: If you have a mobile phone number confirmed on your account, you can enter it here (don't add any zeros before the country code, or any symbols).
-    • Username: You can also log in with your username, if you created one.
-  3. Enter your password and click Log In.
+1. Go to the Clinics page
+2. Select your preferred clinic
+3. Choose an available time slot
+4. Fill in the appointment details
+5. Submit your request
 
-  You can also use a passkey instead of entering a password for a safer and more convenient way to log into your account.''',
+You'll receive a notification once the clinic confirms your appointment.''',
   ),
   FAQItem(
-    question: 'Log out of Facebook',
-    answer: '''To log out of Facebook:
+    question: 'How do I manage my pets?',
+    answer: '''To manage your pets:
 
-  1. Click your profile picture in the top right
-  2. Select "Log Out" from the dropdown menu
-  3. You'll be logged out and returned to the login screen''',
+1. Go to the Pets section
+2. Tap "Add Pet" to register a new pet
+3. Fill in your pet's information
+4. Save the profile
+
+You can edit or delete pet profiles anytime from the Pets page.''',
   ),
   FAQItem(
-    question: 'Manage logging in with accounts in Accounts Center',
-    answer: '''You can manage all your connected accounts from Accounts Center:
+    question: 'How do I view medical records?',
+    answer: '''To view medical records:
 
-  1. Go to Settings & Privacy
-  2. Click on Accounts Center
-  3. Here you can add or remove accounts
-  4. Manage login settings across all your Meta accounts''',
+1. Select your pet from the Pets page
+2. Tap on "Medical Records"
+3. View all vaccination and treatment history
+
+Medical records are updated by veterinarians after each visit.''',
   ),
   FAQItem(
-    question: 'I don\'t know if I still have a Facebook account',
-    answer: '''If you're not sure if you have an account:
+    question: 'How do I contact a clinic?',
+    answer: '''To contact a clinic:
 
-  1. Go to facebook.com/login/identify
-  2. Enter your email address or phone number
-  3. Facebook will tell you if an account exists
-  4. If found, you can reset your password to regain access''',
+1. Go to the clinic's profile page
+2. Use the messaging feature to chat with them
+3. Or call them directly using the provided contact number
+
+Clinics typically respond within 24 hours.''',
   ),
 ];
 
