@@ -127,31 +127,43 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     );
   }
 
-  void _initializeData() {
-    // Services
-    if (widget.clinic.services.isNotEmpty) {
-      clinicServices = widget.clinic.services
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
-    }
 
-    // Settings
-    if (widget.settings != null) {
-      galleryImages = List.from(widget.settings!.gallery);
-      operatingHours = Map.from(widget.settings!.operatingHours);
-      appointmentDuration = widget.settings!.appointmentDuration;
-      maxAdvanceBooking = widget.settings!.maxAdvanceBooking;
-      autoAcceptAppointments = widget.settings!.autoAcceptAppointments;
-      isOpen = widget.settings!.isOpen;
+void _initializeData() {
+ 
+  if (widget.clinic.services.isNotEmpty) {
+    clinicServices = widget.clinic.services
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    
+   
+    selectedServices = List<String>.from(clinicServices);
+    
+ 
+  }
 
-      medicalServices =
-          Map<String, bool>.from(widget.settings!.medicalServices);
-    } else {
-      operatingHours = _getDefaultOperatingHours();
+  // ✅ Initialize medical services map from settings
+  if (widget.settings != null) {
+    galleryImages = List.from(widget.settings!.gallery);
+    operatingHours = Map.from(widget.settings!.operatingHours);
+    appointmentDuration = widget.settings!.appointmentDuration;
+    maxAdvanceBooking = widget.settings!.maxAdvanceBooking;
+    autoAcceptAppointments = widget.settings!.autoAcceptAppointments;
+    isOpen = widget.settings!.isOpen;
+
+    // ✅ CRITICAL: Load medical services map
+    medicalServices = Map<String, bool>.from(widget.settings!.medicalServices);
+    
+ 
+  } else {
+    operatingHours = _getDefaultOperatingHours();
+
+    for (var service in selectedServices) {
+      medicalServices[service] = _isServiceMedicalByDefault(service);
     }
   }
+}
 
   Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
     return {
@@ -237,118 +249,330 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     );
   }
 
-  Widget _buildBasicInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildSectionCard(
-            title: "Clinic Image",
-            child: Column(
-              children: [
-                Center(
-                  child: Container(
-                    width: 300,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                      color: Colors.grey[100],
+ Widget _buildBasicInfoTab() {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      children: [
+        // CHANGED: Clinic Gallery instead of single image
+        _buildSectionCard(
+          title: "Clinic Gallery",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    "Upload images of your clinic (${galleryImages.length})",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey,
                     ),
-                    child: AspectRatio(
-                      aspectRatio: 1.0,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: newMainImageId != null
-                            ? Image.network(
-                                getDashImageUrl(newMainImageId!),
-                                fit: BoxFit.cover,
-                              )
-                            : widget.clinic.image.isNotEmpty
-                                ? Image.network(
-                                    getDashImageUrl(widget.clinic.image),
-                                    fit: BoxFit.cover,
-                                  )
-                                : Center(
-                                    child: Icon(
-                                      Icons.image,
-                                      size: 64,
-                                      color: Colors.grey[400],
-                                    ),
-                                  ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: isLoadingImage ? null : _pickGalleryImages,
+                    icon: isLoadingImage
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.add_photo_alternate),
+                    label: Text(isLoadingImage ? 'Uploading...' : 'Add Images'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Info message
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Upload multiple images to showcase your clinic. These will be displayed in your clinic profile.',
+                        style: TextStyle(
+                          color: Colors.blue[900],
+                          fontSize: 13,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Gallery display
+              if (galleryImages.isEmpty)
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[50],
                   ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: isLoadingImage ? null : _pickMainImage,
-                  icon: isLoadingImage
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.upload),
-                  label: Text(isLoadingImage ? 'Uploading...' : 'Change Image'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                    foregroundColor: Colors.white,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.photo_library,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "No images uploaded yet",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Click 'Add Images' to get started",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
                   ),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: galleryImages.length,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        // Image container
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              getDashImageUrl(galleryImages[index]),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
+                                          : null,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline,
+                                        color: Colors.red[700],
+                                        size: 32,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Failed to load",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.red[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        
+                        // Delete button
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: InkWell(
+                            onTap: () => _confirmRemoveGalleryImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.red[700],
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // Image number badge
+                        Positioned(
+                          bottom: 6,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-              ],
-            ),
+            ],
           ),
-          const SizedBox(height: 24),
-          _buildDashboardImageSection(),
-          const SizedBox(height: 24),
-          _buildSectionCard(
-            title: "Basic Information",
-            child: Column(
-              children: [
-                _buildTextField(
-                  controller: clinicNameController,
-                  label: "Clinic Name",
-                  icon: Icons.business,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: emailController,
-                  label: "Email",
-                  icon: Icons.email,
-                  keyboardType: TextInputType.emailAddress,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: addressController,
-                  label: "Address",
-                  icon: Icons.location_on,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: contactController,
-                  label: "Contact Number",
-                  icon: Icons.phone,
-                  keyboardType: TextInputType.phone,
-                  required: true,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: descriptionController,
-                  label: "Description",
-                  icon: Icons.description,
-                  maxLines: 4,
-                  hint: "Tell customers about your clinic...",
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(height: 24),
+        _buildDashboardImageSection(),
+        const SizedBox(height: 24),
+        _buildSectionCard(
+          title: "Basic Information",
+          child: Column(
+            children: [
+              _buildTextField(
+                controller: clinicNameController,
+                label: "Clinic Name",
+                icon: Icons.business,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: emailController,
+                label: "Email",
+                icon: Icons.email,
+                keyboardType: TextInputType.emailAddress,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: addressController,
+                label: "Address",
+                icon: Icons.location_on,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: contactController,
+                label: "Contact Number",
+                icon: Icons.phone,
+                keyboardType: TextInputType.phone,
+                required: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: descriptionController,
+                label: "Description",
+                icon: Icons.description,
+                maxLines: 4,
+                hint: "Tell customers about your clinic...",
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+void _confirmRemoveGalleryImage(int index) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Remove Image?'),
+      content: const Text(
+        'Are you sure you want to remove this image from the gallery?',
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _removeGalleryImage(index);
+            _showSuccessSnackbar('Image removed from gallery');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Remove'),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildDashboardImageSection() {
     return _buildSectionCard(
@@ -450,58 +674,113 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildSectionCard(
-            title: "Services Offered",
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: availableServices.map((service) {
-                    final isSelected = selectedServices.contains(service);
-                    final isMedical = medicalServices[service] ??
-                        _isServiceMedicalByDefault(service);
-                    return FilterChip(
-                      label: Text(service),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            selectedServices.add(service);
-                            medicalServices[service] =
-                                _isServiceMedicalByDefault(service);
-                          } else {
-                            selectedServices.remove(service);
-                            medicalServices.remove(service);
-                          }
-                        });
-                      },
-                      selectedColor: const Color.fromRGBO(81, 115, 153, 0.2),
-                      checkmarkColor: const Color.fromRGBO(81, 115, 153, 1),
-                    );
-                  }).toList(),
+        _buildSectionCard(
+          title: "Services Offered",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ✅ Info box showing current status
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: selectedServices.isEmpty 
+                      ? Colors.orange[50] 
+                      : Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: selectedServices.isEmpty 
+                        ? Colors.orange[200]! 
+                        : Colors.blue[200]!,
+                  ),
                 ),
-                const SizedBox(height: 16),
-                if (selectedServices.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange[200]!),
+                child: Row(
+                  children: [
+                    Icon(
+                      selectedServices.isEmpty 
+                          ? Icons.info_outline 
+                          : Icons.check_circle_outline,
+                      color: selectedServices.isEmpty 
+                          ? Colors.orange[700] 
+                          : Colors.blue[700],
+                      size: 20,
                     ),
-                    child: const Row(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        selectedServices.isEmpty
+                            ? "No services selected. You can add services or leave empty."
+                            : "${selectedServices.length} service(s) selected",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: selectedServices.isEmpty 
+                              ? Colors.orange[700] 
+                              : Colors.blue[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // ✅ Services chips
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: availableServices.map((service) {
+                  final isSelected = selectedServices.contains(service);
+                  final isMedical = medicalServices[service] ??
+                      _isServiceMedicalByDefault(service);
+                  return FilterChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.warning, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Text("Please select at least one service"),
+                        Text(service),
+                        if (isSelected && isMedical) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[700],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Medical',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  ),
-              ],
-            ),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          selectedServices.add(service);
+                          medicalServices[service] =
+                              _isServiceMedicalByDefault(service);
+                        } else {
+                          selectedServices.remove(service);
+                          medicalServices.remove(service);
+                        }
+                      });
+                    },
+                    selectedColor: const Color.fromRGBO(81, 115, 153, 0.2),
+                    checkmarkColor: const Color.fromRGBO(81, 115, 153, 1),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
+),
           const SizedBox(height: 24),
           _buildSectionCard(
             title: "Operating Hours",
@@ -1187,122 +1466,114 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       _showErrorSnackbar('Clinic name is required');
       return;
     }
-    if (selectedServices.isEmpty) {
-      _showErrorSnackbar('Please select at least one service');
-      return;
+
+
+  setState(() {
+    isSaving = true;
+  });
+
+  try {
+    // ✅ Handle dashboard image changes (existing code)
+    String? finalDashboardImageId;
+
+    if (newDashboardImageId == '') {
+      if (widget.clinic.dashboardPic != null &&
+          widget.clinic.dashboardPic!.isNotEmpty) {
+        try {
+          await authRepository.deleteImage(widget.clinic.dashboardPic!);
+          print('>>> Old dashboard image deleted');
+        } catch (e) {
+          print('>>> Warning: Could not delete old dashboard image: $e');
+        }
+      }
+      finalDashboardImageId = '';
+    } else if (newDashboardImageId != null) {
+      finalDashboardImageId = newDashboardImageId;
+
+      if (widget.clinic.dashboardPic != null &&
+          widget.clinic.dashboardPic!.isNotEmpty &&
+          widget.clinic.dashboardPic != newDashboardImageId) {
+        try {
+          await authRepository.deleteImage(widget.clinic.dashboardPic!);
+          print('>>> Old dashboard image replaced');
+        } catch (e) {
+          print('>>> Warning: Could not delete old dashboard image: $e');
+        }
+      }
+    } else {
+      finalDashboardImageId = widget.clinic.dashboardPic;
     }
 
-    setState(() {
-      isSaving = true;
-    });
+    // ✅ Update clinic basic info (services can be empty now)
+    final clinicData = {
+      'clinicName': clinicNameController.text.trim(),
+      'address': addressController.text.trim(),
+      'contact': contactController.text.trim(),
+      'email': emailController.text.trim(),
+      'description': descriptionController.text.trim(),
+      'services': selectedServices.join(', '), // ✅ Can be empty string
+      'image': newMainImageId ?? widget.clinic.image,
+      'dashboardPic': finalDashboardImageId ?? '',
+    };
 
-    try {
-      // ✅ Handle dashboard image changes
-      String? finalDashboardImageId;
+    print('>>> Saving clinic with ${selectedServices.length} services');
 
-      if (newDashboardImageId == '') {
-        // User wants to remove dashboard image
-        if (widget.clinic.dashboardPic != null &&
-            widget.clinic.dashboardPic!.isNotEmpty) {
-          try {
-            await authRepository.deleteImage(widget.clinic.dashboardPic!);
-            print('>>> Old dashboard image deleted');
-          } catch (e) {
-            print('>>> Warning: Could not delete old dashboard image: $e');
-          }
-        }
-        finalDashboardImageId = '';
-      } else if (newDashboardImageId != null) {
-        // User uploaded new dashboard image
-        finalDashboardImageId = newDashboardImageId;
+    await authRepository.updateClinic(
+      widget.clinic.documentId!,
+      clinicData,
+    );
 
-        // Delete old dashboard image if it exists
-        if (widget.clinic.dashboardPic != null &&
-            widget.clinic.dashboardPic!.isNotEmpty &&
-            widget.clinic.dashboardPic != newDashboardImageId) {
-          try {
-            await authRepository.deleteImage(widget.clinic.dashboardPic!);
-            print('>>> Old dashboard image replaced');
-          } catch (e) {
-            print('>>> Warning: Could not delete old dashboard image: $e');
-          }
-        }
-      } else {
-        // Keep existing dashboard image
-        finalDashboardImageId = widget.clinic.dashboardPic;
-      }
-
-      // Update clinic basic info
-      final clinicData = {
-        'clinicName': clinicNameController.text.trim(),
-        'address': addressController.text.trim(),
-        'contact': contactController.text.trim(),
-        'email': emailController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'services': selectedServices.join(', '),
-        'image': newMainImageId ?? widget.clinic.image,
-        'dashboardPic': finalDashboardImageId ?? '', // ✅ Add dashboard image
+    // Update or create settings
+    if (widget.settings != null) {
+      final settingsData = {
+        'clinicId': widget.clinic.documentId!,
+        'isOpen': isOpen,
+        'operatingHours': operatingHours,
+        'gallery': galleryImages,
+        'services': selectedServices, // ✅ Can be empty list
+        'medicalServices': medicalServices, // ✅ Can be empty map
+        'appointmentDuration': appointmentDuration,
+        'maxAdvanceBooking': maxAdvanceBooking,
+        'emergencyContact': emergencyContactController.text.trim(),
+        'specialInstructions': specialInstructionsController.text.trim(),
+        'autoAcceptAppointments': autoAcceptAppointments,
       };
 
-      await authRepository.updateClinic(
-        widget.clinic.documentId!,
-        clinicData,
+      await authRepository.updateClinicSettings(
+        widget.settings!.copyWith(
+          isOpen: isOpen,
+          operatingHours: operatingHours,
+          gallery: galleryImages,
+          services: selectedServices,
+          medicalServices: medicalServices,
+          appointmentDuration: appointmentDuration,
+          maxAdvanceBooking: maxAdvanceBooking,
+          emergencyContact: emergencyContactController.text.trim(),
+          specialInstructions: specialInstructionsController.text.trim(),
+          autoAcceptAppointments: autoAcceptAppointments,
+        ),
       );
-
-      // Update or create settings (existing code remains the same)
-      if (widget.settings != null) {
-        final settingsData = {
-          'clinicId': widget.clinic.documentId!,
-          'isOpen': isOpen,
-          'operatingHours':
-              operatingHours, 
-          'gallery': galleryImages,
-          'services': selectedServices,
-          'medicalServices': medicalServices,
-          'appointmentDuration': appointmentDuration,
-          'maxAdvanceBooking': maxAdvanceBooking,
-          'emergencyContact': emergencyContactController.text.trim(),
-          'specialInstructions': specialInstructionsController.text.trim(),
-          'autoAcceptAppointments': autoAcceptAppointments,
-        };
-
-        await authRepository.updateClinicSettings(
-          widget.settings!.copyWith(
-            isOpen: isOpen,
-            operatingHours: operatingHours,
-            gallery: galleryImages,
-            services: selectedServices,
-            medicalServices: medicalServices,
-            appointmentDuration: appointmentDuration,
-            maxAdvanceBooking: maxAdvanceBooking,
-            emergencyContact: emergencyContactController.text.trim(),
-            specialInstructions: specialInstructionsController.text.trim(),
-            autoAcceptAppointments: autoAcceptAppointments,
-          ),
-        );
-      }
-
-      // Delete removed gallery images
-      if (removedGalleryImages.isNotEmpty) {
-        await authRepository.deleteClinicGalleryImages(removedGalleryImages);
-      }
-
-      _showSuccessSnackbar('Clinic updated successfully');
-
-      // Wait a bit for realtime to propagate, then go back
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      _showErrorSnackbar('Error saving changes: ${e.toString()}');
-    } finally {
-      setState(() {
-        isSaving = false;
-      });
     }
-  }
 
+    // Delete removed gallery images
+    if (removedGalleryImages.isNotEmpty) {
+      await authRepository.deleteClinicGalleryImages(removedGalleryImages);
+    }
+
+    _showSuccessSnackbar('Clinic updated successfully');
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
+  } catch (e) {
+    _showErrorSnackbar('Error saving changes: ${e.toString()}');
+  } finally {
+    setState(() {
+      isSaving = false;
+    });
+  }
+}
   void _handleBackPress() {
     if (isSaving) return;
 

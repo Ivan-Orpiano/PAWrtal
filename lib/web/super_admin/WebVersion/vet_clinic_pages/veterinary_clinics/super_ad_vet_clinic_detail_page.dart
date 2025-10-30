@@ -24,6 +24,8 @@ class SuperAdminVetClinicDetailPage extends StatefulWidget {
       _SuperAdminVetClinicDetailPageState();
 }
 
+int _currentGalleryIndex = 0;
+final PageController _appBarGalleryController = PageController();
 class _SuperAdminVetClinicDetailPageState
     extends State<SuperAdminVetClinicDetailPage>
     with SingleTickerProviderStateMixin {
@@ -148,8 +150,6 @@ Future<void> _refreshClinicData() async {
               .map((s) => s.trim())
               .where((s) => s.isNotEmpty)
               .toList();
-          
-          print('>>> Services refreshed: $clinicServices');
         }
         
         // Update medical services map
@@ -157,15 +157,12 @@ Future<void> _refreshClinicData() async {
           medicalServices = Map<String, bool>.from(
             currentSettings!.medicalServices
           );
-          
-          print('>>> Medical services refreshed: $medicalServices');
         }
       });
 
       _showUpdateNotification('Clinic information updated');
     }
   } catch (e) {
-    print('❌ Error refreshing clinic data: $e');
   }
 }
  void _showUpdateNotification(String message) {
@@ -467,126 +464,192 @@ void _showDeletedDialog() {
   }
 
   Widget _buildSliverAppBar(
-    Clinic clinic,
-    ClinicSettings? settings,
-    bool isOpen,
-    String detailedStatus,
-    bool isMobile,
-  ) {
-    return SliverAppBar(
-      surfaceTintColor: Colors.transparent,
-      expandedHeight: isMobile ? 300 : 400,
-      pinned: true,
-      backgroundColor: Colors.white,
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.arrow_back,
-            color: Color.fromRGBO(81, 115, 153, 1),
-          ),
+  Clinic clinic,
+  ClinicSettings? settings,
+  bool isOpen,
+  String detailedStatus,
+  bool isMobile,
+) {
+  // Determine what images to show
+  List<String> imagesToShow = [];
+  
+  // Priority 1: Gallery images from settings
+  if (settings != null && settings.gallery.isNotEmpty) {
+    imagesToShow = settings.gallery;
+  } 
+  // Priority 2: Dashboard picture from settings
+  else if (settings != null && settings.dashboardPic.isNotEmpty) {
+    imagesToShow = [settings.dashboardPic];
+  }
+  // Priority 3: Dashboard picture from clinic
+  else if (clinic.dashboardPic != null && clinic.dashboardPic!.isNotEmpty) {
+    imagesToShow = [clinic.dashboardPic!];
+  }
+  // Priority 4: Clinic main image
+  else if (clinic.image.isNotEmpty) {
+    imagesToShow = [clinic.image];
+  }
+
+  return SliverAppBar(
+    surfaceTintColor: Colors.transparent,
+    expandedHeight: isMobile ? 300 : 400,
+    pinned: true,
+    backgroundColor: Colors.white,
+    leading: IconButton(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+            ),
+          ],
         ),
-        onPressed: () => Navigator.pop(context, true),
+        child: const Icon(
+          Icons.arrow_back,
+          color: Color.fromRGBO(81, 115, 153, 1),
+        ),
       ),
-      flexibleSpace: FlexibleSpaceBar(
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            clinic.clinicName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+      onPressed: () => Navigator.pop(context, true),
+    ),
+    flexibleSpace: FlexibleSpaceBar(
+      title: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          clinic.clinicName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
         ),
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Hero Image
-            clinic.image.isNotEmpty
-                ? Image.network(
-                    getDashImageUrl(clinic.image),
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildImagePlaceholder();
-                    },
-                  )
-                : _buildImagePlaceholder(),
+      ),
+      background: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Gallery Images with PageView
+          if (imagesToShow.isNotEmpty)
+            PageView.builder(
+              controller: _appBarGalleryController,
+              itemCount: imagesToShow.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentGalleryIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                final imageId = imagesToShow[index];
+                return Image.network(
+                  getDashImageUrl(imageId),
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFFF8FAFC),
+                            const Color.fromRGBO(81, 115, 153, 0.05),
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 3,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color.fromRGBO(81, 115, 153, 1),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Loading image ${index + 1}...',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildImagePlaceholder();
+                  },
+                );
+              },
+            )
+          else
+            _buildImagePlaceholder(),
 
-            // Gradient Overlay
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
-                ),
+          // Gradient Overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.7),
+                ],
               ),
             ),
+          ),
 
-            // Real-time Status Badge
+          // Gallery Counter Badge (only show if multiple images)
+          if (imagesToShow.length > 1)
             Positioned(
               top: 100,
-              right: 16,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+              left: 16,
+              child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+                  horizontal: 14,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isOpen
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFEF4444),
-                  borderRadius: BorderRadius.circular(30),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.75),
+                      Colors.black.withOpacity(0.65),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          (isOpen ? Colors.green : Colors.red).withOpacity(0.5),
+                      color: Colors.black.withOpacity(0.3),
                       blurRadius: 12,
-                      spreadRadius: 2,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.8),
-                            blurRadius: 6,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
+                    const Icon(
+                      Icons.photo_library_rounded,
+                      color: Colors.white,
+                      size: 16,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
-                      detailedStatus,
+                      '${_currentGalleryIndex + 1} / ${imagesToShow.length}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -598,11 +661,146 @@ void _showDeletedDialog() {
                 ),
               ),
             ),
+
+          // Real-time Status Badge
+          Positioned(
+            top: 100,
+            right: 16,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: isOpen
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFEF4444),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        (isOpen ? Colors.green : Colors.red).withOpacity(0.5),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 6,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    detailedStatus,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Navigation Arrows (only show if multiple images and not mobile)
+          if (imagesToShow.length > 1 && !isMobile) ...[
+            // Left Arrow
+            Positioned(
+              left: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  onPressed: () {
+                    if (_currentGalleryIndex > 0) {
+                      _appBarGalleryController.animateToPage(
+                        _currentGalleryIndex - 1,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                ),
+              ),
+            ),
+            // Right Arrow
+            Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  onPressed: () {
+                    if (_currentGalleryIndex < imagesToShow.length - 1) {
+                      _appBarGalleryController.animateToPage(
+                        _currentGalleryIndex + 1,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                ),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
 Widget _buildQuickStatsCards(
     Clinic clinic, ClinicSettings? settings, bool isMobile) {
