@@ -366,7 +366,8 @@ class AppWriteProvider {
         return true;
       } else {
         // MOBILE: Use deep link redirect
-        const String scheme = 'https://www.pawrtal.online'; // Your app's custom scheme
+        const String scheme =
+            'https://www.pawrtal.online'; // Your app's custom scheme
         const String successUrl = '$scheme#/auth/success';
         const String failureUrl = '$scheme#/auth/failure';
 
@@ -7212,6 +7213,255 @@ class AppWriteProvider {
       print('>>> ============================================');
     } catch (e) {
       print('>>> Migration error: $e');
+    }
+  }
+
+  /// Get closed dates for a specific date range
+  Future<List<String>> getClinicClosedDates(
+    String clinicId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      print('>>> Getting closed dates for clinic: $clinicId');
+      print('>>> Date range: $startDate to $endDate');
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) {
+        print('>>> No settings found for clinic');
+        return [];
+      }
+
+      final settings = ClinicSettings.fromMap(settingsDoc.data);
+      final allClosedDates = settings.closedDates;
+
+      // Filter dates within the specified range
+      final filteredDates = allClosedDates.where((dateStr) {
+        final date = DateTime.parse(dateStr);
+        return date.isAfter(startDate.subtract(Duration(days: 1))) &&
+            date.isBefore(endDate.add(Duration(days: 1)));
+      }).toList();
+
+      print('>>> Found ${filteredDates.length} closed dates in range');
+      return filteredDates;
+    } catch (e) {
+      print('>>> Error getting closed dates: $e');
+      return [];
+    }
+  }
+
+  /// Check if a specific date is closed for a clinic
+  Future<bool> isClinicClosedOnDate(String clinicId, DateTime date) async {
+    try {
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) return false;
+
+      final settings = ClinicSettings.fromMap(settingsDoc.data);
+      final dateStr = _formatDateToString(date);
+
+      return settings.closedDates.contains(dateStr);
+    } catch (e) {
+      print('>>> Error checking if clinic closed: $e');
+      return false;
+    }
+  }
+
+  /// Add a closed date to clinic settings
+  Future<void> addClosedDateToClinic(
+    String clinicId,
+    DateTime date,
+  ) async {
+    try {
+      print('>>> Adding closed date to clinic: $clinicId');
+      print('>>> Date: $date');
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) {
+        throw Exception('Clinic settings not found');
+      }
+
+      final settings = ClinicSettings.fromMap(settingsDoc.data);
+      final dateStr = _formatDateToString(date);
+
+      // Check if date already exists
+      if (!settings.closedDates.contains(dateStr)) {
+        settings.closedDates.add(dateStr);
+        settings.closedDates.sort(); // Keep dates sorted
+
+        await updateClinicSettings(
+          settingsDoc.$id,
+          {'closedDates': settings.closedDates},
+        );
+
+        print('>>> Closed date added successfully');
+      } else {
+        print('>>> Date already in closed dates list');
+      }
+    } catch (e) {
+      print('>>> Error adding closed date: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove a closed date from clinic settings
+  Future<void> removeClosedDateFromClinic(
+    String clinicId,
+    DateTime date,
+  ) async {
+    try {
+      print('>>> Removing closed date from clinic: $clinicId');
+      print('>>> Date: $date');
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) {
+        throw Exception('Clinic settings not found');
+      }
+
+      final settings = ClinicSettings.fromMap(settingsDoc.data);
+      final dateStr = _formatDateToString(date);
+
+      settings.closedDates.remove(dateStr);
+
+      await updateClinicSettings(
+        settingsDoc.$id,
+        {'closedDates': settings.closedDates},
+      );
+
+      print('>>> Closed date removed successfully');
+    } catch (e) {
+      print('>>> Error removing closed date: $e');
+      rethrow;
+    }
+  }
+
+  /// Clear all closed dates for a clinic
+  Future<void> clearAllClosedDatesForClinic(String clinicId) async {
+    try {
+      print('>>> Clearing all closed dates for clinic: $clinicId');
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) {
+        throw Exception('Clinic settings not found');
+      }
+
+      await updateClinicSettings(
+        settingsDoc.$id,
+        {'closedDates': []},
+      );
+
+      print('>>> All closed dates cleared successfully');
+    } catch (e) {
+      print('>>> Error clearing closed dates: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove past closed dates (cleanup utility)
+  Future<void> removePastClosedDatesForClinic(String clinicId) async {
+    try {
+      print('>>> Removing past closed dates for clinic: $clinicId');
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) {
+        throw Exception('Clinic settings not found');
+      }
+
+      final settings = ClinicSettings.fromMap(settingsDoc.data);
+      final today = DateTime.now();
+      final todayStr = _formatDateToString(today);
+
+      // Keep only future dates (including today)
+      final futureDates = settings.closedDates.where((dateStr) {
+        return dateStr.compareTo(todayStr) >= 0;
+      }).toList();
+
+      final removedCount = settings.closedDates.length - futureDates.length;
+
+      if (removedCount > 0) {
+        await updateClinicSettings(
+          settingsDoc.$id,
+          {'closedDates': futureDates},
+        );
+
+        print('>>> Removed $removedCount past closed dates');
+      } else {
+        print('>>> No past dates to remove');
+      }
+    } catch (e) {
+      print('>>> Error removing past closed dates: $e');
+      rethrow;
+    }
+  }
+
+  /// Helper method to format date to YYYY-MM-DD string
+  String _formatDateToString(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Get available time slots excluding closed dates
+  Future<List<String>> getAvailableTimeSlotsExcludingClosedDates(
+    String clinicId,
+    DateTime date,
+  ) async {
+    try {
+      // Check if the date is a closed date
+      final isClosed = await isClinicClosedOnDate(clinicId, date);
+
+      if (isClosed) {
+        print('>>> Clinic is closed on ${_formatDateToString(date)}');
+        return []; // Return empty list if clinic is closed
+      }
+
+      // Get normal time slots (existing method)
+      return await getOccupiedTimeSlots(clinicId, date);
+    } catch (e) {
+      print('>>> Error getting available time slots: $e');
+      return [];
+    }
+  }
+
+  /// Bulk add closed dates
+  Future<void> bulkAddClosedDates(
+    String clinicId,
+    List<DateTime> dates,
+  ) async {
+    try {
+      print(
+          '>>> Bulk adding ${dates.length} closed dates to clinic: $clinicId');
+
+      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+
+      if (settingsDoc == null) {
+        throw Exception('Clinic settings not found');
+      }
+
+      final settings = ClinicSettings.fromMap(settingsDoc.data);
+
+      // Add all dates (avoiding duplicates)
+      for (var date in dates) {
+        final dateStr = _formatDateToString(date);
+        if (!settings.closedDates.contains(dateStr)) {
+          settings.closedDates.add(dateStr);
+        }
+      }
+
+      settings.closedDates.sort(); // Keep dates sorted
+
+      await updateClinicSettings(
+        settingsDoc.$id,
+        {'closedDates': settings.closedDates},
+      );
+
+      print('>>> Bulk add completed successfully');
+    } catch (e) {
+      print('>>> Error bulk adding closed dates: $e');
+      rethrow;
     }
   }
 }

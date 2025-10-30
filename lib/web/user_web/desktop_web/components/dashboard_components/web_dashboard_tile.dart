@@ -134,13 +134,20 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
       );
     }
 
+    // CRITICAL: Check if today is a closed date FIRST
+    final isTodayClosedDate = _isTodayClosedDate();
+
     final isOpen = _clinicSettings?.isOpen ?? true;
     final isOpenNow = _clinicSettings?.isOpenNow() ?? true;
 
     Color statusColor;
     String statusText;
 
-    if (!isOpen) {
+    // CRITICAL: Prioritize closed date status
+    if (isTodayClosedDate) {
+      statusColor = Colors.red;
+      statusText = "CLOSED TODAY";
+    } else if (!isOpen) {
       statusColor = Colors.red;
       statusText = "CLOSED";
     } else if (!isOpenNow) {
@@ -229,6 +236,20 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
   Widget _buildHoursDisplay() {
     if (_isLoadingSettings || _clinicSettings == null) {
       return const SizedBox.shrink();
+    }
+
+    // CRITICAL: Check if today is a closed date
+    final isTodayClosedDate = _isTodayClosedDate();
+
+    if (isTodayClosedDate) {
+      return Text(
+        'Closed Today',
+        style: TextStyle(
+          color: Colors.red[600],
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      );
     }
 
     // Get today's hours in 24-hour format
@@ -479,5 +500,15 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
         ),
       ),
     );
+  }
+
+  bool _isTodayClosedDate() {
+    if (_clinicSettings == null) return false;
+
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return _clinicSettings!.closedDates.contains(todayStr);
   }
 }

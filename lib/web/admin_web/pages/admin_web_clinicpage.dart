@@ -1368,6 +1368,10 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
               ],
             ),
           ),
+          const SizedBox(height: 20), // NEW: Add spacing
+
+          // NEW: Add closed dates section
+          _buildClosedDatesSection(isMobile),
         ],
       ),
     );
@@ -1786,5 +1790,529 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     } catch (e) {
       return time24;
     }
+  }
+
+  Widget _buildClosedDatesSection(bool isMobile) {
+    return _buildSectionCard(
+      title: "Closed Dates",
+      isMobile: isMobile,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Mark specific dates when your clinic will be closed (holidays, vacations, etc.)",
+                  style: TextStyle(
+                    fontSize: isMobile ? 13 : 14,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Date picker button
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _showClosedDatePicker(isMobile),
+                  icon: const Icon(Icons.event_busy),
+                  label: const Text("Add Closed Date"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[600],
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 16,
+                      vertical: isMobile ? 10 : 12,
+                    ),
+                  ),
+                ),
+              ),
+              if (!isMobile) const SizedBox(width: 12),
+              if (!isMobile)
+                TextButton.icon(
+                  onPressed: controller.selectedClosedDates.isEmpty
+                      ? null
+                      : () => _showClearClosedDatesDialog(),
+                  icon: const Icon(Icons.clear_all),
+                  label: const Text("Clear All"),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // List of closed dates
+          Obx(() {
+            if (controller.selectedClosedDates.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.event_available,
+                          size: isMobile ? 36 : 48, color: Colors.grey[400]),
+                      const SizedBox(height: 8),
+                      Text(
+                        "No closed dates set",
+                        style: TextStyle(
+                          fontSize: isMobile ? 13 : 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Sort dates for display
+            final sortedDates =
+                List<DateTime>.from(controller.selectedClosedDates)
+                  ..sort((a, b) => a.compareTo(b));
+
+            return Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: EdgeInsets.all(isMobile ? 10 : 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(7),
+                        topRight: Radius.circular(7),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.event_busy,
+                            size: isMobile ? 16 : 18,
+                            color: Colors.orange[700]),
+                        const SizedBox(width: 8),
+                        Text(
+                          "${sortedDates.length} Closed Date(s)",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: isMobile ? 13 : 14,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isMobile)
+                          IconButton(
+                            icon: const Icon(Icons.clear_all, size: 18),
+                            onPressed: () => _showClearClosedDatesDialog(),
+                            tooltip: "Clear All",
+                            color: Colors.red,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // List of dates
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: sortedDates.length,
+                    separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      color: Colors.grey[300],
+                    ),
+                    itemBuilder: (context, index) {
+                      final date = sortedDates[index];
+                      final isToday = _isToday(date);
+                      final isPast = date.isBefore(DateTime.now()) && !isToday;
+
+                      return Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 10 : 12,
+                          vertical: isMobile ? 8 : 10,
+                        ),
+                        color: isPast ? Colors.grey[100] : null,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isPast
+                                    ? Colors.grey[300]
+                                    : Colors.orange[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.event_busy,
+                                color: isPast
+                                    ? Colors.grey[600]
+                                    : Colors.orange[700],
+                                size: isMobile ? 18 : 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _formatDateForDisplay(date),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: isMobile ? 13 : 14,
+                                      color: isPast ? Colors.grey[600] : null,
+                                      decoration: isPast
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                  Text(
+                                    _getDayOfWeek(date),
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 11 : 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isToday)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  "Today",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ),
+                            if (isPast)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  "Past",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: isMobile ? 18 : 20,
+                              ),
+                              onPressed: () => _confirmRemoveClosedDate(date),
+                              color: Colors.red,
+                              tooltip: "Remove",
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          // Cleanup button for past dates
+          Obx(() {
+            final hasPastDates = controller.selectedClosedDates.any((date) {
+              return date.isBefore(DateTime.now()) && !_isToday(date);
+            });
+
+            if (!hasPastDates) return const SizedBox.shrink();
+
+            return Column(
+              children: [
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmRemovePastDates(),
+                    icon: const Icon(Icons.cleaning_services),
+                    label: const Text("Remove Past Dates"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
+                      side: BorderSide(color: Colors.grey[400]!),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+
+          const SizedBox(height: 20),
+
+          // Save button
+          Row(
+            children: [
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: controller.isSaving.value
+                    ? null
+                    : controller.saveClinicSettings,
+                icon: controller.isSaving.value
+                    ? SizedBox(
+                        width: isMobile ? 13 : 16,
+                        height: isMobile ? 13 : 16,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(
+                  controller.isSaving.value ? "Saving..." : "Save Closed Dates",
+                  style: TextStyle(fontSize: isMobile ? 12 : 13),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 20,
+                    vertical: isMobile ? 8 : 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClosedDatePicker(bool isMobile) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        DateTime? selectedDate;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Select Closed Date"),
+              content: SizedBox(
+                width: isMobile ? double.maxFinite : 400,
+                child: TableCalendar(
+                  focusedDay: selectedDate ?? DateTime.now(),
+                  firstDay: DateTime.now(),
+                  lastDay: DateTime.now().add(const Duration(days: 365)),
+                  selectedDayPredicate: (day) =>
+                      selectedDate != null && isSameDay(day, selectedDate),
+                  onDaySelected: (selected, focused) {
+                    setState(() => selectedDate = selected);
+                  },
+                  calendarStyle: CalendarStyle(
+                    selectedDecoration: const BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    // Mark already closed dates
+                    disabledDecoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  enabledDayPredicate: (day) {
+                    // Disable dates that are already closed
+                    return !controller.isDateClosed(day);
+                  },
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: selectedDate == null
+                      ? null
+                      : () {
+                          controller.addClosedDate(selectedDate!);
+                          Navigator.pop(context);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[600],
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Add Date"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmRemoveClosedDate(DateTime date) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Remove Closed Date"),
+          content: Text(
+            "Remove ${_formatDateForDisplay(date)} from closed dates?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                controller.removeClosedDate(date);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Remove"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showClearClosedDatesDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Clear All Closed Dates"),
+          content: Text(
+            "Remove all ${controller.selectedClosedDates.length} closed dates?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                controller.clearAllClosedDates();
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Clear All"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmRemovePastDates() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Remove Past Dates"),
+          content: const Text(
+            "Remove all closed dates that have already passed?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                controller.removePastClosedDates();
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Remove"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  String _formatDateForDisplay(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  String _getDayOfWeek(DateTime date) {
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    return days[date.weekday - 1];
   }
 }
