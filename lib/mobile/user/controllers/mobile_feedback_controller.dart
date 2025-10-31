@@ -5,6 +5,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:capstone_app/data/models/daily_report_tracker_model.dart';
 
 class MobileFeedbackController extends GetxController {
   final AuthRepository authRepository;
@@ -22,9 +23,135 @@ class MobileFeedbackController extends GetxController {
   Rx<FeedbackCategory> selectedCategory = FeedbackCategory.other.obs;
   RxString subject = ''.obs;
   RxString description = ''.obs;
+  final Rx<UserDailyReportTracker?> dailyTracker = Rx<UserDailyReportTracker?>(null);
+  final RxBool isCheckingLimit = false.obs;
 
   // ============= NOTIFICATION HELPER =============
 
+@override
+  void onInit() {
+    super.onInit();
+    _loadDailyReportTracker();
+  }
+
+    Future<void> _loadDailyReportTracker() async {
+    try {
+      isCheckingLimit.value = true;
+      
+      final userId = session.userId;
+      if (userId.isEmpty) {
+        print('>>> No user ID, skipping tracker load');
+        return;
+      }
+      
+      print('>>> Loading daily report tracker for user: $userId');
+      
+      // Get user's feedback submissions from last 24 hours
+      final allFeedback = await authRepository.getUserFeedback(userId);
+      
+      final now = DateTime.now();
+      final last24Hours = now.subtract(const Duration(hours: 24));
+      
+      // Count reports in last 24 hours
+      final recentReports = allFeedback.where((feedback) {
+        return feedback.submittedAt.isAfter(last24Hours);
+      }).toList();
+      
+      print('>>> Found ${recentReports.length} reports in last 24 hours');
+      
+      // Find the oldest report timestamp to use as reset time
+      DateTime lastResetAt = now.subtract(const Duration(hours: 24));
+      DateTime? lastReportAt;
+      
+      if (recentReports.isNotEmpty) {
+        // Sort by submission time
+        recentReports.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+        lastResetAt = recentReports.first.submittedAt;
+        lastReportAt = recentReports.last.submittedAt;
+      }
+      
+      // Create tracker
+      final tracker = UserDailyReportTracker(
+        userId: userId,
+        reportCount: recentReports.length,
+        lastResetAt: lastResetAt,
+        lastReportAt: lastReportAt ?? now,
+      );
+      
+      // Check if needs reset
+      if (tracker.needsReset) {
+        print('>>> Tracker needs reset (>24 hours old)');
+        dailyTracker.value = tracker.reset();
+      } else {
+        dailyTracker.value = tracker;
+      }
+      
+      print('>>> Daily tracker loaded:');
+      print('>>>   Reports today: ${dailyTracker.value!.reportCount}/3');
+      print('>>>   Remaining: ${dailyTracker.value!.remainingReports}');
+      print('>>>   Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
+      
+    } catch (e) {
+      print('>>> Error loading daily tracker: $e');
+    } finally {
+      isCheckingLimit.value = false;
+    }
+  }
+
+  bool canSubmitFeedback() {
+    if (dailyTracker.value == null) {
+      print('>>> No tracker loaded, allowing submission');
+      return true;
+    }
+    
+    // Check if needs reset first
+    if (dailyTracker.value!.needsReset) {
+      print('>>> Tracker needs reset, resetting now...');
+      dailyTracker.value = dailyTracker.value!.reset();
+      return true;
+    }
+    
+    final canSubmit = !dailyTracker.value!.hasExceededLimit;
+    
+    if (!canSubmit) {
+      print('>>> Daily limit exceeded: ${dailyTracker.value!.reportCount}/3');
+      print('>>> Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
+    }
+    
+    return canSubmit;
+  }
+
+  int getRemainingReports() {
+    if (dailyTracker.value == null) return 3;
+    
+    if (dailyTracker.value!.needsReset) {
+      return 3;
+    }
+    
+    return dailyTracker.value!.remainingReports;
+  }
+  
+  String getTimeUntilReset() {
+    if (dailyTracker.value == null) return 'N/A';
+    
+    if (dailyTracker.value!.needsReset) {
+      return 'Ready to reset';
+    }
+    
+    return _formatDuration(dailyTracker.value!.timeUntilReset);
+  }
+  
+  String _formatDuration(Duration duration) {
+    if (duration.inHours > 0) {
+      final hours = duration.inHours;
+      final minutes = duration.inMinutes % 60;
+      return '${hours}h ${minutes}m';
+    } else if (duration.inMinutes > 0) {
+      return '${duration.inMinutes}m';
+    } else {
+      return 'Less than 1 minute';
+    }
+  }
   /// Show compact toast notification
   void _showCompactNotification(String message,
       {required Color bgColor,
@@ -211,6 +338,12 @@ class MobileFeedbackController extends GetxController {
 
   /// Submit feedback
   Future<bool> submitFeedback() async {
+      if (!canSubmitFeedback()) {
+      _showError(
+        'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.'
+      );
+      return false;
+    }
     if (!validateForm()) return false;
 
     isSubmitting.value = true;
@@ -250,6 +383,7 @@ class MobileFeedbackController extends GetxController {
       final platform = 'mobile';
       final appVersion = '1.0.0';
       final deviceInfo = 'Mobile Device';
+      final now = DateTime.now(); 
 
       // Create feedback object
       final feedback = FeedbackAndReport(
@@ -266,7 +400,7 @@ class MobileFeedbackController extends GetxController {
         appVersion: appVersion,
         deviceInfo: deviceInfo,
         platform: platform,
-        submittedAt: DateTime.now(),
+        submittedAt: now,
       );
 
       print('Submitting feedback to database...');
@@ -276,11 +410,25 @@ class MobileFeedbackController extends GetxController {
 
       print('Feedback submitted successfully');
 
+ if (dailyTracker.value != null) {
+        dailyTracker.value = dailyTracker.value!.incrementCount();
+        print('>>> Updated tracker: ${dailyTracker.value!.reportCount}/3 reports');
+      } else {
+        // Create new tracker if doesn't exist
+        dailyTracker.value = UserDailyReportTracker(
+          userId: userId,
+          reportCount: 1,
+          lastResetAt: now,
+          lastReportAt: now,
+        );
+      }
       // Clear form
       clearForm();
 
-      // Show success notification
-      _showSuccess("Feedback submitted successfully");
+        final remaining = getRemainingReports();
+      _showSuccess(
+        "Feedback submitted! ($remaining reports remaining today)"
+      );
 
       return true;
     } catch (e, stackTrace) {

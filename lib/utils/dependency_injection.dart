@@ -26,7 +26,7 @@ Future<void> initializeDependencies() async {
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
-  
+   final authRepo = Get.find<AuthRepository>();
   
   print('>>> ✓ Archive Service initialized and running');
 
@@ -57,4 +57,6 @@ Future<void> initializeDependencies() async {
   // ADD THIS LINE - Register WebUserHomeController globally
   Get.put(WebUserHomeController(), permanent: true);
   print('>>> ✓ WebUserHomeController initialized');
+
+  await authRepo.appWriteProvider.migrateReviewsArchiveField();
 }

@@ -332,35 +332,53 @@ class VetDeletionRequestController extends GetxController {
     filterRequests();
   }
 
-  /// Approve deletion request
-  Future<void> approveDeletionRequest(
-    FeedbackDeletionRequest request,
-    String reviewedBy,
-    String? reviewNotes,
-  ) async {
-    try {
-      isProcessing.value = true;
+  /// Approve deletion request with rating recalculation
+Future<void> approveDeletionRequest(
+  FeedbackDeletionRequest request,
+  String reviewedBy,
+  String? reviewNotes,
+) async {
+  try {
+    isProcessing.value = true;
 
-      final result = await authRepository.approveDeletionRequest(
-        request.documentId!,
-        request.reviewId,
-        reviewedBy,
-        reviewNotes,
+    print('>>> ============================================');
+    print('>>> CONTROLLER: Approving deletion request');
+    print('>>> Request ID: ${request.documentId}');
+    print('>>> Review ID: ${request.reviewId}');
+    print('>>> ============================================');
+
+    final result = await authRepository.approveDeletionRequest(
+      request.documentId!,
+      request.reviewId,
+      reviewedBy,
+      reviewNotes,
+    );
+
+    if (result['success'] == true) {
+      _showSnackBar(
+        'Deletion request approved! Review archived and ratings updated.',
+        Colors.green,
       );
-
-      if (result['success'] == true) {
-        _showSnackBar('Deletion request approved successfully', Colors.green);
-        reviewsCache.remove(request.reviewId);
-        await loadAllDeletionRequests();
-      } else {
-        _showSnackBar('Failed to approve request: ${result['error']}', Colors.red);
-      }
-    } catch (e) {
-      _showSnackBar('Error: $e', Colors.red);
-    } finally {
-      isProcessing.value = false;
+      
+      // Remove the cached review
+      reviewsCache.remove(request.reviewId);
+      
+      // Reload all deletion requests to update UI
+      await loadAllDeletionRequests();
+      
+      print('>>> âœ… Deletion approved and ratings recalculated');
+    } else {
+      _showSnackBar('Failed to approve request: ${result['error']}', Colors.red);
+      print('>>> âœ— Approval failed: ${result['error']}');
     }
+  } catch (e) {
+    print('>>> âœ— Error approving deletion request: $e');
+    _showSnackBar('Error: $e', Colors.red);
+  } finally {
+    isProcessing.value = false;
+    print('>>> ============================================');
   }
+}
 
   /// Reject deletion request
   Future<void> rejectDeletionRequest(

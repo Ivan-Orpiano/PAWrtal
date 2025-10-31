@@ -3363,35 +3363,36 @@ class AppWriteProvider {
     }
   }
 
-  /// Get all reviews for a clinic
-  Future<List<Document>> getClinicReviews(
-    String clinicId, {
-    int limit = 50,
-    String? lastDocumentId,
-  }) async {
-    try {
-      final queries = [
-        Query.equal('clinicId', clinicId),
-        Query.orderDesc('createdAt'),
-        Query.limit(limit),
-      ];
+/// Get all reviews for a clinic (EXCLUDING ARCHIVED)
+Future<List<Document>> getClinicReviews(
+  String clinicId, {
+  int limit = 50,
+  String? lastDocumentId,
+}) async {
+  try {
+    final queries = [
+      Query.equal('clinicId', clinicId),
+      Query.equal('isArchived', false), // CRITICAL: Exclude archived reviews
+      Query.orderDesc('createdAt'),
+      Query.limit(limit),
+    ];
 
-      if (lastDocumentId != null) {
-        queries.add(Query.cursorAfter(lastDocumentId));
-      }
-
-      final result = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-        queries: queries,
-      );
-
-      return result.documents;
-    } catch (e) {
-      print('Error getting clinic reviews: $e');
-      return [];
+    if (lastDocumentId != null) {
+      queries.add(Query.cursorAfter(lastDocumentId));
     }
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: queries,
+    );
+
+    return result.documents;
+  } catch (e) {
+    print('Error getting clinic reviews: $e');
+    return [];
   }
+}
 
   /// Get reviews by a specific user
   Future<List<Document>> getUserReviews(String userId) async {
@@ -3485,55 +3486,13 @@ class AppWriteProvider {
     }
   }
 
-  /// Get clinic rating statistics
-  Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
-    try {
-      final reviews = await getClinicReviews(clinicId, limit: 1000);
+/// Get clinic rating statistics (EXCLUDING ARCHIVED)
+Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
+  try {
+    // CRITICAL: Only count non-archived reviews
+    final reviews = await getClinicReviews(clinicId, limit: 1000);
 
-      if (reviews.isEmpty) {
-        return {
-          'averageRating': 0.0,
-          'totalReviews': 0,
-          'ratingDistribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-          'reviewsWithText': 0,
-          'reviewsWithImages': 0,
-        };
-      }
-
-      double totalRating = 0;
-      final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-      int withText = 0;
-      int withImages = 0;
-
-      for (var doc in reviews) {
-        final rating = (doc.data['rating'] ?? 0.0).toDouble();
-        totalRating += rating;
-
-        final starRating = rating.ceil();
-        distribution[starRating] = (distribution[starRating] ?? 0) + 1;
-
-        if (doc.data['reviewText'] != null &&
-            doc.data['reviewText'].toString().isNotEmpty) {
-          withText++;
-        }
-
-        final images = doc.data['images'] as List?;
-        if (images != null && images.isNotEmpty) {
-          withImages++;
-        }
-      }
-
-      final avgRating = totalRating / reviews.length;
-
-      return {
-        'averageRating': double.parse(avgRating.toStringAsFixed(1)),
-        'totalReviews': reviews.length,
-        'ratingDistribution': distribution,
-        'reviewsWithText': withText,
-        'reviewsWithImages': withImages,
-      };
-    } catch (e) {
-      print('Error getting clinic rating stats: $e');
+    if (reviews.isEmpty) {
       return {
         'averageRating': 0.0,
         'totalReviews': 0,
@@ -3542,7 +3501,50 @@ class AppWriteProvider {
         'reviewsWithImages': 0,
       };
     }
+
+    double totalRating = 0;
+    final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+    int withText = 0;
+    int withImages = 0;
+
+    for (var doc in reviews) {
+      final rating = (doc.data['rating'] ?? 0.0).toDouble();
+      totalRating += rating;
+
+      final starRating = rating.ceil();
+      distribution[starRating] = (distribution[starRating] ?? 0) + 1;
+
+      if (doc.data['reviewText'] != null &&
+          doc.data['reviewText'].toString().isNotEmpty) {
+        withText++;
+      }
+
+      final images = doc.data['images'] as List?;
+      if (images != null && images.isNotEmpty) {
+        withImages++;
+      }
+    }
+
+    final avgRating = totalRating / reviews.length;
+
+    return {
+      'averageRating': double.parse(avgRating.toStringAsFixed(1)),
+      'totalReviews': reviews.length,
+      'ratingDistribution': distribution,
+      'reviewsWithText': withText,
+      'reviewsWithImages': withImages,
+    };
+  } catch (e) {
+    print('Error getting clinic rating stats: $e');
+    return {
+      'averageRating': 0.0,
+      'totalReviews': 0,
+      'ratingDistribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+      'reviewsWithText': 0,
+      'reviewsWithImages': 0,
+    };
   }
+}
 
   /// Upload review images (supports both web and mobile)
   Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) async {
@@ -3961,7 +3963,6 @@ class AppWriteProvider {
         collectionId: AppwriteConstants.feedbackAndReportCollectionID,
         documentId: documentId,
         data: {
-          'status': FeedbackStatus.archived.toString().split('.').last,
           'archivedAt': DateTime.now().toIso8601String(),
           'archivedBy': archivedBy,
           'updatedAt': DateTime.now().toIso8601String(),
@@ -5707,66 +5708,194 @@ Future<void> _deleteClinicRelatedData(String clinicId) async {
   }
 
   /// Approve deletion request and archive the review
-  Future<Map<String, dynamic>> approveDeletionRequest(
-    String requestId,
-    String reviewId,
-    String reviewedBy,
-    String? reviewNotes,
-  ) async {
+ /// Approve deletion request and archive the review WITH RATING RECALCULATION
+Future<Map<String, dynamic>> approveDeletionRequest(
+  String requestId,
+  String reviewId,
+  String reviewedBy,
+  String? reviewNotes,
+) async {
+  try {
+    print('>>> ============================================');
+    print('>>> APPROVING DELETION REQUEST');
+    print('>>> Request ID: $requestId');
+    print('>>> Review ID: $reviewId');
+    print('>>> ============================================');
+
+    // Step 1: Get the review to know which clinic it belongs to
+    Document? reviewDoc;
     try {
-      print('>>> ============================================');
-      print('>>> APPROVING DELETION REQUEST');
-      print('>>> Request ID: $requestId');
-      print('>>> Review ID: $reviewId');
-      print('>>> ============================================');
-
-      // Step 1: Update the deletion request status to approved
-      print('>>> Step 1: Updating deletion request status to approved...');
-      await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-        documentId: requestId,
-        data: {
-          'status': 'approved',
-          'reviewedBy': reviewedBy,
-          'reviewedAt': DateTime.now().toIso8601String(),
-          'reviewNotes': reviewNotes,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-      );
-      print('>>> Deletion request updated to approved');
-
-      // Step 2: Archive the review by setting isArchived to true
-      print('>>> Step 2: Archiving the review...');
-      await databases!.updateDocument(
+      reviewDoc = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
         documentId: reviewId,
-        data: {
-          'isArchived': true,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
       );
-      print('>>> Review archived successfully');
-
-      print('>>> ============================================');
-      print('>>> DELETION REQUEST APPROVED');
-      print('>>> ============================================');
-
-      return {
-        'success': true,
-        'message': 'Deletion request approved and review archived',
-      };
+      print('>>> Step 1: Review found - Clinic: ${reviewDoc.data['clinicId']}');
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR APPROVING DELETION REQUEST: $e');
-      print('>>> ============================================');
+      print('>>> ERROR: Review not found: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': 'Review not found: $e',
       };
     }
+
+    final clinicId = reviewDoc.data['clinicId'];
+
+    // Step 2: Update the deletion request status to approved
+    print('>>> Step 2: Updating deletion request status to approved...');
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      documentId: requestId,
+      data: {
+        'status': 'approved',
+        'reviewedBy': reviewedBy,
+        'reviewedAt': DateTime.now().toIso8601String(),
+        'reviewNotes': reviewNotes,
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+    );
+    print('>>> Deletion request updated to approved');
+
+    // Step 3: Archive the review by setting isArchived to true
+    print('>>> Step 3: Archiving the review...');
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      documentId: reviewId,
+      data: {
+        'isArchived': true,
+        'archivedAt': DateTime.now().toIso8601String(),
+        'archivedBy': reviewedBy,
+        'archivedReason': 'Deletion request approved',
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+    );
+    print('>>> Review archived successfully');
+
+    // Step 4: CRITICAL - Recalculate clinic ratings
+    print('>>> Step 4: Recalculating clinic ratings...');
+    try {
+      await _recalculateClinicRatings(clinicId);
+      print('>>> âœ… Ratings recalculated successfully');
+    } catch (e) {
+      print('>>> âš ï¸ Warning: Could not recalculate ratings: $e');
+      // Don't fail the entire operation if recalculation fails
+    }
+
+    print('>>> ============================================');
+    print('>>> DELETION REQUEST APPROVED & RATINGS UPDATED');
+    print('>>> ============================================');
+
+    return {
+      'success': true,
+      'message': 'Deletion request approved, review archived, and ratings updated',
+    };
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> ERROR APPROVING DELETION REQUEST: $e');
+    print('>>> ============================================');
+    return {
+      'success': false,
+      'error': e.toString(),
+    };
   }
+}
+
+/// Helper method to recalculate clinic ratings after review deletion
+Future<void> _recalculateClinicRatings(String clinicId) async {
+  try {
+    print('>>> Recalculating ratings for clinic: $clinicId');
+
+    // Get all non-archived reviews for this clinic
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: [
+        Query.equal('clinicId', clinicId),
+        Query.equal('isArchived', false),
+        Query.limit(1000),
+      ],
+    );
+
+    final activeReviews = result.documents;
+    print('>>> Active reviews count: ${activeReviews.length}');
+
+    if (activeReviews.isEmpty) {
+      print('>>> No active reviews - ratings will be 0');
+      return;
+    }
+
+    // Calculate new average
+    double totalRating = 0;
+    final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+
+    for (var doc in activeReviews) {
+      final rating = (doc.data['rating'] ?? 0.0).toDouble();
+      totalRating += rating;
+
+      final starRating = rating.ceil();
+      distribution[starRating] = (distribution[starRating] ?? 0) + 1;
+    }
+
+    final newAverageRating = totalRating / activeReviews.length;
+
+    print('>>> New average rating: ${newAverageRating.toStringAsFixed(2)}');
+    print('>>> Distribution: $distribution');
+    print('>>> âœ… Ratings recalculated successfully');
+
+    // Note: The stats are calculated on-the-fly in getClinicRatingStats,
+    // so we don't need to store them. They'll be automatically correct
+    // when querying non-archived reviews.
+  } catch (e) {
+    print('>>> Error recalculating ratings: $e');
+    rethrow;
+  }
+}
+  /// Check if a review has a pending deletion request
+Future<bool> hasReviewPendingDeletionRequest(String reviewId) async {
+  try {
+    print('>>> Checking for pending deletion request: $reviewId');
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      queries: [
+        Query.equal('reviewId', reviewId),
+        Query.equal('status', 'pending'),
+        Query.limit(1),
+      ],
+    );
+
+    final hasPending = result.documents.isNotEmpty;
+    print('>>> Review $reviewId has pending request: $hasPending');
+    
+    return hasPending;
+  } catch (e) {
+    print('>>> Error checking pending deletion request: $e');
+    return false;
+  }
+}
+
+/// Get pending deletion request for a review
+Future<Document?> getPendingDeletionRequest(String reviewId) async {
+  try {
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      queries: [
+        Query.equal('reviewId', reviewId),
+        Query.equal('status', 'pending'),
+        Query.limit(1),
+      ],
+    );
+
+    return result.documents.isNotEmpty ? result.documents.first : null;
+  } catch (e) {
+    print('>>> Error getting pending deletion request: $e');
+    return null;
+  }
+}
 
   Future<Map<String, dynamic>> rejectDeletionRequest(
     String requestId,
@@ -7474,4 +7603,55 @@ Future<void> _deleteClinicRelatedData(String clinicId) async {
       rethrow;
     }
   }
+
+  /// Migrate existing reviews to add isArchived field
+Future<void> migrateReviewsArchiveField() async {
+  try {
+    print('>>> ============================================');
+    print('>>> MIGRATING REVIEWS: Adding isArchived field');
+    print('>>> ============================================');
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+      queries: [Query.limit(1000)],
+    );
+
+    print('>>> Found ${result.documents.length} reviews');
+
+    int updated = 0;
+    for (var doc in result.documents) {
+      try {
+        // Check if isArchived field exists
+        if (!doc.data.containsKey('isArchived')) {
+          print('>>> Updating review: ${doc.$id}');
+
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+            documentId: doc.$id,
+            data: {
+              'isArchived': false,
+              'archivedAt': null,
+              'archivedBy': null,
+              'archivedReason': null,
+            },
+          );
+
+          updated++;
+          print('>>>   âœ" Migration successful');
+        }
+      } catch (e) {
+        print('>>> Error updating review ${doc.$id}: $e');
+      }
+    }
+
+    print('>>> ============================================');
+    print('>>> MIGRATION COMPLETE');
+    print('>>> Updated $updated review records');
+    print('>>> ============================================');
+  } catch (e) {
+    print('>>> Migration error: $e');
+  }
+}
 }

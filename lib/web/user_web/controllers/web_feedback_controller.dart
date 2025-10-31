@@ -706,8 +706,6 @@ Future<void> loadAllFeedback() async {
           allFeedback.where((f) => f.status == FeedbackStatus.completed).length,
       'closed':
           allFeedback.where((f) => f.status == FeedbackStatus.closed).length,
-      'archived':
-          allFeedback.where((f) => f.status == FeedbackStatus.archived).length,
       'critical':
           allFeedback.where((f) => f.priority == Priority.critical).length,
       'high': allFeedback.where((f) => f.priority == Priority.high).length,
@@ -775,7 +773,6 @@ Future<void> loadAllFeedback() async {
       final index = allFeedback.indexWhere((f) => f.documentId == documentId);
       if (index != -1) {
         allFeedback[index] = allFeedback[index].copyWith(
-          status: FeedbackStatus.archived,
           archivedAt: DateTime.now(),
           archivedBy: archivedBy,
         );

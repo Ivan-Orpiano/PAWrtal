@@ -360,106 +360,182 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
   }
 
   Widget _buildReviewCard(RatingAndReview review) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor:
-                    const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                child: Text(
-                  review.userName[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Color.fromARGB(255, 81, 115, 153),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+    
+   return FutureBuilder<bool>(
+    future: _authRepo.appWriteProvider.hasReviewPendingDeletionRequest(
+      review.documentId!,
+    ),
+    builder: (context, snapshot) {
+      final hasPendingRequest = snapshot.data ?? false;
+
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: hasPendingRequest
+              ? Colors.orange.shade50 // Highlight if pending
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasPendingRequest
+                ? Colors.orange.shade300 // Orange border if pending
+                : Colors.grey.shade200,
+            width: hasPendingRequest ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pending deletion banner
+            if (hasPendingRequest) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          review.userName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.pending_outlined,
+                      size: 18,
+                      color: Colors.orange.shade800,
                     ),
-                    Text(
-                      review.getTimeAgo(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Deletion request pending approval',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade800,
+                        ),
                       ),
+                    ),
+                    Icon(
+                      Icons.hourglass_empty,
+                      size: 16,
+                      color: Colors.orange.shade700,
                     ),
                   ],
                 ),
               ),
-              buildStarRating(review.rating, size: 20),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: Colors.red.shade600,
-                  size: 20,
+            ],
+
+            // Review header
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor:
+                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                  child: Text(
+                    review.userName[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Color.fromARGB(255, 81, 115, 153),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
                 ),
-                onPressed: () => _showDeletionRequestDialog(review),
-                tooltip: 'Request deletion',
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            review.userName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        review.getTimeAgo(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                buildStarRating(review.rating, size: 20),
+                const SizedBox(width: 8),
+                // Disable delete button if request is pending
+                Tooltip(
+                  message: hasPendingRequest
+                      ? 'Deletion request already pending'
+                      : 'Request deletion',
+                  child: IconButton(
+                    icon: Icon(
+                      hasPendingRequest
+                          ? Icons.hourglass_empty
+                          : Icons.delete_outline,
+                      color: hasPendingRequest
+                          ? Colors.orange.shade600
+                          : Colors.red.shade600,
+                      size: 20,
+                    ),
+                    onPressed: hasPendingRequest
+                        ? null // Disable if pending
+                        : () => _showDeletionRequestDialog(review),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Service badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // Review text
+            if (review.hasReview) ...[
+              const SizedBox(height: 12),
+              Text(
+                review.reviewText!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          if (review.hasReview) ...[
-            const SizedBox(height: 12),
-            Text(
-              review.reviewText!,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+
+            // Review images
+            if (review.hasImages) ...[
+              const SizedBox(height: 12),
+              _buildReviewImages(review.images),
+            ],
           ],
-          if (review.hasImages) ...[
-            const SizedBox(height: 12),
-            _buildReviewImages(review.images),
-          ],
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildReviewImages(List<String> imageIds) {
     return SizedBox(
@@ -730,135 +806,202 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
         });
   }
 
-  Widget _buildFullReviewCard(RatingAndReview review) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor:
-                    const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                child: Text(
-                  review.userName[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Color.fromARGB(255, 81, 115, 153),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+Widget _buildFullReviewCard(RatingAndReview review) {
+  return FutureBuilder<bool>(
+    future: _authRepo.appWriteProvider.hasReviewPendingDeletionRequest(
+      review.documentId!,
+    ),
+    builder: (context, snapshot) {
+      final hasPendingRequest = snapshot.data ?? false;
+
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: hasPendingRequest ? Colors.orange.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasPendingRequest
+                ? Colors.orange.shade300
+                : Colors.grey.shade200,
+            width: hasPendingRequest ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pending deletion banner
+            if (hasPendingRequest) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          review.userName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.pending_outlined,
+                      size: 18,
+                      color: Colors.orange.shade800,
                     ),
-                    Text(
-                      review.getTimeAgo(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Deletion request pending approval by super admin',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade800,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              buildStarRating(review.rating, size: 20),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: Colors.red.shade600,
-                  size: 20,
+            ],
+
+            // Review header
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor:
+                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                  child: Text(
+                    review.userName[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Color.fromARGB(255, 81, 115, 153),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
                 ),
-                onPressed: () {
-                  _showDeletionRequestDialog(review);
-                },
-                tooltip: 'Request deletion',
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            review.userName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        review.getTimeAgo(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                buildStarRating(review.rating, size: 20),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: hasPendingRequest
+                      ? 'Deletion request already pending'
+                      : 'Request deletion',
+                  child: IconButton(
+                    icon: Icon(
+                      hasPendingRequest
+                          ? Icons.hourglass_empty
+                          : Icons.delete_outline,
+                      color: hasPendingRequest
+                          ? Colors.orange.shade600
+                          : Colors.red.shade600,
+                      size: 20,
+                    ),
+                    onPressed: hasPendingRequest
+                        ? null
+                        : () {
+                            _showDeletionRequestDialog(review);
+                          },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Service badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // Review text
+            if (review.hasReview) ...[
+              const SizedBox(height: 12),
+              Text(
+                review.reviewText!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          if (review.hasReview) ...[
-            const SizedBox(height: 12),
-            Text(
-              review.reviewText!,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-          ],
-          if (review.hasImages) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: review.images.length,
-                itemBuilder: (context, index) {
-                  final imageUrl = _authRepo.getImageUrl(review.images[index]);
 
-                  return Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        imageUrl,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 100,
-                            height: 100,
-                            color: Colors.grey.shade200,
-                            child: const Icon(Icons.image_not_supported),
-                          );
-                        },
+            // Review images
+            if (review.hasImages) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: review.images.length,
+                  itemBuilder: (context, index) {
+                    final imageUrl = _authRepo.getImageUrl(review.images[index]);
+
+                    return Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrl,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 100,
+                              height: 100,
+                              color: Colors.grey.shade200,
+                              child: const Icon(Icons.image_not_supported),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
+            ],
           ],
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 }
