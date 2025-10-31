@@ -1,15 +1,18 @@
 import 'package:capstone_app/data/id_verification/widgets/verification_status_widget.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/user_web/controllers/web_user_pfp_controller.dart';
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
+import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 
 class FAQItem {
   final String question;
@@ -80,11 +83,13 @@ class WebSettingsAndEverythingPage extends StatefulWidget {
 }
 
 class _WebSettingsAndEverythingPageState
-    extends State<WebSettingsAndEverythingPage> {
+  extends State<WebSettingsAndEverythingPage> {
   int selectedIndex = 0;
   final GetStorage storage = GetStorage();
   late TextEditingController subjectController;
   late TextEditingController descriptionController;
+  
+  get feedbackController => null;
 
   @override
   void initState() {
@@ -200,6 +205,7 @@ class _WebSettingsAndEverythingPageState
       ),
     );
   }
+  
 
   double _getResponsivePadding() => MediaQuery.of(context).size.width * 0.02;
 
@@ -1904,7 +1910,7 @@ class _WebSettingsAndEverythingPageState
     );
   }
 
-// NEW: Limit exceeded banner
+ // NEW: Limit exceeded banner
   Widget _buildLimitExceededBanner(WebFeedbackController controller) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -2498,4 +2504,142 @@ class _WebSettingsAndEverythingPageState
       },
     );
   }
+  
+   Widget _buildWebFileItemWithPreview(PlatformFile file) {
+  final extension = file.extension?.toLowerCase() ?? '';
+  final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
+  final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: Colors.grey[300]!),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        // Preview thumbnail
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isVideo 
+                ? [Colors.purple[100]!, Colors.purple[50]!]
+                : [Colors.blue[100]!, Colors.blue[50]!],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Icon(
+              isVideo ? Icons.videocam_rounded : Icons.photo_rounded,
+              color: isVideo ? Colors.purple[700] : Colors.blue[700],
+              size: 28,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                file.name,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isVideo ? Colors.purple.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isVideo ? Icons.play_circle_outline : Icons.image_outlined,
+                          size: 12,
+                          color: isVideo ? Colors.purple[700] : Colors.blue[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isVideo ? 'Video' : 'Image',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isVideo ? Colors.purple[700] : Colors.blue[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    feedbackController.getFileSize(file.size),
+                    style: TextStyle(
+                      color: Colors.grey[600], 
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '.${extension.toUpperCase()}',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              feedbackController.removeFile(file);
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.close_rounded, 
+                size: 18, 
+                color: Colors.red[600],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }

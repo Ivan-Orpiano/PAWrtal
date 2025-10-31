@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/super_admin/WebVersion/services/attachment_viewer_widget.dart';
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/web/responsive_layout.dart';
@@ -1038,17 +1039,42 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     ),
                   ],
                 ),
+               // Display attachments with video support
                 if (feedback.attachments.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(Icons.attachment, size: 14, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${feedback.attachments.length} attachment(s)',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                      ),
-                    ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Attachments (${feedback.attachments.length})',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: feedback.attachments.map((fileId) {
+                      final url = controller.getAttachmentUrl(fileId);
+                      final isVideo = _isVideoAttachment(fileId, url);
+                      
+                      return GestureDetector(
+                        onTap: () => _showAttachmentDialog(context, url, isVideo),
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: AttachmentViewerWidget(
+                            attachmentUrl: url,
+                            fileId: fileId,
+                            isVideo: isVideo,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
                 if (feedback.status == FeedbackStatus.closed ||
@@ -2147,6 +2173,79 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       ),
     );
   }
+  bool _isVideoAttachment(String fileId, String url) {
+  // Check URL extension
+  final videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+  final urlLower = url.toLowerCase();
+  
+  return videoExtensions.any((ext) => urlLower.contains('.$ext'));
+}
+
+void _showAttachmentDialog(BuildContext context, String url, bool isVideo) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: 800,
+          maxHeight: 600,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isVideo ? Icons.videocam_rounded : Icons.image_rounded,
+                    color: Colors.grey[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isVideo ? 'Video Attachment' : 'Image Attachment',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: AttachmentViewerWidget(
+                  attachmentUrl: url,
+                  fileId: url,
+                  isVideo: isVideo,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 }
 
 
