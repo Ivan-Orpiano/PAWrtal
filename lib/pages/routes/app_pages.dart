@@ -5,6 +5,8 @@ import 'package:capstone_app/pages/admin_home/admin_home_page.dart';
 import 'package:capstone_app/pages/auth/oauth_callback_page.dart';
 import 'package:capstone_app/pages/auth/oauth_failure_page.dart';
 import 'package:capstone_app/pages/auth/oauth_success_page.dart';
+import 'package:capstone_app/pages/auth/mobile_auth_success_page.dart';
+import 'package:capstone_app/pages/auth/mobile_auth_failure_page.dart';
 import 'package:capstone_app/pages/super_admin_home/super_admin_home_binding.dart';
 import 'package:capstone_app/pages/super_admin_home/super_admin_home_page.dart';
 import 'package:capstone_app/pages/user_home/user_home_binding.dart';
@@ -178,6 +180,14 @@ class AppPages {
     GetPage(
       name: Routes.oauthCallback,
       page: () => const OAuthCallbackPage(),
+    ),
+    GetPage(
+      name: Routes.mobileAuthSuccess,
+      page: () => const MobileAuthSuccessPage(),
+    ),
+    GetPage(
+      name: Routes.mobileAuthFailure,
+      page: () => const MobileAuthFailurePage(),
     ),
   ];
 }
