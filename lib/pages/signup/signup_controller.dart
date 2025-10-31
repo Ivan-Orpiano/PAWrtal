@@ -2,6 +2,9 @@ import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
+import 'package:capstone_app/otp/components/otp_verification_dialog.dart';
+import 'package:capstone_app/otp/services/otp_service.dart';
+import 'package:capstone_app/utils/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -11,6 +14,7 @@ class SignUpController extends GetxController {
   SignUpController(this._authRepository);
 
   final GetStorage _getStorage = GetStorage();
+  final OTPService _otpService = OTPService();
 
   late TextEditingController emailController;
   late TextEditingController nameController;
@@ -22,6 +26,7 @@ class SignUpController extends GetxController {
   final isConfirmPasswordVisible = false.obs;
   final termsAccepted = false.obs;
   final isGoogleLoading = false.obs;
+  final isSendingOTP = false.obs;
 
   // Error messages for each field
   final emailError = Rx<String?>(null);
@@ -234,6 +239,7 @@ class SignUpController extends GetxController {
     );
   }
 
+  /// NEW: Step 1 - Validate and send OTP
   Future<void> signUp() async {
     _clearAllErrors();
 
@@ -246,12 +252,117 @@ class SignUpController extends GetxController {
     }
 
     try {
+      isSendingOTP.value = true;
+
+      final email = emailController.text.trim();
+      final name = nameController.text.trim();
+
+      // Validate email domain
+      if (!EmailValidator.isValidEmailDomain(email)) {
+        emailError.value = EmailValidator.getEmailDomainError(email);
+        isSendingOTP.value = false;
+        return;
+      }
+
+      // Send OTP
+      print('>>> Sending OTP to $email...');
+      final result = await _otpService.sendOTP(email, name);
+
+      if (result['success'] == true) {
+        // Show OTP verification dialog
+        _showOTPVerificationDialog(email, name);
+      } else {
+        generalError.value = result['message'] ?? 'Failed to send verification code';
+      }
+    } catch (error) {
+      print('>>> Error sending OTP: $error');
+      generalError.value = 'Network error. Please check your connection and try again.';
+    } finally {
+      isSendingOTP.value = false;
+    }
+  }
+
+  /// NEW: Show OTP verification dialog
+  void _showOTPVerificationDialog(String email, String name) {
+    Get.dialog(
+      OTPVerificationDialog(
+        email: email,
+        name: name,
+        onVerify: (otp) => _verifyOTPAndCreateAccount(email, otp),
+        onResend: () => _resendOTP(email, name),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  /// NEW: Resend OTP
+  Future<void> _resendOTP(String email, String name) async {
+    try {
+      print('>>> Resending OTP to $email...');
+      final result = await _otpService.sendOTP(email, name);
+
+      if (result['success'] == true) {
+        Get.snackbar(
+          'Code Sent',
+          'A new verification code has been sent to your email',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFF4CAF50),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        Get.snackbar(
+          'Error',
+          result['message'] ?? 'Failed to resend code',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFFEF5350),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      print('>>> Error resending OTP: $e');
+      Get.snackbar(
+        'Error',
+        'Network error. Please try again.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFEF5350),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
+  }
+
+  /// NEW: Step 2 - Verify OTP and create account
+  Future<void> _verifyOTPAndCreateAccount(String email, String otp) async {
+    try {
       isLoading.value = true;
 
+      // Verify OTP
+      print('>>> Verifying OTP...');
+      final verifyResult = await _otpService.verifyOTP(email, otp);
+
+      if (verifyResult['success'] != true) {
+        // Show error in dialog
+        Get.snackbar(
+          'Verification Failed',
+          verifyResult['message'] ?? 'Invalid code',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFFEF5350),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        isLoading.value = false;
+        return;
+      }
+
+      // OTP verified! Now create the account
+      print('>>> OTP verified! Creating account...');
+      
       final user = await _authRepository.signup({
         "userId": ID.unique(),
         "name": nameController.text.trim(),
-        "email": emailController.text.trim(),
+        "email": email,
         "password": passwordController.text,
       });
 
@@ -260,11 +371,14 @@ class SignUpController extends GetxController {
       await _authRepository.createUser({
         "userId": userId,
         "name": nameController.text.trim(),
-        "email": emailController.text.trim(),
+        "email": email,
         "role": "user",
       });
 
-      // Show success dialog instead of snackbar
+      // Close OTP dialog
+      Get.back();
+
+      // Show success dialog
       Get.dialog(
         Dialog(
           shape:
@@ -340,7 +454,6 @@ class SignUpController extends GetxController {
 
       if (error is AppwriteException) {
         if (error.code == 409) {
-          emailError.value = "This email is already registered";
           errorMessage =
               "This email is already registered. Please use a different email or sign in.";
         } else {
@@ -348,6 +461,7 @@ class SignUpController extends GetxController {
         }
       }
 
+      Get.back(); // Close OTP dialog
       generalError.value = errorMessage;
     } finally {
       isLoading.value = false;
