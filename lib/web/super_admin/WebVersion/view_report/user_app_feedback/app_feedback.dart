@@ -1,6 +1,5 @@
 import 'package:capstone_app/web/super_admin/WebVersion/services/attachment_viewer_widget.dart';
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
-import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/web/responsive_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -111,68 +110,69 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildMobileStatsCards() {
-    return Obx(() => Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Total',
-                      controller.feedbackStats['total']?.toString() ?? '0',
-                      Colors.blue,
-                      Icons.feedback,
-                    ),
+ Widget _buildMobileStatsCards() {
+  return Obx(() => Container(
+        color: const Color.fromRGBO(248, 253, 255, 1),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactStatCard(
+                    'Total',
+                    controller.feedbackStats['total']?.toString() ?? '0',
+                    Colors.blue,
+                    Icons.feedback,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Pending',
-                      controller.feedbackStats['pending']?.toString() ?? '0',
-                      Colors.orange,
-                      Icons.schedule,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactStatCard(
+                    'Pending',
+                    controller.feedbackStats['pending']?.toString() ?? '0',
+                    Colors.orange,
+                    Icons.schedule,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Progress',
-                      controller.feedbackStats['inProgress']?.toString() ?? '0',
-                      Colors.blue,
-                      Icons.autorenew,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactStatCard(
+                    'Progress',
+                    controller.feedbackStats['inProgress']?.toString() ?? '0',
+                    Colors.blue,
+                    Icons.autorenew,
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Resolved',
-                      controller.feedbackStats['resolved']?.toString() ?? '0',
-                      Colors.green,
-                      Icons.check_circle,
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactStatCard(
+                    'Completed',  
+                    controller.feedbackStats['completed']?.toString() ?? '0',                     
+                   Colors.green,
+                    Icons.check_circle,
+
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Critical',
-                      controller.feedbackStats['critical']?.toString() ?? '0',
-                      Colors.red,
-                      Icons.warning,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactStatCard(
+                    'Critical',
+                    controller.feedbackStats['critical']?.toString() ?? '0',
+                    Colors.red,
+                    Icons.warning,
                   ),
-                ],
-              ),
-            ],
-          ),
-        ));
-  }
+                ),
+              ],
+            ),
+          ],
+        ),
+      ));
+}
 
   Widget _buildCompactStatCard(
       String title, String value, Color color, IconData icon) {
@@ -422,68 +422,43 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   }
 
   Widget _buildTabletStatsCards() {
-    return Obx(() => Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total',
-                      controller.feedbackStats['total']?.toString() ?? '0',
-                      Colors.blue,
-                      Icons.feedback,
-                    ),
+  return Obx(() => Container(
+        color: const Color.fromRGBO(248, 253, 255, 1),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // ... other cards ...
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'Completed',  // Changed
+                    controller.feedbackStats['completed']?.toString() ?? '0',  // Changed key
+                    Colors.green,
+                    Icons.check_circle,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Pending',
-                      controller.feedbackStats['pending']?.toString() ?? '0',
-                      Colors.orange,
-                      Icons.schedule,
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatCard(
+                    'Critical',
+                    controller.feedbackStats['critical']?.toString() ?? '0',
+                    Colors.red,
+                    Icons.warning,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildStatCard(
-                      'In Progress',
-                      controller.feedbackStats['inProgress']?.toString() ?? '0',
-                      Colors.blue,
-                      Icons.autorenew,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Resolved',
-                      controller.feedbackStats['resolved']?.toString() ?? '0',
-                      Colors.green,
-                      Icons.check_circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Critical',
-                      controller.feedbackStats['critical']?.toString() ?? '0',
-                      Colors.red,
-                      Icons.warning,
-                    ),
-                  ),
-                  const Expanded(child: SizedBox()),
-                ],
-              ),
-            ],
-          ),
-        ));
-  }
+                ),
+                const Expanded(child: SizedBox()),
+              ],
+            ),
+          ],
+        ),
+      ));
+}
 
   Widget _buildTabletFiltersSection() {
     return Container(
@@ -645,50 +620,50 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildStatsCards() {
-    return Obx(() => Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _buildStatCard(
-                'Total',
-                controller.feedbackStats['total']?.toString() ?? '0',
-                Colors.blue,
-                Icons.feedback,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Pending',
-                controller.feedbackStats['pending']?.toString() ?? '0',
-                Colors.orange,
-                Icons.schedule,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'In Progress',
-                controller.feedbackStats['inProgress']?.toString() ?? '0',
-                Colors.blue,
-                Icons.autorenew,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Resolved',
-                controller.feedbackStats['resolved']?.toString() ?? '0',
-                Colors.green,
-                Icons.check_circle,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Critical',
-                controller.feedbackStats['critical']?.toString() ?? '0',
-                Colors.red,
-                Icons.warning,
-              ),
-            ],
-          ),
-        ));
-  }
+ Widget _buildStatsCards() {
+  return Obx(() => Container(
+        color: const Color.fromRGBO(248, 253, 255, 1),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _buildStatCard(
+              'Total',
+              controller.feedbackStats['total']?.toString() ?? '0',
+              Colors.blue,
+              Icons.feedback,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Pending',
+              controller.feedbackStats['pending']?.toString() ?? '0',
+              Colors.orange,
+              Icons.schedule,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'In Progress',
+              controller.feedbackStats['inProgress']?.toString() ?? '0',
+              Colors.blue,
+              Icons.autorenew,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Completed', 
+              controller.feedbackStats['completed']?.toString() ?? '0', 
+              Colors.green,
+              Icons.check_circle,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Critical',
+              controller.feedbackStats['critical']?.toString() ?? '0',
+              Colors.red,
+              Icons.warning,
+            ),
+          ],
+        ),
+      ));
+}
 
   Widget _buildStatCard(String title, String value, Color color, IconData icon) {
     return Expanded(
@@ -882,7 +857,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         return Icons.schedule;
       case FeedbackStatus.inProgress:
         return Icons.autorenew;
-      case FeedbackStatus.resolved:
+      case FeedbackStatus.completed:
         return Icons.check_circle;
       case FeedbackStatus.closed:
         return Icons.lock;
@@ -1077,26 +1052,26 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     }).toList(),
                   ),
                 ],
+                // Find this section in _buildMobileFeedbackCard method:
                 if (feedback.status == FeedbackStatus.closed ||
-                    feedback.status == FeedbackStatus.resolved) ...[
+                    feedback.status == FeedbackStatus.completed) ...[  // Added completed
                   const SizedBox(height: 10),
-                  if (feedback.status == FeedbackStatus.closed)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _archiveFeedback(feedback),
-                        icon: const Icon(Icons.archive, size: 14, color: Colors.white),
-                        label: const Text('Archive', style: TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _archiveFeedback(feedback),
+                      icon: const Icon(Icons.archive, size: 14, color: Colors.white),
+                      label: const Text('Archive', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
+                  ),
                 ],
               ],
             ),
@@ -1229,7 +1204,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ],
                 ),
                 if (feedback.status == FeedbackStatus.closed ||
-                    feedback.status == FeedbackStatus.resolved) ...[
+                    feedback.status == FeedbackStatus.completed) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -1382,7 +1357,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ],
                 ),
                 if (feedback.status == FeedbackStatus.closed ||
-                    feedback.status == FeedbackStatus.resolved) ...[
+                    feedback.status == FeedbackStatus.completed) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -1685,7 +1660,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         return Colors.orange;
       case FeedbackStatus.inProgress:
         return Colors.blue;
-      case FeedbackStatus.resolved:
+      case FeedbackStatus.completed:
         return Colors.green;
       case FeedbackStatus.closed:
         return Colors.grey;

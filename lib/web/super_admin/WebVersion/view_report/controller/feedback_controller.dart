@@ -10,13 +10,14 @@ class AdminFeedbackController extends GetxController {
   final GetStorage _storage = GetStorage();
 
   AdminFeedbackController(this.authRepository);
-
+  final isLoadingFeedback = false.obs;
   final RxList<FeedbackAndReport> allFeedback = <FeedbackAndReport>[].obs;
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
   // Track pinned feedback IDs in memory for quick access
   final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
+
 
   @override
   void onInit() {
@@ -25,34 +26,46 @@ class AdminFeedbackController extends GetxController {
     loadAllFeedback();
   }
 
-Future<void> _runMigration() async {
-  try {
-    await Get.find<AppWriteProvider>().migrateFeedbackPinFields();
-  } catch (e) {
-    print('Migration error: $e');
+  Future<void> _runMigration() async {
+    try {
+      await Get.find<AppWriteProvider>().migrateFeedbackPinFields();
+    } catch (e) {
+      print('Migration error: $e');
+    }
   }
-}
+
   Future<void> loadAllFeedback() async {
     try {
-      isLoading.value = true;
+      isLoadingFeedback.value = true;
       errorMessage.value = '';
 
       final feedbackList = await authRepository.getAllFeedback(limit: 500);
+     
+      // 🔥 ENHANCED SORTING: Pinned first, then by date (newest first)
+      feedbackList.sort((a, b) {
+        // 1. Pinned items always come first
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+
+        // 2. If both pinned or both not pinned, sort by date
+        if (a.submittedAt == null && b.submittedAt == null) return 0;
+        if (a.submittedAt == null) return 1;
+        if (b.submittedAt == null) return -1;
+
+        return b.submittedAt.compareTo(a.submittedAt);
+      });
+
       allFeedback.value = feedbackList;
 
-      // Update pinned IDs from database
+      // Update pinned IDs
       pinnedFeedbackIds.value = feedbackList
           .where((f) => f.isPinned)
           .map((f) => f.documentId!)
           .toSet();
-
-      print('>>> Loaded ${feedbackList.length} feedback items');
-      print('>>> Pinned feedback count: ${pinnedFeedbackIds.length}');
     } catch (e) {
       errorMessage.value = 'Error loading feedback: $e';
-      print('Error loading feedback: $e');
     } finally {
-      isLoading.value = false;
+      isLoadingFeedback.value = false; 
     }
   }
 
@@ -130,7 +143,7 @@ Future<void> _runMigration() async {
   /// Get pinned feedback (sorted by pinnedAt)
   List<FeedbackAndReport> get pinnedFeedback {
     final pinned = allFeedback.where((f) => f.isPinned).toList();
-    
+
     // Sort by pinnedAt (most recent first)
     pinned.sort((a, b) {
       if (a.pinnedAt == null && b.pinnedAt == null) return 0;
@@ -138,7 +151,7 @@ Future<void> _runMigration() async {
       if (b.pinnedAt == null) return -1;
       return b.pinnedAt!.compareTo(a.pinnedAt!);
     });
-    
+
     return pinned;
   }
 
@@ -151,10 +164,10 @@ Future<void> _runMigration() async {
   List<FeedbackAndReport> get sortedFeedback {
     final pinned = pinnedFeedback;
     final unpinned = unpinnedFeedback;
-    
+
     // Sort unpinned by submission date (newest first)
     unpinned.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
-    
+
     return [...pinned, ...unpinned];
   }
 }
