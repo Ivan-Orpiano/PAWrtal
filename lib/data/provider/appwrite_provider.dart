@@ -4937,250 +4937,258 @@ class AppWriteProvider {
   }
 
   /// Archive clinic (soft delete) - moves to archived collection
-  Future<Map<String, dynamic>> archiveClinic({
-    required String clinicId,
-    required String clinicDocumentId,
-    required String archivedBy,
-    String archiveReason = 'No reason provided',
-  }) async {
+Future<Map<String, dynamic>> archiveClinic({
+  required String clinicId,
+  required String clinicDocumentId,
+  required String archivedBy,
+  String archiveReason = 'No reason provided',
+}) async {
+  try {
+    // Step 1: Get original clinic document
+    final clinicDoc = await databases!.getDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+      documentId: clinicDocumentId,
+    );
+
+
+
+    // Step 2: Prepare archived clinic data
+    final now = DateTime.now();
+    final scheduledDeletion = now.add(const Duration(days: 30));
+
+    final Map<String, dynamic> essentialClinicData = {
+      'adminId': clinicDoc.data['adminId'] ?? clinicId,
+      'clinicName': clinicDoc.data['clinicName'] ?? '',
+      'address': clinicDoc.data['address'] ?? '',
+      'contact': clinicDoc.data['contact'] ?? '',
+      'email': clinicDoc.data['email'] ?? '',
+      'services': clinicDoc.data['services'] ?? '',
+      'image': clinicDoc.data['image'] ?? '',
+      'profilePictureId': clinicDoc.data['profilePictureId'] ?? '',
+    };
+
+    String originalClinicDataJson;
     try {
-      print('>>> ============================================');
-      print('>>> ARCHIVING CLINIC (SOFT DELETE)');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> Document ID: $clinicDocumentId');
-      print('>>> ============================================');
+      originalClinicDataJson = jsonEncode(essentialClinicData);
+ 
 
-      // Step 1: Get original clinic document
-      final clinicDoc = await databases!.getDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicsCollectionID,
-        documentId: clinicDocumentId,
-      );
-
-      print('>>> Step 1: Original clinic retrieved');
-
-      // Step 2: Prepare archived clinic data with compressed original data
-      final now = DateTime.now();
-      final scheduledDeletion = now.add(const Duration(days: 30));
-
-      // Store ONLY essential clinic data to avoid size limits
-      final Map<String, dynamic> essentialClinicData = {
-        'adminId': clinicDoc.data['adminId'] ?? clinicId,
-        'clinicName': clinicDoc.data['clinicName'] ?? '',
-        'address': clinicDoc.data['address'] ?? '',
-        'contact': clinicDoc.data['contact'] ?? '',
-        'email': clinicDoc.data['email'] ?? '',
-        // 'adminId': clinicDoc.data['adminId'] ?? '',
-        'services': clinicDoc.data['services'] ?? '',
-        'image': clinicDoc.data['image'] ?? '',
-        'profilePictureId': clinicDoc.data['profilePictureId'] ?? '',
-      };
-
-      // Convert to JSON string
-      String originalClinicDataJson;
-      try {
-        originalClinicDataJson = jsonEncode(essentialClinicData);
-        print(
-            '>>> Original clinic data JSON size: ${originalClinicDataJson.length} chars');
-
-        // Validate size (must be <= 65535 chars)
-        if (originalClinicDataJson.length > 65535) {
-          print(
-              '>>> WARNING: Clinic data too large, storing minimal data only');
-          final minimalData = {
-            //  'clinicId': clinicId,
-            'clinicName': clinicDoc.data['clinicName'] ?? '',
-            'email': clinicDoc.data['email'] ?? '',
-            'adminId': clinicDoc.data['adminId'] ?? '',
-          };
-          originalClinicDataJson = jsonEncode(minimalData);
-        }
-
-        print('>>> Final JSON size: ${originalClinicDataJson.length} chars');
-      } catch (e) {
-        print('>>> ERROR encoding clinic data to JSON: $e');
-        originalClinicDataJson = jsonEncode({
-          'clinicId': clinicId,
+      if (originalClinicDataJson.length > 65535) {
+       
+        final minimalData = {
+          'clinicName': clinicDoc.data['clinicName'] ?? '',
           'email': clinicDoc.data['email'] ?? '',
-        });
+          'adminId': clinicDoc.data['adminId'] ?? '',
+        };
+        originalClinicDataJson = jsonEncode(minimalData);
       }
 
-      final archivedClinicData = {
-        'adminId': clinicId,
-        'clinicName': clinicDoc.data['clinicName'] ?? '',
+    } catch (e) {
+    
+      originalClinicDataJson = jsonEncode({
+        'clinicId': clinicId,
         'email': clinicDoc.data['email'] ?? '',
-        'address': clinicDoc.data['address'] ?? '',
-        'contact': clinicDoc.data['contact'] ?? '',
-        // 'adminId': clinicDoc.data['adminId'] ?? '',
-        'originalDocumentId': clinicDocumentId,
-        'archivedBy': archivedBy,
-        'archivedAt': now.toIso8601String(),
-        'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
-        'archiveReason': archiveReason,
-        'isPermanentlyDeleted': false,
-        'originalClinicData': originalClinicDataJson, // STRING, not Map
-        'isRecovered': false,
-      };
+      });
+    }
 
-      final archivedDoc = await databases!.createDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.archivedClinicsCollectionID,
-        documentId: ID.unique(),
-        data: archivedClinicData,
-      );
+    final archivedClinicData = {
+      'adminId': clinicId,
+      'clinicName': clinicDoc.data['clinicName'] ?? '',
+      'email': clinicDoc.data['email'] ?? '',
+      'address': clinicDoc.data['address'] ?? '',
+      'contact': clinicDoc.data['contact'] ?? '',
+      'originalDocumentId': clinicDocumentId,
+      'archivedBy': archivedBy,
+      'archivedAt': now.toIso8601String(),
+      'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
+      'archiveReason': archiveReason,
+      'isPermanentlyDeleted': false,
+      'originalClinicData': originalClinicDataJson,
+      'isRecovered': false,
+    };
 
-      print('>>> Step 2: Archived clinic record created: ${archivedDoc.$id}');
+    final archivedDoc = await databases!.createDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.archivedClinicsCollectionID,
+      documentId: ID.unique(),
+      data: archivedClinicData,
+    );
 
-      // Step 3: Delete all related data (same as deleteClinicCompletely)
-      await _deleteClinicRelatedData(clinicId);
+ 
 
-      // Step 4: DELETE the original clinic document
+    
+
+    // REMOVED: await _deleteClinicRelatedData(clinicId);
+    
+    // Step 4: DELETE ONLY the clinic document from main collection
+    await databases!.deleteDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.clinicsCollectionID,
+      documentId: clinicDocumentId,
+    );
+
+    print('>>> Step 4: Clinic document removed from main collection');
+    print('>>> ⚠️ IMPORTANT: All clinic data (staff, appointments, records) preserved');
+
+    print('>>> ============================================');
+    print('>>> CLINIC ARCHIVED SUCCESSFULLY');
+    print('>>> Scheduled deletion: $scheduledDeletion');
+    print('>>> All data will remain accessible until permanent deletion');
+    print('>>> ============================================');
+
+    return {
+      'success': true,
+      'archivedDocumentId': archivedDoc.$id,
+      'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
+      'message': 'Clinic archived successfully. All data preserved for 30 days.',
+    };
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> ERROR ARCHIVING CLINIC: $e');
+    print('>>> Stack trace: ${StackTrace.current}');
+    print('>>> ============================================');
+    return {
+      'success': false,
+      'error': e.toString(),
+    };
+  }
+}
+
+Future<void> _deleteClinicRelatedData(String clinicId) async {
+  print('>>> Deleting clinic-related data...');
+
+  // Delete clinic settings
+  try {
+    final settingsDoc = await getClinicSettingsByClinicId(clinicId);
+    if (settingsDoc != null) {
+      // Delete gallery images
+      final gallery = List<String>.from(settingsDoc.data['gallery'] ?? []);
+      for (String imageId in gallery) {
+        try {
+          await deleteImage(imageId);
+        } catch (e) {
+          print('Error deleting gallery image: $e');
+        }
+      }
+      await deleteClinicSettings(settingsDoc.$id);
+    }
+  } catch (e) {
+    print('Error deleting clinic settings: $e');
+  }
+
+  // Delete appointments
+  try {
+    final appointments = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.appointmentCollectionID,
+      queries: [Query.equal('clinicId', clinicId)],
+    );
+    for (var doc in appointments.documents) {
       await databases!.deleteDocument(
         databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.clinicsCollectionID,
-        documentId: clinicDocumentId,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        documentId: doc.$id,
       );
-
-      print('>>> Step 4: Original clinic document deleted');
-
-      print('>>> ============================================');
-      print('>>> CLINIC ARCHIVED SUCCESSFULLY');
-      print('>>> Scheduled deletion: $scheduledDeletion');
-      print('>>> ============================================');
-
-      return {
-        'success': true,
-        'archivedDocumentId': archivedDoc.$id,
-        'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
-        'message':
-            'Clinic archived successfully. Will be permanently deleted in 30 days.',
-      };
-    } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR ARCHIVING CLINIC: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
     }
+  } catch (e) {
+    print('Error deleting appointments: $e');
   }
 
-  /// Helper method to delete clinic-related data
-  Future<void> _deleteClinicRelatedData(String clinicId) async {
-    print('>>> Deleting clinic-related data...');
-
-    // Delete clinic settings
-    try {
-      final settingsDoc = await getClinicSettingsByClinicId(clinicId);
-      if (settingsDoc != null) {
-        // Delete gallery images
-        final gallery = List<String>.from(settingsDoc.data['gallery'] ?? []);
-        for (String imageId in gallery) {
-          try {
-            await deleteImage(imageId);
-          } catch (e) {
-            print('Error deleting gallery image: $e');
-          }
-        }
-        await deleteClinicSettings(settingsDoc.$id);
-      }
-    } catch (e) {
-      print('Error deleting clinic settings: $e');
-    }
-
-    // Delete appointments
-    try {
-      final appointments = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.appointmentCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-      for (var doc in appointments.documents) {
-        await databases!.deleteDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.appointmentCollectionID,
-          documentId: doc.$id,
-        );
-      }
-    } catch (e) {
-      print('Error deleting appointments: $e');
-    }
-
-    // Delete medical records
-    try {
-      final records = await databases!.listDocuments(
+  // Delete medical records
+  try {
+    final records = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.medicalRecordsCollectionID,
+      queries: [Query.equal('clinicId', clinicId)],
+    );
+    for (var doc in records.documents) {
+      await databases!.deleteDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.medicalRecordsCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
+        documentId: doc.$id,
       );
-      for (var doc in records.documents) {
-        await databases!.deleteDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.medicalRecordsCollectionID,
-          documentId: doc.$id,
-        );
-      }
-    } catch (e) {
-      print('Error deleting medical records: $e');
     }
-
-    // Delete conversations and messages
-    try {
-      final conversations = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.conversationsCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-      for (var conversation in conversations.documents) {
-        // Delete messages
-        final messages = await databases!.listDocuments(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.messagesCollectionID,
-          queries: [Query.equal('conversationId', conversation.$id)],
-        );
-        for (var message in messages.documents) {
-          await databases!.deleteDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.messagesCollectionID,
-            documentId: message.$id,
-          );
-        }
-        // Delete conversation
-        await databases!.deleteDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.conversationsCollectionID,
-          documentId: conversation.$id,
-        );
-      }
-    } catch (e) {
-      print('Error deleting conversations: $e');
-    }
-
-    // Deactivate staff
-    try {
-      final staff = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.staffCollectionID,
-        queries: [Query.equal('clinicId', clinicId)],
-      );
-      for (var doc in staff.documents) {
-        await databases!.updateDocument(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.staffCollectionID,
-          documentId: doc.$id,
-          data: {
-            'isActive': false,
-            'updatedAt': DateTime.now().toIso8601String(),
-          },
-        );
-      }
-    } catch (e) {
-      print('Error deactivating staff: $e');
-    }
+  } catch (e) {
+    print('Error deleting medical records: $e');
   }
 
+  // Delete conversations and messages
+  try {
+    final conversations = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.conversationsCollectionID,
+      queries: [Query.equal('clinicId', clinicId)],
+    );
+    for (var conversation in conversations.documents) {
+      // Delete messages
+      final messages = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.messagesCollectionID,
+        queries: [Query.equal('conversationId', conversation.$id)],
+      );
+      for (var message in messages.documents) {
+        await databases!.deleteDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.messagesCollectionID,
+          documentId: message.$id,
+        );
+      }
+      // Delete conversation
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        documentId: conversation.$id,
+      );
+    }
+  } catch (e) {
+    print('Error deleting conversations: $e');
+  }
+
+  // Delete staff accounts (NOW during permanent deletion)
+  try {
+    final staff = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.staffCollectionID,
+      queries: [Query.equal('clinicId', clinicId)],
+    );
+    for (var doc in staff.documents) {
+      await databases!.deleteDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: doc.$id,
+      );
+    }
+    print('>>> Deleted ${staff.documents.length} staff accounts');
+  } catch (e) {
+    print('Error deleting staff: $e');
+  }
+
+  // Delete clinic profile picture
+  try {
+    final clinicDoc = await getClinicById(clinicId);
+    if (clinicDoc != null) {
+      final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
+      if (profilePictureId != null && profilePictureId.isNotEmpty) {
+        try {
+          await deleteImage(profilePictureId);
+        } catch (e) {
+          print('Error deleting profile picture: $e');
+        }
+      }
+      
+      final clinicImage = clinicDoc.data['image'] as String?;
+      if (clinicImage != null && clinicImage.isNotEmpty) {
+        try {
+          await deleteImage(clinicImage);
+        } catch (e) {
+          print('Error deleting clinic main image: $e');
+        }
+      }
+    }
+  } catch (e) {
+    print('Error handling clinic images: $e');
+  }
+}
   /// Get archived clinic by clinicId
   Future<Document?> getArchivedClinicByAdminId(String adminId) async {
     try {
@@ -5255,42 +5263,44 @@ class AppWriteProvider {
   }
 
   /// Permanently delete clinic (called automatically after 30 days)
-  Future<Map<String, dynamic>> permanentlyDeleteClinic(String clinicId) async {
-    try {
-      print('>>> ============================================');
-      print('>>> PERMANENTLY DELETING CLINIC');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
-
-      final archivedDoc = await getArchivedClinicByAdminId(clinicId);
-      if (archivedDoc == null) {
-        throw Exception('Archived clinic record not found');
-      }
-
-      // Update archived record to mark as permanently deleted
-      await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.archivedClinicsCollectionID,
-        documentId: archivedDoc.$id,
-        data: {
-          'isPermanentlyDeleted': true,
-          'permanentlyDeletedAt': DateTime.now().toIso8601String(),
-        },
-      );
-
-      print('>>> PERMANENT DELETION COMPLETE');
-      return {
-        'success': true,
-        'clinicDeleted': true,
-      };
-    } catch (e) {
-      print('>>> ERROR IN PERMANENT DELETION: $e');
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
+ Future<Map<String, dynamic>> permanentlyDeleteClinic(String clinicId) async {
+  try {
+    final archivedDoc = await getArchivedClinicByAdminId(clinicId);
+    if (archivedDoc == null) {
+      throw Exception('Archived clinic record not found');
     }
+    // CRITICAL: NOW delete all related data (not during archiving)
+
+    await _deleteClinicRelatedData(clinicId);
+
+
+    // Update archived record to mark as permanently deleted
+ 
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.archivedClinicsCollectionID,
+      documentId: archivedDoc.$id,
+      data: {
+        'isPermanentlyDeleted': true,
+        'permanentlyDeletedAt': DateTime.now().toIso8601String(),
+      },
+    );
+
+ 
+    
+    return {
+      'success': true,
+      'clinicDeleted': true,
+      'message': 'Clinic and all related data permanently deleted',
+    };
+  } catch (e) {
+
+    return {
+      'success': false,
+      'error': e.toString(),
+    };
   }
+}
 
   /// Recover archived clinic (restore within 30 days)
   Future<Map<String, dynamic>> recoverArchivedClinic({
