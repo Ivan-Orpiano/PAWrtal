@@ -1174,12 +1174,12 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Add images/videos if needed. Max 5 files.',
+                        'Add images or videos (optional)',
                         style: TextStyle(color: Colors.grey[600], fontSize: 11),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '📷 Images: Max 5MB • 🎥 Videos: Max 25MB',
+                        '🖼️ Images: Max 5MB • 🎥 Videos: Max 25MB',
                         style: TextStyle(color: Colors.grey[600], fontSize: 11),
                       ),
                       const SizedBox(height: 12),
@@ -1213,7 +1213,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Images or Videos',
+                                    'Images (JPG, PNG, GIF) or Videos (MP4, MOV)',
                                     style: TextStyle(color: Colors.grey[500], fontSize: 11),
                                   ),
                                 ],
@@ -1223,11 +1223,11 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                         : const SizedBox.shrink(),
                       ),
                       
-                      // Display selected files
+                      // Display selected files with video preview
                       Obx(() => feedbackController.selectedFiles.isNotEmpty
                         ? Column(
                             children: [
-                              ...feedbackController.selectedFiles.map((file) => _buildFileItem(file)).toList(),
+                              ...feedbackController.selectedFiles.map((file) => _buildFileItemWithPreview(file)).toList(),
                               const SizedBox(height: 8),
                               if (feedbackController.selectedFiles.length < 5)
                                 OutlinedButton.icon(
@@ -1899,4 +1899,106 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       },
     );
   }
+
+  Widget _buildFileItemWithPreview(PlatformFile file) {
+  final extension = file.extension?.toLowerCase() ?? '';
+  final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
+  final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.grey[300]!),
+    ),
+    child: Row(
+      children: [
+        // Preview thumbnail
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: isVideo ? Colors.purple.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Center(
+            child: Icon(
+              isVideo ? Icons.video_library : Icons.image,
+              color: isVideo ? Colors.purple : Colors.blue,
+              size: 24,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                file.name,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isVideo ? Colors.purple.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      isVideo ? '🎥 Video' : '🖼️ Image',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isVideo ? Colors.purple[700] : Colors.blue[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    feedbackController.getFileSize(file.size),
+                    style: TextStyle(
+                      color: Colors.grey[600], 
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              feedbackController.removeFile(file);
+              feedbackController.selectedFiles.refresh();
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              child: Icon(
+                Icons.close, 
+                size: 18, 
+                color: Colors.red[400],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }

@@ -703,7 +703,7 @@ Future<void> loadAllFeedback() async {
           .where((f) => f.status == FeedbackStatus.inProgress)
           .length,
       'resolved':
-          allFeedback.where((f) => f.status == FeedbackStatus.resolved).length,
+          allFeedback.where((f) => f.status == FeedbackStatus.completed).length,
       'closed':
           allFeedback.where((f) => f.status == FeedbackStatus.closed).length,
       'archived':

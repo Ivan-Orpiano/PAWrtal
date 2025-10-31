@@ -3943,7 +3943,7 @@ class AppWriteProvider {
           'adminReply': reply,
           'repliedAt': DateTime.now().toIso8601String(),
           'repliedBy': adminName,
-          'status': FeedbackStatus.resolved.toString().split('.').last,
+          'status': FeedbackStatus.completed.toString().split('.').last,
           'updatedAt': DateTime.now().toIso8601String(),
         },
       );
@@ -4085,53 +4085,53 @@ class AppWriteProvider {
 
   /// Get feedback statistics (for admin dashboard)
   Future<Map<String, int>> getFeedbackStatistics() async {
-    try {
-      final allFeedback = await databases!.listDocuments(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-      );
+  try {
+    final allFeedback = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+    );
 
-      int pending = 0;
-      int inProgress = 0;
-      int resolved = 0;
-      int closed = 0;
-      int archived = 0;
-      int critical = 0;
+    int pending = 0;
+    int inProgress = 0;
+    int completed = 0;  // Changed variable name
+    int closed = 0;
+    int archived = 0;
+    int critical = 0;
 
-      for (var doc in allFeedback.documents) {
-        final status = doc.data['status'];
-        final priority = doc.data['priority'];
+    for (var doc in allFeedback.documents) {
+      final status = doc.data['status'];
+      final priority = doc.data['priority'];
 
-        if (status == 'pending') pending++;
-        if (status == 'inProgress') inProgress++;
-        if (status == 'resolved') resolved++;
-        if (status == 'closed') closed++;
-        if (status == 'archived') archived++;
-        if (priority == 'critical') critical++;
-      }
-
-      return {
-        'total': allFeedback.documents.length,
-        'pending': pending,
-        'inProgress': inProgress,
-        'resolved': resolved,
-        'closed': closed,
-        'archived': archived,
-        'critical': critical,
-      };
-    } catch (e) {
-      print('Error getting feedback statistics: $e');
-      return {
-        'total': 0,
-        'pending': 0,
-        'inProgress': 0,
-        'resolved': 0,
-        'closed': 0,
-        'archived': 0,
-        'critical': 0,
-      };
+      if (status == 'pending') pending++;
+      if (status == 'inProgress') inProgress++;
+      if (status == 'completed') completed++;  // Changed from 'resolved'
+      if (status == 'closed') closed++;
+      if (status == 'archived') archived++;
+      if (priority == 'critical') critical++;
     }
+
+    return {
+      'total': allFeedback.documents.length,
+      'pending': pending,
+      'inProgress': inProgress,
+      'completed': completed,  // Changed key
+      'closed': closed,
+      'archived': archived,
+      'critical': critical,
+    };
+  } catch (e) {
+    print('Error getting feedback statistics: $e');
+    return {
+      'total': 0,
+      'pending': 0,
+      'inProgress': 0,
+      'completed': 0,  // Changed key
+      'closed': 0,
+      'archived': 0,
+      'critical': 0,
+    };
   }
+}
 
   // ============= ARCHIVE USER METHODS (SOFT DELETE) =============
 

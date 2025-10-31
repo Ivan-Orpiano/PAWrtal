@@ -201,7 +201,7 @@ enum FeedbackCategory {
 
 enum Priority { low, medium, high, critical }
 
-enum FeedbackStatus { pending, inProgress, resolved, closed, archived }
+enum FeedbackStatus { pending, inProgress, completed, closed, archived }
 
 // Helper extensions for display text
 extension FeedbackTypeExtension on FeedbackType {
@@ -276,7 +276,7 @@ extension FeedbackStatusExtension on FeedbackStatus {
         return 'Pending';
       case FeedbackStatus.inProgress:
         return 'In Progress';
-      case FeedbackStatus.resolved:
+      case FeedbackStatus.completed:
         return 'Resolved';
       case FeedbackStatus.closed:
         return 'Closed';
