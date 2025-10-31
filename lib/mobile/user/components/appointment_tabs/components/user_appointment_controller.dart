@@ -289,36 +289,42 @@ class EnhancedUserAppointmentController extends GetxController {
   }
 
   // NEW: Cancel pending appointment (direct deletion, no reason needed)
-  Future<void> cancelPendingAppointment(String appointmentId) async {
-    try {
-      isLoading.value = true;
+Future<void> cancelPendingAppointment(String appointmentId) async {
+  try {
+    isLoading.value = true;
 
-      await authRepository.updateAppointmentStatus(appointmentId, 'cancelled');
+    // Update with cancellation details including who cancelled
+    await authRepository.updateFullAppointment(appointmentId, {
+      'status': 'cancelled',
+      'cancelledBy': 'user',
+      'cancelledAt': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
 
-      // Remove from local list immediately for better UX
-      appointments.removeWhere((a) => a.documentId == appointmentId);
+    // Remove from local list immediately for better UX
+    appointments.removeWhere((a) => a.documentId == appointmentId);
 
-      Get.snackbar(
-        "Cancelled",
-        "Appointment request cancelled successfully",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.shade50,
-        colorText: Colors.orange.shade700,
-        icon: const Icon(Icons.cancel_outlined, color: Colors.orange),
-        duration: const Duration(seconds: 2),
-      );
-    } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to cancel appointment: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
+    Get.snackbar(
+      "Cancelled",
+      "Appointment request cancelled successfully",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.orange.shade50,
+      colorText: Colors.orange.shade700,
+      icon: const Icon(Icons.cancel_outlined, color: Colors.orange),
+      duration: const Duration(seconds: 2),
+    );
+  } catch (e) {
+    Get.snackbar(
+      "Error",
+      "Failed to cancel appointment: $e",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+  } finally {
+    isLoading.value = false;
   }
+}
 
   // NEW: Cancel accepted appointment (with reason)
   Future<void> cancelAcceptedAppointment(

@@ -168,17 +168,17 @@ class _EnhancedWebAppointmentsPageState
         ],
       ),
       child: Obx(() => Row(
-            children: [
-              _buildTabButton(0, Icons.event_available, "Upcoming", Colors.blue,
-                  appointmentController.upcoming.length),
-              _buildTabButton(1, Icons.pending_actions, "Pending",
-                  Colors.orange, appointmentController.pending.length),
-              _buildTabButton(2, Icons.check_circle, "Completed", Colors.green,
-                  appointmentController.completed.length),
-              _buildTabButton(3, Icons.history, "History", Colors.grey,
-                  appointmentController.history.length),
-            ],
-          )),
+        children: [
+          _buildTabButton(0, Icons.pending_actions, "Pending",
+              Colors.orange, appointmentController.pending.length),
+          _buildTabButton(1, Icons.event_available, "Upcoming", Colors.blue,
+              appointmentController.upcoming.length),
+          _buildTabButton(2, Icons.check_circle, "Completed", Colors.green,
+              appointmentController.completed.length),
+          _buildTabButton(3, Icons.history, "History", Colors.grey,
+              appointmentController.history.length),
+        ],
+      )),
     );
   }
 
@@ -252,19 +252,19 @@ class _EnhancedWebAppointmentsPageState
 
       switch (selectedTabIndex) {
         case 0:
-          appointments = appointmentController.upcoming;
-          emptyTitle = "No Upcoming Appointments";
-          emptyMessage = "Your confirmed future appointments will appear here";
-          emptyIcon = Icons.event_available;
-          emptyColor = Colors.blue;
-          break;
-        case 1:
           appointments = appointmentController.pending;
           emptyTitle = "No Pending Appointments";
           emptyMessage =
               "Appointments awaiting clinic approval will appear here";
           emptyIcon = Icons.pending_actions;
           emptyColor = Colors.orange;
+          break;
+        case 1:
+          appointments = appointmentController.upcoming;
+          emptyTitle = "No Upcoming Appointments";
+          emptyMessage = "Your confirmed future appointments will appear here";
+          emptyIcon = Icons.event_available;
+          emptyColor = Colors.blue;
           break;
         case 2:
           appointments = appointmentController.completed;
@@ -517,12 +517,12 @@ class _EnhancedWebAppointmentsPageState
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
             _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
+            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
             _buildStatusChip(
                 "Completed", "${stats['completed']}", Colors.green),
           ],
-        ),
+        )
       ],
     );
   }
@@ -554,16 +554,16 @@ class _EnhancedWebAppointmentsPageState
         ),
         Row(
           children: [
-            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
-            const SizedBox(width: 12),
             _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
+            const SizedBox(width: 12),
+            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
             const SizedBox(width: 12),
             _buildStatusChip(
                 "Completed", "${stats['completed']}", Colors.green),
             const SizedBox(width: 12),
             _buildStatusChip("History", "${stats['history']}", Colors.grey),
           ],
-        ),
+        )
       ],
     );
   }
@@ -684,50 +684,50 @@ class _EnhancedWebAppointmentsPageState
     }
   }
 
-  String _getTabTitle(int index) {
-    switch (index) {
-      case 0:
-        return "Upcoming";
-      case 1:
-        return "Pending";
-      case 2:
-        return "Completed";
-      case 3:
-        return "History";
-      default:
-        return "Unknown";
-    }
+String _getTabTitle(int index) {
+  switch (index) {
+    case 0:
+      return "Pending";
+    case 1:
+      return "Upcoming";
+    case 2:
+      return "Completed";
+    case 3:
+      return "History";
+    default:
+      return "Unknown";
   }
+}
 
-  IconData _getTabIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.event_available;
-      case 1:
-        return Icons.pending_actions;
-      case 2:
-        return Icons.check_circle;
-      case 3:
-        return Icons.history;
-      default:
-        return Icons.event;
-    }
+IconData _getTabIcon(int index) {
+  switch (index) {
+    case 0:
+      return Icons.pending_actions;
+    case 1:
+      return Icons.event_available;
+    case 2:
+      return Icons.check_circle;
+    case 3:
+      return Icons.history;
+    default:
+      return Icons.event;
   }
+}
 
-  Color _getTabColor(int index) {
-    switch (index) {
-      case 0:
-        return Colors.blue;
-      case 1:
-        return Colors.orange;
-      case 2:
-        return Colors.green;
-      case 3:
-        return Colors.grey;
-      default:
-        return Colors.grey;
-    }
+Color _getTabColor(int index) {
+  switch (index) {
+    case 0:
+      return Colors.orange;
+    case 1:
+      return Colors.blue;
+    case 2:
+      return Colors.green;
+    case 3:
+      return Colors.grey;
+    default:
+      return Colors.grey;
   }
+}
 
   void _showAppointmentDialog(
       Appointment appointment, Clinic? clinic, Pet? pet) {

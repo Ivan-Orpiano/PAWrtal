@@ -395,26 +395,6 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
                     child: _buildStatusBadge(),
                   ),
                   // Like button
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: IconButton(
-                      icon: _isLiked
-                          ? const Icon(
-                              Icons.favorite_rounded,
-                              color: Colors.red,
-                            )
-                          : const Icon(
-                              Icons.favorite_border_rounded,
-                              color: Colors.white,
-                            ),
-                      onPressed: () {
-                        setState(() {
-                          _isLiked = !_isLiked;
-                        });
-                      },
-                    ),
-                  ),
                 ],
               ),
               Padding(

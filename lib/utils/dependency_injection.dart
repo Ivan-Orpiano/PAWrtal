@@ -4,6 +4,7 @@ import 'package:capstone_app/mobile/user/components/dashboard_components/dashboa
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -53,4 +54,7 @@ Future<void> initializeDependencies() async {
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
   
+  // ADD THIS LINE - Register WebUserHomeController globally
+  Get.put(WebUserHomeController(), permanent: true);
+  print('>>> ✓ WebUserHomeController initialized');
 }
