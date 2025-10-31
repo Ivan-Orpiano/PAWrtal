@@ -24,8 +24,6 @@ class SuperAdminVetClinicDetailPage extends StatefulWidget {
       _SuperAdminVetClinicDetailPageState();
 }
 
-int _currentGalleryIndex = 0;
-final PageController _appBarGalleryController = PageController();
 class _SuperAdminVetClinicDetailPageState
     extends State<SuperAdminVetClinicDetailPage>
     with SingleTickerProviderStateMixin {
@@ -38,7 +36,7 @@ class _SuperAdminVetClinicDetailPageState
   Clinic? currentClinic;
   ClinicSettings? currentSettings;
   List<String> clinicServices = [];
-  Map<String, bool> medicalServices = {}; 
+  Map<String, bool> medicalServices = {};
 
   // Real-time subscriptions
   StreamSubscription? _clinicSubscription;
@@ -47,10 +45,6 @@ class _SuperAdminVetClinicDetailPageState
   // Animation controller for smooth transitions
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
-  // Gallery state
-  int _selectedGalleryIndex = 0;
-  final PageController _galleryPageController = PageController();
 
   @override
   void initState() {
@@ -71,6 +65,23 @@ class _SuperAdminVetClinicDetailPageState
 
     _loadStaffCount();
     _setupRealtimeUpdates();
+    _initializeServices();
+  }
+
+  void _initializeServices() {
+    if (currentClinic!.services.isNotEmpty) {
+      clinicServices = currentClinic!.services
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    
+    if (currentSettings != null) {
+      medicalServices = Map<String, bool>.from(
+        currentSettings!.medicalServices
+      );
+    }
   }
 
   @override
@@ -78,7 +89,6 @@ class _SuperAdminVetClinicDetailPageState
     _clinicSubscription?.cancel();
     _settingsSubscription?.cancel();
     _animationController.dispose();
-    _galleryPageController.dispose();
     super.dispose();
   }
 
@@ -97,31 +107,23 @@ class _SuperAdminVetClinicDetailPageState
   }
 
   void _setupRealtimeUpdates() {
-    // Subscribe to clinic changes
     _clinicSubscription = authRepository
         .subscribeToClinicChanges()
         .listen((RealtimeMessage event) {
-      print('🔔 Clinic real-time event: ${event.events}');
-
       if (event.payload['\$id'] == currentClinic?.documentId) {
         if (event.events.any((e) => e.contains('.delete'))) {
-          // Clinic deleted - navigate back
           if (mounted) {
             _showDeletedDialog();
           }
         } else if (event.events.any((e) => e.contains('.update'))) {
-          // Clinic updated - refresh
           _refreshClinicData();
         }
       }
     });
     
-    // Subscribe to settings changes
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
-      print('🔔 Settings real-time event: ${event.events}');
-
       if (currentSettings != null &&
           event.payload['clinicId'] == currentClinic?.documentId) {
         _refreshClinicData();
@@ -129,294 +131,369 @@ class _SuperAdminVetClinicDetailPageState
     });
   }
 
-Future<void> _refreshClinicData() async {
-  try {
-    print('🔄 Refreshing clinic data...');
+  Future<void> _refreshClinicData() async {
+    try {
+      final clinicDoc =
+          await authRepository.getClinicById(currentClinic?.documentId ?? '');
+      final settingsDoc = await authRepository
+          .getClinicSettingsByClinicId(currentClinic?.documentId ?? '');
 
-    final clinicDoc =
-        await authRepository.getClinicById(currentClinic?.documentId ?? '');
-    final settingsDoc = await authRepository
-        .getClinicSettingsByClinicId(currentClinic?.documentId ?? '');
+      if (mounted && clinicDoc != null) {
+        setState(() {
+          currentClinic = Clinic.fromMap(clinicDoc.data);
+          currentClinic!.documentId = clinicDoc.$id;
+          currentSettings = settingsDoc;
+          
+          if (currentClinic!.services.isNotEmpty) {
+            clinicServices = currentClinic!.services
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
+          }
+          
+          if (currentSettings != null) {
+            medicalServices = Map<String, bool>.from(
+              currentSettings!.medicalServices
+            );
+          }
+        });
 
-    if (mounted && clinicDoc != null) {
-      setState(() {
-        currentClinic = Clinic.fromMap(clinicDoc.data);
-        currentClinic!.documentId = clinicDoc.$id;
-        currentSettings = settingsDoc;
-        
-        if (currentClinic!.services.isNotEmpty) {
-          clinicServices = currentClinic!.services
-              .split(',')
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toList();
-        }
-        
-        // Update medical services map
-        if (currentSettings != null) {
-          medicalServices = Map<String, bool>.from(
-            currentSettings!.medicalServices
-          );
-        }
-      });
-
-      _showUpdateNotification('Clinic information updated');
+        _showUpdateNotification('Clinic information updated');
+      }
+    } catch (e) {
+      print('Error refreshing clinic data: $e');
     }
-  } catch (e) {
   }
-}
- void _showUpdateNotification(String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF10B981), Color(0xFF059669)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      backgroundColor: Colors.white,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: const Color(0xFF10B981).withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      duration: const Duration(seconds: 3),
-      elevation: 8,
-    ),
-  );
-}
 
-void _showErrorSnackbar(String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.error_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: 0.2,
-                  color: Color(0xFFEF4444),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      backgroundColor: Colors.white,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: const Color(0xFFEF4444).withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      duration: const Duration(seconds: 4),
-      elevation: 8,
-    ),
-  );
-}
-
-void _showDeletedDialog() {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 30,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.orange.withOpacity(0.2),
-                    Colors.orange.withOpacity(0.1),
-                  ],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withOpacity(0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
+  void _showUpdateNotification(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
-              child: Icon(
-                Icons.info_outline_rounded,
-                color: Colors.orange[700],
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Clinic Archived',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Colors.black87,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'This clinic has been archived by developer.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop(true);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color.fromRGBO(81, 115, 153, 1),
-                        Color.fromRGBO(81, 115, 153, 0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color.fromRGBO(81, 115, 153, 0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: const Color(0xFF10B981).withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
+        duration: const Duration(seconds: 3),
+        elevation: 8,
+      ),
+    );
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.error_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    letterSpacing: 0.2,
+                    color: Color(0xFFEF4444),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: const Color(0xFFEF4444).withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
+        duration: const Duration(seconds: 4),
+        elevation: 8,
+      ),
+    );
+  }
+
+  void _showDeletedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 30,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.orange.withOpacity(0.2),
+                      Colors.orange.withOpacity(0.1),
                     ],
                   ),
-                  child: Container(
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.info_outline_rounded,
+                  color: Colors.orange[700],
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Clinic Archived',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black87,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This clinic has been archived by developer.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(81, 115, 153, 1),
+                          Color.fromRGBO(81, 115, 153, 0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromRGBO(81, 115, 153, 0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
-    final isTablet = screenWidth >= 600 && screenWidth < 1000;
 
     final clinic = currentClinic ?? widget.clinic;
     final settings = currentSettings ?? widget.settings;
 
-    // Real-time status
     final isOpen = settings?.isOpenNow() ?? false;
     final detailedStatus = settings?.getDetailedStatus() ?? 'Status Unknown';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        slivers: [
-          // Animated App Bar with Hero Image
-          _buildSliverAppBar(
-              clinic, settings, isOpen, detailedStatus, isMobile),
+      appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.white,
+        elevation: 2,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color.fromRGBO(81, 115, 153, 1),
+          ),
+          onPressed: () => Navigator.pop(context, true),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              clinic.clinicName,
+              style: const TextStyle(
+                color: Color.fromRGBO(81, 115, 153, 1),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Clinic Details',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isOpen
+                    ? [const Color(0xFF10B981), const Color(0xFF059669)]
+                    : [const Color(0xFFEF4444), const Color(0xFFDC2626)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: (isOpen ? Colors.green : Colors.red).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  detailedStatus,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Gallery Section (Similar to AdminWebClinicpage)
+              if (settings != null && settings.gallery.isNotEmpty)
+                _buildGalleryHeader(settings, isMobile),
 
-          // Content
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Padding(
+              Padding(
                 padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,17 +506,11 @@ void _showDeletedDialog() {
                     _buildActionButtons(context, clinic, isMobile),
                     const SizedBox(height: 24),
 
-                    // Gallery Section (Real-time updated)
-                    if (settings != null && settings.gallery.isNotEmpty) ...[
-                      _buildGallerySection(settings, isMobile),
-                      const SizedBox(height: 24),
-                    ],
-
-                    // Services Section (Real-time updated)
+                    // Services Section
                     _buildServicesSection(clinic, isMobile),
                     const SizedBox(height: 24),
 
-                    // Operating Hours (Real-time updated)
+                    // Operating Hours
                     if (settings != null) ...[
                       _buildOperatingHoursSection(settings, isMobile),
                       const SizedBox(height: 24),
@@ -456,6 +527,340 @@ void _showDeletedDialog() {
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Gallery Header Section (Similar to AdminWebClinicpage)
+  Widget _buildGalleryHeader(ClinicSettings settings, bool isMobile) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color.fromRGBO(81, 115, 153, 0.15),
+                      Color.fromRGBO(81, 115, 153, 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.photo_library_rounded,
+                  color: Color.fromRGBO(81, 115, 153, 1),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Clinic Gallery',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromRGBO(81, 115, 153, 1),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${settings.gallery.length} photos',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Gallery Grid (Similar to AdminWebClinicpage)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: isMobile ? 2 : 4,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1,
+            ),
+            itemCount: settings.gallery.length,
+            itemBuilder: (context, index) {
+              final imageId = settings.gallery[index];
+              return GestureDetector(
+                onTap: () => _showFullScreenImage(settings.gallery, index),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color.fromRGBO(81, 115, 153, 0.2),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      getDashImageUrl(imageId),
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 2,
+                              color: const Color.fromRGBO(81, 115, 153, 1),
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error, color: Colors.red[700], size: 32),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Failed to load',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.red[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Full Screen Image Viewer
+  void _showFullScreenImage(List<String> images, int initialIndex) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            PageView.builder(
+              itemCount: images.length,
+              controller: PageController(initialPage: initialIndex),
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  child: Center(
+                    child: Image.network(
+                      getDashImageUrl(images[index]),
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.error_outline,
+                            color: Colors.white,
+                            size: 64,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickStatsCards(
+      Clinic clinic, ClinicSettings? settings, bool isMobile) {
+    final services =
+        clinic.services.split(',').where((s) => s.trim().isNotEmpty).toList();
+    final galleryCount = settings?.gallery.length ?? 0;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            icon: Icons.medical_services_rounded,
+            label: 'Services',
+            value: '${services.length}',
+            gradient: const LinearGradient(
+              colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            isMobile: isMobile,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            icon: Icons.photo_library_rounded,
+            label: 'Gallery',
+            value: '$galleryCount',
+            gradient: const LinearGradient(
+              colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            isMobile: isMobile,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            icon: Icons.people_rounded,
+            label: 'Staff',
+            value: '$totalStaff',
+            gradient: const LinearGradient(
+              colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            isMobile: isMobile,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Gradient gradient,
+    required bool isMobile,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.3),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: isMobile ? 26 : 30),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isMobile ? 28 : 32,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isMobile ? 13 : 14,
+              color: Colors.white.withOpacity(0.95),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -463,462 +868,7 @@ void _showDeletedDialog() {
     );
   }
 
-  Widget _buildSliverAppBar(
-  Clinic clinic,
-  ClinicSettings? settings,
-  bool isOpen,
-  String detailedStatus,
-  bool isMobile,
-) {
-  // Determine what images to show
-  List<String> imagesToShow = [];
-  
-  // Priority 1: Gallery images from settings
-  if (settings != null && settings.gallery.isNotEmpty) {
-    imagesToShow = settings.gallery;
-  } 
-  // Priority 2: Dashboard picture from settings
-  else if (settings != null && settings.dashboardPic.isNotEmpty) {
-    imagesToShow = [settings.dashboardPic];
-  }
-  // Priority 3: Dashboard picture from clinic
-  else if (clinic.dashboardPic != null && clinic.dashboardPic!.isNotEmpty) {
-    imagesToShow = [clinic.dashboardPic!];
-  }
-  // Priority 4: Clinic main image
-  else if (clinic.image.isNotEmpty) {
-    imagesToShow = [clinic.image];
-  }
-
-  return SliverAppBar(
-    surfaceTintColor: Colors.transparent,
-    expandedHeight: isMobile ? 300 : 400,
-    pinned: true,
-    backgroundColor: Colors.white,
-    leading: IconButton(
-      icon: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.arrow_back,
-          color: Color.fromRGBO(81, 115, 153, 1),
-        ),
-      ),
-      onPressed: () => Navigator.pop(context, true),
-    ),
-    flexibleSpace: FlexibleSpaceBar(
-      title: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          clinic.clinicName,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-      ),
-      background: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Gallery Images with PageView
-          if (imagesToShow.isNotEmpty)
-            PageView.builder(
-              controller: _appBarGalleryController,
-              itemCount: imagesToShow.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentGalleryIndex = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                final imageId = imagesToShow[index];
-                return Image.network(
-                  getDashImageUrl(imageId),
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFFF8FAFC),
-                            const Color.fromRGBO(81, 115, 153, 0.05),
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                              strokeWidth: 3,
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color.fromRGBO(81, 115, 153, 1),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Loading image ${index + 1}...',
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildImagePlaceholder();
-                  },
-                );
-              },
-            )
-          else
-            _buildImagePlaceholder(),
-
-          // Gradient Overlay
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.7),
-                ],
-              ),
-            ),
-          ),
-
-          // Gallery Counter Badge (only show if multiple images)
-          if (imagesToShow.length > 1)
-            Positioned(
-              top: 100,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.75),
-                      Colors.black.withOpacity(0.65),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.photo_library_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_currentGalleryIndex + 1} / ${imagesToShow.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Real-time Status Badge
-          Positioned(
-            top: 100,
-            right: 16,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                color: isOpen
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFEF4444),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        (isOpen ? Colors.green : Colors.red).withOpacity(0.5),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 6,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    detailedStatus,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Navigation Arrows (only show if multiple images and not mobile)
-          if (imagesToShow.length > 1 && !isMobile) ...[
-            // Left Arrow
-            Positioned(
-              left: 16,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_currentGalleryIndex > 0) {
-                      _appBarGalleryController.animateToPage(
-                        _currentGalleryIndex - 1,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  },
-                ),
-              ),
-            ),
-            // Right Arrow
-            Positioned(
-              right: 16,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.arrow_forward_ios,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_currentGalleryIndex < imagesToShow.length - 1) {
-                      _appBarGalleryController.animateToPage(
-                        _currentGalleryIndex + 1,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  },
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _buildQuickStatsCards(
-    Clinic clinic, ClinicSettings? settings, bool isMobile) {
-  final services =
-      clinic.services.split(',').where((s) => s.trim().isNotEmpty).toList();
-  final galleryCount = settings?.gallery.length ?? 0;
-
-  return Row(
-    children: [
-      Expanded(
-        child: _buildStatCard(
-          icon: Icons.medical_services_rounded,
-          label: 'Services',
-          value: '${services.length}',
-          gradient: const LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          isMobile: isMobile,
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: _buildStatCard(
-          icon: Icons.photo_library_rounded,
-          label: 'Gallery',
-          value: '$galleryCount',
-          gradient: const LinearGradient(
-            colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          isMobile: isMobile,
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: _buildStatCard(
-          icon: Icons.people_rounded,
-          label: 'Staff',
-          value: '$totalStaff',
-          gradient: const LinearGradient(
-            colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          isMobile: isMobile,
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildStatCard({
-  required IconData icon,
-  required String label,
-  required String value,
-  required Gradient gradient,
-  required bool isMobile,
-}) {
-  return Container(
-    padding: EdgeInsets.all(isMobile ? 16 : 20),
-    decoration: BoxDecoration(
-      gradient: gradient,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.15),
-          blurRadius: 16,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.25),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.white.withOpacity(0.3),
-                blurRadius: 12,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: isMobile ? 26 : 30),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: isMobile ? 28 : 32,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isMobile ? 13 : 14,
-            color: Colors.white.withOpacity(0.95),
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildActionButtons(
-      BuildContext context, Clinic clinic, bool isMobile) {
+  Widget _buildActionButtons(BuildContext context, Clinic clinic, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 20),
       decoration: BoxDecoration(
@@ -939,7 +889,6 @@ Widget _buildStatCard({
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
@@ -973,10 +922,8 @@ Widget _buildStatCard({
           ),
           const SizedBox(height: 16),
 
-          // Action Buttons Row
           Row(
             children: [
-              // Staff Management - Larger/Primary
               Expanded(
                 flex: 2,
                 child: _buildPrimaryActionCard(
@@ -1010,12 +957,10 @@ Widget _buildStatCard({
               ),
               const SizedBox(width: 10),
 
-              // Compact Buttons Column
               Expanded(
                 flex: 2,
                 child: Column(
                   children: [
-                    // Edit Button
                     _buildCompactActionCard(
                       icon: Icons.edit_rounded,
                       label: 'Edit Details',
@@ -1042,7 +987,6 @@ Widget _buildStatCard({
                     ),
                     const SizedBox(height: 10),
 
-                    // Archive Button
                     _buildCompactActionCard(
                       icon: isDeleting
                           ? Icons.hourglass_empty
@@ -1162,7 +1106,6 @@ Widget _buildStatCard({
     );
   }
 
-// Compact Action Card (Edit & Archive)
   Widget _buildCompactActionCard({
     required IconData icon,
     required String label,
@@ -1215,7 +1158,7 @@ Widget _buildStatCard({
                         ),
                       )
                     : Icon(
-                        icon, 
+                        icon,
                         color: color,
                         size: isMobile ? 18 : 20,
                       ),
@@ -1245,92 +1188,15 @@ Widget _buildStatCard({
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required Color color,
-    required VoidCallback? onPressed,
-    required bool isMobile,
-    bool isLoading = false,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: EdgeInsets.all(isMobile ? 14 : 18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                color,
-                color.withOpacity(0.8),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Icon(icon, color: Colors.white, size: isMobile ? 28 : 32),
-              SizedBox(height: isMobile ? 8 : 10),
-              Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: isMobile ? 14 : 15,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: isMobile ? 11 : 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGallerySection(ClinicSettings settings, bool isMobile) {
+  Widget _buildServicesSection(Clinic clinic, bool isMobile) {
     return Container(
+      padding: EdgeInsets.all(isMobile ? 20 : 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            const Color(0xFFF8FAFC),
-          ],
-        ),
+        color: const Color.fromARGB(255, 248, 253, 255),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color.fromRGBO(81, 115, 153, 0.2),
-          width: 2,
+          color: const Color.fromRGBO(81, 115, 153, 0.15),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -1343,816 +1209,38 @@ Widget _buildStatCard({
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Enhanced Header
-          Container(
-            padding: EdgeInsets.all(isMobile ? 20 : 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color.fromRGBO(81, 115, 153, 0.05),
-                  Colors.transparent,
-                ],
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(22),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color.fromRGBO(81, 115, 153, 0.15),
-                        Color.fromRGBO(81, 115, 153, 0.08),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color.fromRGBO(81, 115, 153, 0.2),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.photo_library_rounded,
-                    color: Color.fromRGBO(81, 115, 153, 1),
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Clinic Gallery',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: Color.fromRGBO(81, 115, 153, 1),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color.fromRGBO(81, 115, 153, 0.15),
-                              const Color.fromRGBO(81, 115, 153, 0.08),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color.fromRGBO(81, 115, 153, 0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.image_rounded,
-                              size: 16,
-                              color: Color.fromRGBO(81, 115, 153, 1),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${settings.gallery.length} photos uploaded',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Real-time sync indicator
-                // Container(
-                //   padding: const EdgeInsets.all(10),
-                //   decoration: BoxDecoration(
-                //     color: const Color(0xFF10B981).withOpacity(0.1),
-                //     shape: BoxShape.circle,
-                //     border: Border.all(
-                //       color: const Color(0xFF10B981).withOpacity(0.3),
-                //       width: 2,
-                //     ),
-                //   ),
-                //   child: const Icon(
-                //     Icons.sync_rounded,
-                //     color: Color(0xFF10B981),
-                //     size: 20,
-                //   ),
-                // ),
-              ],
-            ),
-          ),
-
-          // Main Gallery Image with Enhanced PageView
-          Container(
-            height: isMobile ? 280 : 420,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            child: PageView.builder(
-              controller: _galleryPageController,
-              itemCount: settings.gallery.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _selectedGalleryIndex = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                final imageId = settings.gallery[index];
-                return AnimatedBuilder(
-                  animation: _galleryPageController,
-                  builder: (context, child) {
-                    double value = 1.0;
-                    if (_galleryPageController.position.haveDimensions) {
-                      value = _galleryPageController.page! - index;
-                      value = (1 - (value.abs() * 0.3)).clamp(0.7, 1.0);
-                    }
-                    return Center(
-                      child: SizedBox(
-                        height: Curves.easeInOut.transform(value) *
-                            (isMobile ? 280 : 420),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromRGBO(81, 115, 153, 0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            getDashImageUrl(imageId),
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      const Color(0xFFF8FAFC),
-                                      const Color.fromRGBO(81, 115, 153, 0.05),
-                                    ],
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(20),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color.fromRGBO(
-                                                      81, 115, 153, 0.2)
-                                                  .withOpacity(0.3),
-                                              blurRadius: 20,
-                                              spreadRadius: 5,
-                                            ),
-                                          ],
-                                        ),
-                                        child: CircularProgressIndicator(
-                                          value: loadingProgress
-                                                      .expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                              : null,
-                                          strokeWidth: 3,
-                                          valueColor:
-                                              const AlwaysStoppedAnimation<
-                                                  Color>(
-                                            Color.fromRGBO(81, 115, 153, 1),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(24),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color.fromRGBO(
-                                                      81, 115, 153, 0.15)
-                                                  .withOpacity(0.3),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Text(
-                                          'Loading image ${index + 1}...',
-                                          style: TextStyle(
-                                            color: Colors.grey[700],
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Colors.red[50]!,
-                                      Colors.red[100]!,
-                                    ],
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(20),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.red.withOpacity(0.3),
-                                              blurRadius: 20,
-                                              spreadRadius: 5,
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.broken_image_rounded,
-                                          size: 64,
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(24),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.red.withOpacity(0.2),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Text(
-                                          'Failed to load image',
-                                          style: TextStyle(
-                                            color: Colors.red[700],
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          // Image counter overlay
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.black.withOpacity(0.75),
-                                    Colors.black.withOpacity(0.65),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                '${index + 1} / ${settings.gallery.length}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Enhanced Gallery Thumbnail Strip
-          Container(
-            height: 90,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: settings.gallery.length,
-              itemBuilder: (context, index) {
-                final imageId = settings.gallery[index];
-                final isSelected = _selectedGalleryIndex == index;
-                return GestureDetector(
-                  onTap: () {
-                    _galleryPageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOutCubic,
-                    );
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: isSelected ? 100 : 85,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color.fromRGBO(81, 115, 153, 1)
-                            : Colors.transparent,
-                        width: isSelected ? 3.5 : 2,
-                      ),
-                      boxShadow: [
-                        if (isSelected)
-                          BoxShadow(
-                            color: const Color.fromRGBO(81, 115, 153, 0.4),
-                            blurRadius: 16,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(13),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            getDashImageUrl(imageId),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.grey[200]!,
-                                      Colors.grey[300]!,
-                                    ],
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.error_outline_rounded,
-                                  size: 28,
-                                  color: Colors.grey,
-                                ),
-                              );
-                            },
-                          ),
-                          if (!isSelected)
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.3),
-                              ),
-                            ),
-                          if (isSelected)
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.5),
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(13),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
- Widget _buildServicesSection(Clinic clinic, bool isMobile) {
-  return Container(
-    padding: EdgeInsets.all(isMobile ? 20 : 24),
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 248, 253, 255),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: const Color.fromRGBO(81, 115, 153, 0.15),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color.fromRGBO(81, 115, 153, 0.08),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Enhanced Header
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.medical_services_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Services Offered',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Color.fromRGBO(81, 115, 153, 1),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${clinicServices.length} available services',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        
-        // ✅ REPLACE EXISTING SERVICE TAGS WITH THIS (around line 1250)
-        // Service Tags with Medical Indicator
-        if (clinicServices.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.medical_services_outlined,
-                    size: isMobile ? 48 : 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No services listed',
-                    style: TextStyle(
-                      fontSize: isMobile ? 14 : 16,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: clinicServices.map((service) {
-              // ✅ Check if this service is marked as medical
-              final isMedical = medicalServices[service] ?? false;
-              
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF3B82F6).withOpacity(0.15),
-                      const Color(0xFF3B82F6).withOpacity(0.08),
-                    ],
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF3B82F6).withOpacity(0.3),
-                    width: 1.5,
-                  ),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B82F6).withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6).withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle_rounded,
-                        size: 14,
-                        color: Color(0xFF3B82F6),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      service,
-                      style: const TextStyle(
-                        color: Color(0xFF3B82F6),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    // ✅ Medical Service Badge
-                    if (isMedical) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.green[600]!,
-                              Colors.green[700]!,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withOpacity(0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.medical_services,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Medical',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                child: const Icon(
+                  Icons.medical_services_rounded,
+                  color: Colors.white,
+                  size: 24,
                 ),
-              );
-            }).toList(),
-          ),
-        
-        // ✅ ADD THIS NEW SECTION (after the services list, around line 1350)
-        // Medical Services Legend
-        if (clinicServices.any((service) => medicalServices[service] == true)) ...[
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.green[50]!,
-                  Colors.green[100]!.withOpacity(0.3),
-                ],
               ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.green[300]!,
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.green[600],
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.info_outlined,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    'Medical services are recorded in pet medical history after appointment completion',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.green[900],
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    ),
-  );
-}
-
-  Widget _buildOperatingHoursSection(ClinicSettings settings, bool isMobile) {
-  final today = DateTime.now().weekday;
-  final todayName = _getDayName(today);
-
-  return Container(
-    padding: EdgeInsets.all(isMobile ? 20 : 24),
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 248, 253, 255),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: const Color.fromRGBO(81, 115, 153, 0.15),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color.fromRGBO(81, 115, 153, 0.08),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Enhanced Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        settings.isOpen
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444),
-                        settings.isOpen
-                            ? const Color(0xFF059669)
-                            : const Color(0xFFDC2626),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (settings.isOpen
-                                ? const Color(0xFF10B981)
-                                : const Color(0xFFEF4444))
-                            .withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.access_time_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Column(
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Operating Hours',
+                      'Services Offered',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -2162,7 +1250,7 @@ Widget _buildStatCard({
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Weekly schedule',
+                      '${clinicServices.length} available services',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -2171,714 +1259,902 @@ Widget _buildStatCard({
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          if (clinicServices.isEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: settings.isOpen
-                      ? [const Color(0xFF10B981), const Color(0xFF059669)]
-                      : [const Color(0xFFEF4444), const Color(0xFFDC2626)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.medical_services_outlined,
+                      size: isMobile ? 48 : 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No services listed',
+                      style: TextStyle(
+                        fontSize: isMobile ? 14 : 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: (settings.isOpen
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444))
-                        .withOpacity(0.4),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                  ),
-                ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 6,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: clinicServices.map((service) {
+                final isMedical = medicalServices[service] ?? false;
+                
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    settings.isOpen ? 'Accepting' : 'Not Accepting',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        
-        // Operating Hours List
-        ...settings.operatingHours.entries.map((entry) {
-          final day = entry.key;
-          final hours = entry.value;
-          final isOpen = hours['isOpen'] as bool;
-          final openTime = hours['openTime'] as String;
-          final closeTime = hours['closeTime'] as String;
-          final isToday = day == todayName;
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              gradient: isToday
-                  ? LinearGradient(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
                       colors: [
-                        const Color.fromRGBO(81, 115, 153, 0.2),
-                        const Color.fromRGBO(81, 115, 153, 0.08),
+                        const Color(0xFF3B82F6).withOpacity(0.15),
+                        const Color(0xFF3B82F6).withOpacity(0.08),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: isToday ? null : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isToday
-                    ? const Color.fromRGBO(81, 115, 153, 0.5)
-                    : Colors.grey[200]!,
-                width: isToday ? 2 : 1.5,
-              ),
-              boxShadow: [
-                if (isToday)
-                  BoxShadow(
-                    color: const Color.fromRGBO(81, 115, 153, 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
-            ),
-            child: Row(
-              children: [
-                if (isToday)
-                  Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
                     ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(81, 115, 153, 1),
-                          Color.fromRGBO(81, 115, 153, 0.8),
-                        ],
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromRGBO(81, 115, 153, 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'TODAY',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
+                    ],
                   ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    day.substring(0, 1).toUpperCase() + day.substring(1),
-                    style: TextStyle(
-                      fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
-                      fontSize: 16,
-                      color: isToday
-                          ? const Color.fromRGBO(81, 115, 153, 1)
-                          : Colors.black87,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isOpen) ...[
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_rounded,
+                          size: 14,
+                          color: Color(0xFF3B82F6),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        service,
+                        style: const TextStyle(
+                          color: Color(0xFF3B82F6),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      if (isMedical) ...[
+                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withOpacity(0.15),
-                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.green[600]!,
+                                Colors.green[700]!,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.green.withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          child: const Icon(
-                            Icons.schedule_rounded,
-                            size: 16,
-                            color: Color(0xFF10B981),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          '$openTime - $closeTime',
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444).withOpacity(0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.block_rounded,
-                            size: 16,
-                            color: Color(0xFFEF4444),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Closed',
-                          style: TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 0.3,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.medical_services,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Medical',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ],
                   ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
-          );
-        }),
-      ],
-    ),
-  );
-}
- Widget _buildContactSection(Clinic clinic, bool isMobile) {
-  return Container(
-    padding: EdgeInsets.all(isMobile ? 20 : 24),
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 248, 253, 255),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: const Color.fromRGBO(81, 115, 153, 0.15),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color.fromRGBO(81, 115, 153, 0.08),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Enhanced Header
-        Row(
-          children: [
+          
+          if (clinicServices.any((service) => medicalServices[service] == true)) ...[
+            const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.green[50]!,
+                    Colors.green[100]!.withOpacity(0.3),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.green[300]!,
+                  width: 1.5,
+                ),
               ),
-              child: const Icon(
-                Icons.contact_phone_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'Contact Information',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Color.fromRGBO(81, 115, 153, 1),
-                      letterSpacing: 0.3,
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green[600],
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.info_outlined,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Get in touch',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Medical services are recorded in pet medical history after appointment completion',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.green[900],
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperatingHoursSection(ClinicSettings settings, bool isMobile) {
+    final today = DateTime.now().weekday;
+    final todayName = _getDayName(today);
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 20 : 24),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 248, 253, 255),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color.fromRGBO(81, 115, 153, 0.15),
+          width: 1.5,
         ),
-        const SizedBox(height: 20),
-        
-        // Contact Items
-        _buildContactRow(
-          Icons.location_on_rounded,
-          'Address',
-          clinic.address,
-          const LinearGradient(
-            colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
-        ),
-        const SizedBox(height: 12),
-        _buildContactRow(
-          Icons.phone_rounded,
-          'Phone',
-          clinic.contact,
-          const LinearGradient(
-            colors: [Color(0xFF10B981), Color(0xFF059669)],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          settings.isOpen
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFEF4444),
+                          settings.isOpen
+                              ? const Color(0xFF059669)
+                              : const Color(0xFFDC2626),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (settings.isOpen
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444))
+                              .withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.access_time_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Operating Hours',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Color.fromRGBO(81, 115, 153, 1),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Weekly schedule',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: settings.isOpen
+                        ? [const Color(0xFF10B981), const Color(0xFF059669)]
+                        : [const Color(0xFFEF4444), const Color(0xFFDC2626)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (settings.isOpen
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFEF4444))
+                          .withOpacity(0.4),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.8),
+                            blurRadius: 6,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      settings.isOpen ? 'Accepting' : 'Not Accepting',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
+          
+          ...settings.operatingHours.entries.map((entry) {
+            final day = entry.key;
+            final hours = entry.value;
+            final isOpen = hours['isOpen'] as bool;
+            final openTime = hours['openTime'] as String;
+            final closeTime = hours['closeTime'] as String;
+            final isToday = day == todayName;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: isToday
+                    ? LinearGradient(
+                        colors: [
+                          const Color.fromRGBO(81, 115, 153, 0.2),
+                          const Color.fromRGBO(81, 115, 153, 0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isToday ? null : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isToday
+                      ? const Color.fromRGBO(81, 115, 153, 0.5)
+                      : Colors.grey[200]!,
+                  width: isToday ? 2 : 1.5,
+                ),
+                boxShadow: [
+                  if (isToday)
+                    BoxShadow(
+                      color: const Color.fromRGBO(81, 115, 153, 0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  if (isToday)
+                    Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(81, 115, 153, 1),
+                            Color.fromRGBO(81, 115, 153, 0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color.fromRGBO(81, 115, 153, 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'TODAY',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      day.substring(0, 1).toUpperCase() + day.substring(1),
+                      style: TextStyle(
+                        fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
+                        fontSize: 16,
+                        color: isToday
+                            ? const Color.fromRGBO(81, 115, 153, 1)
+                            : Colors.black87,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (isOpen) ...[
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.schedule_rounded,
+                              size: 16,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '$openTime - $closeTime',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ] else ...[
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.block_rounded,
+                              size: 16,
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Closed',
+                            style: TextStyle(
+                              color: Color(0xFFEF4444),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactSection(Clinic clinic, bool isMobile) {
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 20 : 24),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 248, 253, 255),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color.fromRGBO(81, 115, 153, 0.15),
+          width: 1.5,
         ),
-        const SizedBox(height: 12),
-        _buildContactRow(
-          Icons.email_rounded,
-          'Email',
-          clinic.email,
-          const LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
-        ),
-        if (clinic.description.isNotEmpty) ...[
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.contact_phone_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Contact Information',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color.fromRGBO(81, 115, 153, 1),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Get in touch',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          _buildContactRow(
+            Icons.location_on_rounded,
+            'Address',
+            clinic.address,
+            const LinearGradient(
+              colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+            ),
+          ),
           const SizedBox(height: 12),
           _buildContactRow(
-            Icons.description_rounded,
-            'Description',
-            clinic.description,
+            Icons.phone_rounded,
+            'Phone',
+            clinic.contact,
+            const LinearGradient(
+              colors: [Color(0xFF10B981), Color(0xFF059669)],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildContactRow(
+            Icons.email_rounded,
+            'Email',
+            clinic.email,
+            const LinearGradient(
+              colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+            ),
+          ),
+          if (clinic.description.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildContactRow(
+              Icons.description_rounded,
+              'Description',
+              clinic.description,
+              const LinearGradient(
+                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactRow(
+    IconData icon,
+    String label,
+    String value,
+    Gradient gradient,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 20, color: Colors.white),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[600],
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminSection(Clinic clinic, bool isMobile) {
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 20 : 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color.fromRGBO(81, 115, 153, 0.08),
+            const Color.fromRGBO(81, 115, 153, 0.03),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color.fromRGBO(81, 115, 153, 0.25),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(81, 115, 153, 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color.fromRGBO(81, 115, 153, 1),
+                      Color.fromRGBO(81, 115, 153, 0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromRGBO(81, 115, 153, 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Administrator',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color.fromRGBO(81, 115, 153, 1),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'System information',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          _buildAdminInfoRow(
+            'Admin ID',
+            clinic.adminId,
+            Icons.badge_rounded,
+            const LinearGradient(
+              colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildAdminInfoRow(
+            'Created By',
+            clinic.createdBy,
+            Icons.person_rounded,
+            const LinearGradient(
+              colors: [Color(0xFF10B981), Color(0xFF059669)],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildAdminInfoRow(
+            'Role',
+            clinic.role,
+            Icons.verified_user_rounded,
+            const LinearGradient(
+              colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildAdminInfoRow(
+            'Created',
+            _formatDate(clinic.createdAt),
+            Icons.calendar_today_rounded,
             const LinearGradient(
               colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
             ),
           ),
         ],
-      ],
-    ),
-  );
-}
-
-Widget _buildContactRow(
-  IconData icon,
-  String label,
-  String value,
-  Gradient gradient,
-) {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(
-        color: Colors.grey[200]!,
-        width: 1.5,
       ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(icon, size: 20, color: Colors.white),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[600],
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildAdminSection(Clinic clinic, bool isMobile) {
-  return Container(
-    padding: EdgeInsets.all(isMobile ? 20 : 24),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          const Color.fromRGBO(81, 115, 153, 0.08),
-          const Color.fromRGBO(81, 115, 153, 0.03),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: const Color.fromRGBO(81, 115, 153, 0.25),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color.fromRGBO(81, 115, 153, 0.1),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
+  Widget _buildAdminInfoRow(
+    String label,
+    String value,
+    IconData icon,
+    Gradient gradient,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 1.5,
         ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Enhanced Header
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color.fromRGBO(81, 115, 153, 1),
-                    Color.fromRGBO(81, 115, 153, 0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color.fromRGBO(81, 115, 153, 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.admin_panel_settings_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Administrator',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Color.fromRGBO(81, 115, 153, 1),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'System information',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        
-        // Admin Info Items
-        _buildAdminInfoRow(
-          'Admin ID',
-          clinic.adminId,
-          Icons.badge_rounded,
-          const LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 10),
-        _buildAdminInfoRow(
-          'Created By',
-          clinic.createdBy,
-          Icons.person_rounded,
-          const LinearGradient(
-            colors: [Color(0xFF10B981), Color(0xFF059669)],
-          ),
-        ),
-        const SizedBox(height: 10),
-        _buildAdminInfoRow(
-          'Role',
-          clinic.role,
-          Icons.verified_user_rounded,
-          const LinearGradient(
-            colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-          ),
-        ),
-        const SizedBox(height: 10),
-        _buildAdminInfoRow(
-          'Created',
-          _formatDate(clinic.createdAt),
-          Icons.calendar_today_rounded,
-          const LinearGradient(
-            colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildAdminInfoRow(
-  String label,
-  String value,
-  IconData icon,
-  Gradient gradient,
-) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: Colors.grey[200]!,
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[600],
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 14,
-          color: Colors.grey[400],
-        ),
-      ],
-    ),
-  );
-}
-
- Widget _buildImagePlaceholder() {
-  return Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          const Color(0xFFF8FAFC),
-          const Color.fromRGBO(81, 115, 153, 0.05),
         ],
       ),
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(40),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color.fromRGBO(81, 115, 153, 0.15),
-                const Color.fromRGBO(81, 115, 153, 0.08),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color.fromRGBO(81, 115, 153, 0.3),
-              width: 3,
+            child: Icon(
+              icon,
+              size: 18,
+              color: Colors.white,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromRGBO(81, 115, 153, 0.2),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
           ),
-          child: Icon(
-            Icons.pets_rounded,
-            size: 80,
-            color: const Color.fromRGBO(81, 115, 153, 0.6),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 12,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: const Color.fromRGBO(81, 115, 153, 0.2),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromRGBO(81, 115, 153, 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.image_not_supported_rounded,
-                size: 20,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'No Image Available',
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[600],
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 14,
+            color: Colors.grey[400],
+          ),
+        ],
+      ),
+    );
+  }
 
   String _getDayName(int weekday) {
     switch (weekday) {
@@ -2910,358 +2186,347 @@ Widget _buildAdminInfoRow(
     }
   }
 
-void _showDeleteConfirmation(BuildContext context, Clinic clinic) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
-      ),
-      contentPadding: EdgeInsets.zero,
-      content: Container(
-        width: 400,
-        decoration: BoxDecoration(
+  void _showDeleteConfirmation(BuildContext context, Clinic clinic) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              const Color(0xFFF8FAFC),
-            ],
-          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header with gradient
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFFEA580C).withOpacity(0.1),
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          width: 400,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                const Color(0xFFF8FAFC),
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFEA580C).withOpacity(0.1),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
                 ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFEA580C).withOpacity(0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.archive_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Archive Clinic',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFEA580C),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Confirm action',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Are you sure you want to archive "${clinic.clinicName}"?',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.5,
+                        color: Colors.black87,
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFEA580C).withOpacity(0.4),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFEA580C).withOpacity(0.1),
+                            const Color(0xFFEA580C).withOpacity(0.05),
+                          ],
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFEA580C).withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEA580C).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 20,
+                                  color: Color(0xFFEA580C),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'This will archive:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFEA580C),
+                                  fontSize: 15,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          _buildArchiveItem('All appointments'),
+                          _buildArchiveItem('All medical records'),
+                          _buildArchiveItem('All conversations'),
+                          _buildArchiveItem('Staff accounts (deactivated)'),
+                          _buildArchiveItem('Gallery images'),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEA580C).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_rounded,
+                                      size: 16,
+                                      color: Color(0xFFEA580C),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Permanently deleted in 30 days',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFFEA580C),
+                                          fontSize: 13,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'You can recover it within 30 days from the Archived Clinics page.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFFEA580C),
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.archive_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                  ],
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(28),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Archive Clinic',
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
                           style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFEA580C),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            color: Colors.black87,
                             letterSpacing: 0.3,
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Confirm action',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _archiveClinic(clinic);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Are you sure you want to archive "${clinic.clinicName}"?',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      height: 1.5,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // Warning Box
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFEA580C).withOpacity(0.1),
-                          const Color(0xFFEA580C).withOpacity(0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFFEA580C).withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEA580C).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.info_outline_rounded,
-                                size: 20,
-                                color: Color(0xFFEA580C),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'This will archive:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFFEA580C),
-                                fontSize: 15,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        _buildArchiveItem('All appointments'),
-                        _buildArchiveItem('All medical records'),
-                        _buildArchiveItem('All conversations'),
-                        _buildArchiveItem('Staff accounts (deactivated)'),
-                        _buildArchiveItem('Gallery images'),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.all(12),
+                        child: Ink(
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEA580C).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEA580C),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.warning_rounded,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                    child: Text(
-                                      'Permanently deleted in 30 days',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFFEA580C),
-                                        fontSize: 13,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'You can recover it within 30 days from the Archived Clinics page.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFFEA580C),
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.4,
-                                ),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFEA580C).withOpacity(0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
+                          child: Container(
+                            alignment: Alignment.center,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.archive_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Archive Clinic',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 15,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Actions
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(28),
+                  ],
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(
-                            color: Colors.grey[300]!,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: Colors.black87,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _archiveClinic(clinic);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Ink(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFEA580C).withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          alignment: Alignment.center,
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.archive_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Archive Clinic',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
+  Widget _buildArchiveItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEA580C).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.close_rounded,
+              size: 12,
+              color: Color(0xFFEA580C),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-Widget _buildArchiveItem(String text) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEA580C).withOpacity(0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Icon(
-            Icons.close_rounded,
-            size: 12,
-            color: Color(0xFFEA580C),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-            height: 1.4,
-          ),
-        ),
-      ],
-    ),
-  );
-}
   Future<void> _archiveClinic(Clinic clinic) async {
     setState(() {
       isDeleting = true;
@@ -3269,74 +2534,72 @@ Widget _buildArchiveItem(String text) {
 
     try {
       showDialog(
-  context: context,
-  barrierDismissible: false,
-  builder: (context) => Dialog(
-    backgroundColor: Colors.transparent,
-    child: Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 30,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color.fromRGBO(81, 115, 153, 0.2),
-                  Color.fromRGBO(81, 115, 153, 0.1),
-                ],
-              ),
-              shape: BoxShape.circle,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
+              ],
             ),
-            child: const CircularProgressIndicator(
-              strokeWidth: 4,
-              color: Color.fromRGBO(81, 115, 153, 1),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color.fromRGBO(81, 115, 153, 0.2),
+                        Color.fromRGBO(81, 115, 153, 0.1),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 4,
+                    color: Color.fromRGBO(81, 115, 153, 1),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Archiving clinic...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    color: Color.fromRGBO(81, 115, 153, 1),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please wait while we process your request',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Archiving clinic...',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-              color: Color.fromRGBO(81, 115, 153, 1),
-              letterSpacing: 0.3,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Please wait while we process your request',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    ),
-  ),
-);
+        ),
+      );
 
-      // Get current admin info
       final currentUser = await authRepository.getUser();
       final adminName = currentUser?.name ?? 'Super Admin';
 
-      // Archive the clinic
       final results = await authRepository.archiveClinic(
         clinicId: clinic.documentId ?? '',
         clinicDocumentId: clinic.documentId ?? '',
@@ -3390,8 +2653,9 @@ Widget _buildArchiveItem(String text) {
       }
     }
   }
+}
 
-  void _showDeletionResults(Map<String, dynamic> results) {
+  void _showDeletionResults(Map<String, dynamic> results, BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -3448,4 +2712,4 @@ Widget _buildArchiveItem(String text) {
       ),
     );
   }
-}
+

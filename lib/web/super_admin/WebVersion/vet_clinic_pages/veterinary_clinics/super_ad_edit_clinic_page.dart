@@ -510,6 +510,7 @@ void _initializeData() {
                 icon: Icons.email,
                 keyboardType: TextInputType.emailAddress,
                 required: true,
+                enabled: false, 
               ),
               const SizedBox(height: 16),
               _buildTextField(
@@ -1067,6 +1068,7 @@ void _confirmRemoveGalleryImage(int index) {
                   label: "Emergency Contact",
                   icon: Icons.emergency,
                   keyboardType: TextInputType.phone,
+                  enabled: true,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
@@ -1147,11 +1149,13 @@ void _confirmRemoveGalleryImage(int index) {
     bool required = false,
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
+    bool enabled = true,
   }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: required ? "$label *" : label,
         hintText: hint,
@@ -1612,9 +1616,9 @@ void _confirmRemoveGalleryImage(int index) {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle, color: Color.fromARGB(255, 255, 255, 255)),
             const SizedBox(width: 12),
-            Text(message),
+            Text(message, style: const TextStyle(color: Colors.white)),
           ],
         ),
         backgroundColor: Colors.green[700],

@@ -342,30 +342,219 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
     }
   }
 
-  Future<void> _processScheduledDeletionsNow() async {
-    final confirm = await showDialog<bool>(
+ Future<void> _processScheduledDeletionsNow() async {
+    // ============================================
+    // STEP 1: FIRST CONFIRMATION - WARNING DIALOG
+    // ============================================
+    final firstConfirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Process Scheduled Deletions'),
-        content: const Text(
-          'This will permanently delete all clinics whose 30-day period has expired. This action cannot be undone. Continue?',
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                darkRed.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [darkRed, darkRed.withOpacity(0.8)],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.warning_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'Permanent Deletion Warning',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'You are about to permanently delete archived clinics!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: darkBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Warning boxes
+                    _buildWarningBox(
+                      icon: Icons.delete_forever,
+                      title: 'All Clinic Data Will Be Lost',
+                      description: 'This includes appointments, medical records, conversations, and staff accounts.',
+                      color: darkRed,
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    _buildWarningBox(
+                      icon: Icons.schedule,
+                      title: 'Only Expired Archives',
+                      description: 'Only clinics past their 30-day retention period will be deleted.',
+                      color: warningOrange,
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    _buildWarningBox(
+                      icon: Icons.restore_from_trash,
+                      title: 'No Recovery Possible',
+                      description: 'Once deleted, these clinics cannot be recovered by any means.',
+                      color: darkBlue,
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: darkRed.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: darkRed.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: darkRed, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'This action is IRREVERSIBLE and will permanently remove all data.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: darkRed,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Actions
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [darkRed, darkRed.withOpacity(0.8)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: darkRed.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'I Understand, Continue',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: darkRed),
-            child: const Text('Process'),
-          ),
-        ],
       ),
     );
 
-    if (confirm != true) return;
+    if (firstConfirm != true) return;
 
+    // ============================================
+    // STEP 2: GET CLINICS DUE FOR DELETION
+    // ============================================
+    List<ArchivedClinic> clinicsDue = [];
     try {
       Get.dialog(
         const Center(
@@ -377,8 +566,484 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Processing deletions...'),
+                  Text('Checking clinics due for deletion...'),
                 ],
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      final allArchived = await _authRepository.getAllArchivedClinics(
+        includePermanentlyDeleted: false,
+        limit: 500,
+      );
+
+      final now = DateTime.now();
+      clinicsDue = allArchived.where((clinic) {
+        return !clinic.isPermanentlyDeleted &&
+            !clinic.isRecovered &&
+            clinic.scheduledDeletionAt.isBefore(now);
+      }).toList();
+
+      Get.back(); // Close loading dialog
+    } catch (e) {
+      Get.back(); // Close loading dialog
+      Get.snackbar(
+        'Error',
+        'Failed to check deletion status: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // If no clinics due for deletion
+    if (clinicsDue.isEmpty) {
+      Get.dialog(
+        AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: successGreen.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_circle, color: successGreen),
+              ),
+              const SizedBox(width: 12),
+              const Text('No Deletions Needed'),
+            ],
+          ),
+          content: const Text(
+            'There are no archived clinics currently due for permanent deletion. All clinics are still within their 30-day retention period.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Get.back(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: successGreen,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // ============================================
+    // STEP 3: SECOND CONFIRMATION - TYPE TO CONFIRM
+    // ============================================
+    final TextEditingController confirmController = TextEditingController();
+    final confirmText = 'DELETE ${clinicsDue.length} CLINICS';
+    
+    final secondConfirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final isConfirmTextValid = confirmController.text == confirmText;
+          
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 550),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, backgroundColor],
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [darkRed, Colors.red.shade900],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Final Confirmation Required',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Clinics count
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                darkRed.withOpacity(0.15),
+                                darkRed.withOpacity(0.05),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: darkRed.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: darkRed,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${clinicsDue.length}',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Clinics Ready for Deletion',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: darkBlue,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'All have exceeded 30-day retention',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Clinics list preview
+                        if (clinicsDue.isNotEmpty) ...[
+                          const Text(
+                            'Clinics to be deleted:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 150),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: clinicsDue.length,
+                              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade300),
+                              itemBuilder: (context, index) {
+                                final clinic = clinicsDue[index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.local_hospital, size: 16, color: darkRed),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          clinic.clinicName,
+                                          style: const TextStyle(fontSize: 13),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Text(
+                                        clinic.email,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                        
+                        // Confirmation instruction
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: warningOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: warningOrange.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.keyboard, color: warningOrange, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Type the following to confirm:',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: darkBlue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: darkRed),
+                                ),
+                                child: SelectableText(
+                                  confirmText,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: darkRed,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Input field
+                        TextField(
+                          controller: confirmController,
+                          onChanged: (value) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Type confirmation text',
+                            hintText: confirmText,
+                            prefixIcon: Icon(
+                              isConfirmTextValid ? Icons.check_circle : Icons.edit,
+                              color: isConfirmTextValid ? successGreen : Colors.grey,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isConfirmTextValid ? successGreen : Colors.grey,
+                                width: 2,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isConfirmTextValid ? successGreen : Colors.grey.shade300,
+                                width: 2,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: isConfirmTextValid ? successGreen : primaryColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Actions
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              confirmController.dispose();
+                              Navigator.pop(context, false);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(color: primaryColor),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: isConfirmTextValid
+                                  ? LinearGradient(
+                                      colors: [darkRed, Colors.red.shade900],
+                                    )
+                                  : null,
+                              color: isConfirmTextValid ? null : Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: isConfirmTextValid
+                                  ? [
+                                      BoxShadow(
+                                        color: darkRed.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: ElevatedButton(
+                              onPressed: isConfirmTextValid
+                                  ? () {
+                                      confirmController.dispose();
+                                      Navigator.pop(context, true);
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                disabledBackgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Permanently Delete',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isConfirmTextValid ? Colors.white : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    if (secondConfirm != true) return;
+
+    // ============================================
+    // STEP 4: PROCESS DELETION
+    // ============================================
+    try {
+      Get.dialog(
+        WillPopScope(
+          onWillPop: () async => false,
+          child: Center(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 5,
+                        color: darkRed,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Processing ${clinicsDue.length} deletions...',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'This may take a few moments',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -388,29 +1053,83 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
 
       final result = await _archiveService.processNow();
 
-      Get.back();
+      Get.back(); // Close loading dialog
 
+      // ============================================
+      // STEP 5: SHOW RESULTS
+      // ============================================
       Get.dialog(
         AlertDialog(
-          title: const Text('Processing Complete'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [successGreen, accentTeal],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              const Text('Deletion Complete'),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Clinics processed: ${result['processed']}'),
+              _buildResultRow(
+                icon: Icons.check_circle,
+                label: 'Clinics processed',
+                value: '${result['processed']}',
+                color: successGreen,
+              ),
               if (result['errors'] != null && (result['errors'] as List).isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Errors: ${(result['errors'] as List).length}',
-                  style: const TextStyle(color: Colors.red),
+                const SizedBox(height: 12),
+                _buildResultRow(
+                  icon: Icons.error,
+                  label: 'Errors encountered',
+                  value: '${(result['errors'] as List).length}',
+                  color: darkRed,
                 ),
               ],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: successGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: successGreen.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: successGreen, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'All expired archived clinics have been permanently deleted.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           actions: [
             ElevatedButton(
               onPressed: () => Get.back(),
-              child: const Text('OK'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: successGreen,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -419,14 +1138,94 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
       _loadArchivedClinics();
       _loadStats();
     } catch (e) {
-      Get.back();
+      Get.back(); // Close loading dialog
       Get.snackbar(
         'Error',
         'Failed to process deletions: $e',
         backgroundColor: Colors.red,
         colorText: Colors.white,
+        duration: const Duration(seconds: 5),
       );
     }
+  }
+ 
+  Widget _buildWarningBox({
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: Colors.white, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(fontSize: 14),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
