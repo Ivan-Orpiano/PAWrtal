@@ -59,12 +59,7 @@
                 <!-- CRITICAL: Your custom scheme for OAuth -->
                 <data
                     android:scheme="https"
-                    android:host="www.pawrtal.online"
-                    android:pathPrefix="/mobile-auth-success" />
-                <data
-                    android:scheme="https"
-                    android:host="www.pawrtal.online"
-                    android:pathPrefix="/mobile-auth-failure" />
+                    android:host="pawrtal.online" />
             </intent-filter>
         </activity>
         <service

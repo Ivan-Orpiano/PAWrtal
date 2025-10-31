@@ -60,13 +60,11 @@ class MobileOAuthHandler {
       print('>>> Path: ${uri.path}');
       print('>>> ============================================');
 
-      // CRITICAL: Check for mobile auth callbacks from web domain
-      if (uri.scheme == 'https' && uri.host == 'www.pawrtal.online') {
-        if (uri.path == '/mobile-auth-success') {
-          print('>>> ✅ Mobile OAuth SUCCESS detected');
+      // Check if it's our OAuth callback
+      if (uri.scheme == 'pawrtal' && uri.host == 'auth') {
+        if (uri.path == '/success') {
           await _handleOAuthSuccess();
-        } else if (uri.path == '/mobile-auth-failure') {
-          print('>>> ❌ Mobile OAuth FAILURE detected');
+        } else if (uri.path == '/failure') {
           _handleOAuthFailure();
         }
       }
