@@ -1,8 +1,8 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/utils/image_helper.dart';
+import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
 
 class SuperAdminVetClinicTile extends StatefulWidget {
   final Clinic clinic;
@@ -28,13 +28,16 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
   late AnimationController _pulseController;
   late AnimationController _shimmerController;
   late AnimationController _addressPulseController;
+  late AnimationController _hoverController;
   late Animation<double> _pulseAnimation;
   late Animation<double> _shimmerAnimation;
   late Animation<double> _addressPulseAnimation;
+  late Animation<double> _hoverAnimation;
 
   bool _imageLoaded = false;
   bool _imageError = false;
   String? _cachedImageUrl;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -45,12 +48,12 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
       vsync: this,
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
     _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1800),
       vsync: this,
     )..repeat();
 
@@ -63,8 +66,17 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
       vsync: this,
     )..repeat(reverse: true);
 
-    _addressPulseAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+    _addressPulseAnimation = Tween<double>(begin: 0.96, end: 1.0).animate(
       CurvedAnimation(parent: _addressPulseController, curve: Curves.easeInOut),
+    );
+
+    _hoverController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _hoverAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOut),
     );
 
     _updateImageUrl();
@@ -75,6 +87,7 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
     _pulseController.dispose();
     _shimmerController.dispose();
     _addressPulseController.dispose();
+    _hoverController.dispose();
     super.dispose();
   }
 
@@ -87,7 +100,7 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
         oldWidget.clinic.clinicName != widget.clinic.clinicName ||
         oldWidget.clinic.services != widget.clinic.services ||
         oldWidget.settings?.gallery != widget.settings?.gallery) {
-      print('📄 Real-time update detected for: ${widget.clinic.clinicName}');
+      print('🔄 Real-time update detected for: ${widget.clinic.clinicName}');
 
       setState(() {
         _imageLoaded = false;
@@ -98,110 +111,151 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
     }
   }
 
- void _updateImageUrl() {
-  // PRIORITY 1: Check for dashboardPic
-  if (widget.clinic.dashboardPic != null &&
-      widget.clinic.dashboardPic!.isNotEmpty) {
-    final newUrl = getDashImageUrl(widget.clinic.dashboardPic!);
-    if (newUrl != _cachedImageUrl) {
-      setState(() {
-        _cachedImageUrl = newUrl;
-      });
+  void _updateImageUrl() {
+    // PRIORITY 1: Check for dashboardPic
+    if (widget.clinic.dashboardPic != null &&
+        widget.clinic.dashboardPic!.isNotEmpty) {
+      final newUrl = getDashImageUrl(widget.clinic.dashboardPic!);
+      if (newUrl != _cachedImageUrl) {
+        setState(() {
+          _cachedImageUrl = newUrl;
+        });
+      }
+      return;
     }
-    return;
+
+    // PRIORITY 2: Fallback to regular clinic image
+    if (widget.clinic.image.isNotEmpty) {
+      final newUrl = getDashImageUrl(widget.clinic.image);
+      if (newUrl != _cachedImageUrl) {
+        setState(() {
+          _cachedImageUrl = newUrl;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _cachedImageUrl = null;
+    });
   }
 
-  // PRIORITY 2: Fallback to regular clinic image
-  if (widget.clinic.image.isNotEmpty) {
-    final newUrl = getDashImageUrl(widget.clinic.image);
-    if (newUrl != _cachedImageUrl) {
-      setState(() {
-        _cachedImageUrl = newUrl;
-      });
-    }
-    return;
+  // Responsive sizing helper
+  double _getResponsiveSize({
+    required double mobile,
+    required double tablet,
+    required double desktop,
+  }) {
+    if (widget.isMobile) return mobile;
+    if (widget.isTablet) return tablet;
+    return desktop;
   }
 
-  setState(() {
-    _cachedImageUrl = null;
-  });
-}
   @override
   Widget build(BuildContext context) {
     final isOpen = widget.settings?.isOpenNow() ?? false;
     final detailedStatus = widget.settings?.getDetailedStatus() ?? 'Unknown';
     final galleryCount = widget.settings?.gallery.length ?? 0;
 
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 400),
-      tween: Tween(begin: 0.95, end: 1.0),
-      curve: Curves.easeOutCubic,
-      builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(widget.isTablet ? 24 : 28),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color.fromRGBO(81, 115, 153, 0.08),
-                  blurRadius: widget.isTablet ? 10 : 12,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: const Color.fromRGBO(81, 115, 153, 0.15),
-                  blurRadius: widget.isTablet ? 20 : 24,
-                  offset: const Offset(0, 8),
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(widget.isTablet ? 24 : 28),
-                side: BorderSide(
-                  color: const Color.fromRGBO(81, 115, 153, 0.15),
-                  width: 2,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image Section
-                  Expanded(
-                    flex: widget.isTablet ? 6 : 5,
-                    child: _buildImageSection(
-                        isOpen, detailedStatus, galleryCount),
-                  ),
+    final borderRadius = _getResponsiveSize(
+      mobile: 20.0,
+      tablet: 22.0,
+      desktop: 26.0,
+    );
 
-                  // Info Section - Redesigned
-                  Expanded(
-                    flex: widget.isTablet ? 5 : 4,
-                    child: _buildInfoSection(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _hoverController.forward();
       },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _hoverController.reverse();
+      },
+      child: AnimatedBuilder(
+        animation: _hoverAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _hoverAnimation.value,
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 400),
+              tween: Tween(begin: 0.92, end: 1.0),
+              curve: Curves.easeOutCubic,
+              builder: (context, scale, child) {
+                return Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _isHovered
+                              ? const Color.fromRGBO(81, 115, 153, 0.15)
+                              : const Color.fromRGBO(81, 115, 153, 0.08),
+                          blurRadius: _isHovered ? 16 : 10,
+                          offset: Offset(0, _isHovered ? 6 : 4),
+                        ),
+                        BoxShadow(
+                          color: _isHovered
+                              ? const Color.fromRGBO(81, 115, 153, 0.25)
+                              : const Color.fromRGBO(81, 115, 153, 0.15),
+                          blurRadius: _isHovered ? 28 : 20,
+                          offset: Offset(0, _isHovered ? 12 : 8),
+                          spreadRadius: _isHovered ? 3 : 2,
+                        ),
+                      ],
+                    ),
+                    child: Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(borderRadius),
+                        side: BorderSide(
+                          color: _isHovered
+                              ? const Color.fromRGBO(81, 115, 153, 0.25)
+                              : const Color.fromRGBO(81, 115, 153, 0.15),
+                          width: _isHovered ? 2.5 : 2,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image Section
+                          Expanded(
+                            flex: widget.isMobile ? 5 : widget.isTablet ? 6 : 5,
+                            child: _buildImageSection(
+                                isOpen, detailedStatus, galleryCount, borderRadius),
+                          ),
+
+                          // Info Section
+                          Expanded(
+                            flex: widget.isMobile ? 4 : widget.isTablet ? 5 : 4,
+                            child: _buildInfoSection(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildImageSection(
-      bool isOpen, String detailedStatus, int galleryCount) {
-    final borderRadius = widget.isTablet ? 22.0 : 26.0;
-
+      bool isOpen, String detailedStatus, int galleryCount, double borderRadius) {
     return Stack(
       children: [
+        // Main Image with Smooth Transitions
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 600),
           transitionBuilder: (child, animation) {
             return FadeTransition(
               opacity: animation,
               child: ScaleTransition(
-                scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+                scale: Tween<double>(begin: 0.92, end: 1.0).animate(animation),
                 child: child,
               ),
             );
@@ -211,20 +265,20 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(
-                top: Radius.circular(borderRadius),
+                top: Radius.circular(borderRadius - 2),
               ),
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFFF8FAFC),
-                  const Color.fromRGBO(81, 115, 153, 0.05),
+                  Color(0xFFF8FAFC),
+                  Color.fromRGBO(81, 115, 153, 0.05),
                 ],
               ),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.vertical(
-                top: Radius.circular(borderRadius),
+                top: Radius.circular(borderRadius - 2),
               ),
               child: _cachedImageUrl != null
                   ? _buildNetworkImage()
@@ -232,28 +286,32 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
             ),
           ),
         ),
+
+        // Gradient Overlay
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(
-                top: Radius.circular(borderRadius),
+                top: Radius.circular(borderRadius - 2),
               ),
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withOpacity(0.4),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withOpacity(0.35),
+                  Colors.black.withOpacity(0.65),
                 ],
                 stops: const [0.5, 0.8, 1.0],
               ),
             ),
           ),
         ),
+
+        // Open/Closed Status Badge
         Positioned(
-          top: widget.isTablet ? 14 : 20,
-          right: widget.isTablet ? 14 : 20,
+          top: _getResponsiveSize(mobile: 12, tablet: 14, desktop: 18),
+          right: _getResponsiveSize(mobile: 12, tablet: 14, desktop: 18),
           child: AnimatedBuilder(
             animation: _pulseAnimation,
             builder: (context, child) {
@@ -261,16 +319,16 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                 scale: isOpen ? _pulseAnimation.value : 1.0,
                 child: Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: widget.isMobile
-                        ? 18
-                        : widget.isTablet
-                            ? 14
-                            : 16,
-                    vertical: widget.isMobile
-                        ? 11
-                        : widget.isTablet
-                            ? 8
-                            : 10,
+                    horizontal: _getResponsiveSize(
+                      mobile: 14,
+                      tablet: 15,
+                      desktop: 16,
+                    ),
+                    vertical: _getResponsiveSize(
+                      mobile: 9,
+                      tablet: 9.5,
+                      desktop: 10,
+                    ),
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -278,15 +336,23 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                           ? [const Color(0xFF10B981), const Color(0xFF059669)]
                           : [const Color(0xFFEF4444), const Color(0xFFDC2626)],
                     ),
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
                         color: (isOpen
                                 ? const Color(0xFF10B981)
                                 : const Color(0xFFEF4444))
                             .withOpacity(0.4),
-                        blurRadius: widget.isTablet ? 10 : 14,
-                        spreadRadius: widget.isTablet ? 1 : 2,
+                        blurRadius: _getResponsiveSize(
+                          mobile: 10,
+                          tablet: 11,
+                          desktop: 14,
+                        ),
+                        spreadRadius: _getResponsiveSize(
+                          mobile: 1,
+                          tablet: 1.5,
+                          desktop: 2,
+                        ),
                       ),
                     ],
                   ),
@@ -294,37 +360,54 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: widget.isTablet ? 8 : 10,
-                        height: widget.isTablet ? 8 : 10,
+                        width: _getResponsiveSize(
+                          mobile: 8,
+                          tablet: 9,
+                          desktop: 10,
+                        ),
+                        height: _getResponsiveSize(
+                          mobile: 8,
+                          tablet: 9,
+                          desktop: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.white.withOpacity(0.8),
-                              blurRadius: widget.isTablet ? 6 : 8,
-                              spreadRadius: widget.isTablet ? 1 : 2,
+                              blurRadius: _getResponsiveSize(
+                                mobile: 6,
+                                tablet: 7,
+                                desktop: 8,
+                              ),
+                              spreadRadius: _getResponsiveSize(
+                                mobile: 1,
+                                tablet: 1.5,
+                                desktop: 2,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       SizedBox(
-                          width: widget.isMobile
-                              ? 8
-                              : widget.isTablet
-                                  ? 6
-                                  : 7),
+                        width: _getResponsiveSize(
+                          mobile: 7,
+                          tablet: 7.5,
+                          desktop: 8,
+                        ),
+                      ),
                       Text(
-                        isOpen ? 'OPEN NOW' : 'CLOSED',
+                        isOpen ? 'OPEN' : 'CLOSED',
                         style: TextStyle(
-                          fontSize: widget.isMobile
-                              ? 12.5
-                              : widget.isTablet
-                                  ? 10.5
-                                  : 11.5,
+                          fontSize: _getResponsiveSize(
+                            mobile: 11,
+                            tablet: 11.5,
+                            desktop: 12,
+                          ),
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
-                          letterSpacing: widget.isTablet ? 1.0 : 1.2,
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ],
@@ -334,81 +417,24 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
             },
           ),
         ),
-        if (_imageLoaded)
-          Positioned(
-            top: widget.isTablet ? 14 : 20,
-            left: widget.isTablet ? 14 : 20,
-            child: TweenAnimationBuilder<double>(
-              duration: const Duration(seconds: 3),
-              tween: Tween(begin: 1.0, end: 0.0),
-              curve: Curves.easeOut,
-              builder: (context, opacity, child) {
-                if (opacity < 0.05) return const SizedBox.shrink();
-                return Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: widget.isTablet ? 10 : 12,
-                      vertical: widget.isTablet ? 6 : 8,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color.fromRGBO(81, 115, 153, 0.95),
-                          Color.fromRGBO(81, 115, 153, 0.85),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromRGBO(81, 115, 153, 0.4),
-                          blurRadius: widget.isTablet ? 6 : 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 800),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          builder: (context, value, child) {
-                            return Transform.rotate(
-                              angle: value * 2 * 3.14159,
-                              child: Icon(
-                                Icons.sync,
-                                color: Colors.white,
-                                size: widget.isTablet ? 12 : 14,
-                              ),
-                            );
-                          },
-                        ),
-                        SizedBox(width: widget.isTablet ? 5 : 6),
-                        Text(
-                          'Updated',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: widget.isTablet ? 10 : 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+
+        // Gallery Count Badge
         if (galleryCount > 0)
           Positioned(
-            bottom: widget.isTablet ? 14 : 20,
-            left: widget.isTablet ? 14 : 20,
+            bottom: _getResponsiveSize(mobile: 12, tablet: 14, desktop: 18),
+            left: _getResponsiveSize(mobile: 12, tablet: 14, desktop: 18),
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: widget.isTablet ? 10 : 14,
-                vertical: widget.isTablet ? 7 : 10,
+                horizontal: _getResponsiveSize(
+                  mobile: 12,
+                  tablet: 13,
+                  desktop: 14,
+                ),
+                vertical: _getResponsiveSize(
+                  mobile: 8,
+                  tablet: 9,
+                  desktop: 10,
+                ),
               ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -417,7 +443,7 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                     Colors.black.withOpacity(0.65),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.3),
                   width: 1.5,
@@ -425,7 +451,11 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.3),
-                    blurRadius: widget.isTablet ? 10 : 12,
+                    blurRadius: _getResponsiveSize(
+                      mobile: 8,
+                      tablet: 10,
+                      desktop: 12,
+                    ),
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -436,24 +466,42 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                   Icon(
                     Icons.photo_library_rounded,
                     color: Colors.white,
-                    size: widget.isTablet ? 15 : 18,
+                    size: _getResponsiveSize(
+                      mobile: 16,
+                      tablet: 17,
+                      desktop: 18,
+                    ),
                   ),
-                  SizedBox(width: widget.isTablet ? 6 : 8),
+                  SizedBox(
+                    width: _getResponsiveSize(
+                      mobile: 6,
+                      tablet: 7,
+                      desktop: 8,
+                    ),
+                  ),
                   Text(
                     '$galleryCount',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: widget.isTablet ? 12 : 14,
+                      fontSize: _getResponsiveSize(
+                        mobile: 13,
+                        tablet: 13.5,
+                        desktop: 14,
+                      ),
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'photos',
+                    galleryCount == 1 ? 'photo' : 'photos',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
-                      fontSize: widget.isTablet ? 10 : 12,
+                      fontSize: _getResponsiveSize(
+                        mobile: 11,
+                        tablet: 11.5,
+                        desktop: 12,
+                      ),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -525,38 +573,72 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: EdgeInsets.all(widget.isTablet ? 16 : 20),
+                  padding: EdgeInsets.all(_getResponsiveSize(
+                    mobile: 16,
+                    tablet: 18,
+                    desktop: 20,
+                  )),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
                         color: const Color.fromRGBO(81, 115, 153, 0.2),
-                        blurRadius: widget.isTablet ? 16 : 20,
-                        spreadRadius: widget.isTablet ? 4 : 5,
+                        blurRadius: _getResponsiveSize(
+                          mobile: 14,
+                          tablet: 16,
+                          desktop: 20,
+                        ),
+                        spreadRadius: _getResponsiveSize(
+                          mobile: 3,
+                          tablet: 4,
+                          desktop: 5,
+                        ),
                       ),
                     ],
                   ),
                   child: CircularProgressIndicator(
-                    strokeWidth: widget.isTablet ? 2.5 : 3,
+                    strokeWidth: _getResponsiveSize(
+                      mobile: 2.5,
+                      tablet: 2.75,
+                      desktop: 3,
+                    ),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       Color.fromRGBO(81, 115, 153, 1),
                     ),
                   ),
                 ),
-                SizedBox(height: widget.isTablet ? 12 : 16),
+                SizedBox(
+                  height: _getResponsiveSize(
+                    mobile: 12,
+                    tablet: 14,
+                    desktop: 16,
+                  ),
+                ),
                 Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: widget.isTablet ? 12 : 16,
-                    vertical: widget.isTablet ? 6 : 8,
+                    horizontal: _getResponsiveSize(
+                      mobile: 14,
+                      tablet: 15,
+                      desktop: 16,
+                    ),
+                    vertical: _getResponsiveSize(
+                      mobile: 7,
+                      tablet: 7.5,
+                      desktop: 8,
+                    ),
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
                         color: const Color.fromRGBO(81, 115, 153, 0.15),
-                        blurRadius: widget.isTablet ? 8 : 10,
+                        blurRadius: _getResponsiveSize(
+                          mobile: 8,
+                          tablet: 9,
+                          desktop: 10,
+                        ),
                         offset: const Offset(0, 4),
                       ),
                     ],
@@ -565,9 +647,13 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                     'Loading image...',
                     style: TextStyle(
                       color: Colors.grey[700],
-                      fontSize: widget.isTablet ? 11 : 13,
+                      fontSize: _getResponsiveSize(
+                        mobile: 12,
+                        tablet: 12.5,
+                        desktop: 13,
+                      ),
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
@@ -581,13 +667,13 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
 
   Widget _buildPlaceholder({bool isError = false}) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFFF8FAFC),
-            const Color.fromRGBO(81, 115, 153, 0.08),
+            Color(0xFFF8FAFC),
+            Color.fromRGBO(81, 115, 153, 0.08),
           ],
         ),
       ),
@@ -596,51 +682,76 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(widget.isTablet ? 20 : 24),
+              padding: EdgeInsets.all(_getResponsiveSize(
+                mobile: 20,
+                tablet: 22,
+                desktop: 24,
+              )),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    const Color.fromRGBO(81, 115, 153, 0.15),
-                    const Color.fromRGBO(81, 115, 153, 0.08),
+                    Color.fromRGBO(81, 115, 153, 0.15),
+                    Color.fromRGBO(81, 115, 153, 0.08),
                   ],
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: const Color.fromRGBO(81, 115, 153, 0.2),
-                    blurRadius: widget.isTablet ? 16 : 20,
-                    spreadRadius: widget.isTablet ? 4 : 5,
+                    blurRadius: _getResponsiveSize(
+                      mobile: 16,
+                      tablet: 18,
+                      desktop: 20,
+                    ),
+                    spreadRadius: _getResponsiveSize(
+                      mobile: 4,
+                      tablet: 4.5,
+                      desktop: 5,
+                    ),
                   ),
                 ],
               ),
               child: Icon(
                 isError ? Icons.broken_image_rounded : Icons.pets_rounded,
-                size: widget.isMobile
-                    ? 72
-                    : widget.isTablet
-                        ? 56
-                        : 64,
+                size: _getResponsiveSize(
+                  mobile: 60,
+                  tablet: 64,
+                  desktop: 68,
+                ),
                 color: const Color.fromRGBO(81, 115, 153, 0.6),
               ),
             ),
             SizedBox(
-                height: widget.isMobile
-                    ? 16
-                    : widget.isTablet
-                        ? 12
-                        : 14),
+              height: _getResponsiveSize(
+                mobile: 14,
+                tablet: 15,
+                desktop: 16,
+              ),
+            ),
             Container(
               padding: EdgeInsets.symmetric(
-                horizontal: widget.isTablet ? 16 : 20,
-                vertical: widget.isTablet ? 8 : 10,
+                horizontal: _getResponsiveSize(
+                  mobile: 18,
+                  tablet: 19,
+                  desktop: 20,
+                ),
+                vertical: _getResponsiveSize(
+                  mobile: 9,
+                  tablet: 9.5,
+                  desktop: 10,
+                ),
               ),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: const Color.fromRGBO(81, 115, 153, 0.15),
-                    blurRadius: widget.isTablet ? 10 : 12,
+                    blurRadius: _getResponsiveSize(
+                      mobile: 10,
+                      tablet: 11,
+                      desktop: 12,
+                    ),
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -649,13 +760,13 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                 isError ? 'Image failed to load' : 'No Image Available',
                 style: TextStyle(
                   color: const Color.fromRGBO(81, 115, 153, 1),
-                  fontSize: widget.isMobile
-                      ? 15
-                      : widget.isTablet
-                          ? 12
-                          : 14,
+                  fontSize: _getResponsiveSize(
+                    mobile: 13,
+                    tablet: 13.5,
+                    desktop: 14,
+                  ),
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -667,49 +778,49 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
 
   Widget _buildInfoSection() {
     return Container(
-      padding: EdgeInsets.all(
-        widget.isMobile
-            ? 20.0
-            : widget.isTablet
-                ? 14.0
-                : 18.0,
-      ),
+      padding: EdgeInsets.all(_getResponsiveSize(
+        mobile: 16.0,
+        tablet: 17.0,
+        desktop: 18.0,
+      )),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(widget.isTablet ? 22.0 : 26.0),
+          bottom: Radius.circular(_getResponsiveSize(
+            mobile: 18.0,
+            tablet: 20.0,
+            desktop: 24.0,
+          )),
         ),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Calculate available space for dynamic layout
           final availableHeight = constraints.maxHeight;
-          final availableWidth = constraints.maxWidth;
-          
+
           // Dynamic font sizes based on available space
-          final clinicNameFontSize = widget.isMobile
-              ? (availableHeight > 120 ? 22.0 : 18.0)
-              : widget.isTablet
-                  ? (availableHeight > 100 ? 16.0 : 13.0)
-                  : (availableHeight > 110 ? 18.0 : 15.0);
-          
-          final locationLabelFontSize = widget.isMobile
-              ? (availableHeight > 120 ? 10.5 : 9.0)
-              : widget.isTablet
-                  ? (availableHeight > 100 ? 8.0 : 7.0)
-                  : (availableHeight > 110 ? 9.5 : 8.0);
-          
-          final addressFontSize = widget.isMobile
-              ? (availableHeight > 120 ? 14.5 : 12.0)
-              : widget.isTablet
-                  ? (availableHeight > 100 ? 10.5 : 9.0)
-                  : (availableHeight > 110 ? 12.5 : 10.5);
-          
+          final clinicNameFontSize = _getResponsiveSize(
+            mobile: availableHeight > 110 ? 18.0 : 16.0,
+            tablet: availableHeight > 100 ? 15.0 : 13.0,
+            desktop: availableHeight > 110 ? 17.0 : 15.0,
+          );
+
+          final locationLabelFontSize = _getResponsiveSize(
+            mobile: availableHeight > 110 ? 9.5 : 8.5,
+            tablet: availableHeight > 100 ? 8.0 : 7.0,
+            desktop: availableHeight > 110 ? 9.0 : 8.0,
+          );
+
+          final addressFontSize = _getResponsiveSize(
+            mobile: availableHeight > 110 ? 13.0 : 11.5,
+            tablet: availableHeight > 100 ? 10.5 : 9.5,
+            desktop: availableHeight > 110 ? 12.0 : 10.5,
+          );
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Clinic Name
+              // Clinic Name with Animation
               Flexible(
                 flex: 2,
                 child: AnimatedSwitcher(
@@ -734,18 +845,26 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                       fontWeight: FontWeight.w900,
                       color: const Color.fromRGBO(81, 115, 153, 1),
                       height: 1.2,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              
+
               SizedBox(
-                height: availableHeight > 120
-                    ? (widget.isMobile ? 16 : widget.isTablet ? 10 : 14)
-                    : (widget.isMobile ? 8 : widget.isTablet ? 6 : 8),
+                height: availableHeight > 110
+                    ? _getResponsiveSize(
+                        mobile: 14,
+                        tablet: 11,
+                        desktop: 13,
+                      )
+                    : _getResponsiveSize(
+                        mobile: 8,
+                        tablet: 7,
+                        desktop: 8,
+                      ),
               ),
 
               // Creative Address Section with Animated Pin
@@ -756,29 +875,47 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                   builder: (context, child) {
                     return Container(
                       padding: EdgeInsets.all(
-                        availableHeight > 120
-                            ? (widget.isMobile ? 16.0 : widget.isTablet ? 10.0 : 14.0)
-                            : (widget.isMobile ? 12.0 : widget.isTablet ? 8.0 : 10.0),
+                        availableHeight > 110
+                            ? _getResponsiveSize(
+                                mobile: 14.0,
+                                tablet: 11.0,
+                                desktop: 13.0,
+                              )
+                            : _getResponsiveSize(
+                                mobile: 11.0,
+                                tablet: 9.0,
+                                desktop: 10.0,
+                              ),
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            const Color.fromRGBO(81, 115, 153, 0.12),
-                            const Color.fromRGBO(81, 115, 153, 0.06),
+                            Color.fromRGBO(81, 115, 153, 0.12),
+                            Color.fromRGBO(81, 115, 153, 0.06),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(widget.isTablet ? 18 : 20),
+                        borderRadius: BorderRadius.circular(
+                          _getResponsiveSize(
+                            mobile: 16,
+                            tablet: 17,
+                            desktop: 18,
+                          ),
+                        ),
                         border: Border.all(
                           color: const Color.fromRGBO(81, 115, 153, 0.25),
-                          width: widget.isTablet ? 1.5 : 2,
+                          width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: const Color.fromRGBO(81, 115, 153, 0.15),
-                            blurRadius: widget.isTablet ? 10 : 12,
-                            offset: const Offset(0, 4),
+                            blurRadius: _getResponsiveSize(
+                              mobile: 8,
+                              tablet: 10,
+                              desktop: 12,
+                            ),
+                            offset: const Offset(0, 3),
                             spreadRadius: 1,
                           ),
                         ],
@@ -791,9 +928,17 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                             scale: _addressPulseAnimation.value,
                             child: Container(
                               padding: EdgeInsets.all(
-                                availableHeight > 120
-                                    ? (widget.isTablet ? 8.0 : 10.0)
-                                    : (widget.isTablet ? 6.0 : 8.0),
+                                availableHeight > 110
+                                    ? _getResponsiveSize(
+                                        mobile: 9.0,
+                                        tablet: 8.0,
+                                        desktop: 9.0,
+                                      )
+                                    : _getResponsiveSize(
+                                        mobile: 7.0,
+                                        tablet: 6.0,
+                                        desktop: 7.0,
+                                      ),
                               ),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
@@ -805,32 +950,56 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(
-                                  widget.isTablet ? 12 : 14,
+                                  _getResponsiveSize(
+                                    mobile: 11,
+                                    tablet: 12,
+                                    desktop: 13,
+                                  ),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color.fromRGBO(81, 115, 153, 0.3),
-                                    blurRadius: widget.isTablet ? 6 : 8,
+                                    blurRadius: _getResponsiveSize(
+                                      mobile: 6,
+                                      tablet: 7,
+                                      desktop: 8,
+                                    ),
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
                               child: Icon(
                                 Icons.location_on_rounded,
-                                size: availableHeight > 120
-                                    ? (widget.isMobile ? 24 : widget.isTablet ? 18 : 20)
-                                    : (widget.isMobile ? 20 : widget.isTablet ? 16 : 18),
+                                size: availableHeight > 110
+                                    ? _getResponsiveSize(
+                                        mobile: 20,
+                                        tablet: 18,
+                                        desktop: 19,
+                                      )
+                                    : _getResponsiveSize(
+                                        mobile: 17,
+                                        tablet: 16,
+                                        desktop: 17,
+                                      ),
                                 color: Colors.white,
                               ),
                             ),
                           ),
-                          
+
                           SizedBox(
-                            width: availableHeight > 120
-                                ? (widget.isTablet ? 10 : 14)
-                                : (widget.isTablet ? 8 : 10),
+                            width: availableHeight > 110
+                                ? _getResponsiveSize(
+                                    mobile: 12,
+                                    tablet: 10,
+                                    desktop: 12,
+                                  )
+                                : _getResponsiveSize(
+                                    mobile: 9,
+                                    tablet: 8,
+                                    desktop: 9,
+                                  ),
                           ),
-                          
+
                           // Address Text
                           Expanded(
                             child: Column(
@@ -843,13 +1012,21 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                                     fontSize: locationLabelFontSize,
                                     fontWeight: FontWeight.w900,
                                     color: const Color.fromRGBO(81, 115, 153, 0.6),
-                                    letterSpacing: widget.isTablet ? 1.2 : 1.5,
+                                    letterSpacing: 1.3,
                                   ),
                                 ),
                                 SizedBox(
-                                  height: availableHeight > 120
-                                      ? (widget.isTablet ? 4 : 6)
-                                      : (widget.isTablet ? 3 : 4),
+                                  height: availableHeight > 110
+                                      ? _getResponsiveSize(
+                                          mobile: 5,
+                                          tablet: 4,
+                                          desktop: 5,
+                                        )
+                                      : _getResponsiveSize(
+                                          mobile: 3,
+                                          tablet: 3,
+                                          desktop: 3,
+                                        ),
                                 ),
                                 Flexible(
                                   child: Text(
@@ -861,7 +1038,7 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.2,
                                     ),
-                                    maxLines: availableHeight > 120 ? 3 : 2,
+                                    maxLines: availableHeight > 110 ? 3 : 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
