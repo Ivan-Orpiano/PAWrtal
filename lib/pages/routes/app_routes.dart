@@ -13,6 +13,8 @@ abstract class Routes {
   static const oauthSuccess = _Paths.oauthSuccess;
   static const oauthFailure = _Paths.oauthFailure;
   static const oauthCallback = _Paths.oauthCallback;
+  static const mobileAuthSuccess = _Paths.mobileAuthSuccess;
+  static const mobileAuthFailure = _Paths.mobileAuthFailure;
 }
 
 abstract class _Paths {
@@ -27,4 +29,6 @@ abstract class _Paths {
   static const oauthSuccess = '/auth/success';
   static const oauthFailure = '/auth/failure';
   static const oauthCallback = '/auth/callback';
+  static const mobileAuthSuccess = '/mobile-auth-success';
+  static const mobileAuthFailure = '/mobile-auth-failure';
 }
