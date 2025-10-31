@@ -46,82 +46,92 @@ class _UserHomePageState extends State<UserHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return GetX<WebUserHomeController>(
-      builder: (webController) {
-        // Determine if we should show the navigation bar
-        // Hide it when on dashboard (index 0) AND map view is active
-        final bool showNavBar = !(_currentIndex == 0 && webController.showMapView.value);
+    // Try to find the controller, but don't fail if it doesn't exist
+    final webController = Get.isRegistered<WebUserHomeController>() 
+        ? Get.find<WebUserHomeController>() 
+        : null;
 
-        return Scaffold(
-          resizeToAvoidBottomInset: false,
-          appBar: const MyAppBar(),
-          drawer: const MyDrawer(),
-          body: Stack(
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      appBar: const MyAppBar(),
+      drawer: const MyDrawer(),
+      body: Stack(
+        children: [
+          // Page content
+          _pages[_currentIndex],
+          // Bottom navigation overlay
+          Stack(
+            alignment: Alignment.bottomCenter,
             children: [
-              // Page content
-              _pages[_currentIndex],
-              // Bottom navigation overlay
-              Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  // Nav bar - conditionally shown
-                  if (showNavBar)
-                    Positioned(
-                      bottom: 24,
-                      left: 24,
-                      right: 24,
-                      child: CustomPaint(
-                        painter: NotchedNavbarPainter(),
-                        child: SizedBox(
-                          height: 70,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _navButton(const Icon(Icons.home_rounded), 0),
-                              _navButton(const Icon(Icons.calendar_month_rounded), 1),
-                              const SizedBox(width: 30),
-                              _navButton(const Icon(Icons.message_rounded), 2),
-                              _navButton(const Icon(Icons.pets_rounded), 3),
-                            ]
+              // Nav bar - conditionally shown
+              Obx(() {
+                // Determine if we should show the navigation bar
+                // Hide it when on dashboard (index 0) AND map view is active
+                final bool showMapView = webController?.showMapView.value ?? false;
+                final bool showNavBar = !(_currentIndex == 0 && showMapView);
+
+                return Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    // Nav bar - conditionally shown
+                    if (showNavBar)
+                      Positioned(
+                        bottom: 24,
+                        left: 24,
+                        right: 24,
+                        child: CustomPaint(
+                          painter: NotchedNavbarPainter(),
+                          child: SizedBox(
+                            height: 70,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _navButton(const Icon(Icons.home_rounded), 0),
+                                _navButton(const Icon(Icons.calendar_month_rounded), 1),
+                                const SizedBox(width: 30),
+                                _navButton(const Icon(Icons.message_rounded), 2),
+                                _navButton(const Icon(Icons.pets_rounded), 3),
+                              ]
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  // Center button - always shown
-                  Positioned(
-                    bottom: showNavBar ? (24 + 60 - 28) : 24 + 60 - 28,
-                    child: FloatingActionButton(  
-                      backgroundColor: Colors.white,
-                      heroTag: "userHomeLoc",
-                      shape: const CircleBorder(),
-                      onPressed: () {
-                        // If on dashboard (index 0), toggle map view
-                        if (_currentIndex == 0) {
-                          webController.toggleMapView();
-                        } else {
-                          // Otherwise navigate to standalone Pawmap
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const Pawmap(),
-                            )
-                          );
-                        }
-                      },
-                      child: Icon(
-                        (_currentIndex == 0 && webController.showMapView.value)
-                            ? Icons.list_rounded
-                            : Icons.location_on_rounded,
-                        color: Colors.black,
+                    // Center button - always shown
+                    Positioned(
+                      bottom: showNavBar ? (24 + 60 - 28) : 24 + 60 - 28,
+                      child: FloatingActionButton(  
+                        backgroundColor: Colors.white,
+                        heroTag: "userHomeLoc",
+                        shape: const CircleBorder(),
+                        onPressed: () {
+                          // If on dashboard (index 0) and controller exists, toggle map view
+                          if (_currentIndex == 0 && webController != null) {
+                            webController.toggleMapView();
+                          } else {
+                            // Otherwise navigate to standalone Pawmap
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const Pawmap(),
+                              )
+                            );
+                          }
+                        },
+                        child: Icon(
+                          (_currentIndex == 0 && showMapView)
+                              ? Icons.list_rounded
+                              : Icons.location_on_rounded,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                  )
-                ],
-              ),
+                    )
+                  ],
+                );
+              }),
             ],
           ),
-        );
-      }
+        ],
+      ),
     );
   }
 

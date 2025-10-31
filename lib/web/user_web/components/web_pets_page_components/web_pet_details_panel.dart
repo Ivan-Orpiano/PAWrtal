@@ -494,10 +494,18 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
-                    setState(() {
-                      _selectedMedicalAppointment = null;
-                    });
-                    _flipToView(CardView.back);
+                    if (_selectedMedicalAppointment != null) {
+                      // If viewing details, just close details
+                      setState(() {
+                        _selectedMedicalAppointment = null;
+                      });
+                    } else {
+                      // If viewing list, go back to health records
+                      setState(() {
+                        _selectedMedicalAppointment = null;
+                      });
+                      _flipToView(CardView.back);
+                    }
                   },
                   tooltip: "Back",
                 ),
@@ -1433,10 +1441,18 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
-                    setState(() {
-                      _selectedVaccination = null;
-                    });
-                    _flipToView(CardView.back);
+                    if (_selectedVaccination != null) {
+                      // If viewing details, just close details
+                      setState(() {
+                        _selectedVaccination = null;
+                      });
+                    } else {
+                      // If viewing list, go back to health records
+                      setState(() {
+                        _selectedVaccination = null;
+                      });
+                      _flipToView(CardView.back);
+                    }
                   },
                   tooltip: "Back",
                 ),

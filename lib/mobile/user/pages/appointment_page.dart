@@ -23,14 +23,14 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
 
   final List<TabData> _tabs = [
     TabData(
-      icon: Icons.event_available_rounded,
-      text: "Upcoming",
-      color: Colors.blue,
-    ),
-    TabData(
       icon: Icons.pending_rounded,
       text: "Pending",
       color: Colors.orange,
+    ),
+    TabData(
+      icon: Icons.event_available_rounded,
+      text: "Upcoming",
+      color: Colors.blue,
     ),
     TabData(
       icon: Icons.check_circle_rounded,
@@ -188,10 +188,10 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                           
                           switch (index) {
                             case 0:
-                              count = stats['upcoming'] ?? 0;
+                              count = stats['pending'] ?? 0;
                               break;
                             case 1:
-                              count = stats['pending'] ?? 0;
+                              count = stats['upcoming'] ?? 0;
                               break;
                             case 2:
                               count = stats['completed'] ?? 0;
@@ -324,8 +324,8 @@ class _EnhancedAppointmentPageState extends State<EnhancedAppointmentPage>
                     child: TabBarView(
                       controller: _tabController,
                       children: const [
-                        EnhancedAPFirstTab(),  // Upcoming
-                        EnhancedAPSecondTab(), // Pending
+                        EnhancedAPSecondTab(), // Pending (was 2nd tab)
+                        EnhancedAPFirstTab(),  // Upcoming (was 1st tab)
                         EnhancedAPThirdTab(),  // Completed
                         EnhancedAPFourthTab(), // History
                       ],

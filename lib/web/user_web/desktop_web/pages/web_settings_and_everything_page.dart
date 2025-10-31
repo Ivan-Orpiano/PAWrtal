@@ -926,41 +926,6 @@ class _WebSettingsAndEverythingPageState
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          _buildModernCard(
-            title: 'Appearance',
-            icon: Icons.palette_outlined,
-            iconColor: Colors.purple,
-            children: [
-              _buildModernSettingTile(
-                icon: Icons.dark_mode_outlined,
-                title: 'Dark Mode',
-                subtitle: 'Switch between light and dark theme',
-                iconColor: Colors.indigo,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.language_outlined,
-                title: 'Language',
-                subtitle: 'English (US)',
-                iconColor: Colors.blue,
-                isSwitch: false,
-                onTap: () => _showSnackbar(
-                    'Info', 'Language selection coming soon', Colors.blue),
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.format_size_outlined,
-                title: 'Text Size',
-                subtitle: 'Adjust font size for better readability',
-                iconColor: Colors.cyan,
-                isSwitch: false,
-                onTap: () => _showSnackbar(
-                    'Info', 'Text size adjustment coming soon', Colors.blue),
-              ),
-            ],
-          ),
           const SizedBox(height: 20),
           _buildModernCard(
             title: 'Notifications',

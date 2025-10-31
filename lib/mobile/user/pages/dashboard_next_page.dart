@@ -1403,43 +1403,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         child: SafeArea(
           child: Row(
             children: [
-              InkWell(
-                customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                onTap: () {
-                  setState(() {
-                    _isSaved = !_isSaved;
-                  });
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _isSaved
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: _isSaved ? Colors.red : Colors.black,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isSaved ? "Saved" : "Save",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
