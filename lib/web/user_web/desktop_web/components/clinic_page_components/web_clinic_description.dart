@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/id_verification/guards/unified_verification_guard.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -19,14 +20,18 @@ class WebClinicDescriptionUpdated extends StatefulWidget {
 
 class _WebClinicDescriptionUpdatedState
     extends State<WebClinicDescriptionUpdated> {
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   bool _showFullDescription = false;
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
+
+  late UnifiedVerificationGuard _verificationGuard;
 
   @override
   void initState() {
     super.initState();
     _loadClinicSettings();
+    _verificationGuard = UnifiedVerificationGuard(_authRepo);
   }
 
   Future<void> _loadClinicSettings() async {
@@ -232,6 +237,26 @@ class _WebClinicDescriptionUpdatedState
 
   Future<void> _startConversationWithClinic(BuildContext context) async {
     try {
+      final UserSessionService userSession = Get.find<UserSessionService>();
+
+      if (userSession.userId.isEmpty) {
+        _showLoginRequiredDialog(context);
+        return;
+      }
+
+      // NEW: Check verification before starting conversation
+      final canAccess = await _verificationGuard.canAccessFeature(
+        context: context,
+        userId: userSession.userId,
+        email: userSession.userEmail,
+        userRole: userSession.userRole,
+        featureName: 'messaging',
+      );
+
+      if (!canAccess) {
+        return; // Guard will show verification dialog
+      }
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -245,14 +270,6 @@ class _WebClinicDescriptionUpdatedState
           Get.isRegistered<MessagingController>()
               ? Get.find<MessagingController>()
               : Get.put(MessagingController());
-
-      final UserSessionService userSession = Get.find<UserSessionService>();
-
-      if (userSession.userId.isEmpty) {
-        Navigator.pop(context);
-        _showLoginRequiredDialog(context);
-        return;
-      }
 
       print('=== Starting conversation with clinic ===');
 
