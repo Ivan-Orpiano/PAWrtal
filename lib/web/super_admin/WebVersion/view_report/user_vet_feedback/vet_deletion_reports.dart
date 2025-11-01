@@ -905,11 +905,11 @@ Widget _buildRequestCard(FeedbackDeletionRequest request) {
                               color: Colors.white,
                             ),
                             label: Text(
-                              isMobile ? 'Delete' : 'Delete Record',
+                              isMobile ? 'Archive' : 'Archive Record',
                               style: TextStyle(fontSize: isMobile ? 12 : 14),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE74C3C),
+                              backgroundColor: const Color.fromRGBO(251, 140, 0, 1),
                               foregroundColor: Colors.white,
                               padding: EdgeInsets.symmetric(
                                 horizontal: isMobile ? 12 : 16,

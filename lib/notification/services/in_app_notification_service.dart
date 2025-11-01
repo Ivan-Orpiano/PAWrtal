@@ -272,8 +272,14 @@ class InAppNotificationService extends GetxService {
         return Icons.done_all;
       case NotificationType.message:
         return Icons.message;
+      case NotificationType.deletionRequestApproved: 
+        return Icons.check_circle_outline;
+      case NotificationType.deletionRequestRejected:
+        return Icons.cancel_outlined;
+
       default:
         return Icons.notifications;
+        
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:capstone_app/utils/feedback_spam_detector.dart';
 
 class WebFeedbackController extends GetxController {
   final AuthRepository authRepository;
@@ -37,6 +38,10 @@ final Rxn<FeedbackType> typeFilter = Rxn<FeedbackType>();
 final Rxn<FeedbackCategory> categoryFilter = Rxn<FeedbackCategory>();
 final Rxn<Priority> priorityFilter = Rxn<Priority>();
 final RxString searchQuery = ''.obs;
+
+final RxInt spamDetectedCount = 0.obs;
+final RxInt autoArchivedCount = 0.obs;
+final RxBool isCleaningSpam = false.obs;
 
 // Pinned feedback IDs
 final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
@@ -114,6 +119,11 @@ bool isPinned(String feedbackId) {
     if (role == 'admin' || role == 'staff') {
       loadAllFeedback();
      _loadDailyReportTracker();
+
+      //Auto-clean spam 
+       Future.delayed(const Duration(seconds: 2), () {
+      autoCleanSpamFeedback();
+    });
     }
   }
 
@@ -620,6 +630,96 @@ Future<void> loadAllFeedback() async {
     isLoadingFeedback.value = false;
   }
 }
+
+    Future<void> autoCleanSpamFeedback() async {
+    try {
+      print('>>> ============================================');
+      print('>>> STARTING AUTO SPAM CLEANUP');
+      print('>>> ============================================');
+
+      isCleaningSpam.value = true;
+      int detectedCount = 0;
+      int archivedCount = 0;
+
+      final feedbackToCheck = allFeedback.where((f) {
+        // Only check pending/new feedback (not already archived)
+        return f.archivedAt == null && 
+              (f.status == FeedbackStatus.pending || 
+                f.status == FeedbackStatus.inProgress);
+      }).toList();
+
+      print('>>> Checking ${feedbackToCheck.length} feedbacks for spam...');
+
+      for (var feedback in feedbackToCheck) {
+        try {
+          // Combine subject and description for analysis
+          final textToAnalyze = '${feedback.subject} ${feedback.description}';
+          
+          // Run spam detection
+          final isSpam = FeedbackSpamDetector.isSpamOrGibberish(textToAnalyze);
+
+          if (isSpam) {
+            detectedCount++;
+            print('>>> 🚫 SPAM DETECTED: ${feedback.subject}');
+            
+            // Get detailed analysis
+            final analysis = FeedbackSpamDetector.analyzeMessage(textToAnalyze);
+            print('>>>   Spam Score: ${(analysis['spamScore'] * 100).toStringAsFixed(1)}%');
+
+            // Auto-archive spam feedback
+            await archiveFeedback(feedback.documentId!);
+            archivedCount++;
+
+            print('>>>   ✅ Auto-archived spam feedback');
+          }
+        } catch (e) {
+          print('>>> Error checking feedback ${feedback.documentId}: $e');
+        }
+      }
+
+      spamDetectedCount.value = detectedCount;
+      autoArchivedCount.value = archivedCount;
+
+      print('>>> ============================================');
+      print('>>> SPAM CLEANUP COMPLETE');
+      print('>>> Detected: $detectedCount');
+      print('>>> Archived: $archivedCount');
+      print('>>> ============================================');
+
+      if (archivedCount > 0) {
+        _showSuccess('Auto-cleaned $archivedCount spam feedback(s)');
+        await loadAllFeedback(); // Refresh list
+      } else {
+        _showInfo('No spam detected - all feedbacks look good!');
+      }
+
+    } catch (e) {
+      print('>>> Error in auto spam cleanup: $e');
+      _showError('Spam cleanup failed: $e');
+    } finally {
+      isCleaningSpam.value = false;
+    }
+  }
+
+  /// Manual spam check for single feedback
+  Future<bool> checkIfSpam(FeedbackAndReport feedback) async {
+    final textToAnalyze = '${feedback.subject} ${feedback.description}';
+    return FeedbackSpamDetector.isSpamOrGibberish(textToAnalyze);
+  }
+
+  /// Get spam analysis details (for admin review)
+  Map<String, dynamic> getSpamAnalysis(FeedbackAndReport feedback) {
+    final textToAnalyze = '${feedback.subject} ${feedback.description}';
+    return FeedbackSpamDetector.analyzeMessage(textToAnalyze);
+  }
+
+
+
+
+
+
+
+
 
   /// Filter feedback based on current filters
   void filterFeedback() {

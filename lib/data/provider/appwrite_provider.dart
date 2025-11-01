@@ -6763,6 +6763,71 @@ class AppWriteProvider {
     }
   }
 
+  /// Create deletion request notification (helper method) - UPDATED WITH LOGGING
+  Future<void> createDeletionRequestNotification({
+    required String clinicAdminId,
+    required String title,
+    required String message,
+    required String status,
+    required String requestId,
+    String? clinicId,
+    String? reviewId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> PROVIDER: Creating deletion request notification');
+      print('>>> Recipient (Clinic Admin ID): $clinicAdminId');
+      print('>>> Title: $title');
+      print('>>> Status: $status');
+      print('>>> ============================================');
+
+      final notificationData = {
+        'userId': clinicAdminId,
+        'title': title,
+        'message': message,
+        'type': 'general',
+        'priority': status == 'rejected' ? 'high' : 'normal',
+        'isRead': false,
+        'createdAt': DateTime.now().toIso8601String(),
+        'clinicId': clinicId,
+        'metadata': metadata != null ? jsonEncode(metadata) : null,
+      };
+
+      print('>>> Notification data prepared:');
+      print('>>>   - userId: ${notificationData['userId']}');
+      print('>>>   - type: ${notificationData['type']}');
+      print('>>>   - priority: ${notificationData['priority']}');
+
+      final doc = await createNotification(notificationData);
+      
+      print('>>> ✅ Notification created with document ID: ${doc.$id}');
+      print('>>> Verifying notification was created...');
+      
+      // Verify the notification exists
+      try {
+        final verifyDoc = await databases!.getDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.notificationsCollectionID,
+          documentId: doc.$id,
+        );
+        print('>>> ✅ Verification successful - notification exists');
+        print('>>>   - Recipient userId: ${verifyDoc.data['userId']}');
+        print('>>>   - Title: ${verifyDoc.data['title']}');
+      } catch (verifyError) {
+        print('>>> ❌ Verification failed: $verifyError');
+      }
+      
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR creating deletion request notification: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      // Don't rethrow - notification failure shouldn't break the main flow
+    }
+  }
+
   /// Fix existing conversation starters that don't have isAutoReply field
   Future<void> migrateConversationStarters() async {
     try {
