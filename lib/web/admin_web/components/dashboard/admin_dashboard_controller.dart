@@ -139,40 +139,68 @@ class AdminDashboardController extends GetxController {
       await fetchClinicData();
 
       // Verify clinic data is available
-      if (clinicData.value?.documentId == null) {
+      if (clinicData.value == null || clinicData.value?.documentId == null) {
         print('>>> ERROR: No clinic data loaded!');
-        throw Exception('Clinic data not available');
+        isLoading.value = false;
+        Get.snackbar(
+          "Error",
+          "Unable to load clinic data. Please check your permissions and try again.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+        return; // Exit early instead of throwing
       }
 
       print('>>> ✓ Clinic loaded: ${clinicData.value!.clinicName}');
       print('>>> ✓ Clinic ID: ${clinicData.value!.documentId}');
 
-      // Step 2: Fetch appointments data
+      // Step 2: Fetch appointments data (with null check)
       print('>>> Step 2: Fetching appointments...');
-      await Future.wait([
-        fetchAllAppointments(),
-        fetchAppointmentStats(),
-      ]);
-      print('>>> ✓ Appointments loaded: ${appointments.length}');
+      try {
+        await Future.wait([
+          fetchAllAppointments(),
+          fetchAppointmentStats(),
+        ]);
+        print('>>> ✓ Appointments loaded: ${appointments.length}');
+      } catch (e) {
+        print('>>> WARNING: Error fetching appointments: $e');
+        // Continue even if appointments fail
+      }
 
-      // Step 3: Fetch recent messages (MUST be after clinic data)
+      // Step 3: Fetch recent messages (with null check)
       print('>>> Step 3: Fetching recent messages...');
-      await fetchRecentMessages();
-      print('>>> ✓ Messages loaded: ${recentMessages.length}');
+      try {
+        await fetchRecentMessages();
+        print('>>> ✓ Messages loaded: ${recentMessages.length}');
+      } catch (e) {
+        print('>>> WARNING: Error fetching messages: $e');
+        // Continue even if messages fail
+      }
 
-      // Step 4: Generate calendar data
+      // Step 4: Generate calendar data (with null check)
       print('>>> Step 4: Generating calendar data...');
-      await generateCalendarData();
-      print('>>> ✓ Calendar generated');
+      try {
+        await generateCalendarData();
+        print('>>> ✓ Calendar generated');
+      } catch (e) {
+        print('>>> WARNING: Error generating calendar: $e');
+        // Continue even if calendar fails
+      }
 
       // Step 5: Initialize real-time updates LAST
       print('>>> Step 5: Initializing real-time updates...');
-      await _initializeRealTimeUpdates();
-      print('>>> ✓ Real-time subscriptions active');
+      try {
+        await _initializeRealTimeUpdates();
+        print('>>> ✓ Real-time subscriptions active');
+      } catch (e) {
+        print('>>> WARNING: Error initializing real-time: $e');
+        // Continue even if real-time fails
+      }
 
       print('>>> ============================================');
       print('>>> DASHBOARD INITIALIZATION COMPLETE');
-      print('>>> - Clinic: ${clinicData.value!.clinicName}');
+      print('>>> - Clinic: ${clinicData.value?.clinicName ?? "Unknown"}');
       print('>>> - Appointments: ${appointments.length}');
       print('>>> - Recent Messages: ${recentMessages.length}');
       print('>>> - Real-time Connected: ${isRealTimeConnected.value}');
@@ -180,7 +208,13 @@ class AdminDashboardController extends GetxController {
     } catch (e) {
       print('>>> ERROR: Failed to load dashboard data: $e');
       print('>>> Stack trace: ${StackTrace.current}');
-      Get.snackbar("Error", "Failed to load dashboard data: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to load dashboard: ${e.toString()}",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
     } finally {
       isLoading.value = false;
     }
@@ -428,11 +462,13 @@ class AdminDashboardController extends GetxController {
     }
   }
 
-  /// Enhanced _initializeRealTimeUpdates to include conversation updates
   Future<void> _initializeRealTimeUpdates() async {
-    try {
-      if (clinicData.value?.documentId == null) return;
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
+      print('>>> WARNING: Cannot initialize real-time - no clinic ID');
+      return;
+    }
 
+    try {
       print('>>> ============================================');
       print('>>> INITIALIZING REAL-TIME UPDATES');
       print('>>> Clinic ID: ${clinicData.value!.documentId}');
@@ -911,17 +947,23 @@ class AdminDashboardController extends GetxController {
 
   Future<void> fetchClinicData() async {
     try {
+      print('>>> ============================================');
+      print('>>> FETCHING CLINIC DATA');
+      print('>>> ============================================');
+
       final user = await authRepository.getUser();
       if (user == null) {
         print('>>> ERROR: No user found');
-        return;
+        throw Exception('User not authenticated');
       }
+
+      print('>>> User ID: ${user.$id}');
 
       // Get user role from storage
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
 
-      print('>>> Fetching clinic data for role: $userRole');
+      print('>>> User Role: $userRole');
 
       String? clinicId;
 
@@ -929,37 +971,56 @@ class AdminDashboardController extends GetxController {
         // Staff: Get clinicId from storage
         clinicId = storage.read('clinicId') as String?;
         print('>>> DASHBOARD: Staff mode - using stored clinicId: $clinicId');
+
+        if (clinicId == null || clinicId.isEmpty) {
+          print('>>> ERROR: Staff has no clinicId assigned');
+          throw Exception('No clinic assigned to staff account');
+        }
       } else {
         // Admin: Get clinic by admin ID
         print('>>> DASHBOARD: Admin mode - looking up clinic');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
+          print('>>> Found clinic by admin ID: $clinicId');
+        } else {
+          print('>>> ERROR: No clinic found for admin');
+          throw Exception('No clinic found for this admin account');
         }
       }
 
-      if (clinicId != null) {
+      if (clinicId != null && clinicId.isNotEmpty) {
+        print('>>> Fetching clinic document for ID: $clinicId');
         final clinicDoc = await authRepository.getClinicById(clinicId);
+
         if (clinicDoc != null) {
           clinicData.value = Clinic.fromMap(clinicDoc.data);
           clinicData.value!.documentId = clinicDoc.$id;
           print(
-              '>>> DASHBOARD: Clinic loaded: ${clinicData.value!.clinicName}');
-          print('>>> DASHBOARD: Clinic ID: ${clinicData.value!.documentId}');
+              '>>> ✓ DASHBOARD: Clinic loaded: ${clinicData.value!.clinicName}');
+          print('>>> ✓ DASHBOARD: Clinic ID: ${clinicData.value!.documentId}');
         } else {
           print('>>> ERROR: Clinic document not found for ID: $clinicId');
+          throw Exception('Clinic document not found');
         }
       } else {
-        print('>>> ERROR: No clinicId available');
+        print('>>> ERROR: No valid clinicId available');
+        throw Exception('No clinic ID available');
       }
+
+      print('>>> ============================================');
     } catch (e) {
-      print(">>> ERROR fetching clinic data: $e");
+      print('>>> ERROR fetching clinic data: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      clinicData.value = null; // Ensure it's null on error
+      rethrow; // Re-throw to be caught by initializeDashboard
     }
   }
 
   Future<void> fetchAllAppointments() async {
-    if (clinicData.value?.documentId == null) {
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
       print('>>> ERROR: Cannot fetch appointments - no clinic ID');
+      appointments.clear(); // Clear instead of throwing
       return;
     }
 
@@ -976,11 +1037,16 @@ class AdminDashboardController extends GetxController {
       _processUpcomingAppointments();
     } catch (e) {
       print(">>> ERROR fetching appointments: $e");
+      appointments.clear(); // Clear on error
     }
   }
 
   Future<void> fetchAppointmentStats() async {
-    if (clinicData.value?.documentId == null) return;
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
+      print('>>> ERROR: Cannot fetch stats - no clinic ID');
+      appointmentStats.clear();
+      return;
+    }
 
     try {
       final stats = await authRepository
@@ -1004,7 +1070,9 @@ class AdminDashboardController extends GetxController {
             monthlyAppointments.where((a) => a.status == 'pending').length,
       });
     } catch (e) {
-      print("Error fetching appointment stats: $e");
+      print(">>> ERROR fetching appointment stats: $e");
+      appointmentStats.clear();
+      monthlyStats.clear();
     }
   }
 
@@ -1237,10 +1305,8 @@ class AdminDashboardController extends GetxController {
     // Placeholder for future implementation
   }
 
-  /// Enhanced fetchRecentMessages with logging
-
   Future<void> fetchRecentMessages() async {
-    if (clinicData.value?.documentId == null) {
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
       print('>>> ERROR: Cannot fetch messages - no clinic ID');
       recentMessages.clear();
       return;
@@ -1387,7 +1453,7 @@ class AdminDashboardController extends GetxController {
     } catch (e, stackTrace) {
       print('>>> ERROR fetching recent messages: $e');
       print('>>> Stack trace: $stackTrace');
-      // Clear messages on error instead of showing snackbar during initialization
+      // Clear messages on error
       recentMessages.clear();
       recentMessages.refresh();
       print('>>> ============================================');

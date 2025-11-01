@@ -126,7 +126,16 @@ class ClinicSettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('>>> ============================================');
+    print('>>> CLINIC SETTINGS CONTROLLER: onInit called');
+    print('>>> ============================================');
+
     _ensureControllersInitialized();
+
+    // CRITICAL: Clear any cached data before initializing
+    clinic.value = null;
+    clinicSettings.value = null;
+
     initializeData();
   }
 
@@ -150,11 +159,29 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> initializeData() async {
     try {
+      print('>>> ============================================');
+      print('>>> CLINIC SETTINGS: Initializing data');
+      print('>>> ============================================');
+
       isLoading.value = true;
+
+      // CRITICAL: Clear all cached data first
+      clinic.value = null;
+      clinicSettings.value = null;
+      galleryImages.clear();
+      selectedServices.clear();
+      medicalServices.clear();
+      closedDates.clear();
+      selectedClosedDates.clear();
+
+      // Fetch fresh data
       await fetchClinicData();
       await fetchClinicSettings();
+
+      print('>>> CLINIC SETTINGS: Data initialization complete');
+      print('>>> ============================================');
     } catch (e) {
-      print("Error initializing data: $e");
+      print(">>> Error initializing data: $e");
       _showSnackBar("Failed to load clinic data: $e", isError: true);
     } finally {
       isLoading.value = false;
@@ -163,75 +190,118 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> fetchClinicData() async {
     try {
+      print('>>> ============================================');
+      print('>>> CLINIC SETTINGS: Fetching clinic data');
+      print('>>> ============================================');
+
       final user = await authRepository.getUser();
       if (user == null) {
         print(">>> No user found");
         return;
       }
 
+      print('>>> Current user ID: ${user.$id}');
+
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
+      final storedClinicId = storage.read('clinicId') as String?;
+
+      print('>>> User role: $userRole');
+      print('>>> Stored clinic ID: $storedClinicId');
 
       String? clinicId;
 
       if (userRole == 'staff') {
-        clinicId = storage.read('clinicId') as String?;
-        print(
-            '>>> CLINIC SETTINGS: Staff mode - using stored clinicId: $clinicId');
-      } else {
-        print('>>> CLINIC SETTINGS: Admin mode - looking up clinic');
+        clinicId = storedClinicId;
+        print('>>> STAFF mode - using stored clinicId: $clinicId');
+      } else if (userRole == 'admin') {
+        print('>>> ADMIN mode - looking up clinic by adminId');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-          print('>>> CLINIC SETTINGS: Admin clinic found: $clinicId');
+          print('>>> Admin clinic found: $clinicId');
         } else {
-          print('>>> CLINIC SETTINGS: No clinic found for admin');
+          print('>>> No clinic found for admin');
         }
+      } else {
+        print('>>> Unknown role or no role: $userRole');
       }
 
       if (clinicId != null && clinicId.isNotEmpty) {
-        print('>>> CLINIC SETTINGS: Fetching clinic with ID: $clinicId');
+        print('>>> Fetching clinic document with ID: $clinicId');
         final clinicDoc = await authRepository.getClinicById(clinicId);
+
         if (clinicDoc != null) {
+          // CRITICAL: Create fresh clinic object
           clinic.value = Clinic.fromMap(clinicDoc.data);
           clinic.value!.documentId = clinicDoc.$id;
+
+          print('>>> ✅ Clinic loaded successfully');
+          print('>>> Clinic name: ${clinic.value!.clinicName}');
+          print('>>> Clinic document ID: ${clinic.value!.documentId}');
+
+          // Populate form fields
           _populateClinicFields();
-          print(
-              '>>> CLINIC SETTINGS: Clinic loaded successfully: ${clinic.value!.clinicName}');
         } else {
-          print('>>> CLINIC SETTINGS: Clinic document not found');
+          print('>>> ❌ Clinic document not found');
+          clinic.value = null;
         }
       } else {
-        print('>>> CLINIC SETTINGS: No clinic ID available');
+        print('>>> ❌ No clinic ID available');
+        clinic.value = null;
       }
+
+      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error fetching clinic data: $e');
+      print('>>> ❌ Error fetching clinic data: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      clinic.value = null;
       rethrow;
     }
   }
 
   Future<void> fetchClinicSettings() async {
     try {
+      print('>>> ============================================');
+      print('>>> CLINIC SETTINGS: Fetching settings');
+      print('>>> ============================================');
+
       if (clinic.value?.documentId == null) {
-        print('>>> CLINIC SETTINGS: No clinic document ID available');
+        print('>>> ❌ No clinic document ID available');
+        clinicSettings.value = null;
         return;
       }
 
-      print(
-          '>>> CLINIC SETTINGS: Fetching settings for clinic: ${clinic.value!.documentId}');
-      final settings = await authRepository
-          .getClinicSettingsByClinicId(clinic.value!.documentId!);
+      final currentClinicId = clinic.value!.documentId!;
+      print('>>> Fetching settings for clinic: $currentClinicId');
+      print('>>> Clinic name: ${clinic.value!.clinicName}');
+
+      final settings =
+          await authRepository.getClinicSettingsByClinicId(currentClinicId);
 
       if (settings != null) {
+        // CRITICAL: Create fresh settings object
         clinicSettings.value = settings;
+
+        print('>>> ✅ Settings loaded successfully');
+        print('>>> Settings document ID: ${settings.documentId}');
+        print('>>> Services count: ${settings.services.length}');
+        print('>>> Gallery images count: ${settings.gallery.length}');
+
+        // Populate form fields
         _populateSettingsFields();
-        print('>>> CLINIC SETTINGS: Settings loaded successfully');
       } else {
-        print('>>> CLINIC SETTINGS: No settings found, creating default');
+        print('>>> ⚠️ No settings found, creating default');
         await createDefaultSettings();
       }
+
+      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error fetching clinic settings: $e');
+      print('>>> ❌ Error fetching clinic settings: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      clinicSettings.value = null;
       _showSnackBar("Failed to load clinic settings: $e", isError: true);
     }
   }
@@ -256,48 +326,81 @@ class ClinicSettingsController extends GetxController {
   }
 
   void _populateClinicFields() {
-    if (clinic.value == null) return;
+    if (clinic.value == null) {
+      print('>>> Cannot populate clinic fields - clinic is null');
+      return;
+    }
 
     try {
+      print('>>> Populating clinic fields for: ${clinic.value!.clinicName}');
+
       _ensureControllersInitialized();
+
       clinicNameController.text = clinic.value!.clinicName;
       addressController.text = clinic.value!.address;
       contactController.text = clinic.value!.contact;
       emailController.text = clinic.value!.email;
       descriptionController.text = clinic.value!.description;
+
+      print('>>> ✅ Clinic fields populated');
     } catch (e) {
-      print('Error populating clinic fields: $e');
+      print('>>> ❌ Error populating clinic fields: $e');
     }
   }
 
   void _populateSettingsFields() {
-    if (clinicSettings.value == null) return;
+    if (clinicSettings.value == null) {
+      print('>>> Cannot populate settings fields - settings is null');
+      return;
+    }
 
     try {
+      print('>>> Populating settings fields');
+
       _ensureControllersInitialized();
+
       final settings = clinicSettings.value!;
+
+      // CRITICAL: Clear existing data before populating
+      galleryImages.clear();
+      selectedServices.clear();
+      medicalServices.clear();
+      operatingHours.clear();
+      closedDates.clear();
+      selectedClosedDates.clear();
+
+      // Populate observables
       isClinicOpen.value = settings.isOpen;
       autoAcceptAppointments.value = settings.autoAcceptAppointments;
       appointmentDuration.value = settings.appointmentDuration;
       maxAdvanceBooking.value = settings.maxAdvanceBooking;
+
+      // CRITICAL: Use assignAll to replace entire lists
       selectedServices.assignAll(settings.services);
       galleryImages.assignAll(settings.gallery);
       operatingHours.assignAll(settings.operatingHours);
+      medicalServices.assignAll(settings.medicalServices);
+      closedDates.assignAll(settings.closedDates);
+
+      // Parse closed dates
+      selectedClosedDates.assignAll(settings.closedDates
+          .map((dateStr) => DateTime.parse(dateStr))
+          .toList());
+
       selectedLocation.value = settings.location;
       emergencyContactController.text = settings.emergencyContact;
       specialInstructionsController.text = settings.specialInstructions;
       tempDashboardPic.value = settings.dashboardPic;
       dashboardPicChanged.value = false;
 
-      // NEW: Populate medical services
-      medicalServices.assignAll(settings.medicalServices);
-
-      closedDates.assignAll(settings.closedDates);
-      selectedClosedDates.assignAll(settings.closedDates
-          .map((dateStr) => DateTime.parse(dateStr))
-          .toList());
+      print('>>> ✅ Settings fields populated');
+      print('>>> Services: ${selectedServices.length}');
+      print('>>> Medical services: ${medicalServices.length}');
+      print('>>> Gallery images: ${galleryImages.length}');
+      print('>>> Closed dates: ${closedDates.length}');
     } catch (e) {
-      print('Error populating settings fields: $e');
+      print('>>> ❌ Error populating settings fields: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -838,5 +941,35 @@ class ClinicSettingsController extends GetxController {
       _controllersInitialized = false;
     }
     super.onClose();
+  }
+
+  Future<void> refreshData() async {
+    print('>>> ============================================');
+    print('>>> FORCING DATA REFRESH');
+    print('>>> ============================================');
+
+    // Clear all cached data
+    clinic.value = null;
+    clinicSettings.value = null;
+    galleryImages.clear();
+    selectedServices.clear();
+    medicalServices.clear();
+    closedDates.clear();
+    selectedClosedDates.clear();
+    operatingHours.clear();
+
+    // Clear form fields
+    if (_controllersInitialized) {
+      clinicNameController.clear();
+      addressController.clear();
+      contactController.clear();
+      emailController.clear();
+      descriptionController.clear();
+      emergencyContactController.clear();
+      specialInstructionsController.clear();
+    }
+
+    // Fetch fresh data
+    await initializeData();
   }
 }

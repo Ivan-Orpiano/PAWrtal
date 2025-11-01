@@ -2,6 +2,7 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_pet_card_view.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/dialogs/model_record_view_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -182,9 +183,14 @@ class WebAppointmentModal extends StatelessWidget {
 
     try {
       Pet? pet;
+      String? clinicId;
 
       print('>>> Attempting to load pet with ID: ${appointment.petId}');
       print('>>> User ID: ${appointment.userId}');
+      print('>>> Clinic ID: ${appointment.clinicId}'); // NEW
+
+      // Get clinic ID from appointment
+      clinicId = appointment.clinicId;
 
       // Try fetching by userId to get all user's pets
       final userPets =
@@ -233,20 +239,34 @@ class WebAppointmentModal extends StatelessWidget {
         return;
       }
 
+      if (clinicId == null || clinicId.isEmpty) {
+        print('>>> ERROR: Clinic ID not available');
+        Get.snackbar(
+          'Error',
+          'Clinic information not available for this appointment',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
       // Close current modal first
       Navigator.of(Get.context!).pop();
 
       // Small delay to ensure smooth transition
       await Future.delayed(const Duration(milliseconds: 100));
 
-      // Show the AdminPetCardView dialog
+      // Show the AdminPetCardView dialog with clinicId
       await showDialog(
         context: Get.context!,
-        builder: (context) => AdminPetCardView(pet: pet!),
+        builder: (context) => AdminPetCardView(
+          pet: pet!,
+          clinicId: clinicId!, // PASS CLINIC ID
+        ),
       );
 
       // Optional: Reopen the appointment modal after closing pet card
-      // Leave this commented out unless you want the behavior
       await Future.delayed(const Duration(milliseconds: 100));
       showDialog(
         context: Get.context!,
@@ -279,8 +299,9 @@ class WebAppointmentModal extends StatelessWidget {
         const SizedBox(height: 24),
         _buildWorkflowProgress(),
         const SizedBox(height: 24),
-        // Add link to view medical record if completed
-        if (appointment.status == 'completed') ...[
+        // MODIFIED: Only show medical record link for completed MEDICAL services
+        if (appointment.status == 'completed' &&
+            appointment.isMedicalService) ...[
           _buildMedicalRecordLink(),
           const SizedBox(height: 24),
         ],
@@ -302,15 +323,14 @@ class WebAppointmentModal extends StatelessWidget {
             ],
           ),
         ),
-        // REMOVED: Medical information section
-        // Medical data is now in MedicalRecord, not Appointment
         const SizedBox(width: 24),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Add link to view medical record if completed
-              if (appointment.status == 'completed') ...[
+              // MODIFIED: Only show medical record link for completed MEDICAL services
+              if (appointment.status == 'completed' &&
+                  appointment.isMedicalService) ...[
                 _buildMedicalRecordLink(),
                 const SizedBox(height: 24),
               ],
@@ -326,6 +346,44 @@ class WebAppointmentModal extends StatelessWidget {
     );
   }
 
+  Widget _buildServiceTypeIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: appointment.isMedicalService
+            ? Colors.red.withOpacity(0.1)
+            : Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: appointment.isMedicalService
+              ? Colors.red.withOpacity(0.3)
+              : Colors.blue.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            appointment.isMedicalService
+                ? Icons.medical_services
+                : Icons.content_cut,
+            size: 14,
+            color: appointment.isMedicalService ? Colors.red : Colors.blue,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            appointment.isMedicalService ? 'Medical Service' : 'Basic Service',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: appointment.isMedicalService ? Colors.red : Colors.blue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAppointmentDetails() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -337,13 +395,20 @@ class WebAppointmentModal extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Appointment Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color.fromARGB(255, 81, 115, 153),
-            ),
+          Row(
+            children: [
+              const Text(
+                'Appointment Details',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 81, 115, 153),
+                ),
+              ),
+              const Spacer(),
+              // NEW: Service type indicator
+              _buildServiceTypeIndicator(),
+            ],
           ),
           const SizedBox(height: 16),
           _buildDetailRow(
@@ -366,7 +431,7 @@ class WebAppointmentModal extends StatelessWidget {
               appointment.notes!,
             ),
           ],
-          // NEW: Display cancellation reason if appointment is cancelled
+          // Rest of the existing cancellation/decline information...
           if (appointment.status == 'cancelled' &&
               appointment.cancellationReason != null &&
               appointment.cancellationReason!.isNotEmpty) ...[
@@ -425,7 +490,6 @@ class WebAppointmentModal extends StatelessWidget {
               ),
             ),
           ],
-          // Display declined reason if appointment is declined
           if (appointment.status == 'declined' &&
               appointment.cancellationReason != null &&
               appointment.cancellationReason!.isNotEmpty) ...[
@@ -518,6 +582,8 @@ class WebAppointmentModal extends StatelessWidget {
   }
 
   Widget _buildMedicalRecordLink() {
+    final controller = Get.find<WebAppointmentController>();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -533,7 +599,7 @@ class WebAppointmentModal extends StatelessWidget {
               Icon(Icons.medical_information, color: Colors.teal[700]),
               const SizedBox(width: 8),
               const Text(
-                'Medical Record',
+                'Medical Record Available',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -544,27 +610,101 @@ class WebAppointmentModal extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'This appointment has been completed. Medical records including diagnosis, treatment, and vital signs are available in the Medical Records section.',
+            'This medical service has been completed. View the full medical record including diagnosis, treatment, vital signs, and veterinary notes.',
             style: TextStyle(fontSize: 14, color: Colors.black87),
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () {
-              // Navigate to medical records screen
-              Get.back(); // Close modal
-              // You'll need to implement navigation to medical records
-              // filtered by this appointment ID
-            },
-            icon: const Icon(Icons.arrow_forward),
+            onPressed: () => _viewMedicalRecord(controller),
+            icon: const Icon(Icons.visibility),
             label: const Text('View Medical Record'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// NEW METHOD: View medical record for this appointment
+  void _viewMedicalRecord(WebAppointmentController controller) async {
+    // Show loading indicator
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      print('>>> ============================================');
+      print('>>> VIEWING MEDICAL RECORD');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> ============================================');
+
+      // Get the medical record for this appointment
+      final medicalRecord = await controller.getMedicalRecordByAppointmentId(
+        appointment.documentId!,
+      );
+
+      // Close loading indicator
+      Get.back();
+
+      if (medicalRecord == null) {
+        print('>>> ❌ No medical record found');
+
+        Get.snackbar(
+          'No Medical Record',
+          'No medical record found for this appointment. This may be an older record or the service may not have created a medical record.',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+          icon: const Icon(Icons.warning, color: Colors.white),
+        );
+        return;
+      }
+
+      print('>>> ✅ Medical record found, showing dialog...');
+
+      // Get pet and owner names
+      final petName = controller.getPetName(appointment.petId);
+      final ownerName = controller.getOwnerName(appointment.userId);
+
+      // Show the medical record dialog
+      await Get.dialog(
+        MedicalRecordViewDialog(
+          medicalRecord: medicalRecord,
+          petName: petName,
+          ownerName: ownerName,
+        ),
+      );
+
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR viewing medical record: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+
+      // Close loading indicator if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Failed to load medical record: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   Widget _buildTimingStatistics() {

@@ -298,10 +298,19 @@ class WebAppointmentTile extends StatelessWidget {
 
     try {
       Pet? pet;
+      String? clinicId;
+
+      print('>>> Attempting to load pet with ID: ${appointment.petId}');
+      print('>>> Clinic ID: ${appointment.clinicId}'); // NEW
+
+      // Get clinic ID from appointment
+      clinicId = appointment.clinicId;
 
       // Try fetching by userId to get all user's pets
       final userPets =
           await controller.authRepository.getUserPets(appointment.userId);
+
+      print('>>> Found ${userPets.length} pets for user');
 
       // Find the pet by matching petId, name, or document ID
       final petDoc = userPets.firstWhereOrNull(
@@ -314,12 +323,14 @@ class WebAppointmentTile extends StatelessWidget {
       if (petDoc != null) {
         pet = Pet.fromMap(petDoc.data);
         pet.documentId = petDoc.$id;
+        print('>>> Pet loaded: ${pet.name}');
       }
 
       // Close loading indicator
       Get.back();
 
       if (pet == null) {
+        print('>>> ERROR: Could not find pet');
         Get.snackbar(
           'Error',
           'Could not load pet information. Pet ID: ${appointment.petId}',
@@ -330,10 +341,25 @@ class WebAppointmentTile extends StatelessWidget {
         return;
       }
 
-      // Show the AdminPetCardView dialog
+      if (clinicId == null || clinicId.isEmpty) {
+        print('>>> ERROR: Clinic ID not available');
+        Get.snackbar(
+          'Error',
+          'Clinic information not available for this appointment',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      // Show the AdminPetCardView dialog with clinicId
       showDialog(
         context: Get.context!,
-        builder: (context) => AdminPetCardView(pet: pet!),
+        builder: (context) => AdminPetCardView(
+          pet: pet!,
+          clinicId: clinicId!, // PASS CLINIC ID
+        ),
       );
     } catch (e) {
       // Close loading indicator if still open
