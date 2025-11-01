@@ -2298,4 +2298,43 @@ For more details, please check your appointments.
       print('>>> Stack trace: ${StackTrace.current}');
     }
   }
+
+  /// Get medical record by appointment ID
+  Future<MedicalRecord?> getMedicalRecordByAppointmentId(
+      String appointmentId) async {
+    try {
+      print('>>> ============================================');
+      print(
+          '>>> CONTROLLER: Getting medical record for appointment: $appointmentId');
+      print('>>> ============================================');
+
+      // Get all medical records for the clinic
+      final allRecords = await authRepository
+          .getClinicMedicalRecords(clinicData.value!.documentId!);
+
+      // Find the record that matches this appointment ID
+      final matchingRecord = allRecords.firstWhereOrNull(
+        (record) => record.appointmentId == appointmentId,
+      );
+
+      if (matchingRecord != null) {
+        print('>>> ✅ Medical record found!');
+        print('>>> Record ID: ${matchingRecord.id}');
+        print('>>> Service: ${matchingRecord.service}');
+        print('>>> Diagnosis: ${matchingRecord.diagnosis}');
+        print('>>> Has vitals: ${matchingRecord.hasVitals}');
+      } else {
+        print('>>> ⚠️ No medical record found for this appointment');
+      }
+
+      print('>>> ============================================');
+      return matchingRecord;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR getting medical record: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+      return null;
+    }
+  }
 }

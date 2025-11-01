@@ -14,10 +14,12 @@ enum CardView { front, back, vaccinationHistory, medicalAppointmentsHistory }
 
 class AdminPetCardView extends StatefulWidget {
   final Pet pet;
+  final String clinicId; // NEW: Required clinic ID
 
   const AdminPetCardView({
     super.key,
     required this.pet,
+    required this.clinicId, // NEW
   });
 
   @override
@@ -46,16 +48,74 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    // Initialize controller and fetch data
+    // ✅ CRITICAL: Initialize controller IMMEDIATELY in initState
+    _initializeController();
+  }
+
+  /// NEW: Initialize controller synchronously in initState
+  void _initializeController() {
+    print('>>> 🔧 Initializing AdminPetCardViewController...');
+
+    // Register controller with unique tag
+    final adminController = Get.put(
+      AdminPetCardViewController(
+        authRepository: Get.find(),
+      ),
+      tag: widget.pet.petId,
+    );
+
+    print('>>> ✅ Controller registered');
+
+    // Fetch data AFTER first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPetData(adminController);
+    });
+  }
+
+  /// NEW: Load pet data after controller is initialized
+  Future<void> _loadPetData(AdminPetCardViewController controller) async {
+    try {
+      print('>>> 📊 Loading pet data...');
+      print('>>> Pet ID: ${widget.pet.petId}');
+      print('>>> Clinic ID: ${widget.clinicId}');
+
+      // Load all data
+      await controller.loadPetData(widget.pet, widget.clinicId);
+
+      print('>>> ✅ All data loaded successfully');
+      print('>>> Medical Records: ${controller.medicalRecords.length}');
+      print('>>> Vaccinations: ${controller.vaccinations.length}');
+      print(
+          '>>> Medical Appointments: ${controller.medicalAppointments.length}');
+    } catch (e, stackTrace) {
+      print('>>> ❌ ERROR loading pet data: $e');
+      print('>>> Stack trace: $stackTrace');
+    }
+  }
+
+  /// NEW: Initialize controller and fetch all data immediately
+  Future<void> _initializeAndLoadData() async {
+    try {
+      print('>>> ðŸ"§ ADMIN CARD VIEW: Initializing controller...');
+
       final adminController = Get.put(
         AdminPetCardViewController(
           authRepository: Get.find(),
         ),
         tag: widget.pet.petId,
       );
-      adminController.loadPetData(widget.pet);
-    });
+
+      print('>>> âœ… Controller initialized');
+      print('>>> ðŸ"Š Fetching all pet data...');
+
+      // âœ… CRITICAL: Pass clinic ID and fetch data immediately
+      await adminController.loadPetData(widget.pet, widget.clinicId);
+
+      print('>>> âœ… All data loaded and counts updated');
+    } catch (e, stackTrace) {
+      print('>>> âŒ ERROR initializing admin card view: $e');
+      print('>>> Stack trace: $stackTrace');
+    }
   }
 
   @override
@@ -92,36 +152,110 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
   @override
   Widget build(BuildContext context) {
+    // ✅ SAFE: Check if controller exists before accessing
+    final controllerTag = widget.pet.petId;
+
+    if (!Get.isRegistered<AdminPetCardViewController>(tag: controllerTag)) {
+      // Controller not ready yet - show loading
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 800,
+          height: 600,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.white,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  color: const Color(0xFF3498DB),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Initializing pet card...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ✅ Controller exists - get it safely
+    final controller = Get.find<AdminPetCardViewController>(tag: controllerTag);
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          maxWidth: 800, // Match web_pet_details_panel
-          maxHeight: 600, // Match web_pet_details_panel
+          maxWidth: 800,
+          maxHeight: 600,
         ),
-        child: AnimatedBuilder(
-          animation: _animation,
-          builder: (context, child) {
-            final angle =
-                _animation.value * math.pi * (_isGoingForward ? 1 : -1);
-            final transform = Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(angle);
+        child: Obx(() {
+          // Show loading while data is being fetched
+          final isLoading = controller.isLoadingMedicalRecords.value ||
+              controller.isLoadingVaccinations.value ||
+              controller.isLoadingMedicalAppointments.value;
 
-            return Transform(
-              transform: transform,
-              alignment: Alignment.center,
-              child: angle.abs() >= math.pi / 2
-                  ? Transform(
-                      transform: Matrix4.identity()
-                        ..rotateY(_isGoingForward ? math.pi : -math.pi),
-                      alignment: Alignment.center,
-                      child: _buildCurrentView(),
-                    )
-                  : _buildPreviousView(),
+          if (isLoading) {
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      color: const Color(0xFF3498DB),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Loading ${widget.pet.name}\'s medical history...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
-          },
-        ),
+          }
+
+          // ✅ Data loaded - show the card with animation
+          return AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              final angle =
+                  _animation.value * math.pi * (_isGoingForward ? 1 : -1);
+              final transform = Matrix4.identity()
+                ..setEntry(3, 2, 0.001)
+                ..rotateY(angle);
+
+              return Transform(
+                transform: transform,
+                alignment: Alignment.center,
+                child: angle.abs() >= math.pi / 2
+                    ? Transform(
+                        transform: Matrix4.identity()
+                          ..rotateY(_isGoingForward ? math.pi : -math.pi),
+                        alignment: Alignment.center,
+                        child: _buildCurrentView(),
+                      )
+                    : _buildPreviousView(),
+              );
+            },
+          );
+        }),
       ),
     );
   }
@@ -356,10 +490,10 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Medical Appointments History section (PRIMARY)
+                  // Medical Appointments History section (CLINIC-SPECIFIC)
                   _buildHistoryButton(
                     'Medical Appointments History',
-                    'View all medical appointments with records',
+                    'View medical appointments from your clinic', // UPDATED MESSAGE
                     Icons.local_hospital_outlined,
                     () => _flipToView(CardView.medicalAppointmentsHistory),
                     controller.medicalAppointmentsCount,
@@ -368,10 +502,10 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
                   const SizedBox(height: 16),
 
-                  // Vaccination History section
+                  // Vaccination History section (ALL CLINICS)
                   _buildHistoryButton(
                     'Vaccination History',
-                    'View vaccination records',
+                    'View vaccination records (all clinics)', // UPDATED MESSAGE
                     Icons.vaccines_outlined,
                     () => _flipToView(CardView.vaccinationHistory),
                     controller.vaccinationCount,
@@ -381,113 +515,6 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildVaccinationHistoryView() {
-    final controller =
-        Get.find<AdminPetCardViewController>(tag: widget.pet.petId);
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2C3E50),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    setState(() {
-                      _selectedVaccination = null;
-                    });
-                    _flipToView(CardView.back);
-                  },
-                  tooltip: "Back",
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _selectedVaccination != null
-                        ? 'Vaccination Details'
-                        : 'Vaccination History',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                if (_selectedVaccination != null)
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () {
-                      setState(() {
-                        _selectedVaccination = null;
-                      });
-                    },
-                    tooltip: "Close Details",
-                  ),
-              ],
-            ),
-          ),
-          // Content
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoadingVaccinations.value) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text(
-                        'Loading vaccination history...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              if (controller.vaccinations.isEmpty) {
-                return _buildEmptyState(
-                  'No Vaccination Records',
-                  'No vaccination history available for this pet yet.',
-                  Icons.vaccines_outlined,
-                );
-              }
-
-              if (_selectedVaccination != null) {
-                return _buildVaccinationDetails(_selectedVaccination!);
-              }
-
-              return _buildVaccinationsList(controller.vaccinations);
-            }),
-          ),
-        ],
       ),
     );
   }
@@ -557,7 +584,7 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
                         const SizedBox(height: 4),
                       if (_selectedMedicalAppointment == null)
                         const Text(
-                          'All medical visits across clinics',
+                          'Medical visits from your clinic', // UPDATED MESSAGE
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white70,
@@ -601,7 +628,7 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
               if (controller.medicalAppointments.isEmpty) {
                 return _buildEmptyState(
                   'No Medical Appointments',
-                  'No completed medical appointments found for ${widget.pet.name} yet.',
+                  'No completed medical appointments from your clinic found for ${widget.pet.name} yet.', // UPDATED MESSAGE
                   Icons.local_hospital_outlined,
                 );
               }
@@ -613,6 +640,128 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
               return _buildMedicalAppointmentsList(
                   controller.medicalAppointments, controller);
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVaccinationHistoryView() {
+    final controller =
+        Get.find<AdminPetCardViewController>(tag: widget.pet.petId);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C3E50),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    setState(() {
+                      _selectedVaccination = null;
+                    });
+                    _flipToView(CardView.back);
+                  },
+                  tooltip: "Back",
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedVaccination != null
+                            ? 'Vaccination Details'
+                            : 'Vaccination History',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (_selectedVaccination == null)
+                        const SizedBox(height: 4),
+                      if (_selectedVaccination == null)
+                        const Text(
+                          'All vaccinations (across all clinics)', // ADDED CLARIFICATION
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_selectedVaccination != null)
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _selectedVaccination = null;
+                      });
+                    },
+                    tooltip: "Close Details",
+                  ),
+              ],
+            ),
+          ),
+          // Content
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingVaccinations.value) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading vaccination history...',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (controller.vaccinations.isEmpty) {
+                return _buildEmptyState(
+                  'No Vaccination Records',
+                  'No vaccination history available for this pet yet.',
+                  Icons.vaccines_outlined,
+                );
+              }
+
+              if (_selectedVaccination != null) {
+                return _buildVaccinationDetails(_selectedVaccination!);
+              }
+
+              return _buildVaccinationsList(controller.vaccinations);
             }),
           ),
         ],
@@ -1423,6 +1572,8 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
                   vaccination.batchNumber!.isNotEmpty)
                 _buildDetailRow('Batch Number', vaccination.batchNumber!),
             ],
+            icon: Icons.vaccines,
+            iconColor: const Color(0xFF9B59B6),
           ),
           const SizedBox(height: 16),
           _buildDetailCard(
@@ -1438,19 +1589,17 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
                   DateFormat('MMMM dd, yyyy').format(vaccination.nextDueDate!),
                 ),
             ],
+            icon: Icons.event,
+            iconColor: const Color(0xFF3498DB),
           ),
-          const SizedBox(height: 16),
-          _buildDetailCard(
-            'Administered By',
-            [
-              _buildDetailRow('Veterinarian', vaccination.veterinarianName),
-            ],
-          ),
+          // REMOVED: "Administered By" section completely
           if (vaccination.notes != null && vaccination.notes!.isNotEmpty) ...[
             const SizedBox(height: 16),
             _buildDetailCard(
               'Additional Notes',
               [_buildDetailRow('Notes', vaccination.notes!)],
+              icon: Icons.note,
+              iconColor: const Color(0xFF95A5A6),
             ),
           ],
         ],
