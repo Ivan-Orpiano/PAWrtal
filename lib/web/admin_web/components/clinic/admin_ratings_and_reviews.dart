@@ -53,6 +53,15 @@ class AdminRatingsAndReviews extends StatefulWidget {
   State<AdminRatingsAndReviews> createState() => _AdminRatingsAndReviewsState();
 }
 
+
+ bool _isMobile(BuildContext context) {
+  return MediaQuery.of(context).size.width < mobileWidth;
+}
+
+bool _isTablet(BuildContext context) {
+  return MediaQuery.of(context).size.width >= mobileWidth && 
+         MediaQuery.of(context).size.width < tabletWidth;
+}
 class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
   final AuthRepository _authRepo = Get.find<AuthRepository>();
   List<RatingAndReview> reviews = [];
@@ -191,350 +200,476 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+Widget build(BuildContext context) {
+  final isMobile = _isMobile(context);
+  final isTablet = _isTablet(context);
 
-    double averageRating = calculateAverageRating();
-    Map<int, double> ratingPercentages = calculateRatingPercentages();
-    final displayReviews = filteredReviews.take(5).toList();
+  if (isLoading) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(40),
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
+  double averageRating = calculateAverageRating();
+  Map<int, double> ratingPercentages = calculateRatingPercentages();
+  final displayReviews = filteredReviews.take(5).toList();
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Header - Responsive
+      Row(
+        children: [
+          Expanded(
+            child: Text(
               "Ratings & Reviews",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            if (reviews.isNotEmpty)
-              Row(
-                children: [
-                  Text(
-                    "${averageRating.toStringAsFixed(1)} / 5",
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w600),
-                  ),
-                  const Icon(
-                    Icons.star_rate_rounded,
-                    color: Colors.amber,
-                    size: 34,
-                  )
-                ],
-              ),
-          ],
-        ),
-        if (reviews.isEmpty)
-          _buildNoReviews()
-        else ...[
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: (ratingPercentages.entries.toList()
-                    ..sort((a, b) => b.key.compareTo(a.key)))
-                  .map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Text(
-                        entry.key.toString(),
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            Container(
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            FractionallySizedBox(
-                              widthFactor: entry.value,
-                              child: Container(
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: displayReviews.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 24),
-            itemBuilder: (context, index) {
-              return _buildReviewCard(displayReviews[index]);
-            },
-          ),
-        ],
-        const SizedBox(height: 32),
-        if (reviews.isNotEmpty)
-          GestureDetector(
-            onTap: () =>
-                _showAllReviewsDialog(averageRating, ratingPercentages),
-            child: Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: Colors.black),
-                  ),
-                  key: widget.reviewsEndKey,
-                  child: Text(
-                    "Show all ${reviews.length} reviews",
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          )
-      ],
-    );
-  }
-
-  Widget _buildNoReviews() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 40),
-      padding: const EdgeInsets.all(48),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.rate_review_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No reviews yet',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: isMobile ? 18 : 22,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Be the first to review this clinic!',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReviewCard(RatingAndReview review) {
-    
-   return FutureBuilder<bool>(
-    future: _authRepo.appWriteProvider.hasReviewPendingDeletionRequest(
-      review.documentId!,
-    ),
-    builder: (context, snapshot) {
-      final hasPendingRequest = snapshot.data ?? false;
-
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: hasPendingRequest
-              ? Colors.orange.shade50 // Highlight if pending
-              : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: hasPendingRequest
-                ? Colors.orange.shade300 // Orange border if pending
-                : Colors.grey.shade200,
-            width: hasPendingRequest ? 2 : 1,
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Pending deletion banner
-            if (hasPendingRequest) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade300),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.pending_outlined,
-                      size: 18,
-                      color: Colors.orange.shade800,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Deletion request pending approval',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange.shade800,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.hourglass_empty,
-                      size: 16,
-                      color: Colors.orange.shade700,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // Review header
+          if (reviews.isNotEmpty)
             Row(
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor:
-                      const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
-                  child: Text(
-                    review.userName[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Color.fromARGB(255, 81, 115, 153),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                Text(
+                  "${averageRating.toStringAsFixed(1)} / 5",
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 20,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Icon(
+                  Icons.star_rate_rounded,
+                  color: Colors.amber,
+                  size: isMobile ? 24 : 34,
+                )
+              ],
+            ),
+        ],
+      ),
+      
+      if (reviews.isEmpty)
+        _buildNoReviews(isMobile)
+      else ...[
+        const SizedBox(height: 16),
+        
+        // Rating Distribution - Make it compact on mobile
+        Container(
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: (ratingPercentages.entries.toList()
+                  ..sort((a, b) => b.key.compareTo(a.key)))
+                .map((entry) {
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 3 : 4),
+                child: Row(
+                  children: [
+                    Text(
+                      entry.key.toString(),
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    Icon(
+                      Icons.star,
+                      size: isMobile ? 12 : 16,
+                      color: Colors.amber,
+                    ),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    Expanded(
+                      child: Stack(
                         children: [
-                          Text(
-                            review.userName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                          Container(
+                            height: isMobile ? 6 : 8,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(isMobile ? 3 : 4),
+                            ),
+                          ),
+                          FractionallySizedBox(
+                            widthFactor: entry.value,
+                            child: Container(
+                              height: isMobile ? 6 : 8,
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(isMobile ? 3 : 4),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      Text(
-                        review.getTimeAgo(),
+                    ),
+                    SizedBox(width: isMobile ? 6 : 8),
+                    SizedBox(
+                      width: isMobile ? 30 : 40,
+                      child: Text(
+                        '${(entry.value * 100).toInt()}%',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                          fontSize: isMobile ? 11 : 14,
+                          color: Colors.grey[600],
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        
+        SizedBox(height: isMobile ? 16 : 24),
+        
+        // Reviews List
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: displayReviews.length,
+          separatorBuilder: (context, index) => SizedBox(height: isMobile ? 16 : 24),
+          itemBuilder: (context, index) {
+            return _buildReviewCard(displayReviews[index], isMobile);
+          },
+        ),
+      ],
+      
+      SizedBox(height: isMobile ? 24 : 32),
+      
+      if (reviews.isNotEmpty)
+        GestureDetector(
+          onTap: () => _showAllReviewsDialog(averageRating, ratingPercentages),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 18,
+              vertical: isMobile ? 10 : 8,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.black, width: isMobile ? 1.5 : 1),
+            ),
+            key: widget.reviewsEndKey,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Show all ${reviews.length} reviews",
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(width: isMobile ? 6 : 8),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: isMobile ? 18 : 20,
+                ),
+              ],
+            ),
+          ),
+        )
+    ],
+  );
+}
+
+      Widget _buildNoReviews(bool isMobile) {
+      return Container(
+        margin: EdgeInsets.symmetric(vertical: isMobile ? 24 : 40),
+        padding: EdgeInsets.all(isMobile ? 32 : 48),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.rate_review_outlined,
+                size: isMobile ? 48 : 64,
+                color: Colors.grey.shade400,
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+              Text(
+                'No reviews yet',
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              SizedBox(height: isMobile ? 6 : 8),
+              Text(
+                'Be the first to review this clinic!',
+                style: TextStyle(
+                  fontSize: isMobile ? 12 : 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+  Widget _buildReviewCard(RatingAndReview review, bool isMobile) {
+    
+      return FutureBuilder<bool>(
+      future: _authRepo.appWriteProvider.hasReviewPendingDeletionRequest(
+        review.documentId!,
+      ),
+      builder: (context, snapshot) {
+        final hasPendingRequest = snapshot.data ?? false;
+
+        return Container(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: BoxDecoration(
+            color: hasPendingRequest ? Colors.orange.shade50 : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasPendingRequest
+                  ? Colors.orange.shade300
+                  : Colors.grey.shade200,
+              width: hasPendingRequest ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Pending deletion banner
+              if (hasPendingRequest) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 8 : 12,
+                    vertical: isMobile ? 6 : 8,
+                  ),
+                  margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.pending_outlined,
+                        size: isMobile ? 16 : 18,
+                        color: Colors.orange.shade800,
+                      ),
+                      SizedBox(width: isMobile ? 6 : 8),
+                      Expanded(
+                        child: Text(
+                          isMobile 
+                              ? 'Deletion pending'
+                              : 'Deletion request pending approval',
+                          style: TextStyle(
+                            fontSize: isMobile ? 11 : 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.hourglass_empty,
+                        size: isMobile ? 14 : 16,
+                        color: Colors.orange.shade700,
                       ),
                     ],
                   ),
                 ),
-                buildStarRating(review.rating, size: 20),
-                const SizedBox(width: 8),
-                // Disable delete button if request is pending
-                Tooltip(
-                  message: hasPendingRequest
-                      ? 'Deletion request already pending'
-                      : 'Request deletion',
-                  child: IconButton(
+              ],
+
+              // Review header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: isMobile ? 20 : 24,
+                    backgroundColor:
+                        const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+                    child: Text(
+                      review.userName[0].toUpperCase(),
+                      style: TextStyle(
+                        color: const Color.fromARGB(255, 81, 115, 153),
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 16 : 18,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: isMobile ? 10 : 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          review.userName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: isMobile ? 14 : 16,
+                          ),
+                        ),
+                        SizedBox(height: isMobile ? 2 : 4),
+                        buildStarRating(review.rating, size: isMobile ? 16 : 20),
+                        SizedBox(height: isMobile ? 6 : 8),
+                        // Service badge
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 8 : 10,
+                            vertical: isMobile ? 4 : 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
+                            style: TextStyle(
+                              fontSize: isMobile ? 11 : 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isMobile) ...[
+                    SizedBox(width: isMobile ? 6 : 8),
+                    Tooltip(
+                      message: hasPendingRequest
+                          ? 'Deletion request already pending'
+                          : 'Request deletion',
+                      child: IconButton(
+                        icon: Icon(
+                          hasPendingRequest
+                              ? Icons.hourglass_empty
+                              : Icons.delete_outline,
+                          color: hasPendingRequest
+                              ? Colors.orange.shade600
+                              : Colors.red.shade600,
+                          size: 20,
+                        ),
+                        onPressed: hasPendingRequest
+                            ? null
+                            : () => _showDeletionRequestDialog(review),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              SizedBox(height: isMobile ? 6 : 8),
+
+              // Time ago
+              Text(
+                review.getTimeAgo(),
+                style: TextStyle(
+                  fontSize: isMobile ? 11 : 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+
+              // Review text
+              if (review.hasReview) ...[
+                SizedBox(height: isMobile ? 8 : 12),
+                Text(
+                  review.reviewText!,
+                  style: TextStyle(
+                    fontSize: isMobile ? 13 : 14,
+                    height: 1.4,
+                  ),
+                  maxLines: isMobile ? null : 3,
+                  overflow: isMobile ? TextOverflow.visible : TextOverflow.ellipsis,
+                ),
+              ],
+
+              // Review images
+              if (review.hasImages) ...[
+                SizedBox(height: isMobile ? 10 : 12),
+                SizedBox(
+                  height: isMobile ? 80 : 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: isMobile
+                        ? review.images.length
+                        : (review.images.length > 3 ? 3 : review.images.length),
+                    itemBuilder: (context, index) {
+                      final imageUrl = _authRepo.getImageUrl(review.images[index]);
+                      return Container(
+                        margin: EdgeInsets.only(right: isMobile ? 6 : 8),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl,
+                            width: isMobile ? 80 : 80,
+                            height: isMobile ? 80 : 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: isMobile ? 80 : 80,
+                                height: isMobile ? 80 : 80,
+                                color: Colors.grey.shade200,
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  size: isMobile ? 20 : 24,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // Mobile delete button
+              if (isMobile) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: hasPendingRequest
+                        ? null
+                        : () => _showDeletionRequestDialog(review),
                     icon: Icon(
                       hasPendingRequest
                           ? Icons.hourglass_empty
                           : Icons.delete_outline,
-                      color: hasPendingRequest
+                      size: 18,
+                    ),
+                    label: Text(
+                      hasPendingRequest
+                          ? 'Deletion Pending'
+                          : 'Request Deletion',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: hasPendingRequest
                           ? Colors.orange.shade600
                           : Colors.red.shade600,
-                      size: 20,
+                      side: BorderSide(
+                        color: hasPendingRequest
+                            ? Colors.orange.shade300
+                            : Colors.red.shade300,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    onPressed: hasPendingRequest
-                        ? null // Disable if pending
-                        : () => _showDeletionRequestDialog(review),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-
-            // Service badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '${review.serviceName}${review.petName != null ? ' • ${review.petName}' : ''}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade700,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-
-            // Review text
-            if (review.hasReview) ...[
-              const SizedBox(height: 12),
-              Text(
-                review.reviewText!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
             ],
-
-            // Review images
-            if (review.hasImages) ...[
-              const SizedBox(height: 12),
-              _buildReviewImages(review.images),
-            ],
-          ],
-        ),
-      );
-    },
-  );
+          ),
+        );
+      },
+    );
 }
 
   Widget _buildReviewImages(List<String> imageIds) {
@@ -572,241 +707,82 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
   }
 
   void _showAllReviewsDialog(
-      double averageRating, Map<int, double> ratingPercentages) {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            insetPadding: const EdgeInsets.symmetric(vertical: 60),
-            child: Container(
-              width: responsiveDialogWidth(context),
-              height: 700,
-              decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(20)),
-              clipBehavior: Clip.hardEdge,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16),
-                child: Column(
+    double averageRating, Map<int, double> ratingPercentages) {
+  final isMobile = _isMobile(context);
+  final isTablet = _isTablet(context);
+  
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: EdgeInsets.symmetric(
+          vertical: isMobile ? 40 : 60,
+          horizontal: isMobile ? 16 : 40,
+        ),
+        child: Container(
+          width: isMobile
+              ? MediaQuery.of(context).size.width - 32
+              : (isTablet ? 800 : 1020),
+          height: isMobile ? MediaQuery.of(context).size.height - 80 : 700,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+                child: Row(
                   children: [
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: () => Navigator.pop(context),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            size: 20,
-                          ),
-                        ),
-                      ],
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, size: 24),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(width: isMobile ? 12 : 16),
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.only(left: 42),
-                        child: Row(
-                          children: [
-                            // Left side - Statistics
-                            Flexible(
-                              flex: 2,
-                              child: Column(
-                                children: [
-                                  Text(
-                                    averageRating.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                        fontSize: 48,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 28),
-                                  buildStarRating(averageRating),
-                                  const SizedBox(height: 28),
-                                  const SizedBox(
-                                    width: 300,
-                                    child: Divider(
-                                      height: 1,
-                                      thickness: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 28),
-                                  Text(
-                                    "${reviews.length} reviews",
-                                    style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 28),
-                                  const SizedBox(
-                                    width: 300,
-                                    child: Divider(
-                                      height: 1,
-                                      thickness: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 28),
-                                  const Text(
-                                    "Overall Rating",
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w600),
-                                  ),
-                                  SizedBox(
-                                    height: 200,
-                                    width: 300,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 16.0),
-                                      child: Column(
-                                        children:
-                                            (ratingPercentages.entries.toList()
-                                                  ..sort((a, b) =>
-                                                      b.key.compareTo(a.key)))
-                                                .map((entry) {
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 4),
-                                            child: Row(
-                                              children: [
-                                                Text(
-                                                  entry.key.toString(),
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Stack(
-                                                    children: [
-                                                      Container(
-                                                        height: 8,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color:
-                                                              Colors.grey[300],
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(4),
-                                                        ),
-                                                      ),
-                                                      FractionallySizedBox(
-                                                        widthFactor:
-                                                            entry.value,
-                                                        child: Container(
-                                                          height: 8,
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: Colors.black,
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        4),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(width: 32),
-
-                            // Right side - Reviews list
-                            Flexible(
-                              flex: 3,
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 32),
-                                    child: SizedBox(
-                                      width: 525,
-                                      height: 50,
-                                      child: TextField(
-                                        controller: _controller,
-                                        decoration: InputDecoration(
-                                            hintText: 'Search reviews',
-                                            hintStyle:
-                                                const TextStyle(fontSize: 14),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(15),
-                                                borderSide: const BorderSide(
-                                                    color: Colors.black,
-                                                    width: 1.5)),
-                                            suffixIcon: _showClear
-                                                ? IconButton(
-                                                    icon: const Icon(
-                                                        Icons.close_rounded),
-                                                    onPressed: () {
-                                                      _controller.clear();
-                                                      setState(() {
-                                                        _showClear = false;
-                                                        searchQuery = '';
-                                                      });
-                                                    },
-                                                  )
-                                                : const Icon(
-                                                    Icons.search_rounded)),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width: 600,
-                                    child: Divider(
-                                      height: 1,
-                                      thickness: 0.5,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 12),
-                                      child: SizedBox(
-                                        width: 610,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 40),
-                                          child: ListView.separated(
-                                            itemCount: filteredReviews.length,
-                                            separatorBuilder: (_, __) =>
-                                                const SizedBox(height: 24),
-                                            itemBuilder: (context, index) {
-                                              return _buildFullReviewCard(
-                                                  filteredReviews[index]);
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 30)
-                                ],
-                              ),
-                            )
-                          ],
+                      child: Text(
+                        'All Reviews',
+                        style: TextStyle(
+                          fontSize: isMobile ? 18 : 20,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
-            ),
-          );
-        });
-  }
 
-Widget _buildFullReviewCard(RatingAndReview review) {
+              // Content
+              Expanded(
+                child: isMobile
+                    ? _buildMobileDialogContent(
+                        averageRating,
+                        ratingPercentages,
+                      )
+                    : _buildDesktopDialogContent(
+                        averageRating,
+                        ratingPercentages,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildFullReviewCard(RatingAndReview review, bool isMobile) {
   return FutureBuilder<bool>(
     future: _authRepo.appWriteProvider.hasReviewPendingDeletionRequest(
       review.documentId!,
@@ -1002,6 +978,337 @@ Widget _buildFullReviewCard(RatingAndReview review) {
         ),
       );
     },
+  );
+}
+
+Widget _buildMobileDialogContent(
+  double averageRating,
+  Map<int, double> ratingPercentages,
+) {
+  return SingleChildScrollView(
+    child: Column(
+      children: [
+        // Statistics section
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                averageRating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              buildStarRating(averageRating, size: 20),
+              const SizedBox(height: 8),
+              Text(
+                "${reviews.length} reviews",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Rating bars
+              ...((ratingPercentages.entries.toList()
+                    ..sort((a, b) => b.key.compareTo(a.key)))
+                  .map((entry) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Text(
+                        entry.key.toString(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.star, size: 12, color: Colors.amber),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            Container(
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                            FractionallySizedBox(
+                              widthFactor: entry.value,
+                              child: Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 35,
+                        child: Text(
+                          '${(entry.value * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              })),
+            ],
+          ),
+        ),
+
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: 'Search reviews',
+              hintStyle: const TextStyle(fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _showClear
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () {
+                        _controller.clear();
+                        setState(() {
+                          _showClear = false;
+                          searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.black, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ),
+
+        // Reviews list
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: filteredReviews.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              return _buildFullReviewCard(filteredReviews[index], true);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    ),
+  );
+}
+
+Widget _buildDesktopDialogContent(
+  double averageRating,
+  Map<int, double> ratingPercentages,
+) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 16, right: 16),
+    child: Row(
+      children: [
+        // Left side - Statistics
+        Flexible(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 42, top: 16),
+            child: Column(
+              children: [
+                Text(
+                  averageRating.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                buildStarRating(averageRating),
+                const SizedBox(height: 28),
+                const SizedBox(
+                  width: 300,
+                  child: Divider(height: 1, thickness: 0.5),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  "${reviews.length} reviews",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                const SizedBox(
+                  width: 300,
+                  child: Divider(height: 1, thickness: 0.5),
+                ),
+                const SizedBox(height: 28),
+                const Text(
+                  "Overall Rating",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                SizedBox(
+                  height: 200,
+                  width: 300,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Column(
+                      children: (ratingPercentages.entries.toList()
+                            ..sort((a, b) => b.key.compareTo(a.key)))
+                          .map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Text(
+                                entry.key.toString(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[300],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    FractionallySizedBox(
+                                      widthFactor: entry.value,
+                                      child: Container(
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: Colors.black,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 32),
+
+        // Right side - Reviews list
+        Flexible(
+          flex: 3,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 32, top: 16),
+                child: SizedBox(
+                  width: 525,
+                  height: 50,
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: 'Search reviews',
+                      hintStyle: const TextStyle(fontSize: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 1.5,
+                        ),
+                      ),
+                      suffixIcon: _showClear
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded),
+                              onPressed: () {
+                                _controller.clear();
+                                setState(() {
+                                  _showClear = false;
+                                  searchQuery = '';
+                                });
+                              },
+                            )
+                          : const Icon(Icons.search_rounded),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(
+                width: 600,
+                child: Divider(height: 1, thickness: 0.5),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    width: 610,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: ListView.separated(
+                        itemCount: filteredReviews.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 24),
+                        itemBuilder: (context, index) {
+                          return _buildFullReviewCard(
+                            filteredReviews[index],
+                            false,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }
 }
