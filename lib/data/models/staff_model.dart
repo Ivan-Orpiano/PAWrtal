@@ -14,6 +14,7 @@ class Staff {
   late List<String> authorities;
   late bool isActive;
   late String updatedAt;
+  late bool isDoctor;
 
   Staff({
     required this.name,
@@ -29,6 +30,7 @@ class Staff {
     required this.clinicId,
     required this.userId,
     required this.authorities,
+    this.isDoctor = false,
     this.isActive = true,
     String? updatedAt,
   })  : email = email ?? '', // Default to empty string if not provided
@@ -50,6 +52,7 @@ class Staff {
     authorities = List<String>.from(map["authorities"] ?? []);
     isActive = map["isActive"] ?? true;
     updatedAt = map["updatedAt"] ?? DateTime.now().toIso8601String();
+    isDoctor = map["isDoctor"] ?? false;
   }
 
   Map<String, dynamic> toMap() {
@@ -68,6 +71,7 @@ class Staff {
       "authorities": authorities,
       "isActive": isActive,
       "updatedAt": updatedAt,
+      "isDoctor": isDoctor,
     };
   }
 
@@ -87,6 +91,7 @@ class Staff {
     List<String>? authorities,
     bool? isActive,
     String? updatedAt,
+    bool? isDoctor,
   }) {
     return Staff(
       name: name ?? this.name,
@@ -104,6 +109,7 @@ class Staff {
       authorities: authorities ?? this.authorities,
       isActive: isActive ?? this.isActive,
       updatedAt: updatedAt ?? this.updatedAt,
+      isDoctor: isDoctor ?? this.isDoctor,
     );
   }
 }

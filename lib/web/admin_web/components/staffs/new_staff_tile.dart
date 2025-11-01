@@ -5,13 +5,15 @@ import 'package:image_picker/image_picker.dart';
 
 class NewStaffTile extends StatelessWidget {
   final void Function(
-      String name,
-      String username,
-      String email,
-      String phone,
-      List<String> authorities,
-      Uint8List? imageBytes,
-      String password) onStaffCreated;
+    String name,
+    String username,
+    String email,
+    String phone,
+    List<String> authorities,
+    Uint8List? imageBytes,
+    String password,
+    bool isDoctor, // ADDED 8th parameter
+  ) onStaffCreated;
 
   const NewStaffTile({
     super.key,
@@ -146,14 +148,14 @@ class NewStaffTile extends StatelessWidget {
         final firstNameController = TextEditingController();
         final surnameController = TextEditingController();
         final phoneController = TextEditingController();
-        final emailController = TextEditingController(); // NEW
+        final emailController = TextEditingController();
 
         return _StaffFormDialog(
           firstNameController: firstNameController,
           surnameController: surnameController,
           phoneController: phoneController,
-          emailController: emailController, // NEW
-          onStaffCreated: onStaffCreated,
+          emailController: emailController,
+          onStaffCreated: onStaffCreated, // This now expects 8 parameters
         );
       },
     );
@@ -164,7 +166,7 @@ class _StaffFormDialog extends StatefulWidget {
   final TextEditingController firstNameController;
   final TextEditingController surnameController;
   final TextEditingController phoneController;
-  final TextEditingController emailController; // NEW
+  final TextEditingController emailController;
   final void Function(
       String name,
       String username,
@@ -172,13 +174,14 @@ class _StaffFormDialog extends StatefulWidget {
       String phone,
       List<String> authorities,
       Uint8List? imageBytes,
-      String password) onStaffCreated;
+      String password,
+      bool isDoctor) onStaffCreated; // ADDED 8th parameter
 
   const _StaffFormDialog({
     required this.firstNameController,
     required this.surnameController,
     required this.phoneController,
-    required this.emailController, // NEW
+    required this.emailController,
     required this.onStaffCreated,
   });
 
@@ -192,6 +195,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   bool messagesAuth = false;
   Uint8List? selectedImageBytes;
   bool hasChanges = false;
+  bool isDoctorChecked = false;
 
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
@@ -229,11 +233,12 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       hasChanges = widget.firstNameController.text.trim().isNotEmpty ||
           widget.surnameController.text.trim().isNotEmpty ||
           widget.phoneController.text.trim().isNotEmpty ||
-          widget.emailController.text.trim().isNotEmpty || // NEW
+          widget.emailController.text.trim().isNotEmpty ||
           selectedImageBytes != null ||
           clinicAuth ||
           appointmentAuth ||
-          messagesAuth;
+          messagesAuth ||
+          isDoctorChecked; // Added to check for changes
     });
   }
 
@@ -506,6 +511,73 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     );
   }
 
+  Widget _buildDoctorToggle() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.2), width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.medical_services,
+                  size: 18,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Licensed Veterinarian',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: darkText,
+                  ),
+                ),
+              ),
+              Switch(
+                value: isDoctorChecked,
+                onChanged: (value) {
+                  setState(() {
+                    isDoctorChecked = value;
+                    _checkForChanges();
+                  });
+                },
+                activeColor: Colors.red,
+                activeTrackColor: Colors.red.withOpacity(0.3),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 36),
+            child: Text(
+              isDoctorChecked
+                  ? 'This staff member is a licensed veterinarian and can complete medical appointments with diagnosis and treatment.'
+                  : 'Enable this if the staff member is a licensed veterinarian who can diagnose and treat patients.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleCreateStaff() {
     if (widget.firstNameController.text.isEmpty ||
         widget.surnameController.text.isEmpty) {
@@ -521,7 +593,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       return;
     }
 
-    // Validate image is required
     if (selectedImageBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -535,7 +606,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       return;
     }
 
-    // Validate phone if provided
     final phoneDigits = widget.phoneController.text.trim();
     if (phoneDigits.isNotEmpty && phoneDigits.length != 9) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -550,7 +620,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       return;
     }
 
-    // NEW: Validate email if provided
     final email = widget.emailController.text.trim();
     if (email.isNotEmpty && !_isValidEmail(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -574,7 +643,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     if (appointmentAuth) authorities.add('Appointments');
     if (messagesAuth) authorities.add('Messages');
 
-    // Show credentials dialog
     _showCredentialsDialog(fullName, email, phone, authorities);
   }
 
@@ -1567,6 +1635,59 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                               ],
                             ),
                           ],
+                          // FIXED: Use isDoctorChecked from state
+                          if (isDoctorChecked) ...[
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.medical_services,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Medical License',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: mediumGray,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.verified,
+                                              size: 14, color: Colors.red),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Licensed Veterinarian',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1665,6 +1786,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                               Navigator.pop(dialogContext); // close confirm
                               Navigator.of(this.context).pop(); // close form
 
+                              // FIXED: Pass isDoctorChecked as 8th parameter
                               widget.onStaffCreated(
                                 fullName,
                                 username,
@@ -1673,6 +1795,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                                 authorities,
                                 selectedImageBytes,
                                 password,
+                                isDoctorChecked, // FIXED: Now passing the correct parameter
                               );
                             },
                             icon: const Icon(Icons.check_circle,
@@ -1957,6 +2080,18 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
         _buildEmailTextField(), // NEW
         const SizedBox(height: 18),
         _buildPhoneTextField(),
+
+        const SizedBox(height: 24),
+
+        _buildSectionHeader(
+          'Medical Credentials',
+          Icons.medical_services,
+          Colors.red,
+          subtitle: 'Specify if this staff member is a licensed veterinarian',
+        ),
+        const SizedBox(height: 16),
+
+        _buildDoctorToggle(),
       ],
     );
   }

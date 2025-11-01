@@ -77,11 +77,11 @@ class _StaffTileState extends State<StaffTile>
         staffDocumentId: widget.staff.documentId!,
         currentImageUrl:
             widget.staff.image.isNotEmpty ? widget.staff.image : null,
+        isDoctor: widget.staff.isDoctor, // ADD THIS LINE
       ),
     );
   }
 
-  @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) {
@@ -195,6 +195,41 @@ class _StaffTileState extends State<StaffTile>
                                     )
                                   : null,
                             ),
+                            // DOCTOR BADGE - Top right position
+                            if (widget.staff.isDoctor)
+                              Positioned(
+                                top: -2,
+                                right: -2,
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.red, Colors.redAccent],
+                                    ),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 3,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.red.withOpacity(0.4),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.medical_services,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // PERMISSIONS BADGE - Bottom right position
                             if (widget.staff.authorities.isNotEmpty)
                               Positioned(
                                 bottom: -2,
@@ -251,6 +286,50 @@ class _StaffTileState extends State<StaffTile>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+
+                        // NEW: Doctor Badge below name
+                        if (widget.staff.isDoctor) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Colors.red, Colors.redAccent],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.red.withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Licensed Veterinarian',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 16),
 
                         // Permissions Preview (RESPONSIVE TO CONTENT)

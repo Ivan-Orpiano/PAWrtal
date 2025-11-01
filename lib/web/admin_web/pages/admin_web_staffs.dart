@@ -132,8 +132,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     List<String> authorities,
     Uint8List? imageBytes,
     String password,
+    bool isDoctor, // ADD THIS 8th parameter
   ) async {
-    if (_clinic == null || !mounted) return; // Add mounted check
+    if (_clinic == null || !mounted) return;
 
     try {
       String imageUrl = '';
@@ -148,7 +149,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           imageUrl = _authRepository.getImageUrl(uploadedImage.$id);
         } catch (e) {
           if (mounted) {
-            // Add mounted check
             Get.snackbar(
               'Warning',
               'Failed to upload image, continuing without photo.',
@@ -171,15 +171,15 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         image: imageUrl,
         phone: phone,
         email: email,
+        isDoctor: isDoctor, // ADD THIS parameter to the repository call
       );
 
       if (result['success'] == true) {
         await _loadClinicAndStaff();
         if (mounted) {
-          // Add mounted check
           Get.snackbar(
             'Success',
-            'Staff account created successfully! $name has been added.',
+            'Staff account created successfully! $name has been added.${isDoctor ? ' (Licensed Veterinarian)' : ''}',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: vetGreen,
             colorText: Colors.white,
@@ -190,7 +190,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       }
     } catch (e) {
       if (mounted) {
-        // Add mounted check
         Get.snackbar(
           'Error',
           'Failed to create staff: $e',

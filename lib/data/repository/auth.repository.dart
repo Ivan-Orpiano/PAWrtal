@@ -952,6 +952,7 @@ class AuthRepository {
     String? phone,
     String? email,
     String? createdBy,
+    bool isDoctor = false, // NEW: Add isDoctor parameter
   }) {
     return appWriteProvider.createStaffAccount(
       name: name,
@@ -964,6 +965,7 @@ class AuthRepository {
       phone: phone,
       email: email,
       createdBy: createdBy,
+      isDoctor: isDoctor, // NEW: Pass isDoctor to provider
     );
   }
 
@@ -1050,6 +1052,7 @@ class AuthRepository {
     String? image,
     String? email,
     String? phone,
+    bool? isDoctor, // NEW: Add isDoctor parameter
     List<String>? authorities,
   }) async {
     try {
@@ -1059,12 +1062,76 @@ class AuthRepository {
         department: department,
         image: image,
         phone: phone,
+        isDoctor: isDoctor, // NEW: Pass isDoctor to provider
         authorities: authorities,
       );
     } catch (e) {
       print('Error updating staff info: $e');
       rethrow;
     }
+  }
+
+  Future<void> updateStaffDoctorStatus(
+    String staffDocumentId,
+    bool isDoctor,
+  ) async {
+    try {
+      await appWriteProvider.databases!.updateDocument(
+        // Added ! null check
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: staffDocumentId,
+        data: {
+          'isDoctor': isDoctor,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      print('>>> Staff doctor status updated: $isDoctor');
+    } catch (e) {
+      print('>>> Error updating staff doctor status: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Staff>> getClinicDoctors(String clinicId) async {
+    try {
+      final docs = await appWriteProvider.getClinicDoctors(clinicId);
+      return docs.map((doc) {
+        final staff = Staff.fromMap(doc.data);
+        staff.documentId = doc.$id;
+        return staff;
+      }).toList();
+    } catch (e) {
+      print('Error getting clinic doctors: $e');
+      return [];
+    }
+  }
+
+  Future<List<Staff>> getClinicNonDoctorStaff(String clinicId) async {
+    try {
+      final docs = await appWriteProvider.getClinicNonDoctorStaff(clinicId);
+      return docs.map((doc) {
+        final staff = Staff.fromMap(doc.data);
+        staff.documentId = doc.$id;
+        return staff;
+      }).toList();
+    } catch (e) {
+      print('Error getting non-doctor staff: $e');
+      return [];
+    }
+  }
+
+  Future<bool> isStaffDoctor(String staffDocumentId) async {
+    try {
+      return await appWriteProvider.isStaffDoctor(staffDocumentId);
+    } catch (e) {
+      print('Error checking if staff is doctor: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, int>> getClinicStaffStatsWithDoctors(String clinicId) {
+    return appWriteProvider.getClinicStaffStatsWithDoctors(clinicId);
   }
 
   Future<void> deactivateStaffAccount(String staffDocumentId, String userId) {
@@ -2341,38 +2408,20 @@ class AuthRepository {
     }
   }
 
-  Future<Staff?> getStaffByDocumentId(String staffDocumentId) async {
+  Future<Staff?> getStaffByDocumentId(String documentId) async {
     try {
-      print('>>> ============================================');
-      print('>>> AUTH REPO: GET STAFF BY DOCUMENT ID');
-      print('>>> Staff Document ID: $staffDocumentId');
-      print('>>> ============================================');
+      final doc = await appWriteProvider.databases!.getDocument(
+        // Added ! null check
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: documentId,
+      );
 
-      final staff =
-          await appWriteProvider.getStaffByDocumentId(staffDocumentId);
-
-      if (staff != null) {
-        print('>>> âœ" Staff found successfully');
-        print('>>>   Name: ${staff.name}');
-        print('>>>   Email: ${staff.email}');
-        print('>>>   Username: ${staff.username}');
-        print('>>>   Image ID: ${staff.image}');
-        print('>>>   Image ID Length: ${staff.image.length}');
-        print('>>>   Image ID isEmpty: ${staff.image.isEmpty}');
-        print('>>>   Department: ${staff.department}');
-        print('>>>   Role: ${staff.role}');
-        print('>>> ============================================');
-        return staff;
-      }
-
-      print('>>> âœ— No staff found with document ID: $staffDocumentId');
-      print('>>> ============================================');
-      return null;
-    } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> âŒ ERROR IN AUTH REPO: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
+      final staff = Staff.fromMap(doc.data);
+      staff.documentId = doc.$id;
+      return staff;
+    } catch (e) {
+      print('>>> Error getting staff by document ID: $e');
       return null;
     }
   }

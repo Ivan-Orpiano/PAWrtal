@@ -3,6 +3,7 @@ import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_pet_card_view.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_modal.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/web_non_medical_appointment_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -282,6 +283,9 @@ class WebAppointmentTile extends StatelessWidget {
             ],
           ),
         ),
+        _buildServiceTypeIndicator(), // NEW: Add this
+        const SizedBox(width: 8),
+        _buildStatusBadge(),
       ],
     );
   }
@@ -575,40 +579,52 @@ class WebAppointmentTile extends StatelessWidget {
         appointment.isPast && appointment.status == 'accepted';
 
     if (isPastAccepted) {
-      return Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: buttonHeight,
-              child: OutlinedButton(
-                onPressed: () => controller.confirmMarkNoShow(appointment),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+      return FutureBuilder<bool>(
+        future: controller.isCurrentStaffDoctor(),
+        builder: (context, snapshot) {
+          final isDoctor = snapshot.data ?? true; // Default to true for admins
+          final canCompleteMedical = isDoctor || !appointment.isMedicalService;
+
+          return Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: buttonHeight,
+                  child: OutlinedButton(
+                    onPressed: () => controller.confirmMarkNoShow(appointment),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: Text('Mark No Show',
+                        style: TextStyle(fontSize: fontSize)),
+                  ),
                 ),
-                child:
-                    Text('Mark No Show', style: TextStyle(fontSize: fontSize)),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: buttonHeight,
-              child: ElevatedButton(
-                onPressed: () => _showCompleteServiceDialog(controller),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: canCompleteMedical
+                        ? () => _showCompleteServiceDialog(controller)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          canCompleteMedical ? Colors.green : Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child:
+                        Text('Complete', style: TextStyle(fontSize: fontSize)),
+                  ),
                 ),
-                child: Text('Complete', style: TextStyle(fontSize: fontSize)),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       );
     }
 
@@ -703,68 +719,81 @@ class WebAppointmentTile extends StatelessWidget {
         );
 
       case 'in_progress':
-        // MODIFIED: Check if vaccination service
-        final isVaccination =
-            controller.isVaccinationService(appointment.service);
+        return FutureBuilder<bool>(
+          future: controller.isCurrentStaffDoctor(),
+          builder: (context, snapshot) {
+            final isDoctor = snapshot.data ?? true;
+            final canCompleteMedical =
+                isDoctor || !appointment.isMedicalService;
+            final isVaccination =
+                controller.isVaccinationService(appointment.service);
 
-        return Row(
-          children: [
-            if (!appointment.hasServiceStarted)
-              Expanded(
-                child: SizedBox(
-                  height: buttonHeight,
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        controller.confirmStartService(appointment),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: Text('Start', style: TextStyle(fontSize: fontSize)),
-                  ),
-                ),
-              ),
-            if (appointment.hasServiceStarted) ...[
-              // MODIFIED: Only show Vitals button if NOT a vaccination service
-              if (!isVaccination) ...[
-                Expanded(
-                  child: SizedBox(
-                    height: buttonHeight,
-                    child: OutlinedButton(
-                      onPressed: () => _showVitalsDialog(controller),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+            return Row(
+              children: [
+                if (!appointment.hasServiceStarted)
+                  Expanded(
+                    child: SizedBox(
+                      height: buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            controller.confirmStartService(appointment),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child:
+                            Text('Start', style: TextStyle(fontSize: fontSize)),
                       ),
-                      child:
-                          Text('Vitals', style: TextStyle(fontSize: fontSize)),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                if (appointment.hasServiceStarted) ...[
+                  // Only show Vitals button for medical services AND doctors
+                  if (!isVaccination &&
+                      appointment.isMedicalService &&
+                      canCompleteMedical) ...[
+                    Expanded(
+                      child: SizedBox(
+                        height: buttonHeight,
+                        child: OutlinedButton(
+                          onPressed: () => _showVitalsDialog(controller),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: Text('Vitals',
+                              style: TextStyle(fontSize: fontSize)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    flex: (isVaccination || !appointment.isMedicalService)
+                        ? 1
+                        : 2,
+                    child: SizedBox(
+                      height: buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: canCompleteMedical
+                            ? () => _showCompleteServiceDialog(controller)
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              canCompleteMedical ? Colors.green : Colors.grey,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: Text('Complete',
+                            style: TextStyle(fontSize: fontSize)),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-              Expanded(
-                flex: isVaccination
-                    ? 1
-                    : 2, // MODIFIED: Full width for vaccination
-                child: SizedBox(
-                  height: buttonHeight,
-                  child: ElevatedButton(
-                    onPressed: () => _showCompleteServiceDialog(controller),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child:
-                        Text('Complete', style: TextStyle(fontSize: fontSize)),
-                  ),
-                ),
-              ),
-            ],
-          ],
+            );
+          },
         );
 
       default:
@@ -1503,7 +1532,7 @@ class WebAppointmentTile extends StatelessWidget {
   //   );
   // }
 
-  void _showCompleteServiceDialog(WebAppointmentController controller) {
+  void _showCompleteServiceDialog(WebAppointmentController controller) async {
     // Check if vaccination service FIRST
     if (controller.isVaccinationService(appointment.service)) {
       Get.dialog(
@@ -1513,7 +1542,31 @@ class WebAppointmentTile extends StatelessWidget {
       return;
     }
 
-    // Regular service completion dialog
+    // Check if non-medical service
+    if (!appointment.isMedicalService) {
+      showDialog(
+        context: Get.context!,
+        builder: (context) =>
+            WebNonMedicalAppointmentModal(appointment: appointment),
+      );
+      return;
+    }
+
+    // Check if user is a doctor for medical services
+    final isDoctor = await controller.isCurrentStaffDoctor();
+    if (!isDoctor) {
+      Get.snackbar(
+        'Access Restricted',
+        'Only doctors can complete medical appointments with diagnosis.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: const Icon(Icons.lock, color: Colors.white),
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
+    // Show regular medical service completion dialog
     final diagnosisController = TextEditingController();
     final treatmentController = TextEditingController();
     final prescriptionController = TextEditingController();
@@ -1938,5 +1991,44 @@ class WebAppointmentTile extends StatelessWidget {
       default:
         return status.toUpperCase();
     }
+  }
+
+  Widget _buildServiceTypeIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: appointment.isMedicalService
+            ? Colors.red.withOpacity(0.1)
+            : Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: appointment.isMedicalService
+              ? Colors.red.withOpacity(0.3)
+              : Colors.blue.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            appointment.isMedicalService
+                ? Icons.medical_services
+                : Icons.content_cut,
+            size: 14,
+            color: appointment.isMedicalService ? Colors.red : Colors.blue,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            appointment.isMedicalService ? 'MEDICAL' : 'BASIC',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: appointment.isMedicalService ? Colors.red : Colors.blue,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
