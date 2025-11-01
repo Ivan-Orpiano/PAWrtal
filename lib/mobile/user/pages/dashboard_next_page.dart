@@ -13,7 +13,7 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-import 'package:capstone_app/data/id_verification/guards/appointment_verification_guard.dart';
+import 'package:capstone_app/data/id_verification/guards/unified_verification_guard.dart';
 
 class DashboardNextPage extends StatefulWidget {
   final Clinic clinic;
@@ -35,6 +35,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   bool _isLoadingSettings = true;
   bool _isSaved = false;
 
+  late UnifiedVerificationGuard _verificationGuard;
+
   // Review related state
   List<RatingAndReview> reviews = [];
   ClinicRatingStats? stats;
@@ -45,6 +47,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
     super.initState();
     _loadClinicSettings();
     _loadReviews();
+    _verificationGuard = UnifiedVerificationGuard(_authRepo);
   }
 
   Future<void> _loadClinicSettings() async {
@@ -1417,16 +1420,30 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                     elevation: 0,
                   ),
                   onPressed: _canMakeAppointment()
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ScheduleAppointment(
-                                clinic: widget.clinic,
-                                clinicSettings: _clinicSettings,
-                              ),
-                            ),
+                      ? () async {
+                          // NEW: Check verification before booking
+                          final session = Get.find<UserSessionService>();
+
+                          final canAccess =
+                              await _verificationGuard.canAccessFeature(
+                            context: context,
+                            userId: session.userId,
+                            email: session.userEmail,
+                            userRole: session.userRole,
+                            featureName: 'appointment',
                           );
+
+                          if (canAccess && context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ScheduleAppointment(
+                                  clinic: widget.clinic,
+                                  clinicSettings: _clinicSettings,
+                                ),
+                              ),
+                            );
+                          }
                         }
                       : null,
                   child: Text(
@@ -1445,7 +1462,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
               InkWell(
                 customBorder: const CircleBorder(),
                 onTap: () async {
-                  await _startConversationWithClinic(context);
+                  await _startConversationWithClinic(
+                      context);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -1469,6 +1487,27 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
 
   Future<void> _startConversationWithClinic(BuildContext context) async {
     try {
+      final UserSessionService userSession = Get.find<UserSessionService>();
+
+      if (userSession.userId.isEmpty) {
+        _showLoginRequiredDialog(context);
+        return;
+      }
+
+      // NEW: Check verification before starting conversation
+      final canAccess = await _verificationGuard.canAccessFeature(
+        context: context,
+        userId: userSession.userId,
+        email: userSession.userEmail,
+        userRole: userSession.userRole,
+        featureName: 'messaging',
+      );
+
+      if (!canAccess) {
+        return; // Guard will show verification dialog
+      }
+
+      // If verified, proceed with conversation
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -1481,13 +1520,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
 
       final MessagingController messagingController =
           Get.find<MessagingController>();
-      final UserSessionService userSession = Get.find<UserSessionService>();
-
-      if (userSession.userId.isEmpty) {
-        Navigator.pop(context);
-        _showLoginRequiredDialog(context);
-        return;
-      }
 
       final conversation = await messagingController
           .startConversationWithClinic(widget.clinic.documentId!);

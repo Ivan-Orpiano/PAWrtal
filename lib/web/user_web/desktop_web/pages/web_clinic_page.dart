@@ -14,6 +14,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/web/user_web/controllers/user_web_appointment_controller.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/data/id_verification/guards/unified_verification_guard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -38,6 +39,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final appointmentKey = GlobalKey();
 
   late WebAppointmentController _appointmentController;
+  late UnifiedVerificationGuard _verificationGuard; // NEW
 
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
@@ -51,10 +53,24 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
     }
   }
 
-  void _toggleAppointmentPanel() {
-    setState(() {
-      _showAppointmentPanel = !_showAppointmentPanel;
-    });
+  // MODIFIED: Add verification check before toggling panel
+  Future<void> _toggleAppointmentPanel() async {
+    final session = Get.find<UserSessionService>();
+    
+    // Check verification before showing appointment panel
+    final canAccess = await _verificationGuard.canAccessFeature(
+      context: context,
+      userId: session.userId,
+      email: session.userEmail,
+      userRole: session.userRole,
+      featureName: 'appointment',
+    );
+
+    if (canAccess) {
+      setState(() {
+        _showAppointmentPanel = !_showAppointmentPanel;
+      });
+    }
   }
 
   @override
@@ -69,6 +85,9 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
       ),
       tag: widget.clinic.documentId,
     );
+
+    // NEW: Initialize verification guard
+    _verificationGuard = UnifiedVerificationGuard(Get.find<AuthRepository>());
   }
 
   @override
@@ -477,7 +496,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
       ),
       floatingActionButton: !_showAppointmentPanel
           ? FloatingActionButton.extended(
-              onPressed: _toggleAppointmentPanel,
+              onPressed: _toggleAppointmentPanel, // Already has guard
               backgroundColor: const Color(0xFF5173B8),
               icon: const Icon(Icons.calendar_today, color: Colors.white),
               label: const Text(
