@@ -30,6 +30,8 @@ class StaffAuthController extends GetxController {
   final RxString clinicId = ''.obs;
   final RxString staffDocId = ''.obs;
 
+  final RxBool isDoctor = false.obs;
+
   @override
   void onClose() {
     emailController.dispose();
@@ -80,6 +82,11 @@ class StaffAuthController extends GetxController {
       currentStaff.value = staff;
       staffAuthorities.value = List<String>.from(result['authorities'] ?? []);
       staffDocId.value = staff.documentId!;
+
+      isDoctor.value = staff.isDoctor;
+      _getStorage.write('isDoctor', staff.isDoctor);
+
+      print('Staff doctor status: ${staff.isDoctor}');
 
       // CRITICAL: Store data in GetStorage for persistence
       print('Storing in GetStorage...');
@@ -138,12 +145,15 @@ class StaffAuthController extends GetxController {
 
       if (storedRole == 'staff' && storedUserId != null) {
         final staff = await authRepository.getStaffByUserId(storedUserId);
+
         if (staff != null) {
           currentStaff.value = staff;
           staffAuthorities.value = staff.authorities;
           clinicId.value = staff.clinicId;
           staffDocId.value = staff.documentId ?? '';
+          isDoctor.value = staff.isDoctor;
 
+          print('Doctor status loaded: ${isDoctor.value}');
           print('Staff data loaded successfully');
           print('Authorities: ${staffAuthorities}');
         }
@@ -151,6 +161,19 @@ class StaffAuthController extends GetxController {
     } catch (e) {
       print('Error loading staff data: $e');
     }
+  }
+
+  bool isDoctorStaff() {
+    return isDoctor.value;
+  }
+
+  bool canCompleteMedicalAppointments() {
+    return isDoctor.value;
+  }
+
+  bool canViewMedicalServices() {
+    // All staff can view, but only doctors can complete
+    return true;
   }
 
   bool hasAuthority(String authority) {
@@ -181,6 +204,7 @@ class StaffAuthController extends GetxController {
       sessionId.value = '';
       clinicId.value = '';
       staffDocId.value = '';
+      isDoctor.value = false;
 
       // Clear GetStorage
       _getStorage.erase();

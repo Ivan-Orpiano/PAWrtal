@@ -1099,6 +1099,10 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
     return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$profilePictureId/view?project=${AppwriteConstants.projectID}';
   }
 
+  // admin_pet_card_view.dart - MODIFIED METHODS ONLY
+
+// Replace the existing _buildMedicalAppointmentDetails method with this:
+
   Widget _buildMedicalAppointmentDetails(
       Map<String, dynamic> appointment, AdminPetCardViewController controller) {
     final dateTime = DateTime.parse(appointment['dateTime']);
@@ -1112,11 +1116,16 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
     // Find medical record
     MedicalRecord? medicalRecord;
+
     try {
       medicalRecord = controller.medicalRecords.firstWhere(
         (record) => record.appointmentId == appointmentId,
         orElse: () => throw Exception('Not found'),
       );
+      if (medicalRecord != null) {
+        controller.debugVetIdIssue(
+            medicalRecord.vetId, medicalRecord.appointmentId);
+      }
     } catch (e) {
       // Try fuzzy match
       try {
@@ -1137,6 +1146,11 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
       } catch (e) {
         // No medical record found
       }
+    }
+
+    if (medicalRecord != null) {
+      controller.debugVetIdIssue(
+          medicalRecord.vetId, medicalRecord.appointmentId);
     }
 
     // Find vaccination record
@@ -1242,16 +1256,44 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
               icon: Icons.event,
               iconColor: const Color(0xFF3498DB),
             ),
-            const SizedBox(height: 16),
-            _buildDetailCard(
-              'Administered By',
-              [
-                _buildDetailRow(
-                    'Veterinarian', vaccinationRecord.veterinarianName),
-              ],
-              icon: Icons.person,
-              iconColor: const Color(0xFF2ECC71),
-            ),
+            // MODIFIED: Show who administered the vaccination
+            if (medicalRecord != null) ...[
+              const SizedBox(height: 16),
+              FutureBuilder<String>(
+                future: controller.getVeterinarianName(medicalRecord.vetId),
+                builder: (context, snapshot) {
+                  final vetName = snapshot.data ?? 'Loading...';
+
+                  // Determine the title based on the name
+                  String title;
+                  IconData icon;
+                  Color iconColor;
+
+                  if (vetName == 'Admin') {
+                    title = 'Administered By (Admin)';
+                    icon = Icons.admin_panel_settings;
+                    iconColor = const Color(0xFF667eea);
+                  } else if (vetName.startsWith('Dr.')) {
+                    title = 'Administered By (Doctor)';
+                    icon = Icons.medical_services;
+                    iconColor = const Color(0xFF2ECC71);
+                  } else {
+                    title = 'Administered By (Staff)';
+                    icon = Icons.person;
+                    iconColor = const Color(0xFF95A5A6);
+                  }
+
+                  return _buildDetailCard(
+                    title,
+                    [
+                      _buildDetailRow('Name', vetName),
+                    ],
+                    icon: icon,
+                    iconColor: iconColor,
+                  );
+                },
+              ),
+            ],
             if (vaccinationRecord.notes != null &&
                 vaccinationRecord.notes!.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -1277,6 +1319,42 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
               ],
               icon: Icons.medical_services,
               iconColor: const Color(0xFFE74C3C),
+            ),
+            // MODIFIED: Show doctor/admin/staff who treated
+            const SizedBox(height: 16),
+            FutureBuilder<String>(
+              future: controller.getVeterinarianName(medicalRecord.vetId),
+              builder: (context, snapshot) {
+                final vetName = snapshot.data ?? 'Loading...';
+
+                // Determine the title and styling based on the name
+                String title;
+                IconData icon;
+                Color iconColor;
+
+                if (vetName == 'Admin') {
+                  title = 'Treated By (Admin)';
+                  icon = Icons.admin_panel_settings;
+                  iconColor = const Color(0xFF667eea);
+                } else if (vetName.startsWith('Dr.')) {
+                  title = 'Attending Veterinarian';
+                  icon = Icons.medical_services;
+                  iconColor = const Color(0xFF2ECC71);
+                } else {
+                  title = 'Treated By (Staff)';
+                  icon = Icons.person;
+                  iconColor = const Color(0xFF95A5A6);
+                }
+
+                return _buildDetailCard(
+                  title,
+                  [
+                    _buildDetailRow('Name', vetName),
+                  ],
+                  icon: icon,
+                  iconColor: iconColor,
+                );
+              },
             ),
             if (medicalRecord.hasVitals) ...[
               const SizedBox(height: 16),

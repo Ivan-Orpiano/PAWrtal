@@ -2337,4 +2337,97 @@ For more details, please check your appointments.
       return null;
     }
   }
+
+  Future<void> completeNonMedicalService({
+    required Appointment appointment,
+    String? notes,
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> COMPLETING NON-MEDICAL SERVICE');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> Service: ${appointment.service}');
+      print('>>> ============================================');
+
+      // Update appointment to completed
+      final updatedAppointment = appointment.copyWith(
+        status: 'completed',
+        serviceCompletedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        notes: notes,
+      );
+
+      await updateFullAppointment(updatedAppointment);
+      print('>>> ✅ Non-medical service completed');
+
+      // Create notification
+      try {
+        final notification = AppNotification.appointmentCompleted(
+          userId: appointment.userId,
+          appointmentId: appointment.documentId!,
+          clinicId: appointment.clinicId,
+          clinicName: clinicData.value?.clinicName ?? 'Clinic',
+          petName: getPetName(appointment.petId),
+        );
+
+        await authRepository.createNotification(notification);
+        print('>>> ✅ Completion notification sent');
+      } catch (e) {
+        print('>>> ⚠️ Error creating notification: $e');
+      }
+
+      // Send status notification
+      await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
+
+      // Send automated message
+      await _sendAutomatedAppointmentMessage(
+        appointment: updatedAppointment,
+        messageType: 'completed',
+      );
+
+      print('>>> ============================================');
+      print('>>> NON-MEDICAL SERVICE COMPLETION SUCCESSFUL');
+      print('>>> ============================================');
+
+      Get.snackbar(
+        "Success",
+        "Service completed for ${getPetName(appointment.petId)}!",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR completing non-medical service: $e');
+      print('>>> ============================================');
+      Get.snackbar(
+        "Error",
+        "Failed to complete service: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      rethrow;
+    }
+  }
+
+  Future<bool> isCurrentStaffDoctor() async {
+    try {
+      final storage = GetStorage();
+      final userRole = storage.read('role') as String?;
+
+      if (userRole != 'staff') {
+        // Admins can complete all appointments
+        return true;
+      }
+
+      final staffId = storage.read('staffId') as String?;
+      if (staffId == null) return false;
+
+      final staffDoc = await authRepository.getStaffByDocumentId(staffId);
+      return staffDoc?.isDoctor ?? false;
+    } catch (e) {
+      print('>>> Error checking if staff is doctor: $e');
+      return false;
+    }
+  }
 }

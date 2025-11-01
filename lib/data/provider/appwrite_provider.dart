@@ -2124,7 +2124,6 @@ class AppWriteProvider {
 
   // ============= STAFF ACCOUNT MANAGEMENT METHODS =============
 
-  // REPLACE createStaffAccount METHOD:
   Future<Map<String, dynamic>> createStaffAccount({
     required String name,
     required String username,
@@ -2136,10 +2135,11 @@ class AppWriteProvider {
     String? phone,
     String? email,
     String? createdBy,
+    bool isDoctor = false, // NEW: Add isDoctor parameter with default false
   }) async {
     try {
       print('>>> ============================================');
-      print('>>> STAFF ACCOUNT CREATION START (USERNAME ONLY)');
+      print('>>> STAFF ACCOUNT CREATION START (WITH isDoctor)');
       print('>>> ============================================');
 
       // Store current admin session
@@ -2150,16 +2150,14 @@ class AppWriteProvider {
       print('>>> Step 1: Creating Appwrite auth user with username...');
 
       // Create user with username and password ONLY
-      // Appwrite will handle username-based authentication internally
       final authUser = await account!.create(
         userId: ID.unique(),
-        email:
-            '$username@${AppwriteConstants.projectID}.internal', // Required by Appwrite but hidden
+        email: '$username@${AppwriteConstants.projectID}.internal',
         password: password,
         name: name,
       );
 
-      // IMPORTANT: Update user preferences to set username
+      // Update user preferences to set username
       await account!.updatePrefs(prefs: {
         'username': username,
         'isStaff': true,
@@ -2187,6 +2185,7 @@ class AppWriteProvider {
         'createdBy': createdBy ?? 'admin',
         'role': 'staff',
         'isActive': true,
+        'isDoctor': isDoctor, // NEW: Include isDoctor field
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
       };
@@ -2195,6 +2194,7 @@ class AppWriteProvider {
       print('>>> - Username: ${staffData['username']}');
       print('>>> - Contact email: ${staffData['email']}');
       print('>>> - Role: ${staffData['role']}');
+      print('>>> - Is Doctor: ${staffData['isDoctor']}'); // NEW: Log isDoctor
 
       final staffDoc = await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
@@ -2371,12 +2371,11 @@ class AppWriteProvider {
     }
   }
 
-  // MODIFIED: Migration for existing staff records
   Future<void> migrateExistingStaffRecords() async {
     try {
       print('>>> ============================================');
       print('>>> MIGRATING STAFF RECORDS');
-      print('>>> Adding username field to existing records');
+      print('>>> Adding username and isDoctor fields to existing records');
       print('>>> ============================================');
 
       final result = await databases!.listDocuments(
@@ -2390,31 +2389,27 @@ class AppWriteProvider {
         try {
           final currentRole = doc.data['role'];
           final currentUsername = doc.data['username'];
+          final currentIsDoctor =
+              doc.data['isDoctor']; // NEW: Check isDoctor field
           final email = doc.data['email'];
           final name = doc.data['name'];
+
+          Map<String, dynamic> updateData = {
+            'updatedAt': DateTime.now().toIso8601String(),
+          };
 
           // If role is missing, add it
           if (currentRole == null || currentRole.isEmpty) {
             print(
                 '>>> Updating staff: ${doc.data['name']} (${doc.data['email']})');
             print('>>>   - Adding role field');
-
-            await databases!.updateDocument(
-              databaseId: AppwriteConstants.dbID,
-              collectionId: AppwriteConstants.staffCollectionID,
-              documentId: doc.$id,
-              data: {
-                'role': 'staff',
-                'updatedAt': DateTime.now().toIso8601String(),
-              },
-            );
+            updateData['role'] = 'staff';
           }
 
-          // CRITICAL: If username is missing, generate one from name or email
+          // If username is missing, generate one
           if (currentUsername == null || currentUsername.isEmpty) {
             print('>>> Updating staff: ${doc.data['name']}');
 
-            // Generate username from name or email
             String generatedUsername;
             if (name != null && name.isNotEmpty) {
               generatedUsername = name
@@ -2429,21 +2424,27 @@ class AppWriteProvider {
             }
 
             print('>>>   - Adding username field: $generatedUsername');
+            updateData['username'] = generatedUsername;
+          }
 
+          // NEW: If isDoctor is missing, add it with default false
+          if (currentIsDoctor == null) {
+            print('>>>   - Adding isDoctor field (default: false)');
+            updateData['isDoctor'] = false;
+          }
+
+          // Only update if there are fields to update
+          if (updateData.length > 1) {
+            // More than just updatedAt
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId: AppwriteConstants.staffCollectionID,
               documentId: doc.$id,
-              data: {
-                'username': generatedUsername,
-                'updatedAt': DateTime.now().toIso8601String(),
-              },
+              data: updateData,
             );
-
             print('>>>   ✓ Migration successful');
           } else {
-            print(
-                '>>> Staff already has username: ${doc.data['name']} - $currentUsername');
+            print('>>> Staff already migrated: ${doc.data['name']}');
           }
         } catch (e) {
           print('>>> Error updating staff ${doc.$id}: $e');
@@ -2458,12 +2459,62 @@ class AppWriteProvider {
     }
   }
 
+  Future<Map<String, int>> getClinicStaffStatsWithDoctors(
+      String clinicId) async {
+    try {
+      final allStaff = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        queries: [Query.equal('clinicId', clinicId)],
+      );
+
+      int activeCount = 0;
+      int inactiveCount = 0;
+      int doctorCount = 0;
+      int nonDoctorCount = 0;
+
+      for (var doc in allStaff.documents) {
+        final isActive = doc.data['isActive'] ?? true;
+        final isDoctor = doc.data['isDoctor'] ?? false;
+
+        if (isActive) {
+          activeCount++;
+          if (isDoctor) {
+            doctorCount++;
+          } else {
+            nonDoctorCount++;
+          }
+        } else {
+          inactiveCount++;
+        }
+      }
+
+      return {
+        'total': allStaff.documents.length,
+        'active': activeCount,
+        'inactive': inactiveCount,
+        'doctors': doctorCount,
+        'nonDoctors': nonDoctorCount,
+      };
+    } catch (e) {
+      print('Error getting staff stats: $e');
+      return {
+        'total': 0,
+        'active': 0,
+        'inactive': 0,
+        'doctors': 0,
+        'nonDoctors': 0,
+      };
+    }
+  }
+
   Future<Document> updateStaffInfo({
     required String staffDocumentId,
     String? name,
     String? department,
     String? image,
-    String? phone, // Add this
+    String? phone,
+    bool? isDoctor, // NEW: Add isDoctor parameter
     List<String>? authorities,
   }) async {
     final updateData = <String, dynamic>{
@@ -2473,7 +2524,9 @@ class AppWriteProvider {
     if (name != null) updateData['name'] = name;
     if (department != null) updateData['department'] = department;
     if (image != null) updateData['image'] = image;
-    if (phone != null) updateData['phone'] = phone; // Add this
+    if (phone != null) updateData['phone'] = phone;
+    if (isDoctor != null)
+      updateData['isDoctor'] = isDoctor; // NEW: Include isDoctor
     if (authorities != null) updateData['authorities'] = authorities;
 
     return await databases!.updateDocument(
@@ -2482,6 +2535,83 @@ class AppWriteProvider {
       documentId: staffDocumentId,
       data: updateData,
     );
+  }
+
+  Future<Document> updateStaffDoctorStatus(
+    String staffDocumentId,
+    bool isDoctor,
+  ) async {
+    try {
+      print('>>> Updating staff doctor status...');
+      print('>>> Staff Doc ID: $staffDocumentId');
+      print('>>> Is Doctor: $isDoctor');
+
+      return await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: staffDocumentId,
+        data: {
+          'isDoctor': isDoctor,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('>>> Error updating staff doctor status: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Document>> getClinicDoctors(String clinicId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        queries: [
+          Query.equal('clinicId', clinicId),
+          Query.equal('isDoctor', true),
+          Query.equal('isActive', true),
+          Query.orderDesc('createdAt'),
+        ],
+      );
+      return result.documents;
+    } catch (e) {
+      print('Error getting clinic doctors: $e');
+      return [];
+    }
+  }
+
+  Future<List<Document>> getClinicNonDoctorStaff(String clinicId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        queries: [
+          Query.equal('clinicId', clinicId),
+          Query.equal('isDoctor', false),
+          Query.equal('isActive', true),
+          Query.orderDesc('createdAt'),
+        ],
+      );
+      return result.documents;
+    } catch (e) {
+      print('Error getting non-doctor staff: $e');
+      return [];
+    }
+  }
+
+  Future<bool> isStaffDoctor(String staffDocumentId) async {
+    try {
+      final doc = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.staffCollectionID,
+        documentId: staffDocumentId,
+      );
+
+      return doc.data['isDoctor'] ?? false;
+    } catch (e) {
+      print('Error checking if staff is doctor: $e');
+      return false;
+    }
   }
 
   Future<void> deactivateStaffAccount(
@@ -3363,36 +3493,36 @@ class AppWriteProvider {
     }
   }
 
-/// Get all reviews for a clinic (EXCLUDING ARCHIVED)
-Future<List<Document>> getClinicReviews(
-  String clinicId, {
-  int limit = 50,
-  String? lastDocumentId,
-}) async {
-  try {
-    final queries = [
-      Query.equal('clinicId', clinicId),
-      Query.equal('isArchived', false), // CRITICAL: Exclude archived reviews
-      Query.orderDesc('createdAt'),
-      Query.limit(limit),
-    ];
+  /// Get all reviews for a clinic (EXCLUDING ARCHIVED)
+  Future<List<Document>> getClinicReviews(
+    String clinicId, {
+    int limit = 50,
+    String? lastDocumentId,
+  }) async {
+    try {
+      final queries = [
+        Query.equal('clinicId', clinicId),
+        Query.equal('isArchived', false), // CRITICAL: Exclude archived reviews
+        Query.orderDesc('createdAt'),
+        Query.limit(limit),
+      ];
 
-    if (lastDocumentId != null) {
-      queries.add(Query.cursorAfter(lastDocumentId));
+      if (lastDocumentId != null) {
+        queries.add(Query.cursorAfter(lastDocumentId));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      print('Error getting clinic reviews: $e');
+      return [];
     }
-
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-      queries: queries,
-    );
-
-    return result.documents;
-  } catch (e) {
-    print('Error getting clinic reviews: $e');
-    return [];
   }
-}
 
   /// Get reviews by a specific user
   Future<List<Document>> getUserReviews(String userId) async {
@@ -3486,13 +3616,56 @@ Future<List<Document>> getClinicReviews(
     }
   }
 
-/// Get clinic rating statistics (EXCLUDING ARCHIVED)
-Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
-  try {
-    // CRITICAL: Only count non-archived reviews
-    final reviews = await getClinicReviews(clinicId, limit: 1000);
+  /// Get clinic rating statistics (EXCLUDING ARCHIVED)
+  Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
+    try {
+      // CRITICAL: Only count non-archived reviews
+      final reviews = await getClinicReviews(clinicId, limit: 1000);
 
-    if (reviews.isEmpty) {
+      if (reviews.isEmpty) {
+        return {
+          'averageRating': 0.0,
+          'totalReviews': 0,
+          'ratingDistribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+          'reviewsWithText': 0,
+          'reviewsWithImages': 0,
+        };
+      }
+
+      double totalRating = 0;
+      final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+      int withText = 0;
+      int withImages = 0;
+
+      for (var doc in reviews) {
+        final rating = (doc.data['rating'] ?? 0.0).toDouble();
+        totalRating += rating;
+
+        final starRating = rating.ceil();
+        distribution[starRating] = (distribution[starRating] ?? 0) + 1;
+
+        if (doc.data['reviewText'] != null &&
+            doc.data['reviewText'].toString().isNotEmpty) {
+          withText++;
+        }
+
+        final images = doc.data['images'] as List?;
+        if (images != null && images.isNotEmpty) {
+          withImages++;
+        }
+      }
+
+      final avgRating = totalRating / reviews.length;
+
+      return {
+        'averageRating': double.parse(avgRating.toStringAsFixed(1)),
+        'totalReviews': reviews.length,
+        'ratingDistribution': distribution,
+        'reviewsWithText': withText,
+        'reviewsWithImages': withImages,
+      };
+    } catch (e) {
+      print('Error getting clinic rating stats: $e');
       return {
         'averageRating': 0.0,
         'totalReviews': 0,
@@ -3501,50 +3674,7 @@ Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
         'reviewsWithImages': 0,
       };
     }
-
-    double totalRating = 0;
-    final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-    int withText = 0;
-    int withImages = 0;
-
-    for (var doc in reviews) {
-      final rating = (doc.data['rating'] ?? 0.0).toDouble();
-      totalRating += rating;
-
-      final starRating = rating.ceil();
-      distribution[starRating] = (distribution[starRating] ?? 0) + 1;
-
-      if (doc.data['reviewText'] != null &&
-          doc.data['reviewText'].toString().isNotEmpty) {
-        withText++;
-      }
-
-      final images = doc.data['images'] as List?;
-      if (images != null && images.isNotEmpty) {
-        withImages++;
-      }
-    }
-
-    final avgRating = totalRating / reviews.length;
-
-    return {
-      'averageRating': double.parse(avgRating.toStringAsFixed(1)),
-      'totalReviews': reviews.length,
-      'ratingDistribution': distribution,
-      'reviewsWithText': withText,
-      'reviewsWithImages': withImages,
-    };
-  } catch (e) {
-    print('Error getting clinic rating stats: $e');
-    return {
-      'averageRating': 0.0,
-      'totalReviews': 0,
-      'ratingDistribution': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-      'reviewsWithText': 0,
-      'reviewsWithImages': 0,
-    };
   }
-}
 
   /// Upload review images (supports both web and mobile)
   Future<List<models.File>> uploadReviewImages(List<PlatformFile> files) async {
@@ -5696,7 +5826,6 @@ Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
     }
   }
 
-
   /// Approve deletion request and archive the review WITH RATING RECALCULATION
   Future<Map<String, dynamic>> approveDeletionRequest(
     String requestId,
@@ -5719,7 +5848,8 @@ Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
           collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
           documentId: reviewId,
         );
-        print('>>> Step 1: Review found - Clinic: ${reviewDoc.data['clinicId']}');
+        print(
+            '>>> Step 1: Review found - Clinic: ${reviewDoc.data['clinicId']}');
       } catch (e) {
         print('>>> ERROR: Review not found: $e');
         return {
@@ -5775,7 +5905,8 @@ Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
 
       return {
         'success': true,
-        'message': 'Deletion request approved, review archived, and ratings updated',
+        'message':
+            'Deletion request approved, review archived, and ratings updated',
       };
     } catch (e) {
       print('>>> ============================================');
@@ -5788,100 +5919,101 @@ Future<Map<String, dynamic>> getClinicRatingStats(String clinicId) async {
     }
   }
 
-/// Helper method to recalculate clinic ratings after review deletion
-Future<void> _recalculateClinicRatings(String clinicId) async {
-  try {
-    print('>>> Recalculating ratings for clinic: $clinicId');
+  /// Helper method to recalculate clinic ratings after review deletion
+  Future<void> _recalculateClinicRatings(String clinicId) async {
+    try {
+      print('>>> Recalculating ratings for clinic: $clinicId');
 
-    // Get all non-archived reviews for this clinic
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-      queries: [
-        Query.equal('clinicId', clinicId),
-        Query.equal('isArchived', false),
-        Query.limit(1000),
-      ],
-    );
+      // Get all non-archived reviews for this clinic
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+        queries: [
+          Query.equal('clinicId', clinicId),
+          Query.equal('isArchived', false),
+          Query.limit(1000),
+        ],
+      );
 
-    final activeReviews = result.documents;
-    print('>>> Active reviews count: ${activeReviews.length}');
+      final activeReviews = result.documents;
+      print('>>> Active reviews count: ${activeReviews.length}');
 
-    if (activeReviews.isEmpty) {
-      print('>>> No active reviews - ratings will be 0');
-      return;
+      if (activeReviews.isEmpty) {
+        print('>>> No active reviews - ratings will be 0');
+        return;
+      }
+
+      // Calculate new average
+      double totalRating = 0;
+      final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+
+      for (var doc in activeReviews) {
+        final rating = (doc.data['rating'] ?? 0.0).toDouble();
+        totalRating += rating;
+
+        final starRating = rating.ceil();
+        distribution[starRating] = (distribution[starRating] ?? 0) + 1;
+      }
+
+      final newAverageRating = totalRating / activeReviews.length;
+
+      print('>>> New average rating: ${newAverageRating.toStringAsFixed(2)}');
+      print('>>> Distribution: $distribution');
+      print('>>> âœ… Ratings recalculated successfully');
+
+      // Note: The stats are calculated on-the-fly in getClinicRatingStats,
+      // so we don't need to store them. They'll be automatically correct
+      // when querying non-archived reviews.
+    } catch (e) {
+      print('>>> Error recalculating ratings: $e');
+      rethrow;
     }
-
-    // Calculate new average
-    double totalRating = 0;
-    final distribution = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-
-    for (var doc in activeReviews) {
-      final rating = (doc.data['rating'] ?? 0.0).toDouble();
-      totalRating += rating;
-
-      final starRating = rating.ceil();
-      distribution[starRating] = (distribution[starRating] ?? 0) + 1;
-    }
-
-    final newAverageRating = totalRating / activeReviews.length;
-
-    print('>>> New average rating: ${newAverageRating.toStringAsFixed(2)}');
-    print('>>> Distribution: $distribution');
-    print('>>> âœ… Ratings recalculated successfully');
-
-    // Note: The stats are calculated on-the-fly in getClinicRatingStats,
-    // so we don't need to store them. They'll be automatically correct
-    // when querying non-archived reviews.
-  } catch (e) {
-    print('>>> Error recalculating ratings: $e');
-    rethrow;
   }
-}
+
   /// Check if a review has a pending deletion request
-Future<bool> hasReviewPendingDeletionRequest(String reviewId) async {
-  try {
-    print('>>> Checking for pending deletion request: $reviewId');
+  Future<bool> hasReviewPendingDeletionRequest(String reviewId) async {
+    try {
+      print('>>> Checking for pending deletion request: $reviewId');
 
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-      queries: [
-        Query.equal('reviewId', reviewId),
-        Query.equal('status', 'pending'),
-        Query.limit(1),
-      ],
-    );
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: [
+          Query.equal('reviewId', reviewId),
+          Query.equal('status', 'pending'),
+          Query.limit(1),
+        ],
+      );
 
-    final hasPending = result.documents.isNotEmpty;
-    print('>>> Review $reviewId has pending request: $hasPending');
-    
-    return hasPending;
-  } catch (e) {
-    print('>>> Error checking pending deletion request: $e');
-    return false;
+      final hasPending = result.documents.isNotEmpty;
+      print('>>> Review $reviewId has pending request: $hasPending');
+
+      return hasPending;
+    } catch (e) {
+      print('>>> Error checking pending deletion request: $e');
+      return false;
+    }
   }
-}
 
-/// Get pending deletion request for a review
-Future<Document?> getPendingDeletionRequest(String reviewId) async {
-  try {
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-      queries: [
-        Query.equal('reviewId', reviewId),
-        Query.equal('status', 'pending'),
-        Query.limit(1),
-      ],
-    );
+  /// Get pending deletion request for a review
+  Future<Document?> getPendingDeletionRequest(String reviewId) async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        queries: [
+          Query.equal('reviewId', reviewId),
+          Query.equal('status', 'pending'),
+          Query.limit(1),
+        ],
+      );
 
-    return result.documents.isNotEmpty ? result.documents.first : null;
-  } catch (e) {
-    print('>>> Error getting pending deletion request: $e');
-    return null;
+      return result.documents.isNotEmpty ? result.documents.first : null;
+    } catch (e) {
+      print('>>> Error getting pending deletion request: $e');
+      return null;
+    }
   }
-}
 
   Future<Map<String, dynamic>> rejectDeletionRequest(
     String requestId,
@@ -7669,53 +7801,51 @@ Future<Document?> getPendingDeletionRequest(String reviewId) async {
     }
   }
 
-    /// Migrate existing reviews to add isArchived field
-    Future<void> migrateReviewsArchiveField() async {
-      try {
-        print('>>> ============================================');
-        print('>>> MIGRATING REVIEWS: Adding isArchived field');
-        print('>>> ============================================');
+  /// Migrate existing reviews to add isArchived field
+  Future<void> migrateReviewsArchiveField() async {
+    try {
+      print('>>> ============================================');
+      print('>>> MIGRATING REVIEWS: Adding isArchived field');
+      print('>>> ============================================');
 
-        final result = await databases!.listDocuments(
-          databaseId: AppwriteConstants.dbID,
-          collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-          queries: [Query.limit(1000)],
-        );
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+        queries: [Query.limit(1000)],
+      );
 
-        print('>>> Found ${result.documents.length} reviews');
+      print('>>> Found ${result.documents.length} reviews');
 
-        int updated = 0;
-        for (var doc in result.documents) {
-          try {
-            // Check if isArchived field exists
-            if (!doc.data.containsKey('isArchived')) {
-              print('>>> Updating review: ${doc.$id}');
+      int updated = 0;
+      for (var doc in result.documents) {
+        try {
+          // Check if isArchived field exists
+          if (!doc.data.containsKey('isArchived')) {
+            print('>>> Updating review: ${doc.$id}');
 
-              await databases!.updateDocument(
-                databaseId: AppwriteConstants.dbID,
-                collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-                documentId: doc.$id,
-                data: {
-                  'isArchived': false,
-                },
-              );
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+              documentId: doc.$id,
+              data: {
+                'isArchived': false,
+              },
+            );
 
-              updated++;
-              print('>>>   ✓ Migration successful');
-            }
-          } catch (e) {
-            print('>>> Error updating review ${doc.$id}: $e');
+            updated++;
+            print('>>>   ✓ Migration successful');
           }
+        } catch (e) {
+          print('>>> Error updating review ${doc.$id}: $e');
         }
-
-        print('>>> ============================================');
-        print('>>> MIGRATION COMPLETE');
-        print('>>> Updated $updated review records');
-        print('>>> ============================================');
-      } catch (e) {
-        print('>>> Migration error: $e');
       }
+
+      print('>>> ============================================');
+      print('>>> MIGRATION COMPLETE');
+      print('>>> Updated $updated review records');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> Migration error: $e');
     }
-
-
+  }
 }

@@ -238,3 +238,134 @@ class PermissionBanner extends StatelessWidget {
     );
   }
 }
+
+class DoctorPermissionGuard extends StatelessWidget {
+  final bool isDoctor;
+  final Widget child;
+
+  const DoctorPermissionGuard({
+    super.key,
+    required this.isDoctor,
+    required this.child,
+  });
+
+  static const Color primaryTeal = Color(0xFF5B9BD5);
+  static const Color vetOrange = Color(0xFFF59E0B);
+  static const Color mediumGray = Color(0xFF9CA3AF);
+
+  @override
+  Widget build(BuildContext context) {
+    if (isDoctor) {
+      // Full access - no banner
+      return child;
+    }
+
+    // Doctor-only mode - show banner
+    return Column(
+      children: [
+        _buildDoctorOnlyBanner(context),
+        Expanded(
+          child: AbsorbPointer(
+            // Prevent interactions but allow viewing
+            absorbing: true,
+            child: child,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDoctorOnlyBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.red.shade100, Colors.red.shade50],
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.red.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.medical_services,
+              color: Colors.red,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Doctor-Only Feature',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red.withOpacity(0.5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock, size: 12, color: Colors.red[800]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Medical License Required',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This feature requires veterinary doctor credentials. Only licensed veterinarians can complete medical appointments with diagnosis and treatment. You can view information but cannot make medical decisions or complete medical services.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

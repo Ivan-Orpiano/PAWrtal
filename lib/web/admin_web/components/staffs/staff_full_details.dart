@@ -10,25 +10,27 @@ class StaffFullDetails extends StatefulWidget {
   final String staffName;
   final String username;
   final String? phone;
-  final String? email; // Keep this for compatibility
+  final String? email;
   final Function(List<String>) onAuthoritiesUpdated;
   final List<String> initialAuthorities;
   final VoidCallback onRemove;
   final Uint8List? imageBytes;
   final String staffDocumentId;
   final String? currentImageUrl;
+  final bool isDoctor; // ADD THIS
 
   const StaffFullDetails({
     required this.staffName,
     required this.username,
     this.phone,
-    this.email, // Make sure this is here
+    this.email,
     required this.onAuthoritiesUpdated,
     required this.initialAuthorities,
     required this.onRemove,
     this.imageBytes,
     required this.staffDocumentId,
     this.currentImageUrl,
+    this.isDoctor = false, // ADD THIS with default
     super.key,
   });
 
@@ -42,6 +44,9 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
   late bool hasMessagesAuthority;
   late TextEditingController phoneController;
   late TextEditingController emailController;
+
+  late bool isDoctor;
+  late bool originalIsDoctor;
 
   bool isEditMode = false;
   bool showDeleteConfirm = false;
@@ -97,6 +102,10 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
     emailController = TextEditingController(text: emailValue);
     originalEmail = emailValue;
 
+    // FIXED: Initialize isDoctor from widget parameter
+    isDoctor = widget.isDoctor;
+    originalIsDoctor = widget.isDoctor;
+
     phoneController.addListener(_checkForChanges);
     emailController.addListener(_checkForChanges);
   }
@@ -115,7 +124,8 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           hasMessagesAuthority != originalMessagesAuth ||
           phoneController.text.trim() != originalPhone ||
           emailController.text.trim() != originalEmail ||
-          imageChanged;
+          imageChanged ||
+          isDoctor != originalIsDoctor;
     });
   }
 
@@ -176,6 +186,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           hasChanges = false;
           imageChanged = false;
           newImageBytes = null;
+          isDoctor = originalIsDoctor;
         }
       });
     }
@@ -311,12 +322,18 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         image: finalImageUrl,
       );
 
+      await authRepo.updateStaffDoctorStatus(
+        widget.staffDocumentId,
+        isDoctor,
+      );
+
       // Persist originals for future comparisons
       originalClinicAuth = hasClinicAuthority;
       originalAppointmentsAuth = hasAppointmentsAuthority;
       originalMessagesAuth = hasMessagesAuthority;
       originalPhone = phoneValue;
       originalEmail = emailValue;
+      originalIsDoctor = isDoctor;
 
       widget.onAuthoritiesUpdated(updatedAuthorities);
 
@@ -452,6 +469,17 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                     ),
                     const SizedBox(height: 20),
                     _buildPermissionsSection(),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                      'Medical Credentials',
+                      Icons.medical_services,
+                      Colors.red,
+                      subtitle: isEditMode
+                          ? 'Toggle if this staff member is a licensed veterinarian'
+                          : 'View medical license status',
+                    ),
+                    const SizedBox(height: 20),
+                    _buildDoctorSection(),
                     if (showDeleteConfirm && isEditMode) ...[
                       const SizedBox(height: 20),
                       _buildDeleteConfirmation(),
@@ -1474,6 +1502,168 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       activeColor: colors.first,
       activeTrackColor: colors.first.withOpacity(0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    );
+  }
+
+  Widget _buildDoctorSection() {
+    if (!isEditMode) {
+      // Display mode
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isDoctor ? Colors.red.withOpacity(0.05) : lightGray,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDoctor
+                ? Colors.red.withOpacity(0.3)
+                : primaryTeal.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDoctor
+                    ? Colors.red.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.medical_services,
+                size: 20,
+                color: isDoctor ? Colors.red : Colors.grey,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Medical License',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isDoctor
+                        ? 'Licensed Veterinarian'
+                        : 'Not a licensed veterinarian',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDoctor
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDoctor
+                      ? Colors.red.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isDoctor ? Icons.verified : Icons.close,
+                    size: 16,
+                    color: isDoctor ? Colors.red : Colors.grey,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isDoctor ? 'Doctor' : 'Staff',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDoctor ? Colors.red : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Edit mode
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.2), width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.medical_services,
+                  size: 18,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Licensed Veterinarian',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: darkText,
+                  ),
+                ),
+              ),
+              Switch(
+                value: isDoctor,
+                onChanged: (value) {
+                  setState(() {
+                    isDoctor = value;
+                    _checkForChanges();
+                  });
+                },
+                activeColor: Colors.red,
+                activeTrackColor: Colors.red.withOpacity(0.3),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 36),
+            child: Text(
+              isDoctor
+                  ? 'This staff member is a licensed veterinarian and can complete medical appointments with diagnosis and treatment.'
+                  : 'Enable this if the staff member is a licensed veterinarian who can diagnose and treat patients.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
