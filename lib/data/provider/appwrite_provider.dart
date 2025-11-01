@@ -5707,100 +5707,97 @@ Future<void> _deleteClinicRelatedData(String clinicId) async {
     }
   }
 
-  /// Approve deletion request and archive the review
- /// Approve deletion request and archive the review WITH RATING RECALCULATION
-Future<Map<String, dynamic>> approveDeletionRequest(
-  String requestId,
-  String reviewId,
-  String reviewedBy,
-  String? reviewNotes,
-) async {
-  try {
-    print('>>> ============================================');
-    print('>>> APPROVING DELETION REQUEST');
-    print('>>> Request ID: $requestId');
-    print('>>> Review ID: $reviewId');
-    print('>>> ============================================');
 
-    // Step 1: Get the review to know which clinic it belongs to
-    Document? reviewDoc;
+  /// Approve deletion request and archive the review WITH RATING RECALCULATION
+  Future<Map<String, dynamic>> approveDeletionRequest(
+    String requestId,
+    String reviewId,
+    String reviewedBy,
+    String? reviewNotes,
+  ) async {
     try {
-      reviewDoc = await databases!.getDocument(
+      print('>>> ============================================');
+      print('>>> APPROVING DELETION REQUEST');
+      print('>>> Request ID: $requestId');
+      print('>>> Review ID: $reviewId');
+      print('>>> ============================================');
+
+      // Step 1: Get the review to know which clinic it belongs to
+      Document? reviewDoc;
+      try {
+        reviewDoc = await databases!.getDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+          documentId: reviewId,
+        );
+        print('>>> Step 1: Review found - Clinic: ${reviewDoc.data['clinicId']}');
+      } catch (e) {
+        print('>>> ERROR: Review not found: $e');
+        return {
+          'success': false,
+          'error': 'Review not found: $e',
+        };
+      }
+
+      final clinicId = reviewDoc.data['clinicId'];
+
+      // Step 2: Update the deletion request status to approved
+      print('>>> Step 2: Updating deletion request status to approved...');
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+        documentId: requestId,
+        data: {
+          'status': 'approved',
+          'reviewedBy': reviewedBy,
+          'reviewedAt': DateTime.now().toIso8601String(),
+          'reviewNotes': reviewNotes,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      print('>>> Deletion request updated to approved');
+
+      // Step 3: Archive the review by setting isArchived to true (ONLY THIS FIELD)
+      print('>>> Step 3: Archiving the review...');
+      await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
         documentId: reviewId,
+        data: {
+          'isArchived': true,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
       );
-      print('>>> Step 1: Review found - Clinic: ${reviewDoc.data['clinicId']}');
+      print('>>> Review archived successfully');
+
+      // Step 4: CRITICAL - Recalculate clinic ratings
+      print('>>> Step 4: Recalculating clinic ratings...');
+      try {
+        await _recalculateClinicRatings(clinicId);
+        print('>>> ✅ Ratings recalculated successfully');
+      } catch (e) {
+        print('>>> ⚠️ Warning: Could not recalculate ratings: $e');
+        // Don't fail the entire operation if recalculation fails
+      }
+
+      print('>>> ============================================');
+      print('>>> DELETION REQUEST APPROVED & RATINGS UPDATED');
+      print('>>> ============================================');
+
+      return {
+        'success': true,
+        'message': 'Deletion request approved, review archived, and ratings updated',
+      };
     } catch (e) {
-      print('>>> ERROR: Review not found: $e');
+      print('>>> ============================================');
+      print('>>> ERROR APPROVING DELETION REQUEST: $e');
+      print('>>> ============================================');
       return {
         'success': false,
-        'error': 'Review not found: $e',
+        'error': e.toString(),
       };
     }
-
-    final clinicId = reviewDoc.data['clinicId'];
-
-    // Step 2: Update the deletion request status to approved
-    print('>>> Step 2: Updating deletion request status to approved...');
-    await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
-      documentId: requestId,
-      data: {
-        'status': 'approved',
-        'reviewedBy': reviewedBy,
-        'reviewedAt': DateTime.now().toIso8601String(),
-        'reviewNotes': reviewNotes,
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-    );
-    print('>>> Deletion request updated to approved');
-
-    // Step 3: Archive the review by setting isArchived to true
-    print('>>> Step 3: Archiving the review...');
-    await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-      documentId: reviewId,
-      data: {
-        'isArchived': true,
-        'archivedAt': DateTime.now().toIso8601String(),
-        'archivedBy': reviewedBy,
-        'archivedReason': 'Deletion request approved',
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-    );
-    print('>>> Review archived successfully');
-
-    // Step 4: CRITICAL - Recalculate clinic ratings
-    print('>>> Step 4: Recalculating clinic ratings...');
-    try {
-      await _recalculateClinicRatings(clinicId);
-      print('>>> âœ… Ratings recalculated successfully');
-    } catch (e) {
-      print('>>> âš ï¸ Warning: Could not recalculate ratings: $e');
-      // Don't fail the entire operation if recalculation fails
-    }
-
-    print('>>> ============================================');
-    print('>>> DELETION REQUEST APPROVED & RATINGS UPDATED');
-    print('>>> ============================================');
-
-    return {
-      'success': true,
-      'message': 'Deletion request approved, review archived, and ratings updated',
-    };
-  } catch (e) {
-    print('>>> ============================================');
-    print('>>> ERROR APPROVING DELETION REQUEST: $e');
-    print('>>> ============================================');
-    return {
-      'success': false,
-      'error': e.toString(),
-    };
   }
-}
 
 /// Helper method to recalculate clinic ratings after review deletion
 Future<void> _recalculateClinicRatings(String clinicId) async {
@@ -7604,54 +7601,53 @@ Future<Document?> getPendingDeletionRequest(String reviewId) async {
     }
   }
 
-  /// Migrate existing reviews to add isArchived field
-Future<void> migrateReviewsArchiveField() async {
-  try {
-    print('>>> ============================================');
-    print('>>> MIGRATING REVIEWS: Adding isArchived field');
-    print('>>> ============================================');
-
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-      queries: [Query.limit(1000)],
-    );
-
-    print('>>> Found ${result.documents.length} reviews');
-
-    int updated = 0;
-    for (var doc in result.documents) {
+    /// Migrate existing reviews to add isArchived field
+    Future<void> migrateReviewsArchiveField() async {
       try {
-        // Check if isArchived field exists
-        if (!doc.data.containsKey('isArchived')) {
-          print('>>> Updating review: ${doc.$id}');
+        print('>>> ============================================');
+        print('>>> MIGRATING REVIEWS: Adding isArchived field');
+        print('>>> ============================================');
 
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
-            documentId: doc.$id,
-            data: {
-              'isArchived': false,
-              'archivedAt': null,
-              'archivedBy': null,
-              'archivedReason': null,
-            },
-          );
+        final result = await databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+          queries: [Query.limit(1000)],
+        );
 
-          updated++;
-          print('>>>   âœ" Migration successful');
+        print('>>> Found ${result.documents.length} reviews');
+
+        int updated = 0;
+        for (var doc in result.documents) {
+          try {
+            // Check if isArchived field exists
+            if (!doc.data.containsKey('isArchived')) {
+              print('>>> Updating review: ${doc.$id}');
+
+              await databases!.updateDocument(
+                databaseId: AppwriteConstants.dbID,
+                collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
+                documentId: doc.$id,
+                data: {
+                  'isArchived': false,
+                },
+              );
+
+              updated++;
+              print('>>>   ✓ Migration successful');
+            }
+          } catch (e) {
+            print('>>> Error updating review ${doc.$id}: $e');
+          }
         }
+
+        print('>>> ============================================');
+        print('>>> MIGRATION COMPLETE');
+        print('>>> Updated $updated review records');
+        print('>>> ============================================');
       } catch (e) {
-        print('>>> Error updating review ${doc.$id}: $e');
+        print('>>> Migration error: $e');
       }
     }
 
-    print('>>> ============================================');
-    print('>>> MIGRATION COMPLETE');
-    print('>>> Updated $updated review records');
-    print('>>> ============================================');
-  } catch (e) {
-    print('>>> Migration error: $e');
-  }
-}
+
 }

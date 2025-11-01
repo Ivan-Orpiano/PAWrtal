@@ -1051,72 +1051,62 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     }).toList(),
                   ),
                 ],
-                                // Status-based action buttons
+               // Status-based action buttons
                   if (feedback.status == FeedbackStatus.pending || 
                       feedback.status == FeedbackStatus.inProgress) ...[
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _markAsCompleted(feedback),
-                        icon: const Icon(Icons.check_circle, size: 14, color: Colors.white),
-                        label: const Text('Mark as Completed', style: TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _markAsCompleted(feedback),
+                      icon: const Icon(Icons.check_circle, size: 16, color: Colors.white),
+                      label: const Text('Mark as Completed'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
                   ] else if (feedback.status == FeedbackStatus.completed ||
                             feedback.status == FeedbackStatus.closed) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        // Completed badge
                         if (feedback.status == FeedbackStatus.completed)
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.green[50],
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green[300]!),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Completed',
-                                    style: TextStyle(
-                                      color: Colors.green[700],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green[300]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle, size: 18, color: Colors.green[700]),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Issue Resolved',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
-                        const SizedBox(width: 8),
-                        // Archive button
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _archiveFeedback(feedback),
-                            icon: const Icon(Icons.archive, size: 14, color: Colors.white),
-                            label: const Text('Archive', style: TextStyle(fontSize: 12)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange[600],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => _archiveFeedback(feedback),
+                          icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                          label: const Text('Archive'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange[600],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                         ),
@@ -1406,27 +1396,65 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     ],
                   ],
                 ),
-                if (feedback.status == FeedbackStatus.closed ||
-                    feedback.status == FeedbackStatus.completed) ...[
+               // Status-based action buttons
+                if (feedback.status == FeedbackStatus.pending || 
+                    feedback.status == FeedbackStatus.inProgress) ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _markAsCompleted(feedback),
+                    icon: const Icon(Icons.check_circle, size: 16, color: Colors.white),
+                    label: const Text('Mark as Completed'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ] else if (feedback.status == FeedbackStatus.completed ||
+                          feedback.status == FeedbackStatus.closed) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      if (feedback.status == FeedbackStatus.closed)
-                        ElevatedButton.icon(
-                          onPressed: () => _archiveFeedback(feedback),
-                          icon:
-                              const Icon(Icons.archive, size: 16, color: Colors.white),
-                          label: const Text('Archive'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                      if (feedback.status == FeedbackStatus.completed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green[300]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, size: 20, color: Colors.green[700]),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Issue Resolved',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                      const SizedBox(width: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _archiveFeedback(feedback),
+                        icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                        label: const Text('Archive'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],

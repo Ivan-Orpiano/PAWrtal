@@ -2,6 +2,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -33,6 +34,68 @@ class AdminFeedbackController extends GetxController {
       print('Migration error: $e');
     }
   }
+
+  Future<void> updateStatus(String documentId, FeedbackStatus newStatus) async {
+  try {
+    isLoading.value = true;
+    
+    await authRepository.updateFeedbackStatus(documentId, newStatus);
+    
+    // Update local state
+    final index = allFeedback.indexWhere((f) => f.documentId == documentId);
+    if (index != -1) {
+      allFeedback[index] = allFeedback[index].copyWith(status: newStatus);
+      allFeedback.refresh();
+    }
+    
+    // Reload to get fresh data
+    await loadAllFeedback();
+    
+    Get.snackbar(
+      'Success',
+      'Feedback status updated to ${newStatus.displayName}',
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.green[100],
+      colorText: Colors.green[900],
+    );
+  } catch (e) {
+    Get.snackbar(
+      'Error',
+      'Failed to update status: $e',
+      duration: const Duration(seconds: 3),
+      backgroundColor: Colors.red[100],
+      colorText: Colors.red[900],
+    );
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+Future<void> addReply(String documentId, String reply) async {
+  try {
+    final adminName = GetStorage().read('name') ?? 'Admin';
+    
+    await authRepository.addFeedbackReply(
+      documentId,
+      reply,
+      adminName,
+    );
+    
+    await loadAllFeedback();
+    
+    Get.snackbar(
+      'Success',
+      'Reply added successfully',
+      duration: const Duration(seconds: 2),
+    );
+  } catch (e) {
+    Get.snackbar(
+      'Error',
+      'Failed to add reply: $e',
+      duration: const Duration(seconds: 3),
+    );
+  }
+}
 
   Future<void> loadAllFeedback() async {
     try {
