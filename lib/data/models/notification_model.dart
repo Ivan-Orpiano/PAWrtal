@@ -8,7 +8,10 @@ enum NotificationType {
   appointmentCompleted, // User receives when service is done
   appointmentReminder, // User receives reminder before appointment
   message, // For future message notifications
+  deletionRequestApproved, // Admin receives when deletion approved
+  deletionRequestRejected, // Admin receives when deletion rejected
   general, // General system notifications
+
 }
 
 enum NotificationPriority {

@@ -33,6 +33,7 @@ class NotificationService {
   }
 
   /// Get current FCM token
+  
   String? get fcmToken => _currentFCMToken;
 
   /// Check if notifications are initialized
@@ -296,7 +297,7 @@ class NotificationService {
         badge: true,
         sound: true,
       );
-
+    
       print('>>> Permission status: ${settings.authorizationStatus}');
       
       return settings.authorizationStatus == AuthorizationStatus.authorized ||

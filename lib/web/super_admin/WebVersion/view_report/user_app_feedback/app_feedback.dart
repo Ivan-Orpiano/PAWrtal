@@ -85,13 +85,47 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           ],
         ),
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF517399), size: 20),
-            onPressed: () => controller.loadAllFeedback(),
-            tooltip: 'Refresh',
-          ),
-        ],
+      actions: [
+        // Auto-Clean Spam Button
+        Obx(() => controller.isCleaningSpam.value
+            ? const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF517399)),
+                  ),
+                ),
+              )
+            : Tooltip(
+                message: 'Auto-clean spam feedback',
+                child: TextButton.icon(
+                  onPressed: () => controller.autoCleanSpamFeedback(),
+                  icon: const Icon(Icons.cleaning_services, size: 18),
+                  label: const Text('Clean Spam'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFE65100),
+                    backgroundColor: Colors.orange[50],
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              )),
+        const SizedBox(width: 8),
+        
+        IconButton(
+          icon: const Icon(Icons.refresh, color: Color(0xFF517399)),
+          onPressed: () => controller.loadAllFeedback(),
+          tooltip: 'Refresh',
+        ),
+        IconButton(
+          icon: const Icon(Icons.filter_list_off, color: Color(0xFF517399)),
+          onPressed: () => controller.clearFilters(),
+          tooltip: 'Clear Filters',
+        ),
+        const SizedBox(width: 12),
+      ],
       ),
       drawer: _buildDrawer(context),
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
@@ -429,16 +463,36 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           children: [
             Row(
               children: [
-                // ... other cards ...
+                   _buildStatCard(
+                    'Total',
+                    controller.feedbackStats['total']?.toString() ?? '0',
+                    Colors.blue,
+                    Icons.feedback,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    'Pending',
+                    controller.feedbackStats['pending']?.toString() ?? '0',
+                    Colors.orange,
+                    Icons.schedule,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    'In Progress',
+                    controller.feedbackStats['inProgress']?.toString() ?? '0',
+                    Colors.blue,
+                    Icons.autorenew,
+                  ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               children: [
+                
                 Expanded(
                   child: _buildStatCard(
-                    'Completed',  // Changed
-                    controller.feedbackStats['completed']?.toString() ?? '0',  // Changed key
+                    'Completed', 
+                    controller.feedbackStats['completed']?.toString() ?? '0',  
                     Colors.green,
                     Icons.check_circle,
                   ),
@@ -453,6 +507,15 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ),
                 ),
                 const Expanded(child: SizedBox()),
+                Expanded(
+                child: _buildStatCard(
+                  'Spam Blocked',
+                  controller.autoArchivedCount.value.toString(),
+                  Colors.orange,
+                  Icons.block,
+                ),
+              ),
+                const SizedBox(width: 10),
               ],
             ),
           ],
@@ -1323,6 +1386,43 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                         ),
                       ),
                     ),
+                     const SizedBox(width: 8),
+                    // Spam Detection Badge
+                      FutureBuilder<bool>(
+                        future: controller.checkIfSpam(feedback),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data == true) {
+                            return Tooltip(
+                              message: 'Potential spam detected',
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.red[300]!),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.report_problem, size: 14, color: Colors.red[700]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'SPAM',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                      const SizedBox(width: 8),
                     const SizedBox(width: 8),
                     _buildClickablePriorityBadge(feedback),
                     const SizedBox(width: 8),
@@ -2805,12 +2905,10 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
             icon: const Icon(Icons.archive, color: Colors.white),
             label: const Text('Archive'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF517399),
-              foregroundColor: Colors.white,
-            ),
+            backgroundColor: Colors.orange[600],
+            foregroundColor: Colors.white,
           ),
-
-  
+        ),
       ],
     );
   }

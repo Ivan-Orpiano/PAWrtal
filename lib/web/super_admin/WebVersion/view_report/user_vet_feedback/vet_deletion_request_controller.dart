@@ -332,7 +332,7 @@ class VetDeletionRequestController extends GetxController {
     filterRequests();
   }
 
-  /// Approve deletion request with rating recalculation
+ /// Approve deletion request with rating recalculation AND notifications (FIXED)
 Future<void> approveDeletionRequest(
   FeedbackDeletionRequest request,
   String reviewedBy,
@@ -347,6 +347,53 @@ Future<void> approveDeletionRequest(
     print('>>> Review ID: ${request.reviewId}');
     print('>>> ============================================');
 
+    // CRITICAL: Debug to find the correct admin ID
+    await _debugClinicAdminId(request);
+
+    // Step 1: Get the ACTUAL admin ID from the review's clinic
+    String? actualAdminId;
+    String clinicName = 'Unknown Clinic';
+    
+    try {
+      print('>>> Step 1: Finding actual admin ID...');
+      
+      // Get the review to find which clinic it belongs to
+      final review = await getReview(request.reviewId);
+      
+      if (review != null) {
+        print('>>> Found review, clinic ID: ${review.clinicId}');
+        
+        // Get the clinic document using the review's clinicId
+        final clinic = await authRepository.getClinicById(review.clinicId);
+        
+        if (clinic != null) {
+          actualAdminId = clinic.data['adminId'] as String?;
+          clinicName = clinic.data['clinicName'] ?? 'Unknown Clinic';
+          
+          print('>>> ✅ Found actual admin ID: $actualAdminId');
+          print('>>> ✅ Clinic name: $clinicName');
+        } else {
+          print('>>> ❌ Could not find clinic by ID: ${review.clinicId}');
+        }
+      } else {
+        print('>>> ❌ Could not find review: ${request.reviewId}');
+      }
+    } catch (e) {
+      print('>>> ❌ Error finding admin ID: $e');
+    }
+    
+    // If we couldn't find the admin ID, show error and return
+    if (actualAdminId == null || actualAdminId.isEmpty) {
+      print('>>> ❌ CRITICAL ERROR: Cannot find admin ID to send notification');
+      _showSnackBar(
+        'Error: Cannot identify clinic admin to notify. Please check the data.',
+        Colors.red,
+      );
+      return;
+    }
+
+    // Step 2: Approve the deletion request
+    print('>>> Step 2: Approving deletion request...');
     final result = await authRepository.approveDeletionRequest(
       request.documentId!,
       request.reviewId,
@@ -355,8 +402,60 @@ Future<void> approveDeletionRequest(
     );
 
     if (result['success'] == true) {
+      print('>>> ✅ Deletion approved successfully');
+      
+      // Step 3: Send notification to the CORRECT admin
+      try {
+        print('>>> Step 3: Sending notification...');
+        print('>>> Recipient admin ID: $actualAdminId');
+        
+        // Build notification message
+        final notificationTitle = 'Review Deletion Request Approved ✅';
+        final notificationMessage = reviewNotes != null && reviewNotes.isNotEmpty
+            ? 'Your review deletion request has been approved. Admin notes: $reviewNotes'
+            : 'Your review deletion request for "$clinicName" has been approved.';
+        
+        print('>>> Creating notification with:');
+        print('>>>   - Title: $notificationTitle');
+        print('>>>   - Recipient: $actualAdminId');
+        print('>>>   - Clinic Name: $clinicName');
+        
+        // Create in-app notification using the ACTUAL admin ID
+        await authRepository.createDeletionRequestNotification(
+          clinicAdminId: actualAdminId, // FIXED: Use actual admin ID from clinic document
+          title: notificationTitle,
+          message: notificationMessage,
+          status: 'approved',
+          requestId: request.documentId!,
+          clinicId: request.clinicId,
+          reviewId: request.reviewId,
+          metadata: {
+            'clinicName': clinicName,
+            'reason': request.reason,
+            'reviewedBy': reviewedBy,
+            'reviewNotes': reviewNotes ?? '',
+            'approvedAt': DateTime.now().toIso8601String(),
+          },
+        );
+        
+        print('>>> ✅ Notification created successfully');
+        
+        // Verify notification was created
+        final notificationCount = await authRepository.getUnreadNotificationCount(actualAdminId);
+        print('>>> Admin now has $notificationCount unread notifications');
+        
+      } catch (notifError) {
+        print('>>> ❌ ERROR sending notification: $notifError');
+        print('>>> Stack trace: ${StackTrace.current}');
+        // Show error but don't fail the approval
+        _showSnackBar(
+          'Request approved but notification failed: $notifError',
+          Colors.orange,
+        );
+      }
+      
       _showSnackBar(
-        'Deletion request approved! Review archived and ratings updated.',
+        'Deletion request approved! Notification sent to $clinicName.',
         Colors.green,
       );
       
@@ -366,13 +465,14 @@ Future<void> approveDeletionRequest(
       // Reload all deletion requests to update UI
       await loadAllDeletionRequests();
       
-      print('>>> âœ… Deletion approved and ratings recalculated');
+      print('>>> ✅ Process complete');
     } else {
       _showSnackBar('Failed to approve request: ${result['error']}', Colors.red);
-      print('>>> âœ— Approval failed: ${result['error']}');
+      print('>>> ❌ Approval failed: ${result['error']}');
     }
   } catch (e) {
-    print('>>> âœ— Error approving deletion request: $e');
+    print('>>> ❌ Error approving deletion request: $e');
+    print('>>> Stack trace: ${StackTrace.current}');
     _showSnackBar('Error: $e', Colors.red);
   } finally {
     isProcessing.value = false;
@@ -380,34 +480,147 @@ Future<void> approveDeletionRequest(
   }
 }
 
-  /// Reject deletion request
-  Future<void> rejectDeletionRequest(
-    FeedbackDeletionRequest request,
-    String reviewedBy,
-    String? reviewNotes,
-  ) async {
+
+   /// Reject deletion request AND send notification (FIXED)
+Future<void> rejectDeletionRequest(
+  FeedbackDeletionRequest request,
+  String reviewedBy,
+  String? reviewNotes,
+) async {
+  try {
+    isProcessing.value = true;
+
+    print('>>> ============================================');
+    print('>>> CONTROLLER: Rejecting deletion request');
+    print('>>> Request ID: ${request.documentId}');
+    print('>>> ============================================');
+
+    // CRITICAL: Debug to find the correct admin ID
+    await _debugClinicAdminId(request);
+
+    // Step 1: Get the ACTUAL admin ID from the review's clinic
+    String? actualAdminId;
+    String clinicName = 'Unknown Clinic';
+    
     try {
-      isProcessing.value = true;
-
-      final result = await authRepository.rejectDeletionRequest(
-        request.documentId!,
-        reviewedBy,
-        reviewNotes,
-      );
-
-      if (result['success'] == true) {
-        _showSnackBar('Deletion request rejected', Colors.orange);
-        await loadAllDeletionRequests();
+      print('>>> Step 1: Finding actual admin ID...');
+      
+      // Get the review to find which clinic it belongs to
+      final review = await getReview(request.reviewId);
+      
+      if (review != null) {
+        print('>>> Found review, clinic ID: ${review.clinicId}');
+        
+        // Get the clinic document using the review's clinicId
+        final clinic = await authRepository.getClinicById(review.clinicId);
+        
+        if (clinic != null) {
+          actualAdminId = clinic.data['adminId'] as String?;
+          clinicName = clinic.data['clinicName'] ?? 'Unknown Clinic';
+          
+          print('>>> ✅ Found actual admin ID: $actualAdminId');
+          print('>>> ✅ Clinic name: $clinicName');
+        } else {
+          print('>>> ❌ Could not find clinic by ID: ${review.clinicId}');
+        }
       } else {
-        _showSnackBar('Failed to reject request: ${result['error']}', Colors.red);
+        print('>>> ❌ Could not find review: ${request.reviewId}');
       }
     } catch (e) {
-      _showSnackBar('Error: $e', Colors.red);
-    } finally {
-      isProcessing.value = false;
+      print('>>> ❌ Error finding admin ID: $e');
     }
-  }
+    
+    // If we couldn't find the admin ID, show error and return
+    if (actualAdminId == null || actualAdminId.isEmpty) {
+      print('>>> ❌ CRITICAL ERROR: Cannot find admin ID to send notification');
+      _showSnackBar(
+        'Error: Cannot identify clinic admin to notify. Please check the data.',
+        Colors.red,
+      );
+      return;
+    }
 
+    // Step 2: Reject the deletion request
+    print('>>> Step 2: Rejecting deletion request...');
+    final result = await authRepository.rejectDeletionRequest(
+      request.documentId!,
+      reviewedBy,
+      reviewNotes,
+    );
+
+    if (result['success'] == true) {
+      print('>>> ✅ Deletion rejected successfully');
+      
+      // Step 3: Send notification to the CORRECT admin
+      try {
+        print('>>> Step 3: Sending rejection notification...');
+        print('>>> Recipient admin ID: $actualAdminId');
+        
+        // Build notification message
+        final notificationTitle = 'Review Deletion Request Rejected ❌';
+        final notificationMessage = reviewNotes != null && reviewNotes.isNotEmpty
+            ? 'Your review deletion request has been rejected. Reason: $reviewNotes'
+            : 'Your review deletion request for "$clinicName" has been rejected.';
+        
+        print('>>> Creating notification with:');
+        print('>>>   - Title: $notificationTitle');
+        print('>>>   - Recipient: $actualAdminId');
+        print('>>>   - Clinic Name: $clinicName');
+        
+        // Create in-app notification using the ACTUAL admin ID
+        await authRepository.createDeletionRequestNotification(
+          clinicAdminId: actualAdminId, // FIXED: Use actual admin ID from clinic document
+          title: notificationTitle,
+          message: notificationMessage,
+          status: 'rejected',
+          requestId: request.documentId!,
+          clinicId: request.clinicId,
+          reviewId: request.reviewId,
+          metadata: {
+            'clinicName': clinicName,
+            'reason': request.reason,
+            'reviewedBy': reviewedBy,
+            'reviewNotes': reviewNotes ?? '',
+            'rejectedAt': DateTime.now().toIso8601String(),
+          },
+        );
+        
+        print('>>> ✅ Rejection notification created successfully');
+        
+        // Verify notification was created
+        final notificationCount = await authRepository.getUnreadNotificationCount(actualAdminId);
+        print('>>> Admin now has $notificationCount unread notifications');
+        
+      } catch (notifError) {
+        print('>>> ❌ ERROR sending notification: $notifError');
+        print('>>> Stack trace: ${StackTrace.current}');
+        _showSnackBar(
+          'Request rejected but notification failed: $notifError',
+          Colors.orange,
+        );
+      }
+      
+      _showSnackBar(
+        'Deletion request rejected. Notification sent to $clinicName.',
+        Colors.orange,
+      );
+      
+      await loadAllDeletionRequests();
+      
+      print('>>> ✅ Process complete');
+    } else {
+      _showSnackBar('Failed to reject request: ${result['error']}', Colors.red);
+      print('>>> ❌ Rejection failed: ${result['error']}');
+    }
+  } catch (e) {
+    print('>>> ❌ Error rejecting deletion request: $e');
+    print('>>> Stack trace: ${StackTrace.current}');
+    _showSnackBar('Error: $e', Colors.red);
+  } finally {
+    isProcessing.value = false;
+    print('>>> ============================================');
+  }
+}
   /// Delete a processed request
   Future<void> deleteProcessedRequest(FeedbackDeletionRequest request) async {
     try {
@@ -431,6 +644,87 @@ Future<void> approveDeletionRequest(
       isProcessing.value = false;
     }
   }
+
+  /// Debug method to verify clinic admin ID
+Future<void> _debugClinicAdminId(FeedbackDeletionRequest request) async {
+  print('>>> ============================================');
+  print('>>> DEBUGGING CLINIC ADMIN ID');
+  print('>>> ============================================');
+  print('>>> Request.clinicId (stored): ${request.clinicId}');
+  
+  // Check what's actually stored in the deletion request
+  try {
+    final requestDoc = await authRepository.appWriteProvider.databases!.getDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
+      documentId: request.documentId!,
+    );
+    
+    print('>>> Raw document data:');
+    print('>>>   - clinicId field: ${requestDoc.data['clinicId']}');
+    print('>>>   - userId field: ${requestDoc.data['userId']}');
+    print('>>>   - requestedBy field: ${requestDoc.data['requestedBy']}');
+  } catch (e) {
+    print('>>> Error fetching request document: $e');
+  }
+  
+  // Try to find the clinic by adminId
+  try {
+    print('>>> Attempting to find clinic by adminId: ${request.clinicId}');
+    final clinicByAdmin = await authRepository.getClinicByAdminId(request.clinicId);
+    
+    if (clinicByAdmin != null) {
+      print('>>> ✅ Found clinic by adminId:');
+      print('>>>   - Clinic Name: ${clinicByAdmin.data['clinicName']}');
+      print('>>>   - Clinic Doc ID: ${clinicByAdmin.$id}');
+      print('>>>   - Admin ID: ${clinicByAdmin.data['adminId']}');
+    } else {
+      print('>>> ❌ No clinic found by adminId: ${request.clinicId}');
+    }
+  } catch (e) {
+    print('>>> Error finding clinic by adminId: $e');
+  }
+  
+  // Try to find the clinic by document ID
+  try {
+    print('>>> Attempting to find clinic by document ID: ${request.clinicId}');
+    final clinicByDocId = await authRepository.getClinicById(request.clinicId);
+    
+    if (clinicByDocId != null) {
+      print('>>> ✅ Found clinic by document ID:');
+      print('>>>   - Clinic Name: ${clinicByDocId.data['clinicName']}');
+      print('>>>   - Admin ID: ${clinicByDocId.data['adminId']}');
+    } else {
+      print('>>> ❌ No clinic found by document ID: ${request.clinicId}');
+    }
+  } catch (e) {
+    print('>>> Error finding clinic by document ID: $e');
+  }
+  
+  // Check the review to see which clinic it belongs to
+  try {
+    print('>>> Checking review for clinic information...');
+    final review = await getReview(request.reviewId);
+    
+    if (review != null) {
+      print('>>> ✅ Found review:');
+      print('>>>   - Review Clinic ID: ${review.clinicId}');
+      
+      // Try to get clinic by review's clinicId
+      final reviewClinic = await authRepository.getClinicById(review.clinicId);
+      if (reviewClinic != null) {
+        print('>>> ✅ Found clinic from review:');
+        print('>>>   - Clinic Name: ${reviewClinic.data['clinicName']}');
+        print('>>>   - Admin ID: ${reviewClinic.data['adminId']}');
+        print('>>> ✅✅✅ THIS IS THE CORRECT ADMIN ID TO USE: ${reviewClinic.data['adminId']}');
+      }
+    }
+  } catch (e) {
+    print('>>> Error checking review: $e');
+  }
+  
+  print('>>> ============================================');
+}
 
   /// Get clinic name
   Future<String> getClinicName(String adminId) async {

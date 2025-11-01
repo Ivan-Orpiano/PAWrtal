@@ -2147,6 +2147,29 @@ class AuthRepository {
       metadata: metadata,
     );
   }
+    
+    /// Create deletion request notification
+  Future<void> createDeletionRequestNotification({
+    required String clinicAdminId,
+    required String title,
+    required String message,
+    required String status,
+    required String requestId,
+    String? clinicId,
+    String? reviewId,
+    Map<String, dynamic>? metadata,
+  }) {
+    return appWriteProvider.createDeletionRequestNotification(
+      clinicAdminId: clinicAdminId,
+      title: title,
+      message: message,
+      status: status,
+      requestId: requestId,
+      clinicId: clinicId,
+      reviewId: reviewId,
+      metadata: metadata,
+    );
+  }
 
   // Add this method to the AuthRepository class
   Future<void> migrateConversationStarters() {

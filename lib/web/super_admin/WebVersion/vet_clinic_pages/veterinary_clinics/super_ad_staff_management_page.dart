@@ -691,12 +691,12 @@ class _SuperAdminStaffManagementPageState
                 color: Colors.red[50],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.warning_rounded, color: Colors.red, size: 24),
+              child: const Icon(Icons.warning_rounded, color:  Color.fromRGBO(251, 140, 0, 1), size: 24),
             ),
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'Delete Staff Member',
+                'Archive Staff Member',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
@@ -707,7 +707,7 @@ class _SuperAdminStaffManagementPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to delete ${staff.name}?',
+              'Are you sure you want to archive ${staff.name}?',
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
@@ -716,15 +716,15 @@ class _SuperAdminStaffManagementPageState
               decoration: BoxDecoration(
                 color: Colors.red[50],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red[200]!),
+                border: Border.all(color: const Color.fromRGBO(239, 154, 154, 1)),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.red, size: 20),
+                  Icon(Icons.info_outline,  color: Color.fromRGBO(251, 140, 0, 1), size: 20),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'This action cannot be undone. The staff member will be permanently removed from the system.',
+                      'This action will keep the staff data in the system but will deactivate their account. They will no longer have access to the clinic system.',
                       style: TextStyle(fontSize: 13, color: Colors.red),
                     ),
                   ),
