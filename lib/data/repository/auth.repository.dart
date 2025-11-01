@@ -2087,11 +2087,13 @@ class AuthRepository {
   }
 
   Future<List<Map<String, dynamic>>> getPetMedicalAppointmentsAllClinics(
-      String petId) async {
+    String petId,
+  ) async {
+    // ... keep existing implementation unchanged ...
     try {
-      print('>>> REPOSITORY: Getting all medical appointments for pet: $petId');
+      print('>>> REPOSITORY: Getting ALL medical appointments (Super Admin)');
+      print('>>> Pet ID: $petId');
 
-      // Get the pet document to find both petId and name
       final petDoc = await getPetById(petId);
       String? petName;
 
@@ -2105,14 +2107,11 @@ class AuthRepository {
       final rawAppointments =
           await appWriteProvider.getPetMedicalAppointmentsAllClinics(petId);
 
-      // Enrich appointments with clinic information
       List<Map<String, dynamic>> enrichedAppointments = [];
 
       for (var appointmentData in rawAppointments) {
         try {
           final clinicId = appointmentData['clinicId'];
-
-          // Fetch clinic details
           final clinicDoc = await appWriteProvider.getClinicById(clinicId);
 
           if (clinicDoc != null) {
@@ -2131,7 +2130,6 @@ class AuthRepository {
           enrichedAppointments.add(appointmentData);
         } catch (e) {
           print('>>> Error enriching appointment: $e');
-          // Add appointment even if clinic fetch fails
           appointmentData['clinicName'] = 'Unknown Clinic';
           appointmentData['clinicAddress'] = 'N/A';
           appointmentData['clinicContact'] = 'N/A';
@@ -2609,6 +2607,61 @@ class AuthRepository {
         'isValid': false,
         'error': 'Validation failed: ${e.toString()}',
       };
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPetMedicalAppointmentsByClinic(
+    String petId,
+    String clinicId,
+  ) async {
+    try {
+      print('>>> REPOSITORY: Getting clinic-specific medical appointments');
+      print('>>> Pet ID: $petId');
+      print('>>> Clinic ID: $clinicId');
+
+      final rawAppointments = await appWriteProvider
+          .getPetMedicalAppointmentsByClinic(petId, clinicId);
+
+      // Enrich with clinic information
+      List<Map<String, dynamic>> enrichedAppointments = [];
+
+      for (var appointmentData in rawAppointments) {
+        try {
+          final clinicId = appointmentData['clinicId'];
+
+          // Fetch clinic details
+          final clinicDoc = await appWriteProvider.getClinicById(clinicId);
+
+          if (clinicDoc != null) {
+            appointmentData['clinicName'] =
+                clinicDoc.data['clinicName'] ?? 'Unknown Clinic';
+            appointmentData['clinicAddress'] =
+                clinicDoc.data['address'] ?? 'N/A';
+            appointmentData['clinicContact'] =
+                clinicDoc.data['contact'] ?? 'N/A';
+          } else {
+            appointmentData['clinicName'] = 'Unknown Clinic';
+            appointmentData['clinicAddress'] = 'N/A';
+            appointmentData['clinicContact'] = 'N/A';
+          }
+
+          enrichedAppointments.add(appointmentData);
+        } catch (e) {
+          print('>>> Error enriching appointment: $e');
+          appointmentData['clinicName'] = 'Unknown Clinic';
+          appointmentData['clinicAddress'] = 'N/A';
+          appointmentData['clinicContact'] = 'N/A';
+          enrichedAppointments.add(appointmentData);
+        }
+      }
+
+      print(
+          '>>> Successfully enriched ${enrichedAppointments.length} appointments for clinic');
+
+      return enrichedAppointments;
+    } catch (e) {
+      print('>>> REPOSITORY: Error getting clinic-specific appointments: $e');
+      return [];
     }
   }
 }

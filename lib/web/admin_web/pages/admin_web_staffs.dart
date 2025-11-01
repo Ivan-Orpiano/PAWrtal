@@ -71,6 +71,8 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   }
 
   Future<void> _loadClinicAndStaff() async {
+    if (!mounted) return; // Add this check at the start
+
     setState(() => _isLoading = true);
 
     try {
@@ -96,20 +98,29 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       if (_clinic != null) {
         final staff =
             await _authRepository.getClinicStaff(_clinic!.documentId!);
-        setState(() {
-          staffList = staff;
-        });
+        if (mounted) {
+          // Add mounted check before setState
+          setState(() {
+            staffList = staff;
+          });
+        }
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to load staff: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (mounted) {
+        // Add mounted check before showing snackbar
+        Get.snackbar(
+          'Error',
+          'Failed to load staff: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        // Already has this check, but ensure it's correct
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -122,7 +133,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     Uint8List? imageBytes,
     String password,
   ) async {
-    if (_clinic == null) return;
+    if (_clinic == null || !mounted) return; // Add mounted check
 
     try {
       String imageUrl = '';
@@ -136,14 +147,17 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           final uploadedImage = await _authRepository.uploadImage(inputFile);
           imageUrl = _authRepository.getImageUrl(uploadedImage.$id);
         } catch (e) {
-          Get.snackbar(
-            'Warning',
-            'Failed to upload image, continuing without photo.',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: vetOrange,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
+          if (mounted) {
+            // Add mounted check
+            Get.snackbar(
+              'Warning',
+              'Failed to upload image, continuing without photo.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: vetOrange,
+              colorText: Colors.white,
+              duration: const Duration(seconds: 3),
+            );
+          }
         }
       }
 
@@ -161,30 +175,38 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
       if (result['success'] == true) {
         await _loadClinicAndStaff();
-        Get.snackbar(
-          'Success',
-          'Staff account created successfully! $name has been added.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: vetGreen,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
-          icon: const Icon(Icons.check_circle, color: Colors.white),
-        );
+        if (mounted) {
+          // Add mounted check
+          Get.snackbar(
+            'Success',
+            'Staff account created successfully! $name has been added.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: vetGreen,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 4),
+            icon: const Icon(Icons.check_circle, color: Colors.white),
+          );
+        }
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to create staff: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 5),
-      );
+      if (mounted) {
+        // Add mounted check
+        Get.snackbar(
+          'Error',
+          'Failed to create staff: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+      }
     }
   }
 
   Future<void> _updateStaffAuthorities(
       StaffModel.Staff staff, List<String> newAuthorities) async {
+    if (!mounted) return; // Add mounted check
+
     try {
       await _authRepository.updateStaffAuthorities(
         staff.documentId!,
@@ -192,25 +214,33 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       );
       await _loadClinicAndStaff();
 
-      Get.snackbar(
-        'Success',
-        'Permissions updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: vetGreen,
-        colorText: Colors.white,
-      );
+      if (mounted) {
+        // Add mounted check
+        Get.snackbar(
+          'Success',
+          'Permissions updated successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: vetGreen,
+          colorText: Colors.white,
+        );
+      }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to update permissions: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (mounted) {
+        // Add mounted check
+        Get.snackbar(
+          'Error',
+          'Failed to update permissions: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     }
   }
 
   Future<void> _removeStaff(StaffModel.Staff staff) async {
+    if (!mounted) return; // Add mounted check
+
     try {
       await _authRepository.deactivateStaffAccount(
         staff.documentId!,
@@ -219,21 +249,27 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
       await _loadClinicAndStaff();
 
-      Get.snackbar(
-        'Success',
-        'Staff account deactivated',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: vetOrange,
-        colorText: Colors.white,
-      );
+      if (mounted) {
+        // Add mounted check
+        Get.snackbar(
+          'Success',
+          'Staff account deactivated',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: vetOrange,
+          colorText: Colors.white,
+        );
+      }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to remove staff: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (mounted) {
+        // Add mounted check
+        Get.snackbar(
+          'Error',
+          'Failed to remove staff: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     }
   }
 
