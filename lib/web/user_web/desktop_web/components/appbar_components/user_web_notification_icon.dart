@@ -152,7 +152,8 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
                   icon: const Icon(Icons.done_all, size: 16),
                   label: const Text('Mark all read'),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
                 );
               }),
@@ -161,7 +162,8 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
                 onPressed: () {
                   _showSettingsDialog();
                 },
-                icon: Icon(Icons.settings_outlined, size: 20, color: Colors.grey[700]),
+                icon: Icon(Icons.settings_outlined,
+                    size: 20, color: Colors.grey[700]),
                 tooltip: "Notification Settings",
                 padding: const EdgeInsets.all(8),
               ),
@@ -252,7 +254,8 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete Notification'),
-            content: const Text('Are you sure you want to delete this notification?'),
+            content: const Text(
+                'Are you sure you want to delete this notification?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -261,7 +264,8 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -349,8 +353,10 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
                               color: Colors.grey[500],
                             ),
                           ),
-                          if (notification.priority == NotificationPriority.high ||
-                              notification.priority == NotificationPriority.urgent) ...[
+                          if (notification.priority ==
+                                  NotificationPriority.high ||
+                              notification.priority ==
+                                  NotificationPriority.urgent) ...[
                             const SizedBox(width: 12),
                             // Container(
                             //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -406,6 +412,10 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
         icon = Icons.done_all;
         color = Colors.green;
         break;
+      case NotificationType.appointmentReminder: // NEW
+        icon = Icons.alarm;
+        color = const Color.fromARGB(255, 255, 167, 38); // Orange/Amber
+        break;
       case NotificationType.message:
         icon = Icons.message;
         color = Colors.purple;
@@ -440,7 +450,7 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
               subtitle: const Text('Delete all notifications'),
               onTap: () async {
                 Navigator.of(context).pop();
-                
+
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -455,8 +465,10 @@ class _WebNotificationIconState extends State<WebNotificationIcon> {
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        child: const Text('Delete All', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red),
+                        child: const Text('Delete All',
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),

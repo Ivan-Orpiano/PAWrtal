@@ -2,6 +2,7 @@
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
+import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
@@ -49,6 +50,16 @@ Future<void> initializeDependencies() async {
     permanent: true,
   );
   print('>>> ✓ In-App Notification Service registered (will initialize after login)');
+
+  Get.put(
+    AppointmentReminderService(
+      authRepository: Get.find<AuthRepository>(),
+      appwriteProvider: Get.find<AppWriteProvider>(),
+      session: Get.find<UserSessionService>(),
+    ),
+    permanent: true,
+  );
+  print('>>> ✓ Appointment Reminder Service initialized and running');
 
   Get.put(DashboardController());
   Get.put(MessagingController());

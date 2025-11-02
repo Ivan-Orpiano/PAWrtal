@@ -53,6 +53,7 @@ class AdminDashboardController extends GetxController {
   var isSendingMessage = false.obs;
   final messageController = TextEditingController();
   final scrollController = ScrollController();
+  final appointmentController = Get.find<WebAppointmentController>();
 
   var petProfilePictures = <String, String?>{}.obs;
   var petImageLoadingStates = <String, bool>{}.obs;
@@ -1593,8 +1594,7 @@ class AdminDashboardController extends GetxController {
 
   Future<void> quickAcceptAppointment(Appointment appointment) async {
     try {
-      await authRepository.updateAppointmentStatus(
-          appointment.documentId!, 'accepted');
+      await appointmentController.acceptAppointment(appointment);
       Get.snackbar("Success", "Appointment accepted!");
     } catch (e) {
       Get.snackbar("Error", "Failed to accept appointment: $e");
@@ -1617,8 +1617,6 @@ class AdminDashboardController extends GetxController {
         if (filter != null) {
           Future.delayed(const Duration(milliseconds: 100), () {
             try {
-              final appointmentController =
-                  Get.find<WebAppointmentController>();
               appointmentController.setSelectedTab(filter);
             } catch (e) {
               print("Appointment controller not ready for filter: $filter");
@@ -2022,10 +2020,7 @@ class AdminDashboardController extends GetxController {
   Future<void> quickDeclineAppointment(
       Appointment appointment, String reason) async {
     try {
-      await authRepository.updateAppointmentStatus(
-        appointment.documentId!,
-        'declined',
-      );
+      await appointmentController.declineAppointment(appointment, reason);
 
       // Update the appointment in the local list if needed
       final index = appointments

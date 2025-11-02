@@ -182,9 +182,11 @@ class _NotificationPageState extends State<NotificationPage> {
         return await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Delete Notification'),
-            content: const Text('Are you sure you want to delete this notification?'),
+            content: const Text(
+                'Are you sure you want to delete this notification?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -194,9 +196,11 @@ class _NotificationPageState extends State<NotificationPage> {
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -293,8 +297,10 @@ class _NotificationPageState extends State<NotificationPage> {
                               color: Colors.grey[500],
                             ),
                           ),
-                          if (notification.priority == NotificationPriority.high ||
-                              notification.priority == NotificationPriority.urgent) ...[
+                          if (notification.priority ==
+                                  NotificationPriority.high ||
+                              notification.priority ==
+                                  NotificationPriority.urgent) ...[
                             const SizedBox(width: 12),
                             // Container(
                             //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -350,9 +356,21 @@ class _NotificationPageState extends State<NotificationPage> {
         icon = Icons.done_all;
         color = Colors.green;
         break;
+      case NotificationType.appointmentReminder: // NEW
+        icon = Icons.alarm;
+        color = const Color.fromARGB(255, 255, 167, 38); // Orange/Amber
+        break;
       case NotificationType.message:
         icon = Icons.message;
         color = Colors.purple;
+        break;
+      case NotificationType.deletionRequestApproved:
+        icon = Icons.check_circle_outline;
+        color = Colors.green;
+        break;
+      case NotificationType.deletionRequestRejected:
+        icon = Icons.cancel_outlined;
+        color = Colors.red;
         break;
       default:
         icon = Icons.notifications;
@@ -362,7 +380,7 @@ class _NotificationPageState extends State<NotificationPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1  ),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, size: 24, color: color),
@@ -390,7 +408,8 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
             const SizedBox(height: 24),
             ListTile(
-              leading: const Icon(Icons.done_all, color: Color.fromARGB(255, 81, 115, 153)),
+              leading: const Icon(Icons.done_all,
+                  color: Color.fromARGB(255, 81, 115, 153)),
               title: const Text('Mark all as read'),
               onTap: () async {
                 Navigator.pop(context);
@@ -410,11 +429,12 @@ class _NotificationPageState extends State<NotificationPage> {
               title: const Text('Clear all notifications'),
               onTap: () async {
                 Navigator.pop(context);
-                
+
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                     title: const Text('Clear All Notifications'),
                     content: const Text(
                       'Are you sure you want to delete all notifications? This cannot be undone.',
@@ -428,9 +448,11 @@ class _NotificationPageState extends State<NotificationPage> {
                         onPressed: () => Navigator.of(context).pop(true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('Delete All', style: TextStyle(color: Colors.white)),
+                        child: const Text('Delete All',
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
