@@ -1,3 +1,6 @@
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_clinicpage.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_dashboard.dart';
@@ -18,16 +21,42 @@ class WebAdminHomeController extends GetxController {
   final RxList<Widget> pages = <Widget>[].obs;
   final RxList<String> navigationLabels = <String>[].obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-    print('>>> ============================================');
-    print('>>> WebAdminHomeController: Initializing...');
-    print('>>> ============================================');
+@override
+void onInit() {
+  super.onInit();
+  print('>>> ============================================');
+  print('>>> WebAdminHomeController: Initializing...');
+  print('>>> ============================================');
 
-    _loadUserRole();
-    _buildNavigationBasedOnPermissions();
+  _loadUserRole();
+  _buildNavigationBasedOnPermissions();
+  
+  // 🔧 FIX: Register WebAppointmentController early
+  _registerControllers();
+}
+
+// 🆕 ADD THIS METHOD
+void _registerControllers() {
+  try {
+    print('>>> Registering required controllers...');
+    
+    // Register WebAppointmentController if not already registered
+    if (!Get.isRegistered<WebAppointmentController>()) {
+      Get.put(
+        WebAppointmentController(
+          authRepository: Get.find<AuthRepository>(),
+          session: Get.find<UserSessionService>(),
+        ),
+        permanent: true, // Keep it alive
+      );
+      print('>>> ✅ WebAppointmentController registered');
+    } else {
+      print('>>> ℹ️ WebAppointmentController already registered');
+    }
+  } catch (e) {
+    print('>>> ❌ Error registering controllers: $e');
   }
+}
 
   void _loadUserRole() {
     print('>>> Loading user role from storage...');
