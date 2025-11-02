@@ -1069,10 +1069,14 @@ class WebAppointmentController extends GetxController {
         // Only check accepted appointments
         if (apt.status != 'accepted') return false;
 
-        // Check if same date and time (within 30-minute window)
-        final timeDifference =
-            apt.dateTime.difference(dateTime).inMinutes.abs();
-        return timeDifference < 30; // 30-minute slots
+        //   // Check if same date and time (within 30-minute window)
+        //   final timeDifference =
+        //       apt.dateTime.difference(dateTime).inMinutes.abs();
+        //   return timeDifference != 0;
+        // }).toList();
+
+        // Check if appointment time is exactly the same
+        return apt.dateTime.isAtSameMomentAs(dateTime);
       }).toList();
 
       return conflictingAppointments.isEmpty;
