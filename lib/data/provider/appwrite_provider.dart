@@ -4267,138 +4267,143 @@ class AppWriteProvider {
   // ============= ARCHIVE USER METHODS (SOFT DELETE) =============
 
   /// Archive user (soft delete) - moves to archived collection
-  Future<Map<String, dynamic>> archiveUser({
-    required String userId,
-    required String userDocumentId,
-    required String archivedBy,
-    String archiveReason = 'No reason provided',
-  }) async {
-    try {
-      print('>>> ============================================');
-      print('>>> ARCHIVING USER (SOFT DELETE)');
-      print('>>> User ID: $userId');
-      print('>>> Document ID: $userDocumentId');
-      print('>>> ============================================');
-
-      // Step 1: Get original user document
-      final userDoc = await databases!.getDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.usersCollectionID,
-        documentId: userDocumentId,
-      );
-
-      print('>>> Step 1: Original user retrieved');
-      // Step 2: Prepare archived user data with compressed original data
-      final now = DateTime.now();
-      final scheduledDeletion = now.add(const Duration(days: 30));
-
-      // Store ONLY essential data to avoid size limits
-      final Map<String, dynamic> essentialUserData = {
-        'userId': userDoc.data['userId'] ?? userId,
-        'name': userDoc.data['name'] ?? '',
-        'email': userDoc.data['email'] ?? '',
-        'role': userDoc.data['role'] ?? 'user',
-        'phone': userDoc.data['phone'] ?? '',
-        'profilePictureId': userDoc.data['profilePictureId'] ?? '',
-        // CRITICAL: Store verification status
-        'idVerified': userDoc.data['idVerified'] ?? false,
-        'idVerifiedAt': userDoc.data['idVerifiedAt'],
-        // NEW: Store verification document ID if exists
-        'verificationDocumentId': userDoc.data['verificationDocumentId'],
-      };
-
-      // Convert to JSON string (Appwrite requires string for 65535 char limit)
-      String originalUserDataJson;
+      Future<Map<String, dynamic>> archiveUser({
+      required String userId,
+      required String userDocumentId,
+      required String archivedBy,
+      String archiveReason = 'No reason provided',
+    }) async {
       try {
-        originalUserDataJson = jsonEncode(essentialUserData);
-        print(
-            '>>> Original user data JSON size: ${originalUserDataJson.length} chars');
+        print('>>> ============================================');
+        print('>>> ARCHIVING USER (SOFT DELETE - DATA PRESERVED)');
+        print('>>> User ID: $userId');
+        print('>>> Document ID: $userDocumentId');
+        print('>>> ============================================');
 
-        // Validate size (must be <= 65535 chars)
-        if (originalUserDataJson.length > 65535) {
-          print('>>> WARNING: User data too large, storing minimal data only');
-          // Fallback to absolute minimum
-          final minimalData = {
+        // Step 1: Get original user document
+        final userDoc = await databases!.getDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.usersCollectionID,
+          documentId: userDocumentId,
+        );
+
+        print('>>> Step 1: Original user retrieved');
+        
+        // Step 2: Prepare archived user data with compressed original data
+        final now = DateTime.now();
+        final scheduledDeletion = now.add(const Duration(days: 30));
+
+        // Store ONLY essential data to avoid size limits
+        final Map<String, dynamic> essentialUserData = {
+          'userId': userDoc.data['userId'] ?? userId,
+          'name': userDoc.data['name'] ?? '',
+          'email': userDoc.data['email'] ?? '',
+          'role': userDoc.data['role'] ?? 'user',
+          'phone': userDoc.data['phone'] ?? '',
+          'profilePictureId': userDoc.data['profilePictureId'] ?? '',
+          'idVerified': userDoc.data['idVerified'] ?? false,
+          'idVerifiedAt': userDoc.data['idVerifiedAt'],
+          'verificationDocumentId': userDoc.data['verificationDocumentId'],
+        };
+
+        String originalUserDataJson;
+        try {
+          originalUserDataJson = jsonEncode(essentialUserData);
+          print('>>> Original user data JSON size: ${originalUserDataJson.length} chars');
+
+          if (originalUserDataJson.length > 65535) {
+            print('>>> WARNING: User data too large, storing minimal data only');
+            final minimalData = {
+              'userId': userId,
+              'name': userDoc.data['name'] ?? '',
+              'email': userDoc.data['email'] ?? '',
+              'role': userDoc.data['role'] ?? 'user',
+            };
+            originalUserDataJson = jsonEncode(minimalData);
+          }
+
+          print('>>> Final JSON size: ${originalUserDataJson.length} chars');
+        } catch (e) {
+          print('>>> ERROR encoding user data to JSON: $e');
+          originalUserDataJson = jsonEncode({
             'userId': userId,
-            'name': userDoc.data['name'] ?? '',
             'email': userDoc.data['email'] ?? '',
-            'role': userDoc.data['role'] ?? 'user',
-          };
-          originalUserDataJson = jsonEncode(minimalData);
+          });
         }
 
-        print('>>> Final JSON size: ${originalUserDataJson.length} chars');
-      } catch (e) {
-        print('>>> ERROR encoding user data to JSON: $e');
-        // Absolute fallback
-        originalUserDataJson = jsonEncode({
+        final archivedUserData = {
           'userId': userId,
+          'name': userDoc.data['name'] ?? '',
           'email': userDoc.data['email'] ?? '',
-        });
-      }
+          'role': userDoc.data['role'] ?? 'user',
+          'phone': userDoc.data['phone'] ?? '',
+          'originalDocumentId': userDocumentId,
+          'archivedBy': archivedBy,
+          'archivedAt': now.toIso8601String(),
+          'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
+          'archiveReason': archiveReason,
+          'isPermanentlyDeleted': false,
+          'originalUserData': originalUserDataJson,
+          'isRecovered': false,
+        };
 
-      final archivedUserData = {
-        'userId': userId,
-        'name': userDoc.data['name'] ?? '',
-        'email': userDoc.data['email'] ?? '',
-        'role': userDoc.data['role'] ?? 'user',
-        'phone': userDoc.data['phone'] ?? '',
-        'originalDocumentId': userDocumentId,
-        'archivedBy': archivedBy,
-        'archivedAt': now.toIso8601String(),
-        'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
-        'archiveReason': archiveReason,
-        'isPermanentlyDeleted': false,
-        'originalUserData': originalUserDataJson, // STRING, not Map
-        'isRecovered': false,
-      };
+        // CRITICAL: Create archived record first
+        final archivedDoc = await databases!.createDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.archivedUsersCollectionID,
+          documentId: ID.unique(),
+          data: archivedUserData,
+        );
 
-      final archivedDoc = await databases!.createDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.archivedUsersCollectionID,
-        documentId: ID.unique(),
-        data: archivedUserData,
-      );
+        print('>>> Step 2: Archived record created: ${archivedDoc.$id}');
 
-      // Step 3: DELETE the original user document completely from Users collection
+        // ============================================
+        // CRITICAL CHANGE: ONLY DELETE USER DOCUMENT
+        // DO NOT DELETE RELATED DATA (pets, appointments, etc.)
+        // ============================================
+        print('>>> Step 3: Deleting ONLY user document from Users collection...');
+        
+        await databases!.deleteDocument(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.usersCollectionID,
+          documentId: userDocumentId,
+        );
+        
+        print('>>> ✓ User document deleted');
+        print('>>> ⚠️ IMPORTANT: All related data (pets, appointments, records) PRESERVED');
+        print('>>> These will be deleted during permanent deletion after 30 days');
 
-      await databases!.deleteDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.usersCollectionID,
-        documentId: userDocumentId,
-      );
+        // Step 4: Deactivate user account (prevent login)
+        try {
+          print('>>> Step 4: User account deactivated');
+        } catch (e) {
+          print('>>> Warning: Could not deactivate user account: $e');
+        }
 
-      // Step 4: Deactivate user account (prevent login)
-      try {
-        // Update user preferences to block access
-        print('>>> Step 4: User account deactivated');
+        print('>>> ============================================');
+        print('>>> USER ARCHIVED SUCCESSFULLY (DATA PRESERVED)');
+        print('>>> Scheduled deletion: $scheduledDeletion');
+        print('>>> All user data will remain accessible for 30 days');
+        print('>>> ============================================');
+
+        return {
+          'success': true,
+          'archivedDocumentId': archivedDoc.$id,
+          'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
+          'message':
+              'User archived successfully. All data preserved for 30 days before permanent deletion.',
+        };
       } catch (e) {
-        print('>>> Warning: Could not deactivate user account: $e');
+        print('>>> ============================================');
+        print('>>> ERROR ARCHIVING USER: $e');
+        print('>>> Stack trace: ${StackTrace.current}');
+        print('>>> ============================================');
+        return {
+          'success': false,
+          'error': e.toString(),
+        };
       }
-
-      print('>>> ============================================');
-      print('>>> USER ARCHIVED SUCCESSFULLY');
-      print('>>> Scheduled deletion: $scheduledDeletion');
-      print('>>> ============================================');
-
-      return {
-        'success': true,
-        'archivedDocumentId': archivedDoc.$id,
-        'scheduledDeletionAt': scheduledDeletion.toIso8601String(),
-        'message':
-            'User archived successfully. Will be permanently deleted in 30 days.',
-      };
-    } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR ARCHIVING USER: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
     }
-  }
 
   /// Get archived user by userId
   Future<Document?> getArchivedUserByUserId(String userId) async {
