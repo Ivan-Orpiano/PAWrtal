@@ -43,9 +43,9 @@ class MobileOAuthHandler {
         print('>>> Error getting initial URI: $e');
       }
 
-      print('>>> Mobile OAuth handler initialized');
+      print('>>> ✅ Mobile OAuth handler initialized');
     } catch (e) {
-      print('>>> Error initializing OAuth handler: $e');
+      print('>>> ❌ Error initializing OAuth handler: $e');
     }
   }
 
@@ -53,53 +53,89 @@ class MobileOAuthHandler {
   static Future<void> _handleDeepLink(Uri uri) async {
     try {
       print('>>> ============================================');
-      print('>>> HANDLING OAUTH CALLBACK');
+      print('>>> HANDLING OAUTH DEEP LINK');
       print('>>> URI: $uri');
       print('>>> Scheme: ${uri.scheme}');
       print('>>> Host: ${uri.host}');
       print('>>> Path: ${uri.path}');
       print('>>> ============================================');
 
-      // Check if it's our OAuth callback
+      // Check if it's our OAuth callback (pawrtal://auth/success or pawrtal://auth/failure)
       if (uri.scheme == 'pawrtal' && uri.host == 'auth') {
-        if (uri.path == '/success') {
+        if (uri.path == '/success' || uri.path.isEmpty || uri.path == '/') {
+          // Success path
           await _handleOAuthSuccess();
         } else if (uri.path == '/failure') {
+          // Failure path
           _handleOAuthFailure();
+        } else {
+          print('>>> Unknown OAuth path: ${uri.path}');
         }
+      } else {
+        print('>>> Not an OAuth deep link, ignoring');
       }
     } catch (e) {
-      print('>>> Error handling deep link: $e');
+      print('>>> ❌ Error handling deep link: $e');
       _handleOAuthFailure();
     }
   }
 
-  /// Handle successful OAuth
+  /// Handle successful OAuth with retry logic
   static Future<void> _handleOAuthSuccess() async {
     try {
-      print('>>> OAuth SUCCESS - Processing...');
+      print('>>> ============================================');
+      print('>>> OAUTH SUCCESS - Processing...');
+      print('>>> ============================================');
 
-      // Wait for Appwrite session to be established
-      await Future.delayed(const Duration(milliseconds: 2000));
+      // Show loading in UI
+      Get.dialog(
+        WillPopScope(
+          onWillPop: () async => false,
+          child: const Center(
+            child: Card(
+              margin: EdgeInsets.all(32),
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Completing Google Sign-In...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      // CRITICAL: Wait for session with retry logic
+      await _waitForSession();
 
       final appwriteProvider = Get.find<AppWriteProvider>();
       final authRepository = Get.find<AuthRepository>();
 
       // Get authenticated user
+      print('>>> Getting authenticated user...');
       final user = await appwriteProvider.account!.get();
 
       if (user == null) {
         throw Exception('User not found after OAuth');
       }
 
-      print('>>> User authenticated: ${user.email}');
+      print('>>> ✅ User authenticated: ${user.email}');
 
       // Get session
+      print('>>> Getting session...');
       final session = await appwriteProvider.account!.getSession(
         sessionId: 'current',
       );
+      print('>>> ✅ Session ID: ${session.$id}');
 
       // Check if user exists in database
+      print('>>> Checking database...');
       final existingUserDoc = await authRepository.getUserById(user.$id);
 
       if (existingUserDoc == null) {
@@ -123,13 +159,14 @@ class MobileOAuthHandler {
         });
 
         await _storage.write('userDocumentId', newUserDoc.$id);
-        print('>>> User created: ${newUserDoc.$id}');
+        print('>>> ✅ User created: ${newUserDoc.$id}');
       } else {
-        print('>>> User exists: ${existingUserDoc.$id}');
+        print('>>> ✅ User exists: ${existingUserDoc.$id}');
         await _storage.write('userDocumentId', existingUserDoc.$id);
 
         // Get profile picture if exists
-        final profilePictureId = existingUserDoc.data['profilePictureId'] as String?;
+        final profilePictureId =
+            existingUserDoc.data['profilePictureId'] as String?;
         if (profilePictureId != null && profilePictureId.isNotEmpty) {
           await _storage.write('userProfilePictureId', profilePictureId);
         }
@@ -142,9 +179,22 @@ class MobileOAuthHandler {
       await _storage.write('userName', user.name);
       await _storage.write('role', 'user');
 
-      print('>>> Session stored, navigating to home...');
+      print('>>> ============================================');
+      print('>>> STORAGE SUMMARY:');
+      print('>>> - userId: ${_storage.read("userId")}');
+      print('>>> - sessionId: ${_storage.read("sessionId")}');
+      print('>>> - email: ${_storage.read("email")}');
+      print('>>> - userName: ${_storage.read("userName")}');
+      print('>>> - role: ${_storage.read("role")}');
+      print('>>> ============================================');
+
+      // Close loading dialog
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
 
       // Navigate to user home
+      print('>>> Navigating to home...');
       Get.offAllNamed(Routes.userHome);
 
       // Show success message
@@ -157,16 +207,68 @@ class MobileOAuthHandler {
         duration: const Duration(seconds: 3),
       );
 
-      print('>>> OAuth flow completed successfully');
-    } catch (e) {
-      print('>>> Error in OAuth success handler: $e');
+      print('>>> ✅ OAuth flow completed successfully!');
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ❌ Error in OAuth success handler: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+
+      // Close loading dialog if open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
       _handleOAuthFailure();
+    }
+  }
+
+  /// Wait for OAuth session to be established with retry logic
+  static Future<void> _waitForSession() async {
+    const maxAttempts = 5;
+    const initialDelay = Duration(milliseconds: 1000);
+
+    final appwriteProvider = Get.find<AppWriteProvider>();
+
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        print(
+            '>>> ⏳ Waiting for session... Attempt ${attempt + 1}/$maxAttempts');
+
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        final delay = initialDelay * (1 << attempt);
+        await Future.delayed(delay);
+
+        // Try to get the user - this will throw if session not ready
+        final user = await appwriteProvider.account!.get();
+
+        if (user != null) {
+          print('>>> ✅ Session is ready!');
+          return;
+        }
+      } catch (e) {
+        print('>>> ⏳ Session not ready yet: $e');
+
+        if (attempt == maxAttempts - 1) {
+          // Last attempt failed
+          throw Exception(
+              'Session timeout: Could not establish OAuth session after $maxAttempts attempts');
+        }
+      }
     }
   }
 
   /// Handle OAuth failure
   static void _handleOAuthFailure() {
-    print('>>> OAuth FAILED');
+    print('>>> ============================================');
+    print('>>> ❌ OAUTH FAILED');
+    print('>>> ============================================');
+
+    // Close any open dialogs
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
+    }
 
     Get.offAllNamed(Routes.login);
 
@@ -184,5 +286,6 @@ class MobileOAuthHandler {
   static void dispose() {
     _linkSubscription?.cancel();
     _linkSubscription = null;
+    print('>>> Mobile OAuth handler disposed');
   }
 }

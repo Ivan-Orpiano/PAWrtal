@@ -22,7 +22,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
   void initState() {
     super.initState();
     
-    // Initialize providers
     _appwriteProvider = Get.find<AppWriteProvider>();
     _authRepository = Get.find<AuthRepository>();
     
@@ -36,15 +35,16 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       print('>>> Current URL: ${Uri.base}');
       print('>>> ============================================');
 
-      // Wait for Appwrite session to be fully established
-      await Future.delayed(const Duration(milliseconds: 2000));
+      // CRITICAL FIX: Wait longer and retry with exponential backoff
+      // This fixes the 401 error on deployed sites
+      await _waitForSession();
 
       // Step 1: Get authenticated user from Appwrite Auth
       print('>>> Step 1: Getting authenticated user...');
       final user = await _appwriteProvider.account!.get();
 
       if (user == null) {
-        throw Exception('❌ User not found in Appwrite Auth after OAuth');
+        throw Exception('User not found in Appwrite Auth after OAuth');
       }
 
       print('>>> ✅ User authenticated via OAuth');
@@ -63,17 +63,16 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
 
       if (existingUserDoc == null) {
         print('>>> ❌ User NOT found in database');
-        print('>>> 📝 Creating new user record in Users collection...');
+        print('>>> 🔨 Creating new user record in Users collection...');
 
-        // CRITICAL: Create user in database
         try {
           final newUserDoc = await _authRepository.createUser({
             "userId": user.$id,
             "name": user.name,
             "email": user.email,
-            "role": "user", // Default role for Google OAuth users
-            "phone": "", // Empty for OAuth users
-            "profilePictureId": "", // Will be set later if user uploads
+            "role": "user",
+            "phone": "",
+            "profilePictureId": "",
             "idVerified": false,
             "idVerifiedAt": null,
             "verificationDocumentId": null,
@@ -87,7 +86,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
           print('>>> ✅ User created in database successfully!');
           print('>>> Document ID: ${newUserDoc.$id}');
           
-          // Store document ID
           await _storage.write('userDocumentId', newUserDoc.$id);
           
         } catch (createError) {
@@ -99,10 +97,8 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         print('>>> User Document ID: ${existingUserDoc.$id}');
         print('>>> Existing Role: ${existingUserDoc.data['role']}');
         
-        // Store document ID
         await _storage.write('userDocumentId', existingUserDoc.$id);
         
-        // Get profile picture if exists
         final profilePictureId = existingUserDoc.data['profilePictureId'] as String?;
         if (profilePictureId != null && profilePictureId.isNotEmpty) {
           await _storage.write('userProfilePictureId', profilePictureId);
@@ -116,7 +112,7 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       await _storage.write('sessionId', session.$id);
       await _storage.write('email', user.email);
       await _storage.write('userName', user.name);
-      await _storage.write('role', 'user'); // OAuth users are always "user" role
+      await _storage.write('role', 'user');
 
       print('>>> ============================================');
       print('>>> STORAGE SUMMARY:');
@@ -131,10 +127,8 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       // Step 5: Navigate to user home
       print('>>> Step 5: Navigating to home...');
       
-      // Small delay for better UX
       await Future.delayed(const Duration(milliseconds: 500));
       
-      // Navigate and clear navigation stack
       Get.offAllNamed(Routes.userHome);
       
       print('>>> ✅ OAuth flow completed successfully!');
@@ -147,71 +141,106 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       print('>>> Stack trace: $stackTrace');
       print('>>> ============================================');
 
-      // Show error dialog
-      Get.dialog(
-        Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 64,
+      _showErrorDialog();
+    }
+  }
+
+  /// CRITICAL FIX: Wait for session with retry logic
+  /// This fixes the 401 error on deployed sites
+  Future<void> _waitForSession() async {
+    const maxAttempts = 5;
+    const initialDelay = Duration(milliseconds: 1000);
+    
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        print('>>> Waiting for session... Attempt ${attempt + 1}/$maxAttempts');
+        
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        final delay = initialDelay * (1 << attempt);
+        await Future.delayed(delay);
+        
+        // Try to get the user - this will throw if session not ready
+        final user = await _appwriteProvider.account!.get();
+        
+        if (user != null) {
+          print('>>> ✅ Session is ready!');
+          return;
+        }
+      } catch (e) {
+        print('>>> ⏳ Session not ready yet: $e');
+        
+        if (attempt == maxAttempts - 1) {
+          // Last attempt failed
+          throw Exception('Session timeout: Could not establish OAuth session after $maxAttempts attempts');
+        }
+      }
+    }
+  }
+
+  void _showErrorDialog() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Authentication Failed',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Authentication Failed',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Failed to complete Google Sign-In. Please try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Failed to complete Google Sign-In. Please try again.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    onPressed: () {
-                      Get.back(); // Close dialog
-                      Get.offAllNamed(Routes.login); // Go to login
-                    },
-                    child: const Text(
-                      'Back to Login',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
+                  ),
+                  onPressed: () {
+                    Get.back();
+                    Get.offAllNamed(Routes.login);
+                  },
+                  child: const Text(
+                    'Back to Login',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-        barrierDismissible: false,
-      );
-    }
+      ),
+      barrierDismissible: false,
+    );
   }
 
   @override
@@ -222,7 +251,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo
             Image.asset(
               'lib/images/PAWrtal_logo.png',
               height: 80,
@@ -230,7 +258,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
             ),
             const SizedBox(height: 32),
             
-            // Loading indicator
             const SizedBox(
               width: 50,
               height: 50,
@@ -243,7 +270,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
             ),
             const SizedBox(height: 24),
             
-            // Status text
             Text(
               'Completing Google Sign-In...',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -253,7 +279,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
             ),
             const SizedBox(height: 8),
             
-            // Subtext
             Text(
               'Please wait while we set up your account',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
