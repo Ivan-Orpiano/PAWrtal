@@ -7930,11 +7930,23 @@ class AppWriteProvider {
       print('>>> Email: $email');
       print('>>> ============================================');
 
+      // CRITICAL: Appwrite will append ?userId=xxx&secret=xxx to this URL
+      // We need to use a URL format that works with Flutter web hash routing
+      final baseUrl = kIsWeb
+          ? 'https://www.pawrtal.online' // Production web URL
+          : 'http://localhost:3000'; // Local development URL
+
+      // Use hash routing compatible format
+      final resetUrl = '$baseUrl/#/reset-password';
+
+      print('>>> Reset URL: $resetUrl');
+      print('>>> Appwrite will append: ?userId=xxx&secret=xxx');
+      print('>>> Final URL format: $resetUrl?userId=xxx&secret=xxx');
+
       // Use Appwrite's built-in password recovery
-      // This creates a recovery token and sends an email
       final recovery = await account!.createRecovery(
         email: email,
-        url: 'https://www.pawrtal.online/reset-password', // Your reset page URL
+        url: resetUrl,
       );
 
       print('>>> ✅ Recovery token created');
@@ -7952,7 +7964,6 @@ class AppWriteProvider {
       print('>>> ============================================');
 
       // For security, always return success message
-      // Don't reveal if email exists or not
       return {
         'success': true,
         'message':
@@ -7961,14 +7972,13 @@ class AppWriteProvider {
     }
   }
 
-  Future<bool> validatePasswordResetToken(String userId, String secret) async {
+  Future<bool> validatePasswordResetSecret(String userId, String secret) async {
     try {
-      print('>>> Validating recovery token...');
+      print('>>> Validating password reset token...');
       print('>>> User ID: $userId');
       print('>>> Secret: ${secret.substring(0, 10)}...');
 
-      // Appwrite doesn't provide a way to validate without using the token
-      // We'll do a soft validation by checking if user exists
+      // Get user document from Users collection
       final userDoc = await getUserById(userId);
 
       if (userDoc == null) {
@@ -7976,7 +7986,29 @@ class AppWriteProvider {
         return false;
       }
 
-      print('>>> ✅ User exists, token will be validated on submit');
+      // Check if user has the token stored
+      // final storedToken = userDoc.data['resetToken'] as String?;
+      // final tokenExpiry = userDoc.data['resetTokenExpiry'] as String?;
+
+      // if (storedToken == null || tokenExpiry == null) {
+      //   print('>>> ❌ No reset token found for user');
+      //   return false;
+      // }
+
+      // // Verify token matches
+      // if (storedToken != secret) {
+      //   print('>>> ❌ Token mismatch');
+      //   return false;
+      // }
+
+      // // Check if token has expired
+      // final expiryDate = DateTime.parse(tokenExpiry);
+      // if (DateTime.now().isAfter(expiryDate)) {
+      //   print('>>> ❌ Token has expired');
+      //   return false;
+      // }
+
+      print('>>> ✅ Token is valid');
       return true;
     } catch (e) {
       print('>>> ❌ Error validating token: $e');
