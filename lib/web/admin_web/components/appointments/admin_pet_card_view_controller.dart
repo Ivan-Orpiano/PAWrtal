@@ -148,15 +148,26 @@ class AdminPetCardViewController extends GetxController {
       print('>>> Fetching veterinarian name for vetId: $vetId');
       print('>>> ============================================');
 
-      // STEP 1: Try to get staff by document ID first (most common case)
-      print('>>> Step 1: Checking if vetId is a staff document ID...');
+      // STEP 1: Check if this is a clinic admin (by user ID)
+      print('>>> Step 1: Checking if vetId is a clinic admin...');
+      final clinicDoc = await authRepository.getClinicByAdminId(vetId);
+
+      if (clinicDoc != null) {
+        vetNamesCache[vetId] = 'Admin';
+        print('>>> ✅ User is CLINIC ADMIN - returning "Admin"');
+        print('>>> ============================================');
+        return 'Admin';
+      }
+
+      // STEP 2: Try to get staff by USER ID (most common case after admin)
+      print('>>> Step 2: Checking if vetId is a staff user ID...');
       try {
-        final staffDoc = await authRepository.getStaffByDocumentId(vetId);
+        final staffDoc = await authRepository.getStaffByUserId(vetId);
         if (staffDoc != null) {
           final staffName = staffDoc.name;
           final isDoctor = staffDoc.isDoctor;
 
-          print('>>> ✅ Staff found by document ID!');
+          print('>>> ✅ Staff found by USER ID!');
           print('>>>   Name: $staffName');
           print('>>>   Is Doctor: $isDoctor');
 
@@ -168,22 +179,34 @@ class AdminPetCardViewController extends GetxController {
           return displayName;
         }
       } catch (e) {
-        print('>>> Not a staff document ID, continuing...');
+        print('>>> Not a staff user ID, trying staff document ID...');
       }
 
-      // STEP 2: Check if this user is a clinic admin (by user ID)
-      print('>>> Step 2: Checking if vetId is a clinic admin...');
-      final clinicDoc = await authRepository.getClinicByAdminId(vetId);
+      // STEP 3: Try to get staff by DOCUMENT ID (fallback)
+      print('>>> Step 3: Checking if vetId is a staff document ID...');
+      try {
+        final staffDoc = await authRepository.getStaffByDocumentId(vetId);
+        if (staffDoc != null) {
+          final staffName = staffDoc.name;
+          final isDoctor = staffDoc.isDoctor;
 
-      if (clinicDoc != null) {
-        vetNamesCache[vetId] = 'Admin';
-        print('>>> ✅ User is CLINIC ADMIN - returning "Admin"');
-        print('>>> ============================================');
-        return 'Admin';
+          print('>>> ✅ Staff found by DOCUMENT ID!');
+          print('>>>   Name: $staffName');
+          print('>>>   Is Doctor: $isDoctor');
+
+          // CRITICAL: Return "Dr. [Name]" if doctor, otherwise just name
+          final displayName = isDoctor ? 'Dr. $staffName' : staffName;
+          vetNamesCache[vetId] = displayName;
+          print('>>> ✅ Returning staff name: $displayName');
+          print('>>> ============================================');
+          return displayName;
+        }
+      } catch (e) {
+        print('>>> Not a staff document ID either...');
       }
 
-      // STEP 3: Get the user document to check role (by user ID)
-      print('>>> Step 3: Fetching user document...');
+      // STEP 4: Get the user document as last resort
+      print('>>> Step 4: Fetching user document as fallback...');
       final userDoc = await authRepository.getUserById(vetId);
 
       if (userDoc == null) {
@@ -193,49 +216,14 @@ class AdminPetCardViewController extends GetxController {
         return 'Unknown';
       }
 
-      final userRole = userDoc.data['role'] ?? '';
       final userName = userDoc.data['name'] ?? 'Unknown';
+      final userRole = userDoc.data['role'] ?? '';
 
       print('>>> User found:');
       print('>>>   Name: $userName');
       print('>>>   Role: $userRole');
 
-      // STEP 4: Check if user is staff (by user ID)
-      if (userRole == 'staff') {
-        print('>>> User is staff, fetching staff details by user ID...');
-
-        try {
-          final staffDoc = await authRepository.getStaffByUserId(vetId);
-          if (staffDoc != null) {
-            final staffName = staffDoc.name;
-            final isDoctor = staffDoc.isDoctor;
-
-            print('>>> Staff found:');
-            print('>>>   Name: $staffName');
-            print('>>>   Is Doctor: $isDoctor');
-
-            // CRITICAL: Return "Dr. [Name]" if doctor, otherwise just name
-            final displayName = isDoctor ? 'Dr. $staffName' : staffName;
-            vetNamesCache[vetId] = displayName;
-            print('>>> ✅ Returning staff name: $displayName');
-            print('>>> ============================================');
-            return displayName;
-          } else {
-            print('>>> ⚠️ Staff document not found, using user name');
-            vetNamesCache[vetId] = userName;
-            print('>>> ============================================');
-            return userName;
-          }
-        } catch (e) {
-          print('>>> ⚠️ Error fetching staff document: $e');
-          vetNamesCache[vetId] = userName;
-          print('>>> ============================================');
-          return userName;
-        }
-      }
-
-      // STEP 5: For any other role, return the user's name
-      print('>>> User has role: $userRole, returning user name');
+      // Return the user's name
       vetNamesCache[vetId] = userName;
       print('>>> ============================================');
       return userName;

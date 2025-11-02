@@ -40,6 +40,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
   Vaccination? _selectedVaccination;
   Map<String, dynamic>? _selectedMedicalAppointment;
 
+  bool _isLoadingInitialData = true;
+
   @override
   void initState() {
     super.initState();
@@ -51,9 +53,14 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    // Fetch histories when panel opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchHistories();
+    // ✅ Fetch data AFTER first frame, wait for it to complete before showing UI
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _fetchHistories();
+      if (mounted) {
+        setState(() {
+          _isLoadingInitialData = false;
+        });
+      }
     });
   }
 
@@ -62,19 +69,46 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     super.didUpdateWidget(oldWidget);
     // Refetch if pet changed
     if (oldWidget.pet.petId != widget.pet.petId) {
-      _fetchHistories();
+      setState(() {
+        _isLoadingInitialData = true;
+      });
+
+      // ✅ Wait for data to load before updating state
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _fetchHistories();
+        if (mounted) {
+          setState(() {
+            _isLoadingInitialData = false;
+          });
+        }
+      });
     }
   }
 
-  void _fetchHistories() {
+// ✅ Fetch all data and wait for counts to be available
+  Future<void> _fetchHistories() async {
     final controller = Get.find<WebPetsController>();
     print('>>> Fetching histories for pet: ${widget.pet.petId}');
 
-    // Fetch all three: vaccinations, medical appointments, and medical records
-    controller.fetchPetVaccinationHistory(widget.pet.petId);
-    controller.fetchPetMedicalAppointmentsAllClinics(widget.pet.petId);
-    controller.fetchPetMedicalRecordsForAppointments(
-        widget.pet.petId); // ✅ ADDED THIS
+    try {
+      // ✅ FETCH ALL THREE IN PARALLEL: vaccinations, medical appointments, AND medical records
+      await Future.wait([
+        controller.fetchPetVaccinationHistory(widget.pet.petId),
+        controller.fetchPetMedicalAppointmentsAllClinics(widget.pet.petId),
+        controller.fetchPetMedicalRecordsForAppointments(widget.pet.petId),
+      ]);
+
+      print('>>> ✅ All histories fetched successfully');
+      print('>>> Vaccinations: ${controller.vaccinations.length}');
+      print(
+          '>>> Medical Appointments: ${controller.medicalAppointments.length}');
+      print('>>> Medical Records: ${controller.medicalRecords.length}');
+
+      // ✅ Counts are now available and UI will show correct numbers
+    } catch (e, stackTrace) {
+      print('>>> ❌ Error fetching histories: $e');
+      print('>>> Stack trace: $stackTrace');
+    }
   }
 
   @override
@@ -376,71 +410,93 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header for back side
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2C3E50),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header for back side
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C3E50),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => _flipToView(CardView.front),
-                    tooltip: "Back",
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => _flipToView(CardView.front),
+                  tooltip: "Back",
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Health Records',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Health Records',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+
+          // ✅ SHOW LOADING STATE WHILE FETCHING DATA
+          Expanded(
+            child: _isLoadingInitialData
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(
+                          color: Color(0xFF3498DB),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading ${widget.pet.name}\'s medical history...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Medical Appointments History section (PRIMARY)
+                          _buildHistoryButton(
+                            'Medical Appointments History',
+                            'View all medical appointments with records',
+                            Icons.local_hospital_outlined,
+                            () => _flipToView(
+                                CardView.medicalAppointmentsHistory),
+                            _getMedicalAppointmentsCount(),
+                            isPrimary: true,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Vaccination History section
+                          _buildHistoryButton(
+                            'Vaccination History',
+                            'View vaccination records',
+                            Icons.vaccines_outlined,
+                            () => _flipToView(CardView.vaccinationHistory),
+                            _getVaccinationCount(),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // Back side content - REMOVED Medical Records section
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Medical Appointments History section (PRIMARY)
-                  _buildHistoryButton(
-                    'Medical Appointments History',
-                    'View all medical appointments with records',
-                    Icons.local_hospital_outlined,
-                    () => _flipToView(CardView.medicalAppointmentsHistory),
-                    _getMedicalAppointmentsCount(),
-                    isPrimary: true,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Vaccination History section
-                  _buildHistoryButton(
-                    'Vaccination History',
-                    'View vaccination records',
-                    Icons.vaccines_outlined,
-                    () => _flipToView(CardView.vaccinationHistory),
-                    _getVaccinationCount(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -977,13 +1033,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     final service = appointment['service'] ?? '';
     final petId = appointment['petId'];
 
-    print('>>> ============================================');
-    print('>>> Looking for records for appointment: $appointmentId');
-    print('>>> Service: $service');
-    print('>>> Pet ID: $petId');
-    print('>>> Appointment Date: $dateTime');
-
-    // CRITICAL: Try MULTIPLE matching strategies
+    // Find medical record
     MedicalRecord? medicalRecord;
     Vaccination? vaccinationRecord;
 
@@ -993,89 +1043,32 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         (record) => record.appointmentId == appointmentId,
         orElse: () => throw Exception('Not found'),
       );
-      print('>>> ✅ Found medical record by appointmentId: ${medicalRecord.id}');
     } catch (e) {
-      print('>>> ℹ️ No medical record found by appointmentId');
-    }
-
-    // STRATEGY 2: If not found, try matching by pet + date + service
-    if (medicalRecord == null) {
+      // STRATEGY 2: Try fuzzy match
       try {
         medicalRecord = controller.medicalRecords.firstWhere(
           (record) {
-            // Match by pet
             final petMatches = record.petId == petId;
-
-            // Match by date (same day)
-            final recordDate = record.visitDate;
-            final dateMatches = recordDate.year == dateTime.year &&
-                recordDate.month == dateTime.month &&
-                recordDate.day == dateTime.day;
-
-            // Match by service (fuzzy match)
-            final serviceMatches = record.service.toLowerCase() ==
-                    service.toLowerCase() ||
-                service.toLowerCase().contains(record.service.toLowerCase()) ||
-                record.service.toLowerCase().contains(service.toLowerCase());
-
-            final matches = petMatches && dateMatches && serviceMatches;
-
-            if (matches) {
-              print('>>> 🔍 Potential match found by pet+date+service:');
-              print('>>>   Record ID: ${record.id}');
-              print('>>>   Record appointmentId: ${record.appointmentId}');
-              print('>>>   Record petId: ${record.petId}');
-              print('>>>   Record date: ${record.visitDate}');
-              print('>>>   Record service: ${record.service}');
-            }
-
-            return matches;
+            final dateMatches = record.visitDate.year == dateTime.year &&
+                record.visitDate.month == dateTime.month &&
+                record.visitDate.day == dateTime.day;
+            final serviceMatches = record.service
+                    .toLowerCase()
+                    .contains(service.toLowerCase()) ||
+                service.toLowerCase().contains(record.service.toLowerCase());
+            return petMatches && dateMatches && serviceMatches;
           },
           orElse: () => throw Exception('Not found'),
         );
-        print('>>> ✅ Found medical record by pet+date+service match!');
       } catch (e) {
-        print('>>> ℹ️ No medical record found by pet+date+service either');
+        // No medical record found
       }
     }
 
-    // STRATEGY 3: If not found, try matching by pet + completed time (within 1 hour)
-    if (medicalRecord == null && completedAt != null) {
-      try {
-        medicalRecord = controller.medicalRecords.firstWhere(
-          (record) {
-            // Match by pet
-            final petMatches = record.petId == petId;
-
-            // Match by time (within 1 hour of completion)
-            final timeDifference =
-                record.visitDate.difference(completedAt).abs();
-            final timeMatches = timeDifference.inHours < 1;
-
-            final matches = petMatches && timeMatches;
-
-            if (matches) {
-              print('>>> 🔍 Potential match found by pet+time:');
-              print('>>>   Record ID: ${record.id}');
-              print(
-                  '>>>   Time difference: ${timeDifference.inMinutes} minutes');
-            }
-
-            return matches;
-          },
-          orElse: () => throw Exception('Not found'),
-        );
-        print('>>> ✅ Found medical record by pet+time match!');
-      } catch (e) {
-        print('>>> ℹ️ No medical record found by pet+time either');
-      }
-    }
-
-    // Try to find vaccination record (match by date and service)
+    // Try to find vaccination record
     try {
       final isVaccineService = service.toLowerCase().contains('vaccin') ||
           service.toLowerCase().contains('immuniz');
-
       if (isVaccineService) {
         vaccinationRecord = controller.vaccinations.firstWhere(
           (vaccination) {
@@ -1086,39 +1079,17 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
           },
           orElse: () => throw Exception('Not found'),
         );
-        print(
-            '>>> ✅ Found vaccination record: ${vaccinationRecord.vaccineName}');
       }
     } catch (e) {
-      print('>>> ℹ️ No vaccination record found');
+      // No vaccination record found
     }
-
-    // FINAL CHECK: Print all medical records for this pet to help debug
-    if (medicalRecord == null && vaccinationRecord == null) {
-      print('>>> 📋 All medical records for this pet:');
-      final petRecords =
-          controller.medicalRecords.where((r) => r.petId == petId).toList();
-      for (var record in petRecords) {
-        print('>>>   Record: ${record.id}');
-        print('>>>     appointmentId: ${record.appointmentId}');
-        print('>>>     visitDate: ${record.visitDate}');
-        print('>>>     service: ${record.service}');
-        print('>>>     diagnosis: ${record.diagnosis.substring(0, 30)}...');
-      }
-
-      if (petRecords.isEmpty) {
-        print('>>>   ❌ No medical records found for pet: $petId');
-      }
-    }
-
-    print('>>> ============================================');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Clinic Information Card
+          // Clinic Information
           _buildDetailCard(
             'Veterinary Clinic',
             [
@@ -1130,10 +1101,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
             icon: Icons.local_hospital,
             iconColor: const Color(0xFF667eea),
           ),
-
           const SizedBox(height: 16),
-
-          // Appointment Information Card
+          // Appointment Information
           _buildDetailCard(
             'Appointment Information',
             [
@@ -1157,11 +1126,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
             iconColor: const Color(0xFF3498DB),
           ),
 
-          // ✅✅✅ VACCINATION RECORD SECTION (PRIORITY) ✅✅✅
+          // VACCINATION RECORD SECTION (PRIORITY)
           if (vaccinationRecord != null) ...[
             const SizedBox(height: 16),
-
-            // Vaccine Information Card
             _buildDetailCard(
               'Vaccine Information',
               [
@@ -1181,10 +1148,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               icon: Icons.vaccines,
               iconColor: const Color(0xFF9B59B6),
             ),
-
             const SizedBox(height: 16),
-
-            // Vaccination Dates Card
             _buildDetailCard(
               'Vaccination Dates',
               [
@@ -1203,20 +1167,41 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               icon: Icons.event,
               iconColor: const Color(0xFF3498DB),
             ),
+            // ✅ NEW: Show who administered the vaccination
+            if (medicalRecord != null) ...[
+              const SizedBox(height: 16),
+              FutureBuilder<String>(
+                future: controller.getVeterinarianName(medicalRecord.vetId),
+                builder: (context, snapshot) {
+                  final vetName = snapshot.data ?? 'Loading...';
 
-            const SizedBox(height: 16),
+                  String title;
+                  IconData icon;
+                  Color iconColor;
 
-            // Veterinarian Card
-            _buildDetailCard(
-              'Administered By',
-              [
-                _buildDetailRow(
-                    'Veterinarian', vaccinationRecord.veterinarianName),
-              ],
-              icon: Icons.person,
-              iconColor: const Color(0xFF2ECC71),
-            ),
+                  if (vetName == 'Admin') {
+                    title = 'Administered By (Admin)';
+                    icon = Icons.admin_panel_settings;
+                    iconColor = const Color(0xFF667eea);
+                  } else if (vetName.startsWith('Dr.')) {
+                    title = 'Administered By (Doctor)';
+                    icon = Icons.medical_services;
+                    iconColor = const Color(0xFF2ECC71);
+                  } else {
+                    title = 'Administered By (Staff)';
+                    icon = Icons.person;
+                    iconColor = const Color(0xFF95A5A6);
+                  }
 
+                  return _buildDetailCard(
+                    title,
+                    [_buildDetailRow('Name', vetName)],
+                    icon: icon,
+                    iconColor: iconColor,
+                  );
+                },
+              ),
+            ],
             if (vaccinationRecord.notes != null &&
                 vaccinationRecord.notes!.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -1228,11 +1213,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               ),
             ],
           ]
-          // ✅✅✅ MEDICAL RECORD SECTION (IF NO VACCINATION RECORD) ✅✅✅
+          // MEDICAL RECORD SECTION
           else if (medicalRecord != null) ...[
             const SizedBox(height: 16),
-
-            // Diagnosis & Treatment Card
             _buildDetailCard(
               'Diagnosis & Treatment',
               [
@@ -1245,8 +1228,39 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
               icon: Icons.medical_services,
               iconColor: const Color(0xFFE74C3C),
             ),
+            // ✅ NEW: Show doctor/admin/staff who treated
+            const SizedBox(height: 16),
+            FutureBuilder<String>(
+              future: controller.getVeterinarianName(medicalRecord.vetId),
+              builder: (context, snapshot) {
+                final vetName = snapshot.data ?? 'Loading...';
 
-            // Vital Signs Card (if available)
+                String title;
+                IconData icon;
+                Color iconColor;
+
+                if (vetName == 'Admin') {
+                  title = 'Treated By (Admin)';
+                  icon = Icons.admin_panel_settings;
+                  iconColor = const Color(0xFF667eea);
+                } else if (vetName.startsWith('Dr.')) {
+                  title = 'Attending Veterinarian';
+                  icon = Icons.medical_services;
+                  iconColor = const Color(0xFF2ECC71);
+                } else {
+                  title = 'Treated By (Staff)';
+                  icon = Icons.person;
+                  iconColor = const Color(0xFF95A5A6);
+                }
+
+                return _buildDetailCard(
+                  title,
+                  [_buildDetailRow('Name', vetName)],
+                  icon: icon,
+                  iconColor: iconColor,
+                );
+              },
+            ),
             if (medicalRecord.hasVitals) ...[
               const SizedBox(height: 16),
               _buildDetailCard(
@@ -1269,22 +1283,18 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                 iconColor: const Color(0xFFE74C3C),
               ),
             ],
-
-            // Veterinary Notes Card
             if (medicalRecord.notes != null &&
                 medicalRecord.notes!.isNotEmpty) ...[
               const SizedBox(height: 16),
               _buildDetailCard(
                 'Veterinary Notes',
-                [
-                  _buildDetailRow('Notes', medicalRecord.notes!),
-                ],
+                [_buildDetailRow('Notes', medicalRecord.notes!)],
                 icon: Icons.note,
                 iconColor: const Color(0xFF9B59B6),
               ),
             ],
           ] else ...[
-            // No records found - Enhanced debug info
+            // No records found
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
@@ -1322,43 +1332,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                       color: Colors.grey[700],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Debug Information:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Appointment ID: $appointmentId',
-                          style:
-                              TextStyle(fontSize: 11, color: Colors.grey[600]),
-                        ),
-                        Text(
-                          'Pet ID: $petId',
-                          style:
-                              TextStyle(fontSize: 11, color: Colors.grey[600]),
-                        ),
-                        Text(
-                          'Completed: ${completedAt != null ? DateFormat('MMM dd, yyyy HH:mm').format(completedAt) : 'N/A'}',
-                          style:
-                              TextStyle(fontSize: 11, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -1391,14 +1364,11 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
 
           const SizedBox(height: 16),
 
-          // Additional Notes Card (from appointment)
           if (appointment['notes'] != null &&
               appointment['notes'].toString().isNotEmpty)
             _buildDetailCard(
               'Additional Appointment Notes',
-              [
-                _buildDetailRow('Notes', appointment['notes']),
-              ],
+              [_buildDetailRow('Notes', appointment['notes'])],
               icon: Icons.note_outlined,
               iconColor: const Color(0xFF95A5A6),
             ),

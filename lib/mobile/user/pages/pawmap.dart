@@ -136,37 +136,14 @@ class _PawmapState extends State<Pawmap> {
     _applyFilters();
   }
 
-  int getFilterCount(String filter) {
-    var filtered = allClinics.where((clinic) {
-      final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      return settings?.location != null;
-    });
-
-    switch (filter) {
-      case 'All':
-        return filtered.length;
-      case 'Open':
-        return filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return settings?.isOpen ?? true;
-        }).length;
-      case 'Closed':
-        return filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return !(settings?.isOpen ?? true);
-        }).length;
-      case 'Available Today':
-        return filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return (settings?.isOpen ?? true) && (settings?.isOpenToday() ?? true);
-        }).length;
-      default:
-        return 0;
-    }
-  }
-
   void _applyFilters() {
-    var filtered = allClinics;
+    print('>>> ============================================');
+    print('>>> APPLYING FILTERS IN MOBILE MAPS');
+    print('>>> Filter: $selectedFilter');
+    print('>>> Search: $searchQuery');
+    print('>>> ============================================');
+
+    var filtered = allClinics.toList();
 
     // Apply search filter
     if (searchQuery.isNotEmpty) {
@@ -180,39 +157,144 @@ class _PawmapState extends State<Pawmap> {
             clinic.address.toLowerCase().contains(searchQuery.toLowerCase()) ||
             services.toLowerCase().contains(searchQuery.toLowerCase());
       }).toList();
+      print('>>> After search: ${filtered.length} clinics');
     }
 
-    // Apply status filter
+    // Apply status filter with closed dates support
     switch (selectedFilter) {
       case 'Open':
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return settings?.isOpen ?? true;
+          if (settings == null) return false;
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+          return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
         }).toList();
         break;
-      case 'Closed':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return !(settings?.isOpen ?? true);
-        }).toList();
-        break;
+
       case 'Available Today':
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          return (settings?.isOpen ?? true) && (settings?.isOpenToday() ?? true);
+          if (settings == null) return false;
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+          return settings.isOpen &&
+              settings.isOpenToday() &&
+              !isTodayClosedDate;
         }).toList();
+        break;
+
+      case 'Closed':
+        filtered = filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          if (settings == null) return false;
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+          return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
+        }).toList();
+        break;
+
+      case 'Popular':
+        // For mobile maps, we don't have rating stats yet, so just show all for now
+        // You can add rating stats loading later if needed
+        break;
+
+      case 'All':
+      default:
+        // Show all clinics
         break;
     }
 
-    // Only include clinics that have location data set
+    // Only include clinics that have location data
+    final beforeLocationFilter = filtered.length;
     filtered = filtered.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
       return settings?.location != null;
     }).toList();
 
+    print(
+        '>>> After location filter: ${filtered.length} clinics (removed ${beforeLocationFilter - filtered.length})');
+
     setState(() {
       filteredClinics = filtered;
     });
+
+    print('>>> ============================================');
+    print('>>> FILTER COMPLETE');
+    print('>>> Final: ${filteredClinics.length} clinics');
+    print('>>> ============================================');
+  }
+
+// Replace getFilterCount() in pawmap.dart:
+  int getFilterCount(String filter) {
+    var filtered = allClinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      return settings?.location != null;
+    }).toList();
+
+    switch (filter) {
+      case 'All':
+        return filtered.length;
+
+      case 'Open':
+        return filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          if (settings == null) return false;
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+          return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
+        }).length;
+
+      case 'Available Today':
+        return filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          if (settings == null) return false;
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+          return settings.isOpen &&
+              settings.isOpenToday() &&
+              !isTodayClosedDate;
+        }).length;
+
+      case 'Closed':
+        return filtered.where((clinic) {
+          final settings = clinicSettingsMap[clinic.documentId ?? ''];
+          if (settings == null) return false;
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+          return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
+        }).length;
+
+      case 'Popular':
+        return 0; // Not implemented for mobile maps yet
+
+      default:
+        return 0;
+    }
   }
 
   Future<Position?> _getCurrentUserLocation() async {
@@ -252,12 +334,32 @@ class _PawmapState extends State<Pawmap> {
     Clinic? nearest;
     double shortestDistance = double.infinity;
 
+    print('>>> Finding nearest OPEN clinic');
+
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
+
       if (settings?.location != null) {
+        // Check if clinic is OPEN and AVAILABLE
+        final today = DateTime.now();
+        final todayStr =
+            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+        final isTodayClosedDate = settings!.closedDates.contains(todayStr);
+
+        final isOpenAndAvailable =
+            settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
+
+        if (!isOpenAndAvailable) {
+          print('>>> ${clinic.clinicName}: SKIPPED (not open)');
+          continue;
+        }
+
         final clinicLocation =
-            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+            LatLng(settings.location!['lat']!, settings.location!['lng']!);
         final dist = calculateDistance(userLocation!, clinicLocation);
+
+        print('>>> ${clinic.clinicName}: ${dist.toStringAsFixed(2)} km (OPEN)');
+
         if (dist < shortestDistance) {
           shortestDistance = dist;
           nearest = clinic;
@@ -270,12 +372,48 @@ class _PawmapState extends State<Pawmap> {
       if (settings?.location != null) {
         final nearestLocation =
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+
         if (isWithinBounds(nearestLocation)) {
+          print('>>> Nearest open clinic: ${nearest.clinicName}');
           _mapController.move(nearestLocation, 17);
           fetchRoute(nearestLocation);
+        } else {
+          _showNoNearestClinicMessage(
+              'Nearest open clinic is outside the service area');
         }
       }
+    } else {
+      print('>>> No open clinics found');
+      _showNoNearestClinicMessage('No open clinics available nearby');
     }
+  }
+
+  void _showNoNearestClinicMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange[700],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   List<Marker> getMarkers() {
@@ -295,62 +433,71 @@ class _PawmapState extends State<Pawmap> {
 
       double distanceInKm = calculateDistance(userLocation!, location);
 
-      Color markerColor = Colors.red;
-      if (settings.isOpen) {
-        if (settings.isOpenToday()) {
-          markerColor = Colors.green;
-        } else {
-          markerColor = Colors.orange;
-        }
+      // CRITICAL: Determine marker color with closed dates support
+      Color markerColor;
+
+      final today = DateTime.now();
+      final todayStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final isTodayClosedDate = settings.closedDates.contains(todayStr);
+
+      if (isTodayClosedDate) {
+        markerColor = Colors.red;
+      } else if (!settings.isOpen) {
+        markerColor = Colors.red;
+      } else if (settings.isOpenNow()) {
+        markerColor = Colors.green;
+      } else if (settings.isOpenToday()) {
+        markerColor = Colors.orange;
+      } else {
+        markerColor = Colors.red;
       }
 
-      markers.add(
-        Marker(
-          point: location,
-          width: 70,
-          height: 90,
-          child: GestureDetector(
-            onTap: () {
-              if (userLocation != null) {
-                _popupController.hideAllPopups();
-                fetchRoute(location);
-              }
-            },
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(Icons.location_on, color: markerColor, size: 40),
-                Positioned(
-                  top: 65,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      "${distanceInKm.toStringAsFixed(2)} km",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+      markers.add(Marker(
+        point: location,
+        width: 70,
+        height: 90,
+        child: GestureDetector(
+          onTap: () {
+            if (userLocation != null) {
+              _popupController.hideAllPopups();
+              fetchRoute(location);
+            }
+          },
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(Icons.location_on, color: markerColor, size: 40),
+              Positioned(
+                top: 65,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
                       ),
+                    ],
+                  ),
+                  child: Text(
+                    "${distanceInKm.toStringAsFixed(2)} km",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      );
+      ));
     }
 
     return markers;
