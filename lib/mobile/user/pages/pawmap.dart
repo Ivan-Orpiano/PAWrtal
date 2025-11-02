@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
+import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/search_bar.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/tags.dart';
@@ -30,6 +31,7 @@ class _PawmapState extends State<Pawmap> {
   List<Clinic> allClinics = [];
   List<Clinic> filteredClinics = [];
   Map<String, ClinicSettings?> clinicSettingsMap = {};
+  Map<String, ClinicRatingStats> ratingStatsCache = {}; // ADDED
   bool isLoading = true;
   String? error;
   String searchQuery = '';
@@ -93,6 +95,7 @@ class _PawmapState extends State<Pawmap> {
 
       final clinics = <Clinic>[];
       final settingsMap = <String, ClinicSettings?>{};
+      final statsCache = <String, ClinicRatingStats>{}; // ADDED
 
       for (final data in clinicsWithSettings) {
         final clinic = data['clinic'] as Clinic;
@@ -100,12 +103,29 @@ class _PawmapState extends State<Pawmap> {
 
         clinics.add(clinic);
         settingsMap[clinic.documentId ?? ''] = settings;
+
+        // ADDED: Load rating stats for each clinic
+        try {
+          final stats = await authRepository
+              .getClinicRatingStats(clinic.documentId ?? '');
+          statsCache[clinic.documentId ?? ''] = stats;
+        } catch (e) {
+          print("Error loading rating stats for ${clinic.clinicName}: $e");
+          statsCache[clinic.documentId ?? ''] = ClinicRatingStats(
+            averageRating: 0.0,
+            totalReviews: 0,
+            ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+            reviewsWithText: 0,
+            reviewsWithImages: 0,
+          );
+        }
       }
 
       if (mounted) {
         setState(() {
           allClinics = clinics;
           clinicSettingsMap = settingsMap;
+          ratingStatsCache = statsCache; // ADDED
           isLoading = false;
         });
 
@@ -141,6 +161,7 @@ class _PawmapState extends State<Pawmap> {
     print('>>> APPLYING FILTERS IN MOBILE MAPS');
     print('>>> Filter: $selectedFilter');
     print('>>> Search: $searchQuery');
+    print('>>> Total clinics: ${allClinics.length}');
     print('>>> ============================================');
 
     var filtered = allClinics.toList();
@@ -163,20 +184,32 @@ class _PawmapState extends State<Pawmap> {
     // Apply status filter with closed dates support
     switch (selectedFilter) {
       case 'Open':
+        print('>>> Applying "Open" filter...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
+          if (settings == null) {
+            print('>>> ${clinic.clinicName}: No settings');
+            return false;
+          }
 
           final today = DateTime.now();
           final todayStr =
               '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
           final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
-          return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
+          final isOpen = settings.isOpen;
+          final isOpenNow = settings.isOpenNow();
+
+          print(
+              '>>> ${clinic.clinicName}: isOpen=$isOpen, isOpenNow=$isOpenNow, closedToday=$isTodayClosedDate');
+
+          return isOpen && isOpenNow && !isTodayClosedDate;
         }).toList();
+        print('>>> After "Open" filter: ${filtered.length} clinics');
         break;
 
       case 'Available Today':
+        print('>>> Applying "Available Today" filter...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) return false;
@@ -186,13 +219,17 @@ class _PawmapState extends State<Pawmap> {
               '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
           final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
-          return settings.isOpen &&
-              settings.isOpenToday() &&
-              !isTodayClosedDate;
+          final result =
+              settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
+
+          print('>>> ${clinic.clinicName}: Available Today = $result');
+          return result;
         }).toList();
+        print('>>> After "Available Today" filter: ${filtered.length} clinics');
         break;
 
       case 'Closed':
+        print('>>> Applying "Closed" filter...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) return false;
@@ -202,18 +239,80 @@ class _PawmapState extends State<Pawmap> {
               '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
           final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
-          return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
+          final result =
+              !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
+          print('>>> ${clinic.clinicName}: Closed = $result');
+          return result;
         }).toList();
+        print('>>> After "Closed" filter: ${filtered.length} clinics');
         break;
 
       case 'Popular':
-        // For mobile maps, we don't have rating stats yet, so just show all for now
-        // You can add rating stats loading later if needed
+        print('>>> Applying "Popular" filter...');
+        // Sort by average rating first, then review count
+        filtered.sort((a, b) {
+          final aStats = ratingStatsCache[a.documentId ?? ''];
+          final bStats = ratingStatsCache[b.documentId ?? ''];
+
+          final aRating = aStats?.averageRating ?? 0.0;
+          final bRating = bStats?.averageRating ?? 0.0;
+
+          final aReviews = aStats?.totalReviews ?? 0;
+          final bReviews = bStats?.totalReviews ?? 0;
+
+          print('>>> ${a.clinicName}: Rating=$aRating, Reviews=$aReviews');
+          print('>>> ${b.clinicName}: Rating=$bRating, Reviews=$bReviews');
+
+          // Primary sort: Higher rating first
+          if ((bRating - aRating).abs() > 0.01) {
+            return bRating.compareTo(aRating);
+          }
+
+          // Secondary sort: More reviews if ratings are equal
+          return bReviews.compareTo(aReviews);
+        });
+
+        // Only show clinics with at least 1 review and rating > 0
+        filtered = filtered.where((clinic) {
+          final stats = ratingStatsCache[clinic.documentId ?? ''];
+          final hasReviews = (stats?.totalReviews ?? 0) > 0;
+          final hasRating = (stats?.averageRating ?? 0.0) > 0.0;
+          print(
+              '>>> ${clinic.clinicName}: hasReviews=$hasReviews, hasRating=$hasRating');
+          return hasReviews && hasRating;
+        }).toList();
+        print('>>> After "Popular" filter: ${filtered.length} clinics');
         break;
 
       case 'All':
       default:
-        // Show all clinics
+        print('>>> Showing all clinics');
+        // Show all clinics, sorted by open status first
+        filtered.sort((a, b) {
+          final aSettings = clinicSettingsMap[a.documentId ?? ''];
+          final bSettings = clinicSettingsMap[b.documentId ?? ''];
+
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+          final aIsClosedDate =
+              aSettings?.closedDates.contains(todayStr) ?? false;
+          final bIsClosedDate =
+              bSettings?.closedDates.contains(todayStr) ?? false;
+
+          final aIsOpen = (aSettings?.isOpen ?? true) &&
+              (aSettings?.isOpenNow() ?? false) &&
+              !aIsClosedDate;
+          final bIsOpen = (bSettings?.isOpen ?? true) &&
+              (bSettings?.isOpenNow() ?? false) &&
+              !bIsClosedDate;
+
+          if (aIsOpen && !bIsOpen) return -1;
+          if (!aIsOpen && bIsOpen) return 1;
+
+          return a.clinicName.compareTo(b.clinicName);
+        });
         break;
     }
 
@@ -221,7 +320,11 @@ class _PawmapState extends State<Pawmap> {
     final beforeLocationFilter = filtered.length;
     filtered = filtered.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      return settings?.location != null;
+      final hasLocation = settings?.location != null;
+      if (!hasLocation) {
+        print('>>> ${clinic.clinicName}: No location data');
+      }
+      return hasLocation;
     }).toList();
 
     print(
@@ -233,12 +336,12 @@ class _PawmapState extends State<Pawmap> {
 
     print('>>> ============================================');
     print('>>> FILTER COMPLETE');
-    print('>>> Final: ${filteredClinics.length} clinics');
+    print('>>> Final: ${filteredClinics.length} clinics will be shown on map');
     print('>>> ============================================');
   }
 
-// Replace getFilterCount() in pawmap.dart:
   int getFilterCount(String filter) {
+    // Only count clinics that have location data
     var filtered = allClinics.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
       return settings?.location != null;
@@ -290,7 +393,11 @@ class _PawmapState extends State<Pawmap> {
         }).length;
 
       case 'Popular':
-        return 0; // Not implemented for mobile maps yet
+        return filtered.where((clinic) {
+          final stats = ratingStatsCache[clinic.documentId ?? ''];
+          return (stats?.totalReviews ?? 0) > 0 &&
+              (stats?.averageRating ?? 0.0) > 0.0;
+        }).length;
 
       default:
         return 0;
@@ -329,36 +436,26 @@ class _PawmapState extends State<Pawmap> {
   }
 
   void moveToNearestMarker() {
-    if (userLocation == null || filteredClinics.isEmpty) return;
+    if (userLocation == null || filteredClinics.isEmpty) {
+      _showNoNearestClinicMessage('No clinics available in current filter');
+      return;
+    }
 
     Clinic? nearest;
     double shortestDistance = double.infinity;
 
-    print('>>> Finding nearest OPEN clinic');
+    print(
+        '>>> Finding nearest clinic from ${filteredClinics.length} filtered clinics');
 
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
       if (settings?.location != null) {
-        // Check if clinic is OPEN and AVAILABLE
-        final today = DateTime.now();
-        final todayStr =
-            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-        final isTodayClosedDate = settings!.closedDates.contains(todayStr);
-
-        final isOpenAndAvailable =
-            settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
-
-        if (!isOpenAndAvailable) {
-          print('>>> ${clinic.clinicName}: SKIPPED (not open)');
-          continue;
-        }
-
         final clinicLocation =
-            LatLng(settings.location!['lat']!, settings.location!['lng']!);
+            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
         final dist = calculateDistance(userLocation!, clinicLocation);
 
-        print('>>> ${clinic.clinicName}: ${dist.toStringAsFixed(2)} km (OPEN)');
+        print('>>> ${clinic.clinicName}: ${dist.toStringAsFixed(2)} km');
 
         if (dist < shortestDistance) {
           shortestDistance = dist;
@@ -374,17 +471,18 @@ class _PawmapState extends State<Pawmap> {
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
         if (isWithinBounds(nearestLocation)) {
-          print('>>> Nearest open clinic: ${nearest.clinicName}');
+          print(
+              '>>> Nearest clinic: ${nearest.clinicName} (${shortestDistance.toStringAsFixed(2)} km)');
           _mapController.move(nearestLocation, 17);
           fetchRoute(nearestLocation);
         } else {
           _showNoNearestClinicMessage(
-              'Nearest open clinic is outside the service area');
+              'Nearest clinic is outside the service area');
         }
       }
     } else {
-      print('>>> No open clinics found');
-      _showNoNearestClinicMessage('No open clinics available nearby');
+      print('>>> No clinics found in current filter');
+      _showNoNearestClinicMessage('No clinics available in current filter');
     }
   }
 
@@ -421,19 +519,28 @@ class _PawmapState extends State<Pawmap> {
 
     final markers = <Marker>[];
 
+    print(
+        '>>> Creating markers for ${filteredClinics.length} filtered clinics');
+
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
-      if (settings?.location == null) continue;
+      if (settings?.location == null) {
+        print('>>> ${clinic.clinicName}: Skipped (no location)');
+        continue;
+      }
 
       final location =
           LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
-      if (!isWithinBounds(location)) continue;
+      if (!isWithinBounds(location)) {
+        print('>>> ${clinic.clinicName}: Skipped (out of bounds)');
+        continue;
+      }
 
       double distanceInKm = calculateDistance(userLocation!, location);
 
-      // CRITICAL: Determine marker color with closed dates support
+      // Determine marker color with closed dates support
       Color markerColor;
 
       final today = DateTime.now();
@@ -452,6 +559,9 @@ class _PawmapState extends State<Pawmap> {
       } else {
         markerColor = Colors.red;
       }
+
+      print(
+          '>>> ${clinic.clinicName}: Adding marker (${markerColor.toString()}, ${distanceInKm.toStringAsFixed(2)} km)');
 
       markers.add(Marker(
         point: location,
@@ -500,6 +610,7 @@ class _PawmapState extends State<Pawmap> {
       ));
     }
 
+    print('>>> Total markers created: ${markers.length}');
     return markers;
   }
 
@@ -690,31 +801,6 @@ class _PawmapState extends State<Pawmap> {
           ),
         ],
       ),
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      // floatingActionButton:Padding(
-      //   padding: const EdgeInsets.only(bottom: 55),
-      //   child: Container(
-      //     width: 60,
-      //     height: 60,
-      //     decoration: BoxDecoration(
-      //       color: Colors.grey.shade100,
-      //       shape: BoxShape.circle,
-      //       boxShadow: [
-      //         BoxShadow(
-      //           color: Colors.black.withValues(alpha: 0.15),
-      //           blurRadius: 6,
-      //           offset: const Offset(0, 3)
-      //         )
-      //       ],
-      //     ),
-      //     child: IconButton(
-      //       icon: const Icon(Icons.close_rounded, color: Colors.black,),
-      //       onPressed: () {
-      //         Navigator.pop(context);
-      //       },
-      //     ),
-      //   ),
-      // )
     );
   }
 }

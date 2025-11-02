@@ -21,10 +21,18 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   final ScrollController _scrollController = ScrollController();
   final MapController _mapController = MapController();
 
+  bool _showAppointmentPanel = false;
+
   bool _isValidEmail(String email) {
     final emailRegex =
         RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     return emailRegex.hasMatch(email);
+  }
+
+  void _toggleAppointmentPanel() {
+    setState(() {
+      _showAppointmentPanel = !_showAppointmentPanel;
+    });
   }
 
   IconData _getServiceIcon(String service) {
@@ -942,6 +950,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final horizontalPadding = getResponsivePadding(screenWidth);
     final isMobile = _isMobileLayout(screenWidth);
     final isTablet = _isTabletLayout(screenWidth);
@@ -954,84 +963,189 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
         return const Center(child: CircularProgressIndicator());
       }
 
-      return SingleChildScrollView(
-        controller: _scrollController,
-        child: Column(
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        body: Stack(
           children: [
-            Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding, vertical: 16),
-              color: Colors.blue.shade50,
-              child: Row(
+            // Main scrollable content
+            SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
                 children: [
-                  Icon(Icons.visibility, color: Colors.blue.shade700, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Preview Mode - This is how customers see your clinic. Click edit icons to update basic information.",
-                      style: TextStyle(
-                          fontSize: isMobile ? 12 : 14,
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w500),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding, vertical: 16),
+                    color: Colors.blue.shade50,
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility,
+                            color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Preview Mode - This is how customers see your clinic. Click edit icons to update basic information.",
+                            style: TextStyle(
+                                fontSize: isMobile ? 12 : 14,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.controller.clinic.value!.clinicName,
+                                style: const TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        _buildGalleryPreview(isMobile),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: isTablet || isMobile
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: _buildLeftContent(isMobile),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: getLeftSideWidth(screenWidth),
+                                child: _buildLeftContent(isMobile),
+                              ),
+                              const SizedBox(width: 40),
+                              // Empty space where panel was - now it's floating
+                              const SizedBox(width: 420),
+                            ],
+                          ),
+                  ),
+                  const SizedBox(height: 64),
+                  _buildLocationSection(isMobile),
+                  const SizedBox(height: 64),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                children: [
-                  Row(
+
+            // Floating Appointment Panel (Chat-style)
+            if (_showAppointmentPanel)
+              Positioned(
+                right: 24,
+                bottom: 24,
+                child: Container(
+                  width: 420,
+                  height: screenHeight * 0.75,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
                     children: [
+                      // Header
+                      InkWell(
+                        onTap: _toggleAppointmentPanel,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF5173B8),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Book Appointment',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                onPressed: _toggleAppointmentPanel,
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white, size: 20),
+                                tooltip: 'Close',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Scrollable content
                       Expanded(
-                        child: Text(
-                          widget.controller.clinic.value!.clinicName,
-                          style: const TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold),
+                        child: Container(
+                          color: Colors.grey.shade50,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: settings != null
+                                ? _buildAppointmentPanel(settings, isMobile)
+                                : const Center(
+                                    child: CircularProgressIndicator()),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  _buildGalleryPreview(isMobile),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: isTablet || isMobile
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: _buildLeftContent(isMobile),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: getLeftSideWidth(screenWidth),
-                          child: _buildLeftContent(isMobile),
-                        ),
-                        const SizedBox(width: 40),
-                        if (settings != null)
-                          SizedBox(
-                            width: 420,
-                            child: _buildAppointmentPanel(settings, isMobile),
-                          ),
-                      ],
-                    ),
-            ),
-            const SizedBox(height: 64),
-            _buildLocationSection(isMobile),
-            const SizedBox(height: 64),
           ],
         ),
+        // Floating Action Button
+        floatingActionButton: !_showAppointmentPanel
+            ? FloatingActionButton.extended(
+                onPressed: _toggleAppointmentPanel,
+                backgroundColor: const Color(0xFF5173B8),
+                icon: const Icon(Icons.calendar_today, color: Colors.white),
+                label: const Text(
+                  'Book Appointment',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : null,
       );
     });
   }
@@ -2294,158 +2408,148 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   }
 
   Widget _buildAppointmentPanel(settings, bool isMobile) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-              spreadRadius: 2)
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(isMobile ? 16 : 20),
-            decoration: const BoxDecoration(
-              color: Color(0xFF5173B8),
-              borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Select Date',
+            style: GoogleFonts.inter(
+                fontSize: isMobile ? 14 : 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800])),
+        SizedBox(height: isMobile ? 8 : 12),
+        Container(
+          decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.all(16),
+          child: TableCalendar(
+            focusedDay: _selectedDate ?? DateTime.now(),
+            firstDay: DateTime.now(),
+            lastDay: DateTime.now()
+                .add(Duration(days: settings?.maxAdvanceBooking ?? 30)),
+            selectedDayPredicate: (day) => isSameDay(day, _selectedDate),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() => _selectedDate = selectedDay);
+            },
+            calendarStyle: CalendarStyle(
+              todayDecoration: BoxDecoration(
+                  color: const Color(0xFF5173B8).withOpacity(0.6),
+                  border: Border.all(color: const Color(0xFF5173B8)),
+                  shape: BoxShape.circle),
+              selectedDecoration: const BoxDecoration(
+                  color: Color(0xFF5173B8), shape: BoxShape.circle),
+              outsideDaysVisible: false,
+              cellMargin: const EdgeInsets.all(4),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today,
-                    color: Colors.white, size: isMobile ? 20 : 24),
-                SizedBox(width: isMobile ? 8 : 12),
-                Expanded(
-                  child: Text('Book Appointment',
-                      style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: isMobile ? 16 : 20,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ],
+            headerStyle: HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+              titleTextStyle: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600, fontSize: isMobile ? 14 : 16),
             ),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: TextStyle(
+                  fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.w600),
+              weekendStyle: TextStyle(
+                  fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.w600),
+            ),
+            calendarFormat: CalendarFormat.month,
+            enabledDayPredicate: (day) =>
+                !day.isBefore(DateTime.now().subtract(const Duration(days: 1))),
           ),
-          Padding(
-            padding: EdgeInsets.all(isMobile ? 16 : 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Select Date',
-                    style: GoogleFonts.inter(
-                        fontSize: isMobile ? 14 : 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800])),
-                SizedBox(height: isMobile ? 8 : 12),
-                Container(
-                  decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(12)),
-                  child: TableCalendar(
-                    focusedDay: _selectedDate ?? DateTime.now(),
-                    firstDay: DateTime.now(),
-                    lastDay: DateTime.now()
-                        .add(Duration(days: settings?.maxAdvanceBooking ?? 30)),
-                    selectedDayPredicate: (day) =>
-                        isSameDay(day, _selectedDate),
-                    onDaySelected: (selectedDay, focusedDay) {
-                      setState(() => _selectedDate = selectedDay);
-                    },
-                    calendarStyle: CalendarStyle(
-                      todayDecoration: BoxDecoration(
-                          color: const Color(0xFF5173B8).withOpacity(0.3),
-                          shape: BoxShape.circle),
-                      selectedDecoration: const BoxDecoration(
-                          color: Color(0xFF5173B8), shape: BoxShape.circle),
-                      outsideDaysVisible: false,
-                    ),
-                    headerStyle: HeaderStyle(
-                      formatButtonVisible: false,
-                      titleCentered: true,
-                      titleTextStyle: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          fontSize: isMobile ? 14 : 16),
-                    ),
-                    daysOfWeekStyle: DaysOfWeekStyle(
-                      weekdayStyle: TextStyle(fontSize: isMobile ? 12 : 14),
-                      weekendStyle: TextStyle(fontSize: isMobile ? 12 : 14),
-                    ),
-                    calendarFormat: CalendarFormat.month,
-                    enabledDayPredicate: (day) => !day.isBefore(
-                        DateTime.now().subtract(const Duration(days: 1))),
+        ),
+        SizedBox(height: isMobile ? 16 : 20),
+        Text('Time',
+            style: GoogleFonts.inter(
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700])),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8)),
+          padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 10 : 12, vertical: isMobile ? 10 : 12),
+          child: Row(
+            children: [
+              const Icon(Icons.access_time, size: 20, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text('Select time',
+                  style: TextStyle(
+                      color: Colors.grey, fontSize: isMobile ? 12 : 14)),
+            ],
+          ),
+        ),
+        SizedBox(height: isMobile ? 12 : 16),
+        Text('Service',
+            style: GoogleFonts.inter(
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700])),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8)),
+          padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 10 : 12, vertical: isMobile ? 10 : 12),
+          child: Text('Choose service',
+              style:
+                  TextStyle(color: Colors.grey, fontSize: isMobile ? 12 : 14)),
+        ),
+        SizedBox(height: isMobile ? 12 : 16),
+        Text('Select Pet',
+            style: GoogleFonts.inter(
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700])),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8)),
+          padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 10 : 12, vertical: isMobile ? 10 : 12),
+          child: Row(
+            children: [
+              Icon(Icons.pets, size: isMobile ? 16 : 20, color: Colors.grey),
+              SizedBox(width: isMobile ? 6 : 8),
+              Text('Choose your pet',
+                  style: TextStyle(
+                      color: Colors.grey, fontSize: isMobile ? 12 : 14)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Preview note
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.shade200),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'This is a preview. Actual booking functionality is available to customers.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade700,
                   ),
                 ),
-                SizedBox(height: isMobile ? 16 : 20),
-                Text('Time',
-                    style: GoogleFonts.inter(
-                        fontSize: isMobile ? 12 : 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700])),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8)),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 10 : 12,
-                      vertical: isMobile ? 10 : 12),
-                  child: Text('Select time',
-                      style: TextStyle(
-                          color: Colors.grey, fontSize: isMobile ? 12 : 14)),
-                ),
-                SizedBox(height: isMobile ? 12 : 16),
-                Text('Service',
-                    style: GoogleFonts.inter(
-                        fontSize: isMobile ? 12 : 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700])),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8)),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 10 : 12,
-                      vertical: isMobile ? 10 : 12),
-                  child: Text('Choose service',
-                      style: TextStyle(
-                          color: Colors.grey, fontSize: isMobile ? 12 : 14)),
-                ),
-                SizedBox(height: isMobile ? 12 : 16),
-                Text('Select Pet',
-                    style: GoogleFonts.inter(
-                        fontSize: isMobile ? 12 : 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700])),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8)),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 10 : 12,
-                      vertical: isMobile ? 10 : 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.pets,
-                          size: isMobile ? 16 : 20, color: Colors.grey),
-                      SizedBox(width: isMobile ? 6 : 8),
-                      Text('Choose your pet',
-                          style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: isMobile ? 12 : 14)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

@@ -191,7 +191,7 @@ class ClinicSettingsController extends GetxController {
   Future<void> fetchClinicData() async {
     try {
       print('>>> ============================================');
-      print('>>> CLINIC SETTINGS: Fetching clinic data');
+      print('>>> FETCHING CLINIC DATA');
       print('>>> ============================================');
 
       final user = await authRepository.getUser();
@@ -200,63 +200,67 @@ class ClinicSettingsController extends GetxController {
         return;
       }
 
-      print('>>> Current user ID: ${user.$id}');
+      print('>>> Current user: ${user.$id}');
+      print('>>> User email: ${user.email}');
 
       final storage = GetStorage();
-      final userRole = storage.read('role') as String?;
-      final storedClinicId = storage.read('clinicId') as String?;
 
-      print('>>> User role: $userRole');
-      print('>>> Stored clinic ID: $storedClinicId');
+      // CRITICAL FIX: Always get fresh role from storage
+      final userRole = storage.read('role') as String?;
+      print('>>> User role from storage: $userRole');
 
       String? clinicId;
 
       if (userRole == 'staff') {
-        clinicId = storedClinicId;
-        print('>>> STAFF mode - using stored clinicId: $clinicId');
+        // CRITICAL FIX: Get fresh clinicId from storage
+        clinicId = storage.read('clinicId') as String?;
+        print(
+            '>>> CLINIC SETTINGS: Staff mode - using stored clinicId: $clinicId');
       } else if (userRole == 'admin') {
-        print('>>> ADMIN mode - looking up clinic by adminId');
+        // CRITICAL FIX: Always lookup fresh clinic data for admin
+        print('>>> CLINIC SETTINGS: Admin mode - looking up clinic');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-          print('>>> Admin clinic found: $clinicId');
+          print('>>> CLINIC SETTINGS: Admin clinic found: $clinicId');
+          print('>>> Clinic name: ${clinicDoc.data['clinicName']}');
         } else {
-          print('>>> No clinic found for admin');
+          print('>>> CLINIC SETTINGS: No clinic found for admin');
         }
       } else {
-        print('>>> Unknown role or no role: $userRole');
+        print('>>> CLINIC SETTINGS: Unknown role: $userRole');
       }
 
       if (clinicId != null && clinicId.isNotEmpty) {
-        print('>>> Fetching clinic document with ID: $clinicId');
-        final clinicDoc = await authRepository.getClinicById(clinicId);
+        print('>>> CLINIC SETTINGS: Fetching clinic with ID: $clinicId');
 
+        // CRITICAL FIX: Clear old data before fetching new
+        clinic.value = null;
+
+        final clinicDoc = await authRepository.getClinicById(clinicId);
         if (clinicDoc != null) {
-          // CRITICAL: Create fresh clinic object
           clinic.value = Clinic.fromMap(clinicDoc.data);
           clinic.value!.documentId = clinicDoc.$id;
 
-          print('>>> ✅ Clinic loaded successfully');
+          print('>>> CLINIC SETTINGS: Clinic loaded successfully');
           print('>>> Clinic name: ${clinic.value!.clinicName}');
-          print('>>> Clinic document ID: ${clinic.value!.documentId}');
+          print('>>> Clinic ID: ${clinic.value!.documentId}');
+          print('>>> Clinic address: ${clinic.value!.address}');
 
-          // Populate form fields
           _populateClinicFields();
         } else {
-          print('>>> ❌ Clinic document not found');
-          clinic.value = null;
+          print('>>> CLINIC SETTINGS: Clinic document not found');
         }
       } else {
-        print('>>> ❌ No clinic ID available');
-        clinic.value = null;
+        print('>>> CLINIC SETTINGS: No clinic ID available');
       }
 
       print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error fetching clinic data: $e');
+      print('>>> ============================================');
+      print('>>> Error fetching clinic data: $e');
       print('>>> Stack trace: ${StackTrace.current}');
       print('>>> ============================================');
-      clinic.value = null;
       rethrow;
     }
   }

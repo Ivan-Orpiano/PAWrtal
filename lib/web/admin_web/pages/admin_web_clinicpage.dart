@@ -20,7 +20,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
   late ClinicSettingsController controller;
   bool _showEditingPage = false;
   bool _initialized = false;
-  DateTime? _selectedDate;
 
   @override
   bool get wantKeepAlive => true;
@@ -33,24 +32,30 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
 
   void _initializeTabController() {
     try {
-      if (!Get.isRegistered<ClinicSettingsController>()) {
-        controller = Get.put(
-          ClinicSettingsController(
-            authRepository: Get.find<AuthRepository>(),
-            session: Get.find<UserSessionService>(),
-          ),
-          permanent: true,
-        );
-      } else {
-        controller = Get.find<ClinicSettingsController>();
+      // CRITICAL FIX: Delete old controller if it exists to prevent stale data
+      if (Get.isRegistered<ClinicSettingsController>()) {
+        print('>>> Removing old ClinicSettingsController instance...');
+        Get.delete<ClinicSettingsController>(force: true);
       }
+
+      // CRITICAL FIX: Always create a fresh instance for current clinic
+      print('>>> Creating new ClinicSettingsController instance...');
+      controller = Get.put(
+        ClinicSettingsController(
+          authRepository: Get.find<AuthRepository>(),
+          session: Get.find<UserSessionService>(),
+        ),
+        permanent: false, // CHANGED: Don't persist across logins
+      );
 
       _tabController = TabController(length: 3, vsync: this);
       setState(() {
         _initialized = true;
       });
+
+      print('>>> ClinicSettingsController initialized successfully');
     } catch (e) {
-      print('Error initializing: $e');
+      print('>>> Error initializing: $e');
       setState(() {
         _initialized = false;
       });
@@ -62,6 +67,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     if (_initialized) {
       _tabController.dispose();
     }
+    // Don't delete controller here - let GetX handle it
     super.dispose();
   }
 
@@ -77,207 +83,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
 
   bool _isTabletLayout(double screenWidth) {
     return screenWidth > 785 && screenWidth < 1100;
-  }
-
-  void _showAppointmentPopup() {
-    final settings = controller.clinicSettings.value;
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          insetPadding: EdgeInsets.all(
-              MediaQuery.of(context).size.width <= 785 ? 16 : 24),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: 500,
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-            ),
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  child: _buildAppointmentPanel(settings),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close, color: Colors.grey[600], size: 28),
-                    tooltip: 'Close',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAppointmentPanel(settings) {
-    final isMobile = MediaQuery.of(context).size.width <= 785;
-
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(isMobile ? 16 : 20),
-          decoration: const BoxDecoration(
-            color: Color(0xFF5173B8),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_today,
-                  color: Colors.white, size: isMobile ? 20 : 24),
-              SizedBox(width: isMobile ? 8 : 12),
-              Expanded(
-                child: Text('Book Appointment',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isMobile ? 16 : 20,
-                        fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Select Date',
-                  style: TextStyle(
-                      fontSize: isMobile ? 14 : 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[800])),
-              SizedBox(height: isMobile ? 8 : 12),
-              Container(
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(12)),
-                child: TableCalendar(
-                  focusedDay: _selectedDate ?? DateTime.now(),
-                  firstDay: DateTime.now(),
-                  lastDay: DateTime.now()
-                      .add(Duration(days: settings?.maxAdvanceBooking ?? 30)),
-                  selectedDayPredicate: (day) => isSameDay(day, _selectedDate),
-                  onDaySelected: (selectedDay, focusedDay) {
-                    setState(() => _selectedDate = selectedDay);
-                  },
-                  calendarStyle: CalendarStyle(
-                    todayDecoration: BoxDecoration(
-                        color: const Color(0xFF5173B8).withOpacity(0.3),
-                        shape: BoxShape.circle),
-                    selectedDecoration: const BoxDecoration(
-                        color: Color(0xFF5173B8), shape: BoxShape.circle),
-                    outsideDaysVisible: false,
-                  ),
-                  headerStyle: HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    titleTextStyle: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: isMobile ? 14 : 16),
-                  ),
-                  daysOfWeekStyle: DaysOfWeekStyle(
-                    weekdayStyle: TextStyle(fontSize: isMobile ? 12 : 14),
-                    weekendStyle: TextStyle(fontSize: isMobile ? 12 : 14),
-                  ),
-                  calendarFormat: CalendarFormat.month,
-                  enabledDayPredicate: (day) => !day.isBefore(
-                      DateTime.now().subtract(const Duration(days: 1))),
-                ),
-              ),
-              SizedBox(height: isMobile ? 16 : 20),
-              Text('Time',
-                  style: TextStyle(
-                      fontSize: isMobile ? 12 : 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[700])),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8)),
-                padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 10 : 12,
-                    vertical: isMobile ? 10 : 12),
-                child: Text('Select time',
-                    style: TextStyle(
-                        color: Colors.grey, fontSize: isMobile ? 12 : 14)),
-              ),
-              SizedBox(height: isMobile ? 12 : 16),
-              Text('Service',
-                  style: TextStyle(
-                      fontSize: isMobile ? 12 : 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[700])),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8)),
-                padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 10 : 12,
-                    vertical: isMobile ? 10 : 12),
-                child: Text('Choose service',
-                    style: TextStyle(
-                        color: Colors.grey, fontSize: isMobile ? 12 : 14)),
-              ),
-              SizedBox(height: isMobile ? 12 : 16),
-              Text('Select Pet',
-                  style: TextStyle(
-                      fontSize: isMobile ? 12 : 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[700])),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8)),
-                padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 10 : 12,
-                    vertical: isMobile ? 10 : 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.pets,
-                        size: isMobile ? 16 : 20, color: Colors.grey),
-                    SizedBox(width: isMobile ? 6 : 8),
-                    Text('Choose your pet',
-                        style: TextStyle(
-                            color: Colors.grey, fontSize: isMobile ? 12 : 14)),
-                  ],
-                ),
-              ),
-              SizedBox(height: isMobile ? 20 : 24),
-              SizedBox(
-                width: double.infinity,
-                height: isMobile ? 44 : 48,
-                child: ElevatedButton(
-                  onPressed: null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text('Book Appointment',
-                      style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: isMobile ? 14 : 16,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ),
-              SizedBox(height: isMobile ? 12 : 16),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
   @override
@@ -309,8 +114,9 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             else
               _buildEditingPage(isMobile),
             if (!_showEditingPage) ...[
+              // MODIFIED: Moved Edit Settings button higher
               Positioned(
-                bottom: isMobile ? 16 : 32,
+                bottom: isMobile ? 77 : 85, // Increased from 76/92 to 86/102
                 right: isMobile ? 16 : 32,
                 child: FloatingActionButton.extended(
                   onPressed: _toggleView,
@@ -325,17 +131,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   ),
                 ),
               ),
-              if (isMobile || isTablet)
-                Positioned(
-                  bottom: isMobile ? 76 : 92,
-                  right: isMobile ? 16 : 32,
-                  child: FloatingActionButton(
-                    onPressed: _showAppointmentPopup,
-                    backgroundColor: Colors.green.shade600,
-                    child:
-                        const Icon(Icons.calendar_today, color: Colors.white),
-                  ),
-                ),
+              // Book Appointment FAB stays at original position (bottom: 16/32)
             ]
           ],
         );
@@ -605,8 +401,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                         ],
                       ),
                 const SizedBox(height: 16),
-                // Drag and Drop Area for Desktop
-                if (!isMobile) _buildDragAndDropArea(isMobile),
                 if (!isMobile) const SizedBox(height: 16),
                 Obx(() {
                   if (controller.galleryImages.isEmpty) {
@@ -724,7 +518,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             ),
           ),
           const SizedBox(height: 24),
-          // Dashboard Preview Section
+          // Dashboard Preview Section - MODIFIED
           _buildSectionCard(
             title: "Dashboard Preview",
             isMobile: isMobile,
@@ -739,181 +533,9 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Dashboard Tile Preview
+                // Dashboard Tile Preview - MODIFIED TO MATCH WEB DASHBOARD TILE
                 Obx(() {
-                  final clinic = controller.clinic.value;
-                  final displayImage =
-                      controller.tempDashboardPic.value.isNotEmpty
-                          ? controller.tempDashboardPic.value
-                          : (clinic?.image ?? '');
-
-                  return SizedBox(
-                    width: isMobile ? double.infinity : 350,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Tile Preview
-                        Stack(
-                          children: [
-                            SizedBox(
-                              height: 250,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(15),
-                                child: displayImage.isNotEmpty
-                                    ? Image.network(
-                                        displayImage,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                          if (loadingProgress == null)
-                                            return child;
-                                          return Container(
-                                            color: Colors.grey[200],
-                                            child: const Center(
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            ),
-                                          );
-                                        },
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                          return Container(
-                                            color: Colors.grey[200],
-                                            child: Center(
-                                              child: Icon(
-                                                  Icons.image_not_supported,
-                                                  size: 48,
-                                                  color: Colors.grey[400]),
-                                            ),
-                                          );
-                                        },
-                                      )
-                                    : Container(
-                                        color: Colors.grey[200],
-                                        child: Center(
-                                          child: Icon(Icons.photo,
-                                              size: 48,
-                                              color: Colors.grey[400]),
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            // Status Badge
-                            Positioned(
-                              top: 10,
-                              left: 10,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: controller.isClinicOpen.value
-                                      ? Colors.green
-                                      : Colors.red,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  controller.isClinicOpen.value
-                                      ? "OPEN"
-                                      : "CLOSED",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Like Button
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.favorite_border_rounded,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: null,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        // Clinic Name and Rating
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                clinic?.clinicName ?? "Clinic Name",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.star_rounded,
-                                  color: Colors.amber,
-                                  size: 16,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  "4.95",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Address
-                        Text(
-                          clinic?.address ?? "Address",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        // Hours
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 12,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                controller.clinicSettings.value
-                                        ?.getTodayHours() ??
-                                    "Hours",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
+                  return _buildDashboardTilePreview(isMobile);
                 }),
                 const SizedBox(height: 24),
                 // Control Buttons
@@ -1028,96 +650,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
           ),
         ],
       ),
-    );
-  }
-
-  // NEW: Drag and Drop Area Widget
-  Widget _buildDragAndDropArea(bool isMobile) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        bool isDragOver = false;
-
-        return SizedBox(
-          width: double.infinity,
-          child: DragTarget<List<String>>(
-            onWillAcceptWithDetails: (details) {
-              setState(() => isDragOver = true);
-              return true;
-            },
-            onLeave: (_) {
-              setState(() => isDragOver = false);
-            },
-            onAcceptWithDetails: (details) {
-              setState(() => isDragOver = false);
-            },
-            builder: (context, candidateData, rejectedData) {
-              return MouseRegion(
-                onEnter: (_) => setState(() => isDragOver = true),
-                onExit: (_) => setState(() => isDragOver = false),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isDragOver
-                          ? const Color.fromARGB(255, 81, 115, 153)
-                          : Colors.grey[300]!,
-                      width: isDragOver ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    color: isDragOver
-                        ? const Color.fromARGB(255, 81, 115, 153)
-                            .withOpacity(0.05)
-                        : Colors.grey[50],
-                  ),
-                  child: InkWell(
-                    onTap: controller.isSaving.value
-                        ? null
-                        : controller.addGalleryImages,
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.cloud_upload_outlined,
-                            size: 48,
-                            color: isDragOver
-                                ? const Color.fromARGB(255, 81, 115, 153)
-                                : Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            isDragOver
-                                ? "Drop images here to upload"
-                                : "Drag images here or click to upload",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: isDragOver
-                                  ? const Color.fromARGB(255, 81, 115, 153)
-                                  : Colors.grey[700],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Supported formats: JPG, PNG",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
     );
   }
 
@@ -2314,5 +1846,230 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
       'Sunday'
     ];
     return days[date.weekday - 1];
+  }
+
+  Widget _buildDashboardTilePreview(bool isMobile) {
+    final clinic = controller.clinic.value;
+    final settings = controller.clinicSettings.value;
+    final displayImage = controller.tempDashboardPic.value.isNotEmpty
+        ? controller.tempDashboardPic.value
+        : (clinic?.image ?? '');
+
+    // Get services for display (similar to WebDashboardTile)
+    List<String> services = [];
+    if (settings != null && settings.services.isNotEmpty) {
+      services = settings.services.take(3).toList();
+    } else if (clinic?.services.isNotEmpty ?? false) {
+      services = clinic!.services
+          .split(RegExp(r'[,;|\n]'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .take(3)
+          .toList();
+    }
+
+    // Calculate tile dimensions
+    final tileWidth = isMobile ? double.infinity : 350.0;
+    final tileHeight = isMobile ? 450.0 : 490.0;
+
+    return Container(
+      width: tileWidth,
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Image with status badge
+          Stack(
+            children: [
+              SizedBox(
+                height: tileHeight * 0.7,
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: displayImage.isNotEmpty
+                      ? Image.network(
+                          displayImage,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: Icon(Icons.image_not_supported,
+                                    size: 48, color: Colors.grey[400]),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(Icons.photo,
+                                size: 48, color: Colors.grey[400]),
+                          ),
+                        ),
+                ),
+              ),
+              // Status Badge
+              Positioned(
+                top: 10,
+                left: 10,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: controller.isClinicOpen.value
+                        ? Colors.green
+                        : Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    controller.isClinicOpen.value ? "OPEN" : "CLOSED",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Clinic Name and Rating
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  clinic?.clinicName ?? "Clinic Name",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Row(
+                children: [
+                  Icon(Icons.star, color: Colors.amber, size: 18),
+                  SizedBox(width: 3),
+                  Text(
+                    "4.95",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Address
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  clinic?.address ?? "Address",
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Hours
+          Row(
+            children: [
+              Icon(
+                Icons.access_time,
+                size: 14,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  settings?.getTodayHours() ?? "Hours",
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Services display
+          if (services.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Text(
+                    "Services",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    children: services.take(2).map((service) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Tooltip(
+                          message: service,
+                          child: Icon(
+                            _getServiceIconForPreview(service),
+                            size: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+// NEW: Add helper method for service icons
+  IconData _getServiceIconForPreview(String service) {
+    String serviceLower = service.toLowerCase();
+    if (serviceLower.contains('vaccination') ||
+        serviceLower.contains('vaccine')) {
+      return Icons.vaccines_outlined;
+    } else if (serviceLower.contains('surgery') ||
+        serviceLower.contains('operation')) {
+      return Icons.local_hospital_outlined;
+    } else if (serviceLower.contains('checkup') ||
+        serviceLower.contains('examination')) {
+      return Icons.health_and_safety_outlined;
+    } else if (serviceLower.contains('grooming')) {
+      return Icons.pets_outlined;
+    } else if (serviceLower.contains('dental')) {
+      return Icons.medication_outlined;
+    } else {
+      return Icons.medical_services_outlined;
+    }
   }
 }
