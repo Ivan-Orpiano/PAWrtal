@@ -467,106 +467,472 @@ class _EnhancedWebAppointmentsPageState
     );
   }
 
-  Widget _buildEnhancedAppointmentBar(bool isCompact) {
-    DateTime now = DateTime.now();
-    String formattedDate = DateFormat('MMM dd, yyyy').format(now);
+Widget _buildEnhancedAppointmentBar(bool isCompact) {
+  DateTime now = DateTime.now();
+  String formattedDate = DateFormat('MMM dd, yyyy').format(now);
 
-    return Obx(() {
-      final stats = appointmentController.userStats;
+  return Obx(() {
+    final stats = appointmentController.userStats;
+    final inProgressAppointments = appointmentController.inProgress;
 
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color.fromARGB(255, 81, 115, 153),
-              Colors.blue.shade400,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color.fromARGB(255, 81, 115, 153),
+            Colors.blue.shade400,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: isCompact
-            ? _buildCompactHeader(formattedDate, stats)
-            : _buildFullHeader(formattedDate, stats),
-      );
-    });
-  }
-
-  Widget _buildCompactHeader(String formattedDate, Map<String, int> stats) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildInfoCard(Icons.calendar_today, "Today", formattedDate,
-                isWhite: true),
-            _buildInfoCard(Icons.event_note, "Total", "${stats['total']}",
-                isWhite: true),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
-            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
-            _buildStatusChip(
-                "Completed", "${stats['completed']}", Colors.green),
-          ],
-        )
-      ],
+        ],
+      ),
+      child: isCompact
+          ? _buildCompactHeader(formattedDate, stats, inProgressAppointments)
+          : _buildFullHeader(formattedDate, stats, inProgressAppointments),
     );
-  }
+  });
+}
 
-  Widget _buildFullHeader(String formattedDate, Map<String, int> stats) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+Widget _buildCompactHeader(
+  String formattedDate,
+  Map<String, int> stats,
+  List<Appointment> inProgressAppointments,
+) {
+  return Column(
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildInfoCard(Icons.calendar_today, "Today", formattedDate,
+              isWhite: true),
+          if (inProgressAppointments.isNotEmpty)
+            _buildInProgressButton(inProgressAppointments),
+          _buildInfoCard(Icons.event_note, "Total", "${stats['total']}",
+              isWhite: true),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: [
+          _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
+          _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
+          _buildStatusChip("Completed", "${stats['completed']}", Colors.green),
+          _buildStatusChip("History", "${stats['history']}", Colors.grey),
+        ],
+      ),
+    ],
+  );
+}
+
+Widget _buildFullHeader(
+  String formattedDate,
+  Map<String, int> stats,
+  List<Appointment> inProgressAppointments,
+) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "My Appointments",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "${stats['total']} total • ${stats['today']} today • $formattedDate",
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+      Row(
+        children: [
+          _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
+          const SizedBox(width: 12),
+          _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
+          const SizedBox(width: 12),
+          _buildStatusChip("Completed", "${stats['completed']}", Colors.green),
+          const SizedBox(width: 12),
+          _buildStatusChip("History", "${stats['history']}", Colors.grey),
+          if (inProgressAppointments.isNotEmpty) ...[
+            const SizedBox(width: 12),
+            _buildInProgressButton(inProgressAppointments),
+          ],
+        ],
+      ),
+    ],
+  );
+}
+
+Widget _buildInProgressButton(List<Appointment> inProgressAppointments) {
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: Tooltip(
+      preferBelow: false,
+      verticalOffset: 20,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      richMessage: WidgetSpan(
+        child: _buildInProgressTooltipContent(inProgressAppointments),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                color: Colors.greenAccent,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             const Text(
-              "My Appointments",
+              "In Progress",
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              "${stats['total']} total • ${stats['today']} today • $formattedDate",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "${inProgressAppointments.length}",
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 81, 115, 153),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.info_outline,
+              color: Colors.white,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildInProgressTooltipContent(List<Appointment> appointments) {
+  return Container(
+    constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.medical_services,
+                color: Colors.green.shade600,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Appointments In Progress',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    '${appointments.length} active ${appointments.length == 1 ? 'appointment' : 'appointments'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        
+        // Appointments List
+        Flexible(
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: appointments.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final appointment = appointments[index];
+              final clinic = appointmentController.getClinicForAppointment(appointment);
+              final pet = appointmentController.getPetForAppointment(appointment);
+              
+              return _buildInProgressAppointmentCard(appointment, clinic, pet);
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildInProgressAppointmentCard(
+  Appointment appointment,
+  Clinic? clinic,
+  Pet? pet,
+) {
+  String statusText = '';
+  IconData statusIcon = Icons.medical_services;
+  Color statusColor = Colors.blue;
+
+  if (appointment.checkedInAt != null && appointment.serviceStartedAt == null) {
+    statusText = 'Checked In - Waiting';
+    statusIcon = Icons.login;
+    statusColor = Colors.orange;
+  } else if (appointment.serviceStartedAt != null && appointment.serviceCompletedAt == null) {
+    statusText = 'Treatment in Progress';
+    statusIcon = Icons.healing;
+    statusColor = Colors.green;
+  }
+
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: Colors.grey.shade200),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Status Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: statusColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(statusIcon, size: 12, color: statusColor),
+              const SizedBox(width: 4),
+              Text(
+                statusText,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        
+        // Clinic Info
         Row(
           children: [
-            _buildStatusChip("Pending", "${stats['pending']}", Colors.orange),
-            const SizedBox(width: 12),
-            _buildStatusChip("Upcoming", "${stats['upcoming']}", Colors.blue),
-            const SizedBox(width: 12),
-            _buildStatusChip(
-                "Completed", "${stats['completed']}", Colors.green),
-            const SizedBox(width: 12),
-            _buildStatusChip("History", "${stats['history']}", Colors.grey),
+            Icon(Icons.local_hospital, size: 14, color: Colors.grey.shade600),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                clinic?.clinicName ?? 'Unknown Clinic',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
-        )
+        ),
+        const SizedBox(height: 6),
+        
+        // Service & Pet Info
+        Row(
+          children: [
+            Icon(Icons.medical_services, size: 12, color: Colors.grey.shade600),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                appointment.service,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(Icons.pets, size: 12, color: Colors.grey.shade600),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                pet?.name ?? appointment.petId,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        
+        // Time Info
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.schedule, size: 12, color: Colors.blue.shade700),
+              const SizedBox(width: 6),
+              Text(
+                DateFormat('MMM dd • h:mm a').format(appointment.dateTime),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Progress Indicators
+        if (appointment.checkedInAt != null) ...[
+          const SizedBox(height: 8),
+          _buildProgressIndicator(
+            'Checked In',
+            DateFormat('h:mm a').format(appointment.checkedInAt!),
+            Icons.login,
+            Colors.green,
+          ),
+        ],
+        if (appointment.serviceStartedAt != null) ...[
+          const SizedBox(height: 4),
+          _buildProgressIndicator(
+            'Service Started',
+            DateFormat('h:mm a').format(appointment.serviceStartedAt!),
+            Icons.play_arrow,
+            Colors.blue,
+          ),
+        ],
       ],
-    );
-  }
+    ),
+  );
+}
+
+Widget _buildProgressIndicator(
+  String label,
+  String time,
+  IconData icon,
+  Color color,
+) {
+  return Row(
+    children: [
+      Icon(icon, size: 10, color: color),
+      const SizedBox(width: 4),
+      Text(
+        '$label: ',
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey.shade700,
+        ),
+      ),
+      Text(
+        time,
+        style: TextStyle(
+          fontSize: 9,
+          color: Colors.grey.shade600,
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildInfoCard(IconData icon, String label, String value,
       {bool isWhite = false}) {
