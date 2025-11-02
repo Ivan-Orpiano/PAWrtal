@@ -2123,50 +2123,50 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     );
   }
 
-  Widget _buildDeleteConfirmation() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange[50], // Changed from red to orange
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange[300]!, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
+    Widget _buildDeleteConfirmation() {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange[300]!, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              Icons.archive_outlined, // Changed icon
-              color: Colors.orange[700],
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Are you sure you want to archive ${widget.user.name}? The account will be disabled and permanently deleted after 30 days. You can recover it within this period.',
-              style: TextStyle(
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.archive_outlined,
                 color: Colors.orange[700],
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                size: 24,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Are you sure you want to archive ${widget.user.name}? The account and ALL related data (pets, appointments, medical records) will be preserved for 30 days before permanent deletion. You can recover everything within this period.',
+                style: TextStyle(
+                  color: Colors.orange[700],
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
   Widget _buildActionButtons(bool isWide) {
     if (_isDeleting) {

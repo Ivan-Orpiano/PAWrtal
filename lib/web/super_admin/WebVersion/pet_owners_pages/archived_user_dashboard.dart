@@ -1868,45 +1868,45 @@ Widget _buildResultRow({
               ],
 
               // Warning Banner
-              if (isDueSoon || isDueNow) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isDueNow
-                          ? [darkRed.withOpacity(0.15), darkRed.withOpacity(0.05)]
-                          : [warningOrange.withOpacity(0.15), warningOrange.withOpacity(0.05)],
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDueNow ? darkRed.withOpacity(0.3) : warningOrange.withOpacity(0.3),
-                    ),
+            if (isDueSoon || isDueNow) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDueNow
+                        ? [darkRed.withOpacity(0.15), darkRed.withOpacity(0.05)]
+                        : [warningOrange.withOpacity(0.15), warningOrange.withOpacity(0.05)],
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isDueNow ? Icons.error : Icons.warning,
-                        color: isDueNow ? darkRed : warningOrange,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          isDueNow
-                              ? 'This user is due for permanent deletion'
-                              : 'Will be permanently deleted in $daysLeft days',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDueNow ? darkRed : warningOrange,
-                          ),
-                        ),
-                      ),
-                    ],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDueNow ? darkRed.withOpacity(0.3) : warningOrange.withOpacity(0.3),
                   ),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    Icon(
+                      isDueNow ? Icons.error : Icons.warning,
+                      color: isDueNow ? darkRed : warningOrange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isDueNow
+                            ? 'User data will be permanently deleted now (pets, appointments, medical records)'
+                            : 'User data will be permanently deleted in $daysLeft days (pets, appointments, medical records)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDueNow ? darkRed : warningOrange,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
               // Actions
               if (!user.isPermanentlyDeleted && !user.isRecovered) ...[
