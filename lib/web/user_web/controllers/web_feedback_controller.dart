@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/models/daily_report_tracker_model.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
@@ -7,6 +8,7 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/utils/feedback_spam_detector.dart';
+
 
 class WebFeedbackController extends GetxController {
   final AuthRepository authRepository;
@@ -570,6 +572,7 @@ bool isPinned(String feedbackId) {
     selectedType.value = FeedbackType.bug;
     selectedCategory.value = FeedbackCategory.other;
     
+    
     // Force refresh
     subject.refresh();
     description.refresh();
@@ -631,91 +634,179 @@ Future<void> loadAllFeedback() async {
   }
 }
 
-    Future<void> autoCleanSpamFeedback() async {
-    try {
-      print('>>> ============================================');
-      print('>>> STARTING AUTO SPAM CLEANUP');
-      print('>>> ============================================');
-
-      isCleaningSpam.value = true;
-      int detectedCount = 0;
-      int archivedCount = 0;
-
-      final feedbackToCheck = allFeedback.where((f) {
-        // Only check pending/new feedback (not already archived)
-        return f.archivedAt == null && 
-              (f.status == FeedbackStatus.pending || 
-                f.status == FeedbackStatus.inProgress);
-      }).toList();
-
-      print('>>> Checking ${feedbackToCheck.length} feedbacks for spam...');
-
-      for (var feedback in feedbackToCheck) {
+      /// Checks subject + description for gibberish, scrambled words, and duplicates per user
+      Future<void> autoCleanSpamFeedback() async {
         try {
-          // Combine subject and description for analysis
-          final textToAnalyze = '${feedback.subject} ${feedback.description}';
-          
-          // Run spam detection
-          final isSpam = FeedbackSpamDetector.isSpamOrGibberish(textToAnalyze);
+          print('>>> ============================================');
+          print('>>> STARTING ENHANCED SPAM & REDUNDANCY CLEANUP');
+          print('>>> ============================================');
 
-          if (isSpam) {
-            detectedCount++;
-            print('>>> 🚫 SPAM DETECTED: ${feedback.subject}');
-            
-            // Get detailed analysis
-            final analysis = FeedbackSpamDetector.analyzeMessage(textToAnalyze);
-            print('>>>   Spam Score: ${(analysis['spamScore'] * 100).toStringAsFixed(1)}%');
+          isCleaningSpam.value = true;
+          int spamDetected = 0;
+          int redundantDetected = 0;
+          int totalArchived = 0;
 
-            // Auto-archive spam feedback
-            await archiveFeedback(feedback.documentId!);
-            archivedCount++;
+          final feedbackToCheck = allFeedback.where((f) {
+            // Only check non-archived, active feedback
+            return f.archivedAt == null;
+          }).toList();
 
-            print('>>>   ✅ Auto-archived spam feedback');
+          print('>>> Checking ${feedbackToCheck.length} feedbacks...');
+
+          // Group feedback by user for redundancy check
+          final Map<String, List<FeedbackAndReport>> feedbackByUser = {};
+          for (var feedback in feedbackToCheck) {
+            feedbackByUser.putIfAbsent(feedback.userId, () => []).add(feedback);
           }
+
+          print('>>> Total users: ${feedbackByUser.length}');
+
+          // Process each user's feedback
+          for (var userId in feedbackByUser.keys) {
+            final userFeedbacks = feedbackByUser[userId]!;
+            print('\n>>> 👤 Checking user: $userId (${userFeedbacks.length} feedbacks)');
+
+            // Sort by submission time (oldest first)
+            userFeedbacks.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+
+            for (int i = 0; i < userFeedbacks.length; i++) {
+              final currentFeedback = userFeedbacks[i];
+
+              try {
+                // STEP 1: Check for gibberish/scrambled words
+                final isSpam = FeedbackSpamDetector.isSpamOrGibberish(
+                  subject: currentFeedback.subject,
+                  description: currentFeedback.description,
+                );
+
+                if (isSpam) {
+                  spamDetected++;
+                  print('>>>   🚫 SPAM DETECTED: "${currentFeedback.subject}"');
+                  
+                  await _archiveWithReason(
+                    currentFeedback.documentId!,
+                    'Auto-archived: Gibberish/Scrambled content detected',
+                  );
+                  totalArchived++;
+                  continue; // Skip to next feedback
+                }
+
+                // STEP 2: Check for redundant submissions (compare with previous feedbacks)
+                if (i > 0) {
+                  final previousFeedbacks = userFeedbacks.sublist(0, i).map((f) => {
+                    'subject': f.subject,
+                    'description': f.description,
+                  }).toList();
+
+                  final isRedundant = FeedbackSpamDetector.hasRedundantSubmissions(
+                    userId: userId,
+                    currentSubject: currentFeedback.subject,
+                    currentDescription: currentFeedback.description,
+                    userPreviousFeedbacks: previousFeedbacks,
+                  );
+
+                  if (isRedundant) {
+                    redundantDetected++;
+                    print('>>>   🔄 REDUNDANT DETECTED: "${currentFeedback.subject}"');
+                    
+                    await _archiveWithReason(
+                      currentFeedback.documentId!,
+                      'Auto-archived: Duplicate/Redundant submission',
+                    );
+                    totalArchived++;
+                  }
+                }
+
+              } catch (e) {
+                print('>>>   ❌ Error checking feedback ${currentFeedback.documentId}: $e');
+              }
+            }
+          }
+
+          spamDetectedCount.value = spamDetected;
+          autoArchivedCount.value = totalArchived;
+
+          print('\n>>> ============================================');
+          print('>>> CLEANUP COMPLETE');
+          print('>>> Spam Detected: $spamDetected');
+          print('>>> Redundant Detected: $redundantDetected');
+          print('>>> Total Archived: $totalArchived');
+          print('>>> ============================================');
+
+          if (totalArchived > 0) {
+            _showSuccess('Auto-cleaned $totalArchived spam/redundant feedback(s)');
+            await loadAllFeedback(); // Refresh list
+          } else {
+            _showInfo('✅ All feedbacks look good - no spam detected!');
+          }
+
         } catch (e) {
-          print('>>> Error checking feedback ${feedback.documentId}: $e');
+          print('>>> ❌ Error in auto spam cleanup: $e');
+          _showError('Spam cleanup failed: $e');
+        } finally {
+          isCleaningSpam.value = false;
         }
       }
 
-      spamDetectedCount.value = detectedCount;
-      autoArchivedCount.value = archivedCount;
-
-      print('>>> ============================================');
-      print('>>> SPAM CLEANUP COMPLETE');
-      print('>>> Detected: $detectedCount');
-      print('>>> Archived: $archivedCount');
-      print('>>> ============================================');
-
-      if (archivedCount > 0) {
-        _showSuccess('Auto-cleaned $archivedCount spam feedback(s)');
-        await loadAllFeedback(); // Refresh list
-      } else {
-        _showInfo('No spam detected - all feedbacks look good!');
+      /// Helper: Archive feedback with custom reason
+      Future<void> _archiveWithReason(String documentId, String reason) async {
+        try {
+          await authRepository.appWriteProvider.databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+            documentId: documentId,
+            data: {
+              'archivedAt': DateTime.now().toIso8601String(),
+              'archivedBy': 'System (Auto-cleanup)',
+              'archiveReason': reason,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+          );
+        } catch (e) {
+          print('>>> Error archiving feedback: $e');
+          rethrow;
+        }
       }
 
-    } catch (e) {
-      print('>>> Error in auto spam cleanup: $e');
-      _showError('Spam cleanup failed: $e');
-    } finally {
-      isCleaningSpam.value = false;
-    }
-  }
+      /// Manual check if feedback is spam (subject + description)
+      Future<bool> checkIfSpam(FeedbackAndReport feedback) async {
+        return FeedbackSpamDetector.isSpamOrGibberish(
+          subject: feedback.subject,
+          description: feedback.description,
+        );
+      }
 
-  /// Manual spam check for single feedback
-  Future<bool> checkIfSpam(FeedbackAndReport feedback) async {
-    final textToAnalyze = '${feedback.subject} ${feedback.description}';
-    return FeedbackSpamDetector.isSpamOrGibberish(textToAnalyze);
-  }
+      /// Get detailed spam analysis
+      Map<String, dynamic> getSpamAnalysis(FeedbackAndReport feedback) {
+        return FeedbackSpamDetector.analyzeMessage(
+          subject: feedback.subject,
+          description: feedback.description,
+        );
+      }
 
-  /// Get spam analysis details (for admin review)
-  Map<String, dynamic> getSpamAnalysis(FeedbackAndReport feedback) {
-    final textToAnalyze = '${feedback.subject} ${feedback.description}';
-    return FeedbackSpamDetector.analyzeMessage(textToAnalyze);
-  }
+      /// Check if user has redundant submissions
+      Future<bool> checkUserRedundancy(FeedbackAndReport currentFeedback) async {
+        final userFeedbacks = allFeedback
+            .where((f) => 
+                f.userId == currentFeedback.userId && 
+                f.documentId != currentFeedback.documentId &&
+                f.archivedAt == null)
+            .toList();
 
+        if (userFeedbacks.isEmpty) return false;
 
+        final previousFeedbacks = userFeedbacks.map((f) => {
+          'subject': f.subject,
+          'description': f.description,
+        }).toList();
 
-
+        return FeedbackSpamDetector.hasRedundantSubmissions(
+          userId: currentFeedback.userId,
+          currentSubject: currentFeedback.subject,
+          currentDescription: currentFeedback.description,
+          userPreviousFeedbacks: previousFeedbacks,
+        );
+      }
 
 
 

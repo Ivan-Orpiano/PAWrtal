@@ -1387,43 +1387,88 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                       ),
                     ),
                      const SizedBox(width: 8),
-                    // Spam Detection Badge
-                      FutureBuilder<bool>(
-                        future: controller.checkIfSpam(feedback),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData && snapshot.data == true) {
-                            return Tooltip(
-                              message: 'Potential spam detected',
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red[50],
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.red[300]!),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.report_problem, size: 14, color: Colors.red[700]),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'SPAM',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                 FutureBuilder<Map<String, bool>>(
+                  future: Future.wait([
+                    controller.checkIfSpam(feedback),
+                    controller.checkUserRedundancy(feedback),
+                  ]).then((results) => {
+                    'isSpam': results[0],
+                    'isRedundant': results[1],
+                  }),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const SizedBox.shrink();
+                    
+                    final isSpam = snapshot.data!['isSpam'] ?? false;
+                    final isRedundant = snapshot.data!['isRedundant'] ?? false;
+
+                    if (!isSpam && !isRedundant) return const SizedBox.shrink();
+
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSpam) ...[
+                          Tooltip(
+                            message: 'Gibberish/Scrambled content detected',
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.red[300]!),
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                    const SizedBox(width: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.report_problem, size: 14, color: Colors.red[700]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'SPAM',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        if (isRedundant) ...[
+                          Tooltip(
+                            message: 'Duplicate submission from this user',
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange[300]!),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.content_copy, size: 14, color: Colors.orange[700]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'DUPLICATE',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                                  
                     _buildClickablePriorityBadge(feedback),
                     const SizedBox(width: 8),
                     _buildTypeBadge(feedback.feedbackType),
