@@ -13,6 +13,7 @@ abstract class Routes {
   static const oauthSuccess = _Paths.oauthSuccess;
   static const oauthFailure = _Paths.oauthFailure;
   static const oauthCallback = _Paths.oauthCallback;
+  static const resetPassword = _Paths.resetPassword;
 }
 
 abstract class _Paths {
@@ -27,4 +28,5 @@ abstract class _Paths {
   static const oauthSuccess = '/auth/success';
   static const oauthFailure = '/auth/failure';
   static const oauthCallback = '/auth/callback';
+  static const resetPassword = '/reset-password';
 }

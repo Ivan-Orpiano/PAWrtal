@@ -465,4 +465,93 @@ class LoginController extends GetxController {
     print('>>> Secure session initialized');
     print('>>> ============================================');
   }
+
+  Future<void> sendPasswordResetEmail() async {
+    try {
+      final email = emailForPasswordResetController.text.trim();
+
+      if (email.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'Please enter your email address',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade100,
+          colorText: Colors.red.shade900,
+        );
+        return;
+      }
+
+      // Validate email format
+      if (!GetUtils.isEmail(email)) {
+        Get.snackbar(
+          'Error',
+          'Please enter a valid email address',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade100,
+          colorText: Colors.red.shade900,
+        );
+        return;
+      }
+
+      print('>>> ============================================');
+      print('>>> FORGOT PASSWORD REQUEST');
+      print('>>> Email: $email');
+      print('>>> ============================================');
+
+      // Show loading
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      // Call repository method
+      final result = await authRepository.sendPasswordResetEmail(email);
+
+      // Hide loading
+      Get.back();
+
+      if (result['success'] == true) {
+        print('>>> ✅ Password reset email sent');
+
+        // Clear the email field
+        emailForPasswordResetController.clear();
+
+        Get.snackbar(
+          'Success',
+          result['message'] ?? 'Password reset link sent to your email',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade900,
+          duration: const Duration(seconds: 5),
+        );
+      } else {
+        print('>>> ❌ Failed to send password reset email');
+
+        Get.snackbar(
+          'Error',
+          result['message'] ?? 'Failed to send password reset email',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade100,
+          colorText: Colors.red.shade900,
+        );
+      }
+
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ❌ Error sending password reset email: $e');
+
+      // Hide loading if still showing
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'An error occurred. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+      );
+    }
+  }
 }
