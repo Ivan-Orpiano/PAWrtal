@@ -12,6 +12,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_pa
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_feedback/vet_deletion_reports.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'dart:async';
+import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/pinned_feedback_app.dart';
 
 class AdminFeedbackManagement extends StatefulWidget {
   const AdminFeedbackManagement({super.key});
@@ -85,47 +86,49 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           ],
         ),
         backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      actions: [
-        // Auto-Clean Spam Button
-        Obx(() => controller.isCleaningSpam.value
-            ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF517399)),
+        actions: [
+          // Auto-Clean Spam Button
+          Obx(() => controller.isCleaningSpam.value
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Color(0xFF517399)),
+                    ),
                   ),
-                ),
-              )
-            : Tooltip(
-                message: 'Auto-clean spam feedback',
-                child: TextButton.icon(
-                  onPressed: () => controller.autoCleanSpamFeedback(),
-                  icon: const Icon(Icons.cleaning_services, size: 18),
-                  label: const Text('Clean Spam'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFE65100),
-                    backgroundColor: Colors.orange[50],
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                )
+              : Tooltip(
+                  message: 'Auto-clean spam feedback',
+                  child: TextButton.icon(
+                    onPressed: () => controller.autoCleanSpamFeedback(),
+                    icon: const Icon(Icons.cleaning_services, size: 18),
+                    label: const Text('Clean Spam'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFE65100),
+                      backgroundColor: Colors.orange[50],
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
                   ),
-                ),
-              )),
-        const SizedBox(width: 8),
-        
-        IconButton(
-          icon: const Icon(Icons.refresh, color: Color(0xFF517399)),
-          onPressed: () => controller.loadAllFeedback(),
-          tooltip: 'Refresh',
-        ),
-        IconButton(
-          icon: const Icon(Icons.filter_list_off, color: Color(0xFF517399)),
-          onPressed: () => controller.clearFilters(),
-          tooltip: 'Clear Filters',
-        ),
-        const SizedBox(width: 12),
-      ],
+                )),
+          const SizedBox(width: 8),
+
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF517399)),
+            onPressed: () => controller.loadAllFeedback(),
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list_off, color: Color(0xFF517399)),
+            onPressed: () => controller.clearFilters(),
+            tooltip: 'Clear Filters',
+          ),
+          const SizedBox(width: 12),
+        ],
       ),
       drawer: _buildDrawer(context),
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
@@ -136,77 +139,72 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           Expanded(child: _buildFeedbackList(isMobile: true)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => controller.clearFilters(),
-        backgroundColor: const Color(0xFF517399),
-        child: const Icon(Icons.filter_list_off, color: Colors.white),
-      ),
+      floatingActionButton: _buildPinnedFAB(),
     );
   }
 
- Widget _buildMobileStatsCards() {
-  return Obx(() => Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCompactStatCard(
-                    'Total',
-                    controller.feedbackStats['total']?.toString() ?? '0',
-                    Colors.blue,
-                    Icons.feedback,
+  Widget _buildMobileStatsCards() {
+    return Obx(() => Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Total',
+                      controller.feedbackStats['total']?.toString() ?? '0',
+                      Colors.blue,
+                      Icons.feedback,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCompactStatCard(
-                    'Pending',
-                    controller.feedbackStats['pending']?.toString() ?? '0',
-                    Colors.orange,
-                    Icons.schedule,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Pending',
+                      controller.feedbackStats['pending']?.toString() ?? '0',
+                      Colors.orange,
+                      Icons.schedule,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCompactStatCard(
-                    'Progress',
-                    controller.feedbackStats['inProgress']?.toString() ?? '0',
-                    Colors.blue,
-                    Icons.autorenew,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Progress',
+                      controller.feedbackStats['inProgress']?.toString() ?? '0',
+                      Colors.blue,
+                      Icons.autorenew,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCompactStatCard(
-                    'Completed',  
-                    controller.feedbackStats['completed']?.toString() ?? '0',                     
-                   Colors.green,
-                    Icons.check_circle,
-
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Completed',
+                      controller.feedbackStats['completed']?.toString() ?? '0',
+                      Colors.green,
+                      Icons.check_circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCompactStatCard(
-                    'Critical',
-                    controller.feedbackStats['critical']?.toString() ?? '0',
-                    Colors.red,
-                    Icons.warning,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCompactStatCard(
+                      'Critical',
+                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      Colors.red,
+                      Icons.warning,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ));
- }
+                ],
+              ),
+            ],
+          ),
+        ));
+  }
 
   Widget _buildCompactStatCard(
       String title, String value, Color color, IconData icon) {
@@ -276,9 +274,11 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+                borderSide:
+                    const BorderSide(color: Color(0xFF517399), width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
             onChanged: (value) => controller.updateSearchQuery(value),
           ),
@@ -377,7 +377,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           color: selectedValue != null ? const Color(0xFF517399) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selectedValue != null ? const Color(0xFF517399) : Colors.grey[300]!,
+            color: selectedValue != null
+                ? const Color(0xFF517399)
+                : Colors.grey[300]!,
           ),
         ),
         child: Row(
@@ -452,18 +454,19 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           Expanded(child: _buildFeedbackList(isTablet: true)),
         ],
       ),
+      floatingActionButton: _buildPinnedFAB(),
     );
   }
 
   Widget _buildTabletStatsCards() {
-  return Obx(() => Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                   _buildStatCard(
+    return Obx(() => Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  _buildStatCard(
                     'Total',
                     controller.feedbackStats['total']?.toString() ?? '0',
                     Colors.blue,
@@ -483,45 +486,44 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     Colors.blue,
                     Icons.autorenew,
                   ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                
-                Expanded(
-                  child: _buildStatCard(
-                    'Completed', 
-                    controller.feedbackStats['completed']?.toString() ?? '0',  
-                    Colors.green,
-                    Icons.check_circle,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildStatCard(
-                    'Critical',
-                    controller.feedbackStats['critical']?.toString() ?? '0',
-                    Colors.red,
-                    Icons.warning,
-                  ),
-                ),
-                const Expanded(child: SizedBox()),
-                Expanded(
-                child: _buildStatCard(
-                  'Spam Blocked',
-                  controller.autoArchivedCount.value.toString(),
-                  Colors.orange,
-                  Icons.block,
-                ),
+                ],
               ),
-                const SizedBox(width: 10),
-              ],
-            ),
-          ],
-        ),
-      ));
-}
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Completed',
+                      controller.feedbackStats['completed']?.toString() ?? '0',
+                      Colors.green,
+                      Icons.check_circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Critical',
+                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      Colors.red,
+                      Icons.warning,
+                    ),
+                  ),
+                  const Expanded(child: SizedBox()),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Spam Blocked',
+                      controller.autoArchivedCount.value.toString(),
+                      Colors.orange,
+                      Icons.block,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+              ),
+            ],
+          ),
+        ));
+  }
 
   Widget _buildTabletFiltersSection() {
     return Container(
@@ -549,9 +551,11 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+                borderSide:
+                    const BorderSide(color: Color(0xFF517399), width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             onChanged: (value) => controller.updateSearchQuery(value),
           ),
@@ -680,55 +684,57 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           Expanded(child: _buildFeedbackList()),
         ],
       ),
+      floatingActionButton: _buildPinnedFAB(),
     );
   }
 
- Widget _buildStatsCards() {
-  return Obx(() => Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _buildStatCard(
-              'Total',
-              controller.feedbackStats['total']?.toString() ?? '0',
-              Colors.blue,
-              Icons.feedback,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Pending',
-              controller.feedbackStats['pending']?.toString() ?? '0',
-              Colors.orange,
-              Icons.schedule,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'In Progress',
-              controller.feedbackStats['inProgress']?.toString() ?? '0',
-              Colors.blue,
-              Icons.autorenew,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Completed', 
-              controller.feedbackStats['completed']?.toString() ?? '0', 
-              Colors.green,
-              Icons.check_circle,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Critical',
-              controller.feedbackStats['critical']?.toString() ?? '0',
-              Colors.red,
-              Icons.warning,
-            ),
-          ],
-        ),
-      ));
-}
+  Widget _buildStatsCards() {
+    return Obx(() => Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _buildStatCard(
+                'Total',
+                controller.feedbackStats['total']?.toString() ?? '0',
+                Colors.blue,
+                Icons.feedback,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Pending',
+                controller.feedbackStats['pending']?.toString() ?? '0',
+                Colors.orange,
+                Icons.schedule,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'In Progress',
+                controller.feedbackStats['inProgress']?.toString() ?? '0',
+                Colors.blue,
+                Icons.autorenew,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Completed',
+                controller.feedbackStats['completed']?.toString() ?? '0',
+                Colors.green,
+                Icons.check_circle,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Critical',
+                controller.feedbackStats['critical']?.toString() ?? '0',
+                Colors.red,
+                Icons.warning,
+              ),
+            ],
+          ),
+        ));
+  }
 
-  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+      String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -801,9 +807,11 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
+                borderSide:
+                    const BorderSide(color: Color(0xFF517399), width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             onChanged: (value) => controller.updateSearchQuery(value),
           ),
@@ -924,7 +932,6 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         return Icons.check_circle;
       case FeedbackStatus.closed:
         return Icons.lock;
-  
     }
   }
 
@@ -1015,7 +1022,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                         child: Icon(
                           isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                           size: 14,
-                          color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                          color:
+                              isPinned ? Colors.amber[800] : Colors.grey[600],
                         ),
                       ),
                     ),
@@ -1076,7 +1084,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     ),
                   ],
                 ),
-               // Display attachments with video support
+                // Display attachments with video support
                 if (feedback.attachments.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -1094,9 +1102,10 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     children: feedback.attachments.map((fileId) {
                       final url = controller.getAttachmentUrl(fileId);
                       final isVideo = _isVideoAttachment(fileId, url);
-                      
+
                       return GestureDetector(
-                        onTap: () => _showAttachmentDialog(context, url, isVideo),
+                        onTap: () =>
+                            _showAttachmentDialog(context, url, isVideo),
                         child: Container(
                           width: 120,
                           height: 120,
@@ -1114,68 +1123,74 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     }).toList(),
                   ),
                 ],
-               // Status-based action buttons
-                  if (feedback.status == FeedbackStatus.pending || 
-                      feedback.status == FeedbackStatus.inProgress) ...[
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => _markAsCompleted(feedback),
-                      icon: const Icon(Icons.check_circle, size: 16, color: Colors.white),
-                      label: const Text('Mark as Completed'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green[600],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                // Status-based action buttons
+                if (feedback.status == FeedbackStatus.pending ||
+                    feedback.status == FeedbackStatus.inProgress) ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _markAsCompleted(feedback),
+                    icon: const Icon(Icons.check_circle,
+                        size: 16, color: Colors.white),
+                    label: const Text('Mark as Completed'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  ] else if (feedback.status == FeedbackStatus.completed ||
-                            feedback.status == FeedbackStatus.closed) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        if (feedback.status == FeedbackStatus.completed)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green[300]!),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.check_circle, size: 18, color: Colors.green[700]),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Issue Resolved',
-                                  style: TextStyle(
-                                    color: Colors.green[700],
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  ),
+                ] else if (feedback.status == FeedbackStatus.completed ||
+                    feedback.status == FeedbackStatus.closed) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (feedback.status == FeedbackStatus.completed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green[300]!),
                           ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          onPressed: () => _archiveFeedback(feedback),
-                          icon: const Icon(Icons.archive, size: 16, color: Colors.white),
-                          label: const Text('Archive'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle,
+                                  size: 18, color: Colors.green[700]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Issue Resolved',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _archiveFeedback(feedback),
+                        icon: const Icon(Icons.archive,
+                            size: 16, color: Colors.white),
+                        label: const Text('Archive'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -1229,7 +1244,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                         child: Icon(
                           isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                           size: 16,
-                          color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                          color:
+                              isPinned ? Colors.amber[800] : Colors.grey[600],
                         ),
                       ),
                     ),
@@ -1314,7 +1330,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                       if (feedback.status == FeedbackStatus.closed)
                         ElevatedButton.icon(
                           onPressed: () => _archiveFeedback(feedback),
-                          icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                          icon: const Icon(Icons.archive,
+                              size: 16, color: Colors.white),
                           label: const Text('Archive'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange[600],
@@ -1382,93 +1399,100 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                         child: Icon(
                           isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                           size: 18,
-                          color: isPinned ? Colors.amber[800] : Colors.grey[600],
+                          color:
+                              isPinned ? Colors.amber[800] : Colors.grey[600],
                         ),
                       ),
                     ),
-                     const SizedBox(width: 8),
-                 FutureBuilder<Map<String, bool>>(
-                  future: Future.wait([
-                    controller.checkIfSpam(feedback),
-                    controller.checkUserRedundancy(feedback),
-                  ]).then((results) => {
-                    'isSpam': results[0],
-                    'isRedundant': results[1],
-                  }),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const SizedBox.shrink();
-                    
-                    final isSpam = snapshot.data!['isSpam'] ?? false;
-                    final isRedundant = snapshot.data!['isRedundant'] ?? false;
+                    const SizedBox(width: 8),
+                    FutureBuilder<Map<String, bool>>(
+                      future: Future.wait([
+                        controller.checkIfSpam(feedback),
+                        controller.checkUserRedundancy(feedback),
+                      ]).then((results) => {
+                            'isSpam': results[0],
+                            'isRedundant': results[1],
+                          }),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
 
-                    if (!isSpam && !isRedundant) return const SizedBox.shrink();
+                        final isSpam = snapshot.data!['isSpam'] ?? false;
+                        final isRedundant =
+                            snapshot.data!['isRedundant'] ?? false;
 
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isSpam) ...[
-                          Tooltip(
-                            message: 'Gibberish/Scrambled content detected',
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.red[50],
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.red[300]!),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.report_problem, size: 14, color: Colors.red[700]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'SPAM',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red[700],
-                                    ),
+                        if (!isSpam && !isRedundant)
+                          return const SizedBox.shrink();
+
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isSpam) ...[
+                              Tooltip(
+                                message: 'Gibberish/Scrambled content detected',
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.red[300]!),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        if (isRedundant) ...[
-                          Tooltip(
-                            message: 'Duplicate submission from this user',
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange[50],
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange[300]!),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.content_copy, size: 14, color: Colors.orange[700]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'DUPLICATE',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange[700],
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.report_problem,
+                                          size: 14, color: Colors.red[700]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'SPAM',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red[700],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                                  
+                              const SizedBox(width: 6),
+                            ],
+                            if (isRedundant) ...[
+                              Tooltip(
+                                message: 'Duplicate submission from this user',
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border:
+                                        Border.all(color: Colors.orange[300]!),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.content_copy,
+                                          size: 14, color: Colors.orange[700]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'DUPLICATE',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
                     _buildClickablePriorityBadge(feedback),
                     const SizedBox(width: 8),
                     _buildTypeBadge(feedback.feedbackType),
@@ -1541,31 +1565,34 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     ],
                   ],
                 ),
-               // Status-based action buttons
-                if (feedback.status == FeedbackStatus.pending || 
+                // Status-based action buttons
+                if (feedback.status == FeedbackStatus.pending ||
                     feedback.status == FeedbackStatus.inProgress) ...[
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: () => _markAsCompleted(feedback),
-                    icon: const Icon(Icons.check_circle, size: 16, color: Colors.white),
+                    icon: const Icon(Icons.check_circle,
+                        size: 16, color: Colors.white),
                     label: const Text('Mark as Completed'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[600],
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                 ] else if (feedback.status == FeedbackStatus.completed ||
-                          feedback.status == FeedbackStatus.closed) ...[
+                    feedback.status == FeedbackStatus.closed) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       if (feedback.status == FeedbackStatus.completed)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: Colors.green[50],
                             borderRadius: BorderRadius.circular(8),
@@ -1573,7 +1600,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.check_circle, size: 20, color: Colors.green[700]),
+                              Icon(Icons.check_circle,
+                                  size: 20, color: Colors.green[700]),
                               const SizedBox(width: 10),
                               Text(
                                 'Issue Resolved',
@@ -1589,12 +1617,14 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                       const SizedBox(width: 16),
                       ElevatedButton.icon(
                         onPressed: () => _archiveFeedback(feedback),
-                        icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                        icon: const Icon(Icons.archive,
+                            size: 16, color: Colors.white),
                         label: const Text('Archive'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange[600],
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1656,12 +1686,14 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     priority.displayName,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                       color: isSelected ? priorityColor : Colors.grey[800],
                     ),
                   ),
                 ),
-                if (isSelected) Icon(Icons.check, size: 18, color: priorityColor),
+                if (isSelected)
+                  Icon(Icons.check, size: 18, color: priorityColor),
               ],
             ),
           );
@@ -1739,7 +1771,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     status.displayName,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                       color: isSelected ? statusColor : Colors.grey[800],
                     ),
                   ),
@@ -1887,7 +1920,6 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         return Colors.green;
       case FeedbackStatus.closed:
         return Colors.grey;
-   
     }
   }
 
@@ -1922,6 +1954,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       return 'Just now';
     }
   }
+
   void _archiveFeedback(FeedbackAndReport feedback) {
     showDialog(
       context: context,
@@ -2370,265 +2403,328 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       ),
     );
   }
-  bool _isVideoAttachment(String fileId, String url) {
-  // Check URL extension
-  final videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
-  final urlLower = url.toLowerCase();
-  
-  return videoExtensions.any((ext) => urlLower.contains('.$ext'));
-}
 
-void _showAttachmentDialog(BuildContext context, String url, bool isVideo) {
-  showDialog(
-    context: context,
-    builder: (context) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: 800,
-          maxHeight: 600,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isVideo ? Icons.videocam_rounded : Icons.image_rounded,
-                    color: Colors.grey[700],
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isVideo ? 'Video Attachment' : 'Image Attachment',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Content
-            Expanded(
-              child: Padding(
+  bool _isVideoAttachment(String fileId, String url) {
+    // Check URL extension
+    final videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+    final urlLower = url.toLowerCase();
+
+    return videoExtensions.any((ext) => urlLower.contains('.$ext'));
+  }
+
+  void _showAttachmentDialog(BuildContext context, String url, bool isVideo) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: 800,
+            maxHeight: 600,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
                 padding: const EdgeInsets.all(16),
-                child: AttachmentViewerWidget(
-                  attachmentUrl: url,
-                  fileId: url,
-                  isVideo: isVideo,
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
                 ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isVideo ? Icons.videocam_rounded : Icons.image_rounded,
+                      color: Colors.grey[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isVideo ? 'Video Attachment' : 'Image Attachment',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: AttachmentViewerWidget(
+                    attachmentUrl: url,
+                    fileId: url,
+                    isVideo: isVideo,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _markAsCompleted(FeedbackAndReport feedback) {
+    final TextEditingController resolutionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green[700], size: 24),
+            const SizedBox(width: 12),
+            const Text(
+              'Mark as Completed',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
-      ),
-    ),
-  );
- }
-  void _markAsCompleted(FeedbackAndReport feedback) {
-  final TextEditingController resolutionController = TextEditingController();
-  
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-      title: Row(
-        children: [
-          Icon(Icons.check_circle, color: Colors.green[700], size: 24),
-          const SizedBox(width: 12),
-          const Text(
-            'Mark as Completed',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.w600,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Confirm that this issue has been resolved:',
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
             ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Confirm that this issue has been resolved:',
-            style: TextStyle(
-              color: Colors.grey[800],
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.subject, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        feedback.subject,
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.subject, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          feedback.subject,
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        feedback.userName,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resolutionController,
+              decoration: InputDecoration(
+                labelText: 'Resolution Notes (Optional)',
+                hintText: 'Describe how the issue was fixed...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Text(
-                      feedback.userName,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide:
+                      const BorderSide(color: Color(0xFF517399), width: 2),
+                ),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.green[700], size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Once marked as completed, this feedback can be archived.',
                       style: TextStyle(
-                        color: Colors.grey[700],
+                        color: Colors.green[900],
                         fontSize: 12,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: resolutionController,
-            decoration: InputDecoration(
-              labelText: 'Resolution Notes (Optional)',
-              hintText: 'Describe how the issue was fixed...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
-              ),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green[200]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.green[700], size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Once marked as completed, this feedback can be archived.',
-                    style: TextStyle(
-                      color: Colors.green[900],
-                      fontSize: 12,
-                    ),
                   ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              resolutionController.dispose();
+              Navigator.pop(context);
+            },
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ), //
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Update status to completed
+              await controller.updateStatus(
+                feedback.documentId!,
+                FeedbackStatus.completed,
+              );
+
+              // If resolution notes provided, add as reply
+              if (resolutionController.text.trim().isNotEmpty) {
+                await controller.addReply(
+                  feedback.documentId!,
+                  'Resolution: ${resolutionController.text.trim()}',
+                );
+              }
+
+              resolutionController.dispose();
+              Navigator.pop(context);
+
+              // Show success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Text('Feedback marked as completed!'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green[600],
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
                 ),
-              ],
+              );
+            },
+            icon: const Icon(Icons.check_circle, size: 18),
+            label: const Text('Mark as Completed'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[600],
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            resolutionController.dispose();
-            Navigator.pop(context);
-          },
-          child: Text(
-            'Cancel',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),//
-        ElevatedButton.icon(
-          onPressed: () async {
-            // Update status to completed
-            await controller.updateStatus(
-              feedback.documentId!,
-              FeedbackStatus.completed,
-            );
-            
-            // If resolution notes provided, add as reply
-            if (resolutionController.text.trim().isNotEmpty) {
-              await controller.addReply(
-                feedback.documentId!,
-                'Resolution: ${resolutionController.text.trim()}',
-              );
-            }
-            
-            resolutionController.dispose();
-            Navigator.pop(context);
-            
-            // Show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 12),
-                    const Text('Feedback marked as completed!'),
-                  ],
+    );
+  }
+
+  // ==================== PINNED FEEDBACK FAB ====================
+  Widget _buildPinnedFAB() {
+    return Obx(() {
+      final pinnedCount = controller.pinnedFeedbackIds.length;
+
+      return pinnedCount > 0
+          ? Stack(
+              alignment: Alignment.center,
+              children: [
+                FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PinnedFeedbackPage(),
+                      ),
+                    );
+                  },
+                  backgroundColor: Colors.amber[700],
+                  icon: const Icon(Icons.push_pin, color: Colors.white),
+                  label: Text(
+                    'Pinned ($pinnedCount)',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  elevation: 6,
                 ),
-                backgroundColor: Colors.green[600],
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          },
-          icon: const Icon(Icons.check_circle, size: 18),
-          label: const Text('Mark as Completed'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green[600],
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+                if (pinnedCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.red[600],
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      child: Text(
+                        '$pinnedCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            )
+          : const SizedBox.shrink(); // Hide FAB when no pinned items
+    });
+  }
 }
-}
-
-
 
 // Feedback Details Dialog
 class FeedbackDetailsDialog extends StatefulWidget {
@@ -2950,10 +3046,10 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
             icon: const Icon(Icons.archive, color: Colors.white),
             label: const Text('Archive'),
             style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange[600],
-            foregroundColor: Colors.white,
+              backgroundColor: Colors.orange[600],
+              foregroundColor: Colors.white,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -3078,8 +3174,6 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
       ),
     );
   }
-
- 
 
   String _formatFullDateTime(DateTime dateTime) {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';

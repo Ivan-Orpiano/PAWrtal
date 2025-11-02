@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 import 'package:get/get.dart';
 import 'vet_deletion_request_controller.dart';
+import 'pinned_deletion_request.dart';
 
 class VeterinaryReport extends StatefulWidget {
   const VeterinaryReport({super.key});
@@ -456,43 +457,55 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     });
   }
 
-  Widget _buildRequestList() {
-    return Obx(() {
-      if (_controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
-      }
+    Widget _buildRequestList() {
+      return Obx(() {
+        if (_controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      if (_controller.filteredRequests.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No deletion requests found',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+   
+        final unpinnedRequests = _controller.filteredRequests
+            .where((request) => !request.isPinned)
+            .toList();
+
+        if (unpinnedRequests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No deletion requests found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 8),
+                Text(
+                  'Pinned requests are shown separately',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(_isMobile(context) ? 12 : 16),
+          itemCount: unpinnedRequests.length,
+          itemBuilder: (context, index) {
+            final request = unpinnedRequests[index];
+            return _buildRequestCard(request);
+          },
         );
-      }
-
-      return ListView.builder(
-        padding: EdgeInsets.all(_isMobile(context) ? 12 : 16),
-        itemCount: _controller.filteredRequests.length,
-        itemBuilder: (context, index) {
-          final request = _controller.filteredRequests[index];
-          return _buildRequestCard(request);
-        },
-      );
-    });
-  }
-
+      });
+    }
 Widget _buildRequestCard(FeedbackDeletionRequest request) {
   return Obx(() {
     final clinicName =
@@ -1044,7 +1057,69 @@ Widget _buildRequestCard(FeedbackDeletionRequest request) {
           Expanded(child: _buildRequestList()),
         ],
       ),
+      floatingActionButton: _buildPinnedFAB(),
     );
+  }
+
+  Widget _buildPinnedFAB() {
+    return Obx(() {
+      final pinnedCount = _controller.pinnedRequestIds.length;
+
+      return pinnedCount > 0
+          ? Stack(
+              alignment: Alignment.center,
+              children: [
+                FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PinnedDeletionRequest(),
+                      ),
+                    );
+                  },
+                  backgroundColor: Colors.amber[700],
+                  icon: const Icon(Icons.push_pin, color: Colors.white),
+                  label: Text(
+                    'Pinned ($pinnedCount)',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  elevation: 6,
+                  heroTag: 'pinned_deletion_requests',
+                ),
+                if (pinnedCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.red[600],
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      child: Text(
+                        '$pinnedCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            )
+          : const SizedBox.shrink(); 
+    });
   }
 
   Widget _buildDrawer(BuildContext context) {
