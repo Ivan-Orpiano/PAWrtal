@@ -270,16 +270,16 @@ class InAppNotificationService extends GetxService {
         return Icons.event_busy;
       case NotificationType.appointmentCompleted:
         return Icons.done_all;
+      case NotificationType.appointmentReminder:
+        return Icons.alarm;
       case NotificationType.message:
         return Icons.message;
-      case NotificationType.deletionRequestApproved: 
+      case NotificationType.deletionRequestApproved:
         return Icons.check_circle_outline;
       case NotificationType.deletionRequestRejected:
         return Icons.cancel_outlined;
-
       default:
         return Icons.notifications;
-        
     }
   }
 

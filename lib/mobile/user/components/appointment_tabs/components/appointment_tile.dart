@@ -345,24 +345,24 @@ class EnhancedUserAppointmentTile extends StatelessWidget {
               ),
               
               // Action buttons for certain statuses
-              if (controller.canCancelAppointment(appointment)) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showCancelDialog(context, controller, appointment),
-                    icon: const Icon(Icons.cancel_outlined, size: 16),
-                    label: const Text('Cancel Appointment'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red[700],
-                      side: BorderSide(color: Colors.red[300]!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              // if (controller.canCancelAppointment(appointment)) ...[
+              //   const SizedBox(height: 12),
+              //   SizedBox(
+              //     width: double.infinity,
+              //     child: OutlinedButton.icon(
+              //       onPressed: () => _showCancelDialog(context, controller, appointment),
+              //       icon: const Icon(Icons.cancel_outlined, size: 16),
+              //       label: const Text('Cancel Appointment'),
+              //       style: OutlinedButton.styleFrom(
+              //         foregroundColor: Colors.red[700],
+              //         side: BorderSide(color: Colors.red[300]!),
+              //         shape: RoundedRectangleBorder(
+              //           borderRadius: BorderRadius.circular(8),
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ],
             ],
           ),
         ),

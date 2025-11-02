@@ -11,7 +11,6 @@ enum NotificationType {
   deletionRequestApproved, // Admin receives when deletion approved
   deletionRequestRejected, // Admin receives when deletion rejected
   general, // General system notifications
-
 }
 
 enum NotificationPriority {
@@ -344,6 +343,43 @@ class AppNotification {
       metadata: {
         'clinicName': clinicName,
         'petName': petName,
+      },
+    );
+  }
+
+  factory AppNotification.appointmentReminder({
+    required String userId,
+    required String appointmentId,
+    required String clinicId,
+    required String clinicName,
+    required String petName,
+    required String service,
+    required DateTime appointmentDateTime,
+    required int minutesUntil,
+  }) {
+    String timeMessage;
+    if (minutesUntil < 60) {
+      timeMessage = 'in $minutesUntil minutes';
+    } else {
+      final hours = (minutesUntil / 60).floor();
+      timeMessage = 'in $hours hour${hours > 1 ? 's' : ''}';
+    }
+
+    return AppNotification(
+      userId: userId,
+      title: '⏰ Appointment Reminder',
+      message:
+          '$petName\'s appointment at $clinicName is coming up $timeMessage!',
+      type: NotificationType.appointmentReminder,
+      priority: NotificationPriority.high,
+      appointmentId: appointmentId,
+      clinicId: clinicId,
+      metadata: {
+        'petName': petName,
+        'clinicName': clinicName,
+        'service': service,
+        'appointmentDateTime': appointmentDateTime.toIso8601String(),
+        'minutesUntil': minutesUntil.toString(),
       },
     );
   }

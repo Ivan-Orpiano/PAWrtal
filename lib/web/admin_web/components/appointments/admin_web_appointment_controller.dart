@@ -1039,7 +1039,7 @@ class WebAppointmentController extends GetxController {
 
   Future<void> markNoShow(Appointment appointment) async {
     // Check if appointment is in the past
-    if (appointment.dateTime.isAfter(DateTime.now())) {
+    if (appointment.dateTime.isBefore(DateTime.now())) {
       Get.snackbar("Error", "Cannot mark as no-show for future appointments");
       return;
     }
