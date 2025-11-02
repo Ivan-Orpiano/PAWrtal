@@ -2743,19 +2743,19 @@ class AuthRepository {
   }
 
   /// Validate password reset token
-  Future<bool> validatePasswordResetToken(String userId, String token) {
-    return appWriteProvider.validatePasswordResetToken(userId, token);
+  Future<bool> validatePasswordResetSecret(String userId, String secret) {
+    return appWriteProvider.validatePasswordResetSecret(userId, secret);
   }
 
   /// Reset password
   Future<bool> resetPassword({
     required String userId,
-    required String token,
+    required String secret,
     required String newPassword,
   }) {
     return appWriteProvider.resetPassword(
       userId: userId,
-      secret: token,
+      secret: secret,
       newPassword: newPassword,
     );
   }

@@ -21,7 +21,7 @@ class ResetPasswordController extends GetxController {
 
   // URL parameters
   String? userId;
-  String? token;
+  String? secret;
 
   @override
   void onInit() {
@@ -51,30 +51,108 @@ class ResetPasswordController extends GetxController {
       print('>>> VALIDATING RESET LINK');
       print('>>> ============================================');
 
-      // Get URL parameters
+      // CRITICAL: Get URL parameters with multiple strategies
       final parameters = Get.parameters;
+
+      // Strategy 1: Direct parameters
       userId = parameters['userId'];
-      token = parameters['token'];
+      secret = parameters['secret'];
 
+      print('>>> Strategy 1 (Get.parameters):');
+      print('>>> All parameters: $parameters');
       print('>>> User ID: $userId');
-      print('>>> Token: ${token?.substring(0, 10)}...');
+      print('>>> Secret: $secret');
 
-      if (userId == null || token == null || userId!.isEmpty || token!.isEmpty) {
-        print('>>> ❌ Missing parameters');
-        validationError.value = 'Invalid reset link. Please request a new password reset.';
+      // Strategy 2: Try alternative parameter names
+      if (userId == null || secret == null) {
+        userId = parameters['userId'] ?? parameters['user'] ?? parameters['id'];
+        secret = parameters['secret'] ?? parameters['token'];
+        print('>>> Strategy 2 (alternative names):');
+        print('>>> User ID: $userId');
+        print('>>> Secret: $secret');
+      }
+
+      // Strategy 3: Parse from current route
+      if (userId == null || secret == null) {
+        final currentRoute = Get.currentRoute;
+        print('>>> Strategy 3 (parse from route):');
+        print('>>> Current route: $currentRoute');
+
+        final uri = Uri.parse(currentRoute);
+        userId = uri.queryParameters['userId'];
+        secret = uri.queryParameters['secret'];
+        print('>>> User ID: $userId');
+        print('>>> Secret: $secret');
+      }
+
+      // Strategy 4: Parse from browser URL (Web only)
+      if (userId == null || secret == null) {
+        print('>>> Strategy 4 (parse from browser window.location):');
+        try {
+          // Import dart:html at the top of your file
+          // import 'dart:html' as html;
+
+          // Get the full URL from browser
+          final url = Uri.base.toString();
+          print('>>> Full browser URL: $url');
+
+          // Parse query parameters from the full URL
+          final uri = Uri.parse(url);
+
+          // Check both hash and query parameters
+          if (uri.fragment.isNotEmpty && uri.fragment.contains('?')) {
+            // Parameters are in the hash fragment
+            final fragmentParams = uri.fragment.split('?');
+            if (fragmentParams.length > 1) {
+              final queryString = fragmentParams[1];
+              final params = Uri.splitQueryString(queryString);
+              userId = params['userId'];
+              secret = params['secret'];
+              print('>>> Found in hash fragment:');
+              print('>>> User ID: $userId');
+              print('>>> Secret: $secret');
+            }
+          } else {
+            // Try regular query parameters
+            userId = uri.queryParameters['userId'];
+            secret = uri.queryParameters['secret'];
+            print('>>> Found in query parameters:');
+            print('>>> User ID: $userId');
+            print('>>> Secret: $secret');
+          }
+        } catch (e) {
+          print('>>> Error in Strategy 4: $e');
+        }
+      }
+
+      // Validate we have the required parameters
+      if (userId == null ||
+          secret == null ||
+          userId!.isEmpty ||
+          secret!.isEmpty) {
+        print('>>> ❌ Missing parameters after all strategies');
+        validationError.value =
+            'Invalid reset link. Please request a new password reset.';
         isValidating.value = false;
         return;
       }
 
-      // Validate token with backend
-      final isValid = await _authRepository.validatePasswordResetToken(userId!, token!);
+      print('>>> ✅ Parameters extracted successfully');
+      print('>>> User ID: $userId');
+      print(
+          '>>> Secret: ${secret!.length > 10 ? secret!.substring(0, 10) : secret}...');
+
+      // Validate secret with backend
+      final isValid =
+          await _authRepository.validatePasswordResetSecret(userId!, secret!);
 
       if (isValid) {
-        print('>>> ✅ Token is valid');
+        print('>>> ✅ secret is valid');
         isValidating.value = false;
       } else {
-        print('>>> ❌ Token is invalid or expired');
-        validationError.value = 'This reset link has expired or is invalid. Please request a new one.';
+        print('>>> ❌ secret is invalid or expired');
+        validationError.value =
+            'This reset link has expired or is invalid. Please request a new one.';
         isValidating.value = false;
       }
 
@@ -141,14 +219,14 @@ class ResetPasswordController extends GetxController {
 
       final success = await _authRepository.resetPassword(
         userId: userId!,
-        token: token!,
+        secret: secret!,
         newPassword: newPasswordController.text,
       );
 
       if (success) {
         print('>>> ✅ Password reset successful');
         resetSuccess.value = true;
-        
+
         // Clear form
         newPasswordController.clear();
         confirmPasswordController.clear();
