@@ -31,11 +31,12 @@ List<FAQItem> faqItems = [
     question: 'How do I book an appointment?',
     answer: '''To book an appointment:
 
-1. Go to the Clinics page
+1. Go to the Home page
 2. Select your preferred clinic
-3. Choose an available time slot
-4. Fill in the appointment details
-5. Submit your request
+3. Tap the "Book Appointment" button
+4. Choose an available time slot
+5. Fill in the appointment details
+6. Submit your request
 
 You'll receive a notification once the clinic confirms your appointment.''',
   ),
@@ -51,14 +52,14 @@ You'll receive a notification once the clinic confirms your appointment.''',
 You can edit or delete pet profiles anytime from the Pets page.''',
   ),
   FAQItem(
-    question: 'How do I view medical records?',
-    answer: '''To view medical records:
+    question: 'How do I view pet\'s health records?',
+    answer: '''To view pet's health records:
 
 1. Select your pet from the Pets page
-2. Tap on "Medical Records"
-3. View all vaccination and treatment history
+2. Tap on "More" button (...)
+3. Tap on "Medical Appointment History" or "Vaccination History"
 
-Medical records are updated by veterinarians after each visit.''',
+Health records are updated by veterinarians after each visit.''',
   ),
   FAQItem(
     question: 'How do I contact a clinic?',
@@ -810,14 +811,14 @@ class _WebSettingsAndEverythingPageState
                 onTap: _showChangePasswordDialog,
               ),
               const SizedBox(height: 12),
-              _buildSecurityOption(
-                icon: Icons.verified_user_outlined,
-                title: 'Two-Factor Authentication',
-                subtitle: 'Add an extra layer of security',
-                color: Colors.green,
-                onTap: () => _showSnackbar('Info',
-                    'Two-factor authentication setup coming soon', Colors.blue),
-              ),
+              // _buildSecurityOption(
+              //   icon: Icons.verified_user_outlined,
+              //   title: 'Two-Factor Authentication',
+              //   subtitle: 'Add an extra layer of security',
+              //   color: Colors.green,
+              //   onTap: () => _showSnackbar('Info',
+              //       'Two-factor authentication setup coming soon', Colors.blue),
+              // ),
             ],
           ),
           const SizedBox(height: 20),
@@ -939,14 +940,6 @@ class _WebSettingsAndEverythingPageState
             iconColor: Colors.orange,
             children: [
               _buildModernSettingTile(
-                icon: Icons.notifications_active_outlined,
-                title: 'Push Notifications',
-                subtitle: 'Receive real-time updates and alerts',
-                iconColor: Colors.orange,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
                 icon: Icons.email_outlined,
                 title: 'Email Notifications',
                 subtitle: 'Get important updates via email',
@@ -955,8 +948,16 @@ class _WebSettingsAndEverythingPageState
               ),
               const SizedBox(height: 12),
               _buildModernSettingTile(
+                icon: Icons.notifications_active_outlined,
+                title: 'Push Notifications (For Mobile Application)',
+                subtitle: 'Receive real-time updates and alerts',
+                iconColor: Colors.orange,
+                value: true,
+              ),
+              const SizedBox(height: 12),
+              _buildModernSettingTile(
                 icon: Icons.vibration_outlined,
-                title: 'Sound & Vibration',
+                title: 'Sound & Vibration (For Mobile Application)',
                 subtitle: 'Enable notification sounds',
                 iconColor: Colors.purple,
                 value: true,
@@ -1160,32 +1161,32 @@ class _WebSettingsAndEverythingPageState
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children: [
-                                  _buildActionChip(
-                                    icon: Icons.open_in_new,
-                                    label: 'Open Article',
-                                    color: Colors.blue,
-                                    onTap: () => _showSnackbar(
-                                        'Info',
-                                        'Opening detailed article...',
-                                        Colors.blue),
-                                  ),
-                                  _buildActionChip(
-                                    icon: Icons.link,
-                                    label: 'Copy Link',
-                                    color: Colors.green,
-                                    onTap: () {
-                                      Clipboard.setData(
-                                          ClipboardData(text: item.answer));
-                                      _showSnackbar('Success', 'Link copied!',
-                                          Colors.green);
-                                    },
-                                  ),
-                                ],
-                              ),
+                              // Wrap(
+                              //   spacing: 10,
+                              //   runSpacing: 10,
+                              //   children: [
+                              //     _buildActionChip(
+                              //       icon: Icons.open_in_new,
+                              //       label: 'Open Article',
+                              //       color: Colors.blue,
+                              //       onTap: () => _showSnackbar(
+                              //           'Info',
+                              //           'Opening detailed article...',
+                              //           Colors.blue),
+                              //     ),
+                              //     _buildActionChip(
+                              //       icon: Icons.link,
+                              //       label: 'Copy Link',
+                              //       color: Colors.green,
+                              //       onTap: () {
+                              //         Clipboard.setData(
+                              //             ClipboardData(text: item.answer));
+                              //         _showSnackbar('Success', 'Link copied!',
+                              //             Colors.green);
+                              //       },
+                              //     ),
+                              //   ],
+                              // ),
                               const SizedBox(height: 16),
                               Container(
                                 padding: const EdgeInsets.all(16),
