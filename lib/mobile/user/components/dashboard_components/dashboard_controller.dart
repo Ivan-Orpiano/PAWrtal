@@ -83,6 +83,16 @@ class DashboardController extends GetxController {
     }
   }
 
+  void updateSearchQuery(String query) {
+    searchQuery.value = query;
+    applyFilters();
+  }
+
+  void setFilter(String filter) {
+    selectedFilter.value = filter;
+    applyFilters();
+  }
+
   void applyFilters() {
     var filtered = allClinics.toList();
 
@@ -149,39 +159,56 @@ class DashboardController extends GetxController {
         break;
 
       case 'Popular':
-        // Sort by review count and rating
+        // FIXED: Sort by average rating FIRST, then by review count
         filtered.sort((a, b) {
           final aStats = ratingStatsCache[a.documentId ?? ''];
           final bStats = ratingStatsCache[b.documentId ?? ''];
 
+          final aRating = aStats?.averageRating ?? 0.0;
+          final bRating = bStats?.averageRating ?? 0.0;
+
           final aReviews = aStats?.totalReviews ?? 0;
           final bReviews = bStats?.totalReviews ?? 0;
 
-          if (aReviews != bReviews) {
-            return bReviews.compareTo(aReviews);
+          // Primary sort: Higher rating first
+          if ((bRating - aRating).abs() > 0.01) {
+            return bRating.compareTo(aRating);
           }
 
-          final aRating = aStats?.averageRating ?? 0.0;
-          final bRating = bStats?.averageRating ?? 0.0;
-          return bRating.compareTo(aRating);
+          // Secondary sort: More reviews if ratings are equal
+          return bReviews.compareTo(aReviews);
         });
 
-        // Only show clinics with at least 1 review
+        // Only show clinics with at least 1 review and rating > 0
         filtered = filtered.where((clinic) {
           final stats = ratingStatsCache[clinic.documentId ?? ''];
-          return (stats?.totalReviews ?? 0) > 0;
+          return (stats?.totalReviews ?? 0) > 0 &&
+              (stats?.averageRating ?? 0.0) > 0.0;
         }).toList();
         break;
 
       case 'All':
       default:
-        // Sort open clinics first
+        // Sort open clinics first, then by name
         filtered.sort((a, b) {
           final aSettings = clinicSettingsMap[a.documentId ?? ''];
           final bSettings = clinicSettingsMap[b.documentId ?? ''];
 
-          final aIsOpen = aSettings?.isOpen ?? true;
-          final bIsOpen = bSettings?.isOpen ?? true;
+          final today = DateTime.now();
+          final todayStr =
+              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+          final aIsClosedDate =
+              aSettings?.closedDates.contains(todayStr) ?? false;
+          final bIsClosedDate =
+              bSettings?.closedDates.contains(todayStr) ?? false;
+
+          final aIsOpen = (aSettings?.isOpen ?? true) &&
+              (aSettings?.isOpenNow() ?? false) &&
+              !aIsClosedDate;
+          final bIsOpen = (bSettings?.isOpen ?? true) &&
+              (bSettings?.isOpenNow() ?? false) &&
+              !bIsClosedDate;
 
           if (aIsOpen && !bIsOpen) return -1;
           if (!aIsOpen && bIsOpen) return 1;
@@ -192,16 +219,6 @@ class DashboardController extends GetxController {
     }
 
     filteredClinics.assignAll(filtered);
-  }
-
-  void updateSearchQuery(String query) {
-    searchQuery.value = query;
-    applyFilters();
-  }
-
-  void setFilter(String filter) {
-    selectedFilter.value = filter;
-    applyFilters();
   }
 
   int getFilterCount(String filter) {
@@ -251,9 +268,11 @@ class DashboardController extends GetxController {
         }).length;
 
       case 'Popular':
+        // FIXED: Count clinics with reviews and ratings > 0
         return allClinics.where((clinic) {
           final stats = ratingStatsCache[clinic.documentId ?? ''];
-          return (stats?.totalReviews ?? 0) > 0;
+          return (stats?.totalReviews ?? 0) > 0 &&
+              (stats?.averageRating ?? 0.0) > 0.0;
         }).length;
 
       default:
