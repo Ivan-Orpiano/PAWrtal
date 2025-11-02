@@ -159,61 +159,61 @@ class VetDeletionRequestController extends GetxController {
     }
   }
 
-  /// NEW: Toggle pin status with database persistence
-  Future<void> togglePin(String requestId) async {
-    try {
-      print('>>> Toggling pin for deletion request: $requestId');
+    /// Toggle pin status with database persistence
+    Future<void> togglePin(String requestId) async {
+      try {
+        print('>>> Toggling pin for deletion request: $requestId');
 
-      final requestIndex = allRequests.indexWhere((r) => r.documentId == requestId);
+        final requestIndex = allRequests.indexWhere((r) => r.documentId == requestId);
 
-      if (requestIndex == -1) {
-        print('>>> Error: Request not found');
-        return;
+        if (requestIndex == -1) {
+          print('>>> Error: Request not found');
+          return;
+        }
+
+        final request = allRequests[requestIndex];
+        final newPinStatus = !request.isPinned;
+
+        final pinnedBy = 'Developer';
+
+        print('>>> New pin status: $newPinStatus');
+        print('>>> Pinned by: $pinnedBy');
+
+        // Update in database
+        await authRepository.toggleDeletionRequestPin(
+          requestId,
+          newPinStatus,
+          pinnedBy,
+        );
+
+        // Update local state
+        if (newPinStatus) {
+          pinnedRequestIds.add(requestId);
+        } else {
+          pinnedRequestIds.remove(requestId);
+        }
+
+        // Update the request object
+        allRequests[requestIndex] = request.copyWith(
+          isPinned: newPinStatus,
+          pinnedAt: newPinStatus ? DateTime.now() : null,
+          pinnedBy: newPinStatus ? pinnedBy : null,
+        );
+
+        allRequests.refresh();
+        filterRequests(); // This will trigger UI update
+
+        _showSnackBar(
+          newPinStatus ? 'Request pinned successfully' : 'Request unpinned successfully',
+          newPinStatus ? Colors.amber : Colors.grey,
+        );
+
+        print('>>> Pin toggle successful');
+      } catch (e) {
+        print('>>> Error toggling pin: $e');
+        _showSnackBar('Failed to toggle pin: $e', Colors.red);
       }
-
-      final request = allRequests[requestIndex];
-      final newPinStatus = !request.isPinned;
-
-      final pinnedBy = 'Developer'; // You can get this from session/storage
-
-      print('>>> New pin status: $newPinStatus');
-      print('>>> Pinned by: $pinnedBy');
-
-      // Update in database
-      await authRepository.toggleDeletionRequestPin(
-        requestId,
-        newPinStatus,
-        pinnedBy,
-      );
-
-      // Update local state
-      if (newPinStatus) {
-        pinnedRequestIds.add(requestId);
-      } else {
-        pinnedRequestIds.remove(requestId);
-      }
-
-      // Update the request object
-      allRequests[requestIndex] = request.copyWith(
-        isPinned: newPinStatus,
-        pinnedAt: newPinStatus ? DateTime.now() : null,
-        pinnedBy: newPinStatus ? pinnedBy : null,
-      );
-
-      allRequests.refresh();
-      filterRequests();
-
-      _showSnackBar(
-        newPinStatus ? 'Request pinned successfully' : 'Request unpinned successfully',
-        newPinStatus ? Colors.amber : Colors.grey,
-      );
-
-      print('>>> Pin toggle successful');
-    } catch (e) {
-      print('>>> Error toggling pin: $e');
-      _showSnackBar('Failed to toggle pin: $e', Colors.red);
     }
-  }
 
   /// NEW: Check if request is pinned
   bool isPinned(String requestId) {
@@ -274,39 +274,41 @@ class VetDeletionRequestController extends GetxController {
     return reviewsCache[reviewId];
   }
 
-  /// Filter requests - UPDATED to sort pinned first
-  void filterRequests() {
-    filteredRequests.value = allRequests.where((request) {
-      final clinicName = clinicNamesCache[request.clinicId] ?? 'Unknown Clinic';
-      
-      bool matchesSearch = searchQuery.value.isEmpty ||
-          request.reason.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-          clinicName.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-          request.requestedBy.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-          (reviewsCache[request.reviewId]?.reviewText ?? '')
-              .toLowerCase()
-              .contains(searchQuery.value.toLowerCase());
+  /// Filter requests - Sorts pinned first, then by date
+void filterRequests() {
+  filteredRequests.value = allRequests.where((request) {
+    final clinicName = clinicNamesCache[request.clinicId] ?? 'Unknown Clinic';
+    
+    bool matchesSearch = searchQuery.value.isEmpty ||
+        request.reason.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+        clinicName.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+        request.requestedBy.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+        (reviewsCache[request.reviewId]?.reviewText ?? '')
+            .toLowerCase()
+            .contains(searchQuery.value.toLowerCase());
 
-      bool matchesStatus = selectedStatus.value == 'All' ||
-          request.status.toLowerCase() == selectedStatus.value.toLowerCase();
+    bool matchesStatus = selectedStatus.value == 'All' ||
+        request.status.toLowerCase() == selectedStatus.value.toLowerCase();
 
-      bool matchesReason = selectedReason.value == 'All' ||
-          request.reason == selectedReason.value;
+    bool matchesReason = selectedReason.value == 'All' ||
+        request.reason == selectedReason.value;
 
-      return matchesSearch && matchesStatus && matchesReason;
-    }).toList();
+    return matchesSearch && matchesStatus && matchesReason;
+  }).toList();
 
-    // NEW: Sort pinned items first, then by date
-    filteredRequests.sort((a, b) {
-      // Primary sort: Pinned first
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
+  // 🎯 IMPORTANT: Sort pinned items first, then by date
+  filteredRequests.sort((a, b) {
+    // Primary sort: Pinned first
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
 
-      // Secondary sort: By requested date
-      return b.requestedAt.compareTo(a.requestedAt);
-    });
-  }
+    // Secondary sort: By requested date (newest first)
+    return b.requestedAt.compareTo(a.requestedAt);
+  });
 
+  print('>>> Filtered: ${filteredRequests.length} requests');
+  print('>>> Pinned: ${filteredRequests.where((r) => r.isPinned).length}');
+}
   /// Calculate statistics
   void calculateStatistics() {
     stats.value = {
