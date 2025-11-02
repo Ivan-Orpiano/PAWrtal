@@ -202,12 +202,13 @@ class WebLoginPage extends GetView<WebLoginController> {
                                           keyboardType: TextInputType.text,
                                           maxLength:
                                               50, // Hard limit: 50 characters
-                                              onFieldSubmitted: (_) {
-                                                if (!controller.isLoading.value &&
-                                                    !controller.isGoogleLoading.value) {
-                                                  controller.signIn();
-                                                }
-                                              },
+                                          onFieldSubmitted: (_) {
+                                            if (!controller.isLoading.value &&
+                                                !controller
+                                                    .isGoogleLoading.value) {
+                                              controller.signIn();
+                                            }
+                                          },
                                           decoration: InputDecoration(
                                             prefixIcon: const Icon(
                                                 Icons.person_rounded),
@@ -236,33 +237,44 @@ class WebLoginPage extends GetView<WebLoginController> {
                                       SizedBox(
                                         width: fieldWidth,
                                         child: Obx(() => TextFormField(
-                                              controller: controller.passwordController,
-                                              obscureText: !controller.isPasswordVisible.value,
+                                              controller:
+                                                  controller.passwordController,
+                                              obscureText: !controller
+                                                  .isPasswordVisible.value,
                                               maxLength: 50,
                                               onFieldSubmitted: (_) {
-                                                if (!controller.isLoading.value &&
-                                                    !controller.isGoogleLoading.value) {
+                                                if (!controller
+                                                        .isLoading.value &&
+                                                    !controller.isGoogleLoading
+                                                        .value) {
                                                   controller.signIn();
                                                 }
                                               },
                                               decoration: InputDecoration(
-                                                prefixIcon: const Icon(Icons.lock_rounded),
+                                                prefixIcon: const Icon(
+                                                    Icons.lock_rounded),
                                                 suffixIcon: IconButton(
                                                   icon: Icon(
-                                                    controller.isPasswordVisible.value
+                                                    controller.isPasswordVisible
+                                                            .value
                                                         ? Icons.visibility
                                                         : Icons.visibility_off,
                                                   ),
-                                                  onPressed: controller.togglePasswordVisibility,
+                                                  onPressed: controller
+                                                      .togglePasswordVisibility,
                                                 ),
                                                 hintText: "Password",
                                                 border: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(20)),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20)),
                                                 counterText: "",
                                               ),
                                               onChanged: (value) {
-                                                if (controller.errorMessage.value.isNotEmpty) {
-                                                  controller.errorMessage.value = '';
+                                                if (controller.errorMessage
+                                                    .value.isNotEmpty) {
+                                                  controller
+                                                      .errorMessage.value = '';
                                                 }
                                               },
                                             )),
@@ -402,23 +414,35 @@ class WebLoginPage extends GetView<WebLoginController> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
         title: const Text("Reset Password"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-                "Please enter your email. We will send a recovery link."),
+              "Enter your email address and we'll send you a link to reset your password.",
+            ),
             const SizedBox(height: 10),
             Form(
               key: controller.resetPasswordFormKey,
               child: TextFormField(
                 controller: controller.emailForPasswordResetController,
                 keyboardType: TextInputType.emailAddress,
-                validator: controller
-                    .validateEmailForReset, // Use email-specific validator
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return "Please enter your email";
+                  }
+                  if (!GetUtils.isEmail(value)) {
+                    return "Please enter a valid email";
+                  }
+                  return null;
+                },
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: "Email",
+                  prefixIcon: Icon(Icons.email),
                 ),
               ),
             ),
@@ -432,12 +456,20 @@ class WebLoginPage extends GetView<WebLoginController> {
             },
             child: const Text("Cancel"),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
-              controller.sendPasswordResetEmail();
-              Navigator.pop(context);
+              if (controller.resetPasswordFormKey.currentState!.validate()) {
+                Navigator.pop(context);
+                controller.sendPasswordResetEmail();
+              }
             },
-            child: const Text("Send Link"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF517399),
+            ),
+            child: const Text(
+              "Send Link",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

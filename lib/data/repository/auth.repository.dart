@@ -2737,4 +2737,26 @@ class AuthRepository {
       return [];
     }
   }
+
+  Future<Map<String, dynamic>> sendPasswordResetEmail(String email) {
+    return appWriteProvider.sendPasswordResetEmail(email);
+  }
+
+  /// Validate password reset token
+  Future<bool> validatePasswordResetToken(String userId, String token) {
+    return appWriteProvider.validatePasswordResetToken(userId, token);
+  }
+
+  /// Reset password
+  Future<bool> resetPassword({
+    required String userId,
+    required String token,
+    required String newPassword,
+  }) {
+    return appWriteProvider.resetPassword(
+      userId: userId,
+      secret: token,
+      newPassword: newPassword,
+    );
+  }
 }

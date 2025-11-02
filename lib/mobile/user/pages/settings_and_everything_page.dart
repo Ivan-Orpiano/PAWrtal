@@ -27,11 +27,12 @@ List<FAQItem> faqItems = [
     question: 'How do I book an appointment?',
     answer: '''To book an appointment:
 
-1. Go to the Clinics page
+1. Go to the Home page
 2. Select your preferred clinic
-3. Choose an available time slot
-4. Fill in the appointment details
-5. Submit your request
+3. Tap the "Book Appointment" button
+4. Choose an available time slot
+5. Fill in the appointment details
+6. Submit your request
 
 You'll receive a notification once the clinic confirms your appointment.''',
   ),
@@ -47,14 +48,14 @@ You'll receive a notification once the clinic confirms your appointment.''',
 You can edit or delete pet profiles anytime from the Pets page.''',
   ),
   FAQItem(
-    question: 'How do I view medical records?',
-    answer: '''To view medical records:
+    question: 'How do I view pet\'s health records?',
+    answer: '''To view pet's health records:
 
 1. Select your pet from the Pets page
-2. Tap on "Medical Records"
-3. View all vaccination and treatment history
+2. Tap on "More" button (...)
+3. Tap on "Medical Appointment History" or "Vaccination History"
 
-Medical records are updated by veterinarians after each visit.''',
+Health records are updated by veterinarians after each visit.''',
   ),
   FAQItem(
     question: 'How do I contact a clinic?',
@@ -531,13 +532,13 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 onTap: _showChangePasswordDialog,
               ),
               const SizedBox(height: 10),
-              _buildSecurityOption(
-                icon: Icons.verified_user_outlined,
-                title: 'Two-Factor Auth',
-                subtitle: 'Extra security layer',
-                color: Colors.green,
-                onTap: () => _showSnackbar('Info', '2FA coming soon', Colors.blue),
-              ),
+              // _buildSecurityOption(
+              //   icon: Icons.verified_user_outlined,
+              //   title: 'Two-Factor Auth',
+              //   subtitle: 'Extra security layer',
+              //   color: Colors.green,
+              //   onTap: () => _showSnackbar('Info', '2FA coming soon', Colors.blue),
+              // ),
             ],
           ),
           
@@ -620,39 +621,39 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Appearance Card
-          _buildModernCard(
-            title: 'Appearance',
-            icon: Icons.palette_outlined,
-            iconColor: Colors.purple,
-            children: [
-              _buildModernSettingTile(
-                icon: Icons.dark_mode_outlined,
-                title: 'Dark Mode',
-                subtitle: 'Switch between themes',
-                iconColor: Colors.indigo,
-                value: true,
-              ),
-              const SizedBox(height: 10),
-              _buildModernSettingTile(
-                icon: Icons.language_outlined,
-                title: 'Language',
-                subtitle: 'English (US)',
-                iconColor: Colors.blue,
-                isSwitch: false,
-                onTap: () => _showSnackbar('Info', 'Language selection coming soon', Colors.blue),
-              ),
-              const SizedBox(height: 10),
-              _buildModernSettingTile(
-                icon: Icons.format_size_outlined,
-                title: 'Text Size',
-                subtitle: 'Adjust readability',
-                iconColor: Colors.cyan,
-                isSwitch: false,
-                onTap: () => _showSnackbar('Info', 'Text size adjustment coming soon', Colors.blue),
-              ),
-            ],
-          ),
+          // // Appearance Card
+          // _buildModernCard(
+          //   title: 'Appearance',
+          //   icon: Icons.palette_outlined,
+          //   iconColor: Colors.purple,
+          //   children: [
+          //     _buildModernSettingTile(
+          //       icon: Icons.dark_mode_outlined,
+          //       title: 'Dark Mode',
+          //       subtitle: 'Switch between themes',
+          //       iconColor: Colors.indigo,
+          //       value: true,
+          //     ),
+          //     const SizedBox(height: 10),
+          //     _buildModernSettingTile(
+          //       icon: Icons.language_outlined,
+          //       title: 'Language',
+          //       subtitle: 'English (US)',
+          //       iconColor: Colors.blue,
+          //       isSwitch: false,
+          //       onTap: () => _showSnackbar('Info', 'Language selection coming soon', Colors.blue),
+          //     ),
+          //     const SizedBox(height: 10),
+          //     _buildModernSettingTile(
+          //       icon: Icons.format_size_outlined,
+          //       title: 'Text Size',
+          //       subtitle: 'Adjust readability',
+          //       iconColor: Colors.cyan,
+          //       isSwitch: false,
+          //       onTap: () => _showSnackbar('Info', 'Text size adjustment coming soon', Colors.blue),
+          //     ),
+          //   ],
+          // ),
           
           const SizedBox(height: 16),
           
@@ -663,19 +664,19 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
             iconColor: Colors.orange,
             children: [
               _buildModernSettingTile(
-                icon: Icons.notifications_active_outlined,
-                title: 'Push Notifications',
-                subtitle: 'Real-time updates',
-                iconColor: Colors.orange,
-                value: true,
-              ),
-              const SizedBox(height: 10),
-              _buildModernSettingTile(
                 icon: Icons.email_outlined,
                 title: 'Email Notifications',
                 subtitle: 'Important updates via email',
                 iconColor: Colors.red,
                 value: false,
+              ),
+              const SizedBox(height: 10),
+              _buildModernSettingTile(
+                icon: Icons.notifications_active_outlined,
+                title: 'Push Notifications',
+                subtitle: 'Real-time updates',
+                iconColor: Colors.orange,
+                value: true,
               ),
               const SizedBox(height: 10),
               _buildModernSettingTile(

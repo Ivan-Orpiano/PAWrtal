@@ -2286,7 +2286,7 @@ class AppWriteProvider {
       return null;
     }
   }
-  
+
   // RENAMED: getStaffByEmail -> getStaffByUsername
   Future<Document?> getStaffByUsername(String username) async {
     try {
@@ -7920,6 +7920,102 @@ class AppWriteProvider {
       print('>>> ============================================');
     } catch (e) {
       print('>>> Migration error: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
+    try {
+      print('>>> ============================================');
+      print('>>> SENDING PASSWORD RESET EMAIL (Appwrite Native)');
+      print('>>> Email: $email');
+      print('>>> ============================================');
+
+      // Use Appwrite's built-in password recovery
+      // This creates a recovery token and sends an email
+      final recovery = await account!.createRecovery(
+        email: email,
+        url: 'https://www.pawrtal.online/reset-password', // Your reset page URL
+      );
+
+      print('>>> ✅ Recovery token created');
+      print('>>> Recovery ID: ${recovery.$id}');
+      print('>>> ============================================');
+
+      return {
+        'success': true,
+        'message':
+            'If an account exists with this email, a password reset link has been sent.',
+      };
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR SENDING PASSWORD RESET EMAIL: $e');
+      print('>>> ============================================');
+
+      // For security, always return success message
+      // Don't reveal if email exists or not
+      return {
+        'success': true,
+        'message':
+            'If an account exists with this email, a password reset link has been sent.',
+      };
+    }
+  }
+
+  Future<bool> validatePasswordResetToken(String userId, String secret) async {
+    try {
+      print('>>> Validating recovery token...');
+      print('>>> User ID: $userId');
+      print('>>> Secret: ${secret.substring(0, 10)}...');
+
+      // Appwrite doesn't provide a way to validate without using the token
+      // We'll do a soft validation by checking if user exists
+      final userDoc = await getUserById(userId);
+
+      if (userDoc == null) {
+        print('>>> ❌ User not found');
+        return false;
+      }
+
+      print('>>> ✅ User exists, token will be validated on submit');
+      return true;
+    } catch (e) {
+      print('>>> ❌ Error validating token: $e');
+      return false;
+    }
+  }
+
+  /// Reset password using token
+  Future<bool> resetPassword({
+    required String userId,
+    required String secret, // This is the recovery secret from URL
+    required String newPassword,
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> COMPLETING PASSWORD RECOVERY');
+      print('>>> User ID: $userId');
+      print('>>> Secret: ${secret.substring(0, 10)}...');
+      print('>>> ============================================');
+
+      // Use Appwrite's updateRecovery to complete the password reset
+      // This validates the secret and updates the password
+      await account!.updateRecovery(
+        userId: userId,
+        secret: secret,
+        password: newPassword,
+        // passwordAgain: newPassword, // Confirm password
+      );
+
+      print('>>> ✅ Password updated successfully');
+      print('>>> ============================================');
+
+      return true;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR RESETTING PASSWORD: $e');
+      print('>>> ============================================');
+
+      return false;
     }
   }
 }

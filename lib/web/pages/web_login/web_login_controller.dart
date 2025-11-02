@@ -272,21 +272,40 @@ class WebLoginController extends GetxController {
     if (!resetPasswordFormKey.currentState!.validate()) return;
 
     try {
-      WebLoadingHelper.showLoading(message: 'Sending recovery email...');
+      final email = emailForPasswordResetController.text.trim();
 
-      final appWriteProvider = AppWriteProvider();
-      final success = await appWriteProvider
-          .sendRecoveryEmail(emailForPasswordResetController.text.trim());
+      print('>>> ============================================');
+      print('>>> WEB FORGOT PASSWORD REQUEST');
+      print('>>> Email: $email');
+      print('>>> ============================================');
+
+      WebLoadingHelper.showLoading(message: 'Sending password reset email...');
+
+      final result = await _authRepository.sendPasswordResetEmail(email);
 
       WebLoadingHelper.hideLoading();
 
-      if (success) {
-        WebErrorHandler.handleSuccess('Recovery email sent successfully');
+      if (result['success'] == true) {
+        print('>>> ✅ Password reset email sent');
+
         emailForPasswordResetController.clear();
+
+        WebErrorHandler.handleSuccess(
+          result['message'] ??
+              'Password reset link sent to your email. Please check your inbox.',
+        );
       } else {
-        WebErrorHandler.handleError('Cannot send recovery email');
+        print('>>> ❌ Failed to send password reset email');
+
+        WebErrorHandler.handleError(
+          result['message'] ?? 'Failed to send password reset email',
+        );
       }
+
+      print('>>> ============================================');
     } catch (e) {
+      print('>>> ❌ Error sending password reset email: $e');
+
       WebLoadingHelper.hideLoading();
       WebErrorHandler.handleError(e, context: 'Password Reset');
     }
