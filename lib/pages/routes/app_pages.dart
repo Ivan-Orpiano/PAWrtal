@@ -169,25 +169,25 @@ class AppPages {
       ],
     ),
 
-    GetPage(
-      name: Routes.oauthSuccess,
-      page: () => const OAuthSuccessPage(),
-    ),
-    GetPage(
-      name: Routes.oauthFailure,
-      page: () => const OAuthFailurePage(),
-    ),
+    // OAuth Callback - Public route (handles Google OAuth redirect)
     GetPage(
       name: Routes.oauthCallback,
       page: () => const OAuthCallbackPage(),
+      // No middleware - public access for OAuth callback
     ),
 
     GetPage(
-      name: Routes.resetPassword,
-      page: () => const ResetPasswordPage(),
-      binding: ResetPasswordBinding(),
-      transition: Transition.fadeIn
-      // No middleware - public access for password reset
+      name: Routes.oauthFailure,
+      page: () => const OAuthFailurePage(),
+      // No middleware - public access
     ),
+
+    GetPage(
+        name: Routes.resetPassword,
+        page: () => const ResetPasswordPage(),
+        binding: ResetPasswordBinding(),
+        transition: Transition.fadeIn
+        // No middleware - public access for password reset
+        ),
   ];
 }

@@ -345,31 +345,32 @@ class AppWriteProvider {
       print('>>> ============================================');
 
       if (kIsWeb) {
-        // WEB: Redirect in same tab using platform helper
+        // WEB: Use fragment (#) for SPA routing compatibility
         final htmlHelper = PlatformHtmlHelper.instance;
         final String baseUrl = htmlHelper.getBaseUrl();
-        final String successUrl = '$baseUrl#/auth/success';
-        final String failureUrl = '$baseUrl#/auth/failure';
+
+        // Use hash routing for better SPA compatibility
+        final String successUrl = '$baseUrl/#/auth/callback';
+        final String failureUrl = '$baseUrl/#/auth/failure';
 
         print('>>> Base URL: $baseUrl');
         print('>>> Success URL: $successUrl');
         print('>>> Failure URL: $failureUrl');
 
+        // Create OAuth URL with proper encoding
         final oauthUrl =
             '${AppwriteConstants.endPoint}/account/sessions/oauth2/google'
             '?project=${AppwriteConstants.projectID}'
             '&success=${Uri.encodeComponent(successUrl)}'
             '&failure=${Uri.encodeComponent(failureUrl)}';
 
-        print('>>> Web: Redirecting in current tab...');
+        print('>>> Redirecting to OAuth...');
         htmlHelper.redirectToUrl(oauthUrl);
         return true;
       } else {
-        // MOBILE: Use deep link redirect
-        const String scheme =
-            'https://www.pawrtal.online'; // Your app's custom scheme
-        const String successUrl = '$scheme#/auth/success';
-        const String failureUrl = '$scheme#/auth/failure';
+        // MOBILE: Use custom deep link scheme (NOT https://)
+        const String successUrl = 'pawrtal://auth/success';
+        const String failureUrl = 'pawrtal://auth/failure';
 
         print('>>> Mobile Success URL: $successUrl');
         print('>>> Mobile Failure URL: $failureUrl');
