@@ -54,13 +54,19 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
   }
 
   Widget _buildStatusBadge() {
+    // CRITICAL: Check if today is a closed date FIRST
+    final isTodayClosedDate = _isTodayClosedDate();
+
     final isOpen = widget.clinicSettings?.isOpen ?? true;
     final isOpenNow = widget.clinicSettings?.isOpenNow() ?? true;
 
     Color statusColor;
     String statusText;
 
-    if (!isOpen) {
+    if (isTodayClosedDate) {
+      statusColor = Colors.red;
+      statusText = "CLOSED TODAY";
+    } else if (!isOpen) {
       statusColor = Colors.red;
       statusText = "CLOSED";
     } else if (!isOpenNow) {
@@ -86,6 +92,16 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
         ),
       ),
     );
+  }
+
+  bool _isTodayClosedDate() {
+    if (widget.clinicSettings == null) return false;
+
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return widget.clinicSettings!.closedDates.contains(todayStr);
   }
 
   Widget _buildRatingDisplay() {

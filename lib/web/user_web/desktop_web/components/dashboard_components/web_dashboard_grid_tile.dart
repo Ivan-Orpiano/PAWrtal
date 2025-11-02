@@ -15,6 +15,15 @@ class WebDashboardGridTile extends StatefulWidget {
 class _WebDashboardGridTileState extends State<WebDashboardGridTile> {
   @override
   Widget build(BuildContext context) {
+    print('>>> ============================================');
+    print('>>> BUILDING GRID TILE');
+    print('>>> Number of clinics to display: ${widget.clinics.length}');
+
+    for (var clinic in widget.clinics) {
+      print('>>> - ${clinic.clinicName} (ID: ${clinic.documentId})');
+    }
+    print('>>> ============================================');
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < mobileWidth) {
@@ -37,6 +46,8 @@ class _WebDashboardGridTileState extends State<WebDashboardGridTile> {
                           clinic: clinic,
                           tileWidth: tileWidth,
                           tileHeight: tileWidth * 0.8,
+                          key: ValueKey(
+                              clinic.documentId), // CRITICAL: Add unique key
                         ))
                     .toList(),
               );
@@ -61,6 +72,8 @@ class _WebDashboardGridTileState extends State<WebDashboardGridTile> {
                     .map((clinic) => WebDashboardTile(
                           clinic: clinic,
                           tileWidth: tileWidth,
+                          key: ValueKey(
+                              clinic.documentId), // CRITICAL: Add unique key
                         ))
                     .toList(),
               );

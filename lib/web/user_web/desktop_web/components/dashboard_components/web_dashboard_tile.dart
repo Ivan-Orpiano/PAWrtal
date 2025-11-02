@@ -32,23 +32,57 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
   @override
   void initState() {
     super.initState();
+
+    print('>>> ============================================');
+    print('>>> INITIALIZING TILE FOR: ${widget.clinic.clinicName}');
+    print('>>> Clinic Document ID: ${widget.clinic.documentId}');
+    print('>>> Clinic Image: ${widget.clinic.image}');
+    print('>>> Dashboard Pic: ${widget.clinic.dashboardPic}');
+    print('>>> ============================================');
+
     _loadClinicSettings();
     _loadRatingStats();
   }
 
   Future<void> _loadClinicSettings() async {
     try {
+      final clinicDocId = widget.clinic.documentId ?? '';
+
+      if (clinicDocId.isEmpty) {
+        print(
+            '>>> WARNING: Clinic ${widget.clinic.clinicName} has no document ID');
+        if (mounted) {
+          setState(() {
+            _isLoadingSettings = false;
+          });
+        }
+        return;
+      }
+
+      print('>>> Loading settings for clinic: ${widget.clinic.clinicName}');
+      print('>>>   Document ID: $clinicDocId');
+
       final authRepository = Get.find<AuthRepository>();
-      final settings = await authRepository
-          .getClinicSettingsByClinicId(widget.clinic.documentId ?? '');
+      final settings =
+          await authRepository.getClinicSettingsByClinicId(clinicDocId);
+
       if (mounted) {
         setState(() {
           _clinicSettings = settings;
           _isLoadingSettings = false;
         });
+
+        if (settings != null) {
+          print('>>> Settings loaded successfully');
+          print('>>>   Dashboard Pic: ${settings.dashboardPic}');
+          print('>>>   Gallery: ${settings.gallery.length} images');
+          print('>>>   Services: ${settings.services.length}');
+        } else {
+          print('>>> No settings found for this clinic');
+        }
       }
     } catch (e) {
-      print("Error loading clinic settings for tile: $e");
+      print('>>> ERROR loading clinic settings: $e');
       if (mounted) {
         setState(() {
           _isLoadingSettings = false;
@@ -59,17 +93,35 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
 
   Future<void> _loadRatingStats() async {
     try {
+      final clinicDocId = widget.clinic.documentId ?? '';
+
+      if (clinicDocId.isEmpty) {
+        print(
+            '>>> WARNING: Clinic ${widget.clinic.clinicName} has no document ID for ratings');
+        if (mounted) {
+          setState(() {
+            _isLoadingRating = false;
+          });
+        }
+        return;
+      }
+
+      print('>>> Loading rating stats for clinic: ${widget.clinic.clinicName}');
+
       final authRepository = Get.find<AuthRepository>();
-      final stats = await authRepository
-          .getClinicRatingStats(widget.clinic.documentId ?? '');
+      final stats = await authRepository.getClinicRatingStats(clinicDocId);
+
       if (mounted) {
         setState(() {
           _ratingStats = stats;
           _isLoadingRating = false;
         });
+
+        print(
+            '>>> Rating stats loaded: ${stats.averageRating} (${stats.totalReviews} reviews)');
       }
     } catch (e) {
-      print("Error loading rating stats for tile: $e");
+      print('>>> ERROR loading rating stats: $e');
       if (mounted) {
         setState(() {
           _isLoadingRating = false;
@@ -325,22 +377,46 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
   }
 
   String _getProfileImage() {
-    // Use dashboardPic from settings if available
+    print('>>> Getting profile image for: ${widget.clinic.clinicName}');
+
+    // Priority 1: Use dashboardPic from clinic model (already set from settings)
+    if (widget.clinic.dashboardPic != null &&
+        widget.clinic.dashboardPic!.isNotEmpty) {
+      print('>>>   Using clinic.dashboardPic: ${widget.clinic.dashboardPic}');
+      return widget.clinic.dashboardPic!;
+    }
+
+    // Priority 2: Use dashboardPic from settings
     if (_clinicSettings != null && _clinicSettings!.dashboardPic.isNotEmpty) {
+      print(
+          '>>>   Using settings.dashboardPic: ${_clinicSettings!.dashboardPic}');
       return _clinicSettings!.dashboardPic;
     }
-    // Fallback to first gallery image from settings
+
+    // Priority 3: Use first gallery image from settings
     if (_clinicSettings != null && _clinicSettings!.gallery.isNotEmpty) {
+      print(
+          '>>>   Using first gallery image: ${_clinicSettings!.gallery.first}');
       return _clinicSettings!.gallery.first;
     }
-    // Final fallback to clinic.image
-    return widget.clinic.image;
+
+    // Priority 4: Use clinic.image as fallback
+    if (widget.clinic.image.isNotEmpty) {
+      print('>>>   Using clinic.image: ${widget.clinic.image}');
+      return widget.clinic.image;
+    }
+
+    print('>>>   No image found - will use placeholder');
+    return '';
   }
 
   @override
   Widget build(BuildContext context) {
     final services = _getServicesList();
     final profileImage = _getProfileImage();
+
+    print('>>> Building tile for: ${widget.clinic.clinicName}');
+    print('>>>   Final image URL: $profileImage');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 30),
@@ -373,7 +449,10 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
                               profileImage,
                               fit: BoxFit.cover,
                               width: double.infinity,
+                              key: ValueKey(
+                                  '${widget.clinic.documentId}_image'), // CRITICAL: Unique key for image
                               errorBuilder: (context, error, stackTrace) {
+                                print('>>> ERROR loading image: $error');
                                 return Image.asset(
                                   'lib/images/placeholder.png',
                                   fit: BoxFit.cover,
@@ -394,7 +473,6 @@ class _WebDashboardTileState extends State<WebDashboardTile> {
                     left: 10,
                     child: _buildStatusBadge(),
                   ),
-                  // Like button
                 ],
               ),
               Padding(
