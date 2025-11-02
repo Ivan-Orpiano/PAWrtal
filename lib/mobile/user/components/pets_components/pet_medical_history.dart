@@ -836,7 +836,7 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
             iconColor: const Color(0xFF3498DB),
           ),
 
-          // Vaccination Record (Priority)
+          // ✅ VACCINATION RECORD SECTION (PRIORITY)
           if (vaccinationRecord != null) ...[
             const SizedBox(height: 16),
             _buildDetailCard(
@@ -856,8 +856,72 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
               icon: Icons.vaccines,
               iconColor: const Color(0xFF9B59B6),
             ),
+            const SizedBox(height: 16),
+            _buildDetailCard(
+              'Vaccination Dates',
+              [
+                _buildDetailRow(
+                  'Date Given',
+                  DateFormat('MMMM dd, yyyy')
+                      .format(vaccinationRecord.dateGiven),
+                ),
+                if (vaccinationRecord.nextDueDate != null)
+                  _buildDetailRow(
+                    'Next Due Date',
+                    DateFormat('MMMM dd, yyyy')
+                        .format(vaccinationRecord.nextDueDate!),
+                  ),
+              ],
+              icon: Icons.event,
+              iconColor: const Color(0xFF3498DB),
+            ),
+            // ✅ NEW: Show who administered the vaccination
+            if (medicalRecord != null) ...[
+              const SizedBox(height: 16),
+              FutureBuilder<String>(
+                future: _controller.getVeterinarianName(medicalRecord.vetId),
+                builder: (context, snapshot) {
+                  final vetName = snapshot.data ?? 'Loading...';
+
+                  String title;
+                  IconData icon;
+                  Color iconColor;
+
+                  if (vetName == 'Admin') {
+                    title = 'Administered By (Admin)';
+                    icon = Icons.admin_panel_settings;
+                    iconColor = const Color(0xFF667eea);
+                  } else if (vetName.startsWith('Dr.')) {
+                    title = 'Administered By (Doctor)';
+                    icon = Icons.medical_services;
+                    iconColor = const Color(0xFF2ECC71);
+                  } else {
+                    title = 'Administered By (Staff)';
+                    icon = Icons.person;
+                    iconColor = const Color(0xFF95A5A6);
+                  }
+
+                  return _buildDetailCard(
+                    title,
+                    [_buildDetailRow('Name', vetName)],
+                    icon: icon,
+                    iconColor: iconColor,
+                  );
+                },
+              ),
+            ],
+            if (vaccinationRecord.notes != null &&
+                vaccinationRecord.notes!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildDetailCard(
+                'Additional Notes',
+                [_buildDetailRow('Notes', vaccinationRecord.notes!)],
+                icon: Icons.note,
+                iconColor: const Color(0xFF95A5A6),
+              ),
+            ],
           ]
-          // Medical Record
+          // ✅ MEDICAL RECORD SECTION
           else if (medicalRecord != null) ...[
             const SizedBox(height: 16),
             _buildDetailCard(
@@ -870,6 +934,39 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
               ],
               icon: Icons.medical_services,
               iconColor: const Color(0xFFE74C3C),
+            ),
+            // ✅ NEW: Show doctor/admin/staff who treated
+            const SizedBox(height: 16),
+            FutureBuilder<String>(
+              future: _controller.getVeterinarianName(medicalRecord.vetId),
+              builder: (context, snapshot) {
+                final vetName = snapshot.data ?? 'Loading...';
+
+                String title;
+                IconData icon;
+                Color iconColor;
+
+                if (vetName == 'Admin') {
+                  title = 'Treated By (Admin)';
+                  icon = Icons.admin_panel_settings;
+                  iconColor = const Color(0xFF667eea);
+                } else if (vetName.startsWith('Dr.')) {
+                  title = 'Attending Veterinarian';
+                  icon = Icons.medical_services;
+                  iconColor = const Color(0xFF2ECC71);
+                } else {
+                  title = 'Treated By (Staff)';
+                  icon = Icons.person;
+                  iconColor = const Color(0xFF95A5A6);
+                }
+
+                return _buildDetailCard(
+                  title,
+                  [_buildDetailRow('Name', vetName)],
+                  icon: icon,
+                  iconColor: iconColor,
+                );
+              },
             ),
             if (medicalRecord.hasVitals) ...[
               const SizedBox(height: 16),
@@ -891,6 +988,16 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
                 ],
                 icon: Icons.favorite,
                 iconColor: const Color(0xFFE74C3C),
+              ),
+            ],
+            if (medicalRecord.notes != null &&
+                medicalRecord.notes!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildDetailCard(
+                'Veterinary Notes',
+                [_buildDetailRow('Notes', medicalRecord.notes!)],
+                icon: Icons.note,
+                iconColor: const Color(0xFF9B59B6),
               ),
             ],
           ] else ...[

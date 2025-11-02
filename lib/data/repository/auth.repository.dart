@@ -993,6 +993,7 @@ class AuthRepository {
         print('>>> AUTH REPO: Staff found');
         print('>>> Staff Role: ${staff.role}');
         print('>>> Staff Name: ${staff.name}');
+        print('>>> Is Doctor: ${staff.isDoctor}');
         return staff;
       }
       print('>>> AUTH REPO: No staff found');
@@ -2147,8 +2148,8 @@ class AuthRepository {
       metadata: metadata,
     );
   }
-    
-    /// Create deletion request notification
+
+  /// Create deletion request notification
   Future<void> createDeletionRequestNotification({
     required String clinicAdminId,
     required String title,

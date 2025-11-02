@@ -17,12 +17,22 @@ class VetPopup extends StatelessWidget {
   Color getStatusColor() {
     if (clinicSettings == null) return Colors.grey;
 
+    // Check if today is a closed date FIRST
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final isTodayClosedDate = clinicSettings!.closedDates.contains(todayStr);
+
+    if (isTodayClosedDate) {
+      return Colors.red; // Closed date takes priority
+    }
+
     final isOpen = clinicSettings!.isOpen;
-    final isOpenToday = clinicSettings!.isOpenToday();
+    final isOpenNow = clinicSettings!.isOpenNow();
 
     if (!isOpen) {
       return Colors.red;
-    } else if (!isOpenToday) {
+    } else if (!isOpenNow) {
       return Colors.orange;
     } else {
       return Colors.green;
@@ -32,13 +42,26 @@ class VetPopup extends StatelessWidget {
   String getStatusText() {
     if (clinicSettings == null) return "Unknown";
 
+    // Check if today is a closed date FIRST
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final isTodayClosedDate = clinicSettings!.closedDates.contains(todayStr);
+
+    if (isTodayClosedDate) {
+      return "CLOSED TODAY";
+    }
+
     final isOpen = clinicSettings!.isOpen;
     final isOpenToday = clinicSettings!.isOpenToday();
+    final isOpenNow = clinicSettings!.isOpenNow();
 
     if (!isOpen) {
       return "CLOSED";
     } else if (!isOpenToday) {
       return "CLOSED TODAY";
+    } else if (!isOpenNow) {
+      return "CLOSED NOW";
     } else {
       return "OPEN";
     }
@@ -46,6 +69,17 @@ class VetPopup extends StatelessWidget {
 
   String getTodayHours() {
     if (clinicSettings == null) return "Hours not available";
+
+    // Check if today is a closed date
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final isTodayClosedDate = clinicSettings!.closedDates.contains(todayStr);
+
+    if (isTodayClosedDate) {
+      return "Closed Today";
+    }
+
     return clinicSettings!.getTodayHours();
   }
 
@@ -84,11 +118,27 @@ class VetPopup extends StatelessWidget {
   }
 
   String getClinicImage() {
-    // Use first gallery image from settings if available, otherwise fallback to clinic.image
+    // PRIORITY 1: Use dashboardPic from settings (THIS IS THE KEY CHANGE)
+    if (clinicSettings != null && clinicSettings!.dashboardPic.isNotEmpty) {
+      print(
+          '>>> Using dashboard pic from settings: ${clinicSettings!.dashboardPic}');
+      return clinicSettings!.dashboardPic;
+    }
+
+    // PRIORITY 2: Use first gallery image from settings
     if (clinicSettings != null && clinicSettings!.gallery.isNotEmpty) {
+      print('>>> Using first gallery image: ${clinicSettings!.gallery.first}');
       return clinicSettings!.gallery.first;
     }
-    return clinic.image.isNotEmpty ? clinic.image : '';
+
+    // PRIORITY 3: Fallback to clinic.image
+    if (clinic.image.isNotEmpty) {
+      print('>>> Using clinic.image: ${clinic.image}');
+      return clinic.image;
+    }
+
+    print('>>> No image found - will use placeholder');
+    return '';
   }
 
   @override
@@ -97,306 +147,303 @@ class VetPopup extends StatelessWidget {
     final clinicImage = getClinicImage();
 
     return Container(
-      width: double.infinity,
+      width: 280, // Fixed width for consistency
+      constraints: const BoxConstraints(
+        maxHeight: 500, // Max height to prevent overflow
+      ),
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: SizedBox(
-        width: 280,
-        child: Card(
-          color: const Color.fromARGB(255, 39, 86, 139),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-            side: const BorderSide(color: Colors.white, width: 2),
-          ),
-          elevation: 8,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Image Section
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(25),
-                  topRight: Radius.circular(25),
-                ),
-                child: SizedBox(
-                  width: 280,
-                  height: 160,
-                  child: Stack(
-                    children: [
-                      // Clinic Image
-                      clinicImage.isNotEmpty
-                          ? Image.network(
-                              clinicImage,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  color: Colors.grey[300],
-                                  child: const Icon(
-                                    Icons.local_hospital,
-                                    size: 60,
-                                    color: Colors.grey,
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.local_hospital,
-                                size: 60,
-                                color: Colors.grey,
-                              ),
+      padding: const EdgeInsets.all(0), // Remove padding
+      child: Card(
+        color: const Color.fromARGB(255, 39, 86, 139),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(25),
+          side: const BorderSide(color: Colors.white, width: 2),
+        ),
+        elevation: 8,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Image Section with status badge
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(25),
+                topRight: Radius.circular(25),
+              ),
+              child: SizedBox(
+                width: 280,
+                height: 160,
+                child: Stack(
+                  children: [
+                    // Clinic Image
+                    clinicImage.isNotEmpty
+                        ? Image.network(
+                            clinicImage,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.local_hospital,
+                                  size: 60,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.local_hospital,
+                              size: 60,
+                              color: Colors.grey,
                             ),
-                      // Status Badge Overlay
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: getStatusColor(),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
-                          child: Text(
-                            getStatusText(),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                    // Status Badge Overlay
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: getStatusColor(),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
+                          ],
+                        ),
+                        child: Text(
+                          getStatusText(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ),
 
-              // Content Section
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1,
-                        ),
+            // Content Section
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
                       ),
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Clinic Name
-                          Text(
-                            clinic.clinicName,
-                            textAlign: TextAlign.left,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    ),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Clinic Name
+                        Text(
+                          clinic.clinicName,
+                          textAlign: TextAlign.left,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(255, 39, 86, 139),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Address with icon
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                clinic.address,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Hours with icon
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                getTodayHours(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Services
+                        if (services.isNotEmpty) ...[
+                          const Text(
+                            "Services:",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               color: Color.fromARGB(255, 39, 86, 139),
                             ),
                           ),
-                          const SizedBox(height: 8),
-
-                          // Address with icon
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  clinic.address,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: services.map((service) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
                                 ),
-                              ),
-                            ],
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 39, 86, 139)
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      getServiceIcon(service),
+                                      size: 12,
+                                      color: const Color.fromARGB(
+                                          255, 39, 86, 139),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      service,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Color.fromARGB(255, 39, 86, 139),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
+                        ],
 
-                          // Hours with icon
+                        // Contact Info
+                        if (clinic.contact.isNotEmpty) ...[
                           Row(
                             children: [
                               const Icon(
-                                Icons.access_time,
+                                Icons.phone,
                                 size: 16,
                                 color: Colors.grey,
                               ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  getTodayHours(),
+                                  clinic.contact,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,
-                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
+                        ],
 
-                          // Services
-                          if (services.isNotEmpty) ...[
-                            const Text(
-                              "Services:",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color.fromARGB(255, 39, 86, 139),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
-                              children: services.map((service) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        const Color.fromARGB(255, 39, 86, 139)
-                                            .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        getServiceIcon(service),
-                                        size: 12,
-                                        color: const Color.fromARGB(
-                                            255, 39, 86, 139),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        service,
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color:
-                                              Color.fromARGB(255, 39, 86, 139),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // Contact Info
-                          if (clinic.contact.isNotEmpty) ...[
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.phone,
-                                  size: 16,
-                                  color: Colors.grey,
+                        // Action Button - Updated for appointments
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Navigate to clinic page for appointment booking
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      WebClinicPageHandlerUpdated(
+                                          clinic: clinic),
                                 ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    clinic.contact,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 39, 86, 139),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Book Appointment",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // Action Button - Updated for appointments
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // Navigate to clinic page for appointment booking
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        WebClinicPageHandlerUpdated(
-                                            clinic: clinic),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color.fromARGB(255, 39, 86, 139),
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "Book Appointment",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

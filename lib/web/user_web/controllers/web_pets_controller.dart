@@ -332,4 +332,73 @@ class WebPetsController extends GetxController {
   Future<void> debugAppointments(String petId) async {
     await authRepository.appWriteProvider.debugPetAppointments(petId);
   }
+
+  Future<String> getVeterinarianName(String vetId) async {
+    try {
+      print('>>> CONTROLLER: Fetching veterinarian name for vetId: $vetId');
+
+      // Check if this is a clinic admin (by user ID)
+      final clinicDoc = await authRepository.getClinicByAdminId(vetId);
+      if (clinicDoc != null) {
+        print('>>> User is CLINIC ADMIN - returning "Admin"');
+        return 'Admin';
+      }
+
+      // Try to get staff by USER ID (most common case)
+      try {
+        final staffDoc = await authRepository.getStaffByUserId(vetId);
+        if (staffDoc != null) {
+          final staffName = staffDoc.name;
+          final isDoctor = staffDoc.isDoctor;
+
+          print('>>> Staff found by USER ID!');
+          print('>>>   Name: $staffName');
+          print('>>>   Is Doctor: $isDoctor');
+
+          // Return "Dr. [Name]" if doctor, otherwise just name
+          final displayName = isDoctor ? 'Dr. $staffName' : staffName;
+          print('>>> Returning staff name: $displayName');
+          return displayName;
+        }
+      } catch (e) {
+        print('>>> Not a staff user ID, trying staff document ID...');
+      }
+
+      // Try to get staff by DOCUMENT ID (fallback)
+      try {
+        final staffDoc = await authRepository.getStaffByDocumentId(vetId);
+        if (staffDoc != null) {
+          final staffName = staffDoc.name;
+          final isDoctor = staffDoc.isDoctor;
+
+          print('>>> Staff found by DOCUMENT ID!');
+          print('>>>   Name: $staffName');
+          print('>>>   Is Doctor: $isDoctor');
+
+          final displayName = isDoctor ? 'Dr. $staffName' : staffName;
+          print('>>> Returning staff name: $displayName');
+          return displayName;
+        }
+      } catch (e) {
+        print('>>> Not a staff document ID either...');
+      }
+
+      // Get the user document as last resort
+      print('>>> Fetching user document as fallback...');
+      final userDoc = await authRepository.getUserById(vetId);
+
+      if (userDoc == null) {
+        print('>>> User document not found for vetId: $vetId');
+        return 'Unknown';
+      }
+
+      final userName = userDoc.data['name'] ?? 'Unknown';
+      print('>>> Returning user name: $userName');
+      return userName;
+    } catch (e, stackTrace) {
+      print('>>> ERROR fetching veterinarian name: $e');
+      print('>>> Stack trace: $stackTrace');
+      return 'Unknown';
+    }
+  }
 }

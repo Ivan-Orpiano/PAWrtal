@@ -22,9 +22,7 @@ class _MyTagsState extends State<MyTags> {
     "Open",
     "Available Today",
     "Closed",
-    "Nearby",
     "Popular",
-    "Recommended",
   ];
 
   @override
@@ -39,7 +37,7 @@ class _MyTagsState extends State<MyTags> {
           final tag = tags[index];
           final isSelected = widget.selectedFilter == tag;
           final count = widget.getFilterCount(tag);
-          
+
           return Padding(
             padding: const EdgeInsets.only(left: 10, right: 5),
             child: ChoiceChip(
@@ -48,9 +46,9 @@ class _MyTagsState extends State<MyTags> {
               selectedColor: const Color.fromARGB(255, 81, 115, 153),
               backgroundColor: Colors.white,
               side: BorderSide(
-                color: isSelected 
-                  ? const Color.fromARGB(255, 81, 115, 153)
-                  : Colors.grey.shade300,
+                color: isSelected
+                    ? const Color.fromARGB(255, 81, 115, 153)
+                    : Colors.grey.shade300,
                 width: 1,
               ),
               shape: RoundedRectangleBorder(
