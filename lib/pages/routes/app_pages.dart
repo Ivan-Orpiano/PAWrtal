@@ -186,6 +186,7 @@ class AppPages {
       name: Routes.resetPassword,
       page: () => const ResetPasswordPage(),
       binding: ResetPasswordBinding(),
+      transition: Transition.fadeIn
       // No middleware - public access for password reset
     ),
   ];

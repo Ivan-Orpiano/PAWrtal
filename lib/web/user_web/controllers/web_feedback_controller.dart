@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:capstone_app/data/models/daily_report_tracker_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,6 @@ import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/utils/feedback_spam_detector.dart';
-
 
 class WebFeedbackController extends GetxController {
   final AuthRepository authRepository;
@@ -35,18 +35,20 @@ class WebFeedbackController extends GetxController {
   RxList<FeedbackAndReport> allFeedback = <FeedbackAndReport>[].obs;
   RxList<FeedbackAndReport> filteredFeedback = <FeedbackAndReport>[].obs;
   RxBool isLoadingFeedback = false.obs;
- final Rxn<FeedbackStatus> statusFilter = Rxn<FeedbackStatus>();
-final Rxn<FeedbackType> typeFilter = Rxn<FeedbackType>();
-final Rxn<FeedbackCategory> categoryFilter = Rxn<FeedbackCategory>();
-final Rxn<Priority> priorityFilter = Rxn<Priority>();
-final RxString searchQuery = ''.obs;
+  final Rxn<FeedbackStatus> statusFilter = Rxn<FeedbackStatus>();
+  final Rxn<FeedbackType> typeFilter = Rxn<FeedbackType>();
+  final Rxn<FeedbackCategory> categoryFilter = Rxn<FeedbackCategory>();
+  final Rxn<Priority> priorityFilter = Rxn<Priority>();
+  final RxString searchQuery = ''.obs;
 
-final RxInt spamDetectedCount = 0.obs;
-final RxInt autoArchivedCount = 0.obs;
-final RxBool isCleaningSpam = false.obs;
+  final RxInt spamDetectedCount = 0.obs;
+  final RxInt autoArchivedCount = 0.obs;
+  final RxBool isCleaningSpam = false.obs;
 
-// Pinned feedback IDs
-final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
+    Timer? _autoRefreshTimer;
+    
+  // Pinned feedback IDs
+  final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
 
 
 /// Toggle pin status
@@ -105,13 +107,14 @@ Future<void> togglePin(String feedbackId) async {
 }
 
 
-// Check if feedback is pinned
-bool isPinned(String feedbackId) {
-  return pinnedFeedbackIds.contains(feedbackId);
-}
+    // Check if feedback is pinned
+    bool isPinned(String feedbackId) {
+      return pinnedFeedbackIds.contains(feedbackId);
+    }
 
   // Statistics
   RxMap<String, int> feedbackStats = <String, int>{}.obs;
+
 
   @override
   void onInit() {
@@ -126,8 +129,18 @@ bool isPinned(String feedbackId) {
        Future.delayed(const Duration(seconds: 2), () {
       autoCleanSpamFeedback();
     });
+
+      _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        filterFeedback(); // Re-sort with updated time calculations
+      });
     }
   }
+
+   @override
+    void onClose() {
+      _autoRefreshTimer?.cancel();
+      super.onClose();
+    }
 
  Future<void> _loadDailyReportTracker() async {
     try {
@@ -812,78 +825,109 @@ Future<void> loadAllFeedback() async {
 
 
 
-  /// Filter feedback based on current filters
-  void filterFeedback() {
-  var filtered = allFeedback.toList();
+    /// Filter feedback based on current filters
+    void filterFeedback() {
+      var filtered = allFeedback.toList();
 
-  // Apply search query
-  if (searchQuery.value.isNotEmpty) {
-    filtered = filtered.where((f) {
-      final query = searchQuery.value.toLowerCase();
+      // Apply search query
+      if (searchQuery.value.isNotEmpty) {
+        filtered = filtered.where((f) {
+          final query = searchQuery.value.toLowerCase();
 
-      final subjectMatch = f.subject.toLowerCase().contains(query);
-      final categoryMatch = f.category.displayName.toLowerCase().contains(query);
-      final typeMatch = f.feedbackType.displayName.toLowerCase().contains(query);
-      final nameMatch = f.userName.toLowerCase().contains(query);
-      final emailMatch = f.userEmail.toLowerCase().contains(query);
-      final descriptionMatch = f.description.toLowerCase().contains(query);
+          final subjectMatch = f.subject.toLowerCase().contains(query);
+          final categoryMatch = f.category.displayName.toLowerCase().contains(query);
+          final typeMatch = f.feedbackType.displayName.toLowerCase().contains(query);
+          final nameMatch = f.userName.toLowerCase().contains(query);
+          final emailMatch = f.userEmail.toLowerCase().contains(query);
+          final descriptionMatch = f.description.toLowerCase().contains(query);
 
-      return subjectMatch ||
-          categoryMatch ||
-          typeMatch ||
-          nameMatch ||
-          emailMatch ||
-          descriptionMatch;
-    }).toList();
-  }
+          return subjectMatch ||
+              categoryMatch ||
+              typeMatch ||
+              nameMatch ||
+              emailMatch ||
+              descriptionMatch;
+        }).toList();
+      }
 
-  // Apply filters
-  if (statusFilter.value != null) {
-    filtered = filtered.where((f) => f.status == statusFilter.value).toList();
-  }
+      // Apply filters
+      if (statusFilter.value != null) {
+        filtered = filtered.where((f) => f.status == statusFilter.value).toList();
+      }
 
-  if (priorityFilter.value != null) {
-    filtered = filtered.where((f) => f.priority == priorityFilter.value).toList();
-  }
+      if (priorityFilter.value != null) {
+        filtered = filtered.where((f) => f.priority == priorityFilter.value).toList();
+      }
 
-  if (typeFilter.value != null) {
-    filtered = filtered.where((f) => f.feedbackType == typeFilter.value).toList();
-  }
+      if (typeFilter.value != null) {
+        filtered = filtered.where((f) => f.feedbackType == typeFilter.value).toList();
+      }
 
-  if (categoryFilter.value != null) {
-    filtered = filtered.where((f) => f.category == categoryFilter.value).toList();
-  }
+      if (categoryFilter.value != null) {
+        filtered = filtered.where((f) => f.category == categoryFilter.value).toList();
+      }
 
-  // Sort: Pinned items first, then by priority and date
-  filtered.sort((a, b) {
-    // Primary sort: Pinned items first
-    final aPinned = pinnedFeedbackIds.contains(a.documentId);
-    final bPinned = pinnedFeedbackIds.contains(b.documentId);
     
-    if (aPinned && !bPinned) return -1;
-    if (!aPinned && bPinned) return 1;
+      filtered.sort((a, b) {
+        // ═══════════════════════════════════════════════════════
+        // PRIORITY 1: Pinned items ALWAYS appear first
+        // ═══════════════════════════════════════════════════════
+        final aPinned = pinnedFeedbackIds.contains(a.documentId);
+        final bPinned = pinnedFeedbackIds.contains(b.documentId);
+        
+        if (aPinned && !bPinned) return -1; // a is pinned, b is not → a comes first
+        if (!aPinned && bPinned) return 1;  // b is pinned, a is not → b comes first
 
-    // Secondary sort: Priority
-    final priorityOrder = {
-      Priority.critical: 0,
-      Priority.high: 1,
-      Priority.medium: 2,
-      Priority.low: 3,
-    };
+        // ═══════════════════════════════════════════════════════
+        // PRIORITY 2: Critical priority items (within pinned group or unpinned group)
+        // ═══════════════════════════════════════════════════════
+        final priorityOrder = <Priority, int>{
+          Priority.critical: 0,  // Highest priority
+          Priority.high: 1,
+          Priority.medium: 2,
+          Priority.low: 3,       // Lowest priority
+        };
 
-    final aPriority = priorityOrder[a.priority] ?? 999;
-    final bPriority = priorityOrder[b.priority] ?? 999;
+        final aPriority = priorityOrder[a.priority] ?? 999;
+        final bPriority = priorityOrder[b.priority] ?? 999;
 
-    if (aPriority != bPriority) {
-      return aPriority.compareTo(bPriority);
+        if (aPriority != bPriority) {
+          return aPriority.compareTo(bPriority); // Lower number = higher priority
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // PRIORITY 3: Latest submission date (NEWEST FIRST)
+        // ═══════════════════════════════════════════════════════
+        // b.compareTo(a) gives DESCENDING order (latest first)
+        return b.submittedAt.compareTo(a.submittedAt);
+      });
+
+      filteredFeedback.value = filtered;
+      
+      // Debug log for verification
+      if (filtered.isNotEmpty) {
+        print('>>> Filtered ${filtered.length} feedbacks');
+        print('>>> Top 3 items:');
+        for (int i = 0; i < (filtered.length > 3 ? 3 : filtered.length); i++) {
+          final f = filtered[i];
+          print('>>>   ${i + 1}. ${f.subject} | ${f.isPinned ? "📌 PINNED" : "⚪"} | ${f.priority.displayName} | ${_formatDebugDate(f.submittedAt)}');
+        }
+      }
     }
 
-    // Tertiary sort: Date
-    return b.submittedAt.compareTo(a.submittedAt);
-  });
+    /// Helper method for debug logging (add this to your controller)
+    String _formatDebugDate(DateTime date) {
+      final now = DateTime.now();
+      final diff = now.difference(date);
+      
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      
+      return '${date.day}/${date.month}/${date.year}';
+    }
 
-  filteredFeedback.value = filtered;
-}
   /// Update feedback statistics
   void updateStatistics() {
     feedbackStats.value = {

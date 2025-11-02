@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:appwrite/appwrite.dart';
+import 'package:capstone_app/web/admin_web/components/clinic/clinic_settings_controller.dart';
 
 class SuperAdminEditClinicPage extends StatefulWidget {
   final Clinic clinic;
@@ -1566,17 +1567,17 @@ void _confirmRemoveGalleryImage(int index) {
 
     _showSuccessSnackbar('Clinic updated successfully');
 
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      Navigator.pop(context, true);
-    }
-  } catch (e) {
-    _showErrorSnackbar('Error saving changes: ${e.toString()}');
-  } finally {
-    setState(() {
-      isSaving = false;
-    });
-  }
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        } catch (e) {
+          _showErrorSnackbar('Error saving changes: ${e.toString()}');
+        } finally {
+          setState(() {
+            isSaving = false;
+          });
+        }
 }
   void _handleBackPress() {
     if (isSaving) return;
