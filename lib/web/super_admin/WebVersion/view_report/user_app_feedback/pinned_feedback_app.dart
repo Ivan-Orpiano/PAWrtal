@@ -740,33 +740,709 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
     }
   }
 
-  void _showFeedbackDetails(FeedbackAndReport feedback) {
-    // Reuse the same dialog from AdminFeedbackManagement
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Feedback Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Subject: ${feedback.subject}'),
-              const SizedBox(height: 8),
-              Text('Description: ${feedback.description}'),
-              const SizedBox(height: 8),
-              Text('Status: ${feedback.status.displayName}'),
-              Text('Priority: ${feedback.priority.displayName}'),
-            ],
+ void _showFeedbackDetails(FeedbackAndReport feedback) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // 🎨 Creative Header with Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.amber[700]!, Colors.amber[500]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.push_pin,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Pinned Feedback Details',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID: ${feedback.documentId?.substring(0, 8)}...',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        tooltip: 'Close',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Status badges
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _buildStatusChip(feedback.status),
+                      _buildPriorityChip(feedback.priority),
+                      _buildTypeChip(feedback.feedbackType),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // 📄 Content Area
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Subject
+                    _buildDetailCard(
+                      icon: Icons.subject,
+                      title: 'Subject',
+                      content: feedback.subject,
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Description
+                    _buildDetailCard(
+                      icon: Icons.description,
+                      title: 'Description',
+                      content: feedback.description,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // User Info
+                    _buildDetailCard(
+                      icon: Icons.person,
+                      title: 'Submitted by',
+                      content: '${feedback.userName}\n${feedback.userEmail}',
+                      color: Colors.purple,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Technical Info
+                    _buildDetailCard(
+                      icon: Icons.info_outline,
+                      title: 'Technical Information',
+                      content:
+                          'App Version: ${feedback.appVersion}\nDevice: ${feedback.deviceInfo}\nPlatform: ${feedback.platform}',
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Timestamps
+                    _buildDetailCard(
+                      icon: Icons.access_time,
+                      title: 'Timeline',
+                      content:
+                          'Submitted: ${_formatFullDateTime(feedback.submittedAt)}\nPinned: ${feedback.pinnedAt != null ? _formatFullDateTime(feedback.pinnedAt!) : 'N/A'}\nPinned by: ${feedback.pinnedBy ?? 'N/A'}',
+                      color: Colors.teal,
+                    ),
+
+                    // Attachments
+                    if (feedback.attachments.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _buildAttachmentsCard(feedback),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            // 🎯 Action Buttons
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Unpin Button
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        controller.togglePin(feedback.documentId!);
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.push_pin_outlined, size: 18),
+                      label: const Text('Unpin'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Archive Button (Creative Style)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showArchiveConfirmation(context, feedback),
+                      icon: const Icon(Icons.archive, size: 18),
+                      label: const Text('Archive'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// 🎨 Helper method for status chip
+Widget _buildStatusChip(FeedbackStatus status) {
+  final color = _getStatusColor(status);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.2),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.white.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_getStatusIcon(status), color: Colors.white, size: 14),
+        const SizedBox(width: 6),
+        Text(
+          status.displayName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      ],
+    ),
+  );
+}
+
+Widget _buildPriorityChip(Priority priority) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.2),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.white.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_getPriorityIcon(priority), color: Colors.white, size: 14),
+        const SizedBox(width: 6),
+        Text(
+          priority.displayName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildTypeChip(FeedbackType type) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.2),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.white.withOpacity(0.3)),
+    ),
+    child: Text(
+      type.displayName,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
       ),
-    );
+    ),
+  );
+}
+
+IconData _getStatusIcon(FeedbackStatus status) {
+  switch (status) {
+    case FeedbackStatus.pending:
+      return Icons.schedule;
+    case FeedbackStatus.inProgress:
+      return Icons.autorenew;
+    case FeedbackStatus.completed:
+      return Icons.check_circle;
+    case FeedbackStatus.closed:
+      return Icons.lock;
   }
+}
+
+Widget _buildDetailCard({
+  required IconData icon,
+  required String title,
+  required String content,
+  required Color color,
+}) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: color.withOpacity(0.2)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          content,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[700],
+            height: 1.5,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildAttachmentsCard(FeedbackAndReport feedback) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.blue[50],
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.blue[200]!),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.attach_file, color: Colors.blue[700], size: 18),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Attachments (${feedback.attachments.length})',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue[700],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: feedback.attachments.map((attachmentId) {
+            final url = controller.getAttachmentUrl(attachmentId);
+            final isVideo = _isVideoAttachment(attachmentId, url);
+            
+            return GestureDetector(
+              onTap: () => _showAttachmentDialog(context, url, isVideo),
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[300]!),
+                ),
+                child: AttachmentViewerWidget(
+                  attachmentUrl: url,
+                  fileId: attachmentId,
+                  isVideo: isVideo,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    ),
+  );
+}
+
+String _formatFullDateTime(DateTime dateTime) {
+  return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+}
+
+bool _isVideoAttachment(String fileId, String url) {
+  final videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+  final urlLower = url.toLowerCase();
+  return videoExtensions.any((ext) => urlLower.contains('.$ext'));
+}
+
+void _showAttachmentDialog(BuildContext context, String url, bool isVideo) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 800,
+          maxHeight: 600,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isVideo ? Icons.videocam_rounded : Icons.image_rounded,
+                    color: Colors.grey[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isVideo ? 'Video Attachment' : 'Image Attachment',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: AttachmentViewerWidget(
+                  attachmentUrl: url,
+                  fileId: url,
+                  isVideo: isVideo,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// 🎯 CREATIVE ARCHIVE CONFIRMATION DIALOG
+void _showArchiveConfirmation(BuildContext context, FeedbackAndReport feedback) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 400,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orange[50]!,
+              Colors.orange[100]!,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 🎨 Creative Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange[600]!, Colors.orange[400]!],
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.archive,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Archive This Feedback?',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
+            // 📝 Content
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                feedback.subject,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Submitted by: ${feedback.userName}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange[800], size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'This action will remove the feedback from active view. It can be permanently deleted later.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[900],
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🎯 Action Buttons
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context); // Close confirmation
+                        Navigator.pop(context); // Close details
+                        
+                        // Archive the feedback
+                        await controller.archiveFeedback(feedback.documentId!);
+                      },
+                      icon: const Icon(Icons.archive, size: 20),
+                      label: const Text(
+                        'Archive Now',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 }

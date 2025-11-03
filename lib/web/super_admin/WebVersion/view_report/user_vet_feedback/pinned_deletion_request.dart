@@ -40,7 +40,7 @@ class _PinnedDeletionRequestState extends State<PinnedDeletionRequest> {
     }
 
     // Auto-refresh every 2 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 40), (timer) {
       if (mounted) {
         _controller.loadAllDeletionRequests();
       }
@@ -521,23 +521,88 @@ class _PinnedDeletionRequestState extends State<PinnedDeletionRequest> {
                             ),
                           ],
                         ),
-                        if (request.hasAttachments)
+                        // NEW: Attachment preview in card
+                          if (request.hasAttachments) ...[
+                          SizedBox(height: isMobile ? 8 : 12),
                           Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.attach_file,
-                                  size: isMobile ? 14 : 16,
-                                  color: Colors.grey[500]),
+                              Icon(
+                                Icons.attach_file,
+                                size: isMobile ? 14 : 16,
+                                color: Colors.grey[500],
+                              ),
                               const SizedBox(width: 4),
                               Text(
-                                '${request.attachments.length} file(s)',
+                                '${request.attachments.length} attachment(s)',
                                 style: TextStyle(
                                   fontSize: isMobile ? 11 : 12,
                                   color: Colors.grey[600],
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '- Tap to view details',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 10 : 11,
+                                  color: Colors.blue[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ],
                           ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: isMobile ? 60 : 80,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: request.attachments.length,
+                              itemBuilder: (context, index) {
+                                final attachmentId = request.attachments[index];
+                                final imageUrl = Get.find<AuthRepository>()
+                                    .appWriteProvider
+                                    .getImageUrl(attachmentId);
+                                
+                                return Padding(
+                                  padding: EdgeInsets.only(right: isMobile ? 6 : 8),
+                                  child: Container(
+                                    width: isMobile ? 60 : 80,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: SizedBox(
+                                              width: isMobile ? 16 : 20,
+                                              height: isMobile ? 16 : 20,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.grey.shade200,
+                                            child: Icon(
+                                              Icons.broken_image,
+                                              color: Colors.grey.shade400,
+                                              size: isMobile ? 20 : 24,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ],
                     ),
 

@@ -688,49 +688,64 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildStatsCards() {
-    return Obx(() => Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _buildStatCard(
-                'Total',
-                controller.feedbackStats['total']?.toString() ?? '0',
-                Colors.blue,
-                Icons.feedback,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Pending',
-                controller.feedbackStats['pending']?.toString() ?? '0',
-                Colors.orange,
-                Icons.schedule,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'In Progress',
-                controller.feedbackStats['inProgress']?.toString() ?? '0',
-                Colors.blue,
-                Icons.autorenew,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Completed',
-                controller.feedbackStats['completed']?.toString() ?? '0',
-                Colors.green,
-                Icons.check_circle,
-              ),
-              const SizedBox(width: 12),
-              _buildStatCard(
-                'Critical',
-                controller.feedbackStats['critical']?.toString() ?? '0',
-                Colors.red,
-                Icons.warning,
-              ),
-            ],
-          ),
-        ));
+Widget _buildStatsCards() {
+    return Obx(() {
+      // 🚫 Calculate stats ONLY for unpinned feedback
+      final unpinnedFeedback = controller.allFeedback
+          .where((f) => !f.isPinned)
+          .toList();
+
+      final stats = {
+        'total': unpinnedFeedback.length,
+        'pending': unpinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+        'inProgress': unpinnedFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+        'completed': unpinnedFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+        'critical': unpinnedFeedback.where((f) => f.priority == Priority.critical).length,
+      };
+
+      return Container(
+        color: const Color.fromRGBO(248, 253, 255, 1),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _buildStatCard(
+              'Total',
+              stats['total']?.toString() ?? '0',
+              Colors.blue,
+              Icons.feedback,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Pending',
+              stats['pending']?.toString() ?? '0',
+              Colors.orange,
+              Icons.schedule,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'In Progress',
+              stats['inProgress']?.toString() ?? '0',
+              Colors.blue,
+              Icons.autorenew,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Completed',
+              stats['completed']?.toString() ?? '0',
+              Colors.green,
+              Icons.check_circle,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              'Critical',
+              stats['critical']?.toString() ?? '0',
+              Colors.red,
+              Icons.warning,
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildStatCard(
@@ -935,13 +950,18 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     }
   }
 
-  Widget _buildFeedbackList({bool isMobile = false, bool isTablet = false}) {
+ Widget _buildFeedbackList({bool isMobile = false, bool isTablet = false}) {
     return Obx(() {
       if (controller.isLoadingFeedback.value) {
         return const Center(child: CircularProgressIndicator());
       }
 
-      if (controller.filteredFeedback.isEmpty) {
+      // 🚫 FILTER OUT PINNED FEEDBACK - Only show unpinned items
+      final unpinnedFeedback = controller.filteredFeedback
+          .where((feedback) => !feedback.isPinned)
+          .toList();
+
+      if (unpinnedFeedback.isEmpty) {
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -956,6 +976,16 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              const SizedBox(height: 8),
+              Text(
+                controller.filteredFeedback.isNotEmpty
+                    ? 'All feedback items are pinned'
+                    : 'No feedback items to display',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+              ),
             ],
           ),
         );
@@ -963,9 +993,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
 
       return ListView.builder(
         padding: EdgeInsets.all(isMobile ? 12 : 16),
-        itemCount: controller.filteredFeedback.length,
+        itemCount: unpinnedFeedback.length,
         itemBuilder: (context, index) {
-          final feedback = controller.filteredFeedback[index];
+          final feedback = unpinnedFeedback[index];
           if (isMobile) {
             return _buildMobileFeedbackCard(feedback);
           } else if (isTablet) {

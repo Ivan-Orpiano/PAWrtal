@@ -146,162 +146,173 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       ),
     );
   }
+    Widget _buildDashboardStats() {
+      return Obx(() {
+        // CRITICAL FIX: Calculate stats for PINNED requests only
+        final pinnedRequests = _controller.filteredRequests
+            .where((request) => request.isPinned)
+            .toList();
 
-  Widget _buildDashboardStats() {
-    return Obx(() {
-      final stats = _controller.stats;
-      final isMobile = _isMobile(context);
-      final isTablet = _isTablet(context);
+        final pinnedStats = {
+          'total': pinnedRequests.length,
+          'pending': pinnedRequests.where((r) => r.status == 'pending').length,
+          'approved': pinnedRequests.where((r) => r.status == 'approved').length,
+          'rejected': pinnedRequests.where((r) => r.status == 'rejected').length,
+        };
 
-      return Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: EdgeInsets.all(isMobile ? 12 : 16),
-        child: isMobile
-            ? Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total',
-                          stats['total'].toString(),
-                          Icons.delete_forever,
-                          const Color(0xFF4A90E2),
-                          isCompact: true,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Pending',
-                          stats['pending'].toString(),
-                          Icons.pending,
-                          const Color(0xFFF39C12),
-                          isCompact: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Approved',
-                          stats['approved'].toString(),
-                          Icons.check_circle,
-                          const Color(0xFF2ECC71),
-                          isCompact: true,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Rejected',
-                          stats['rejected'].toString(),
-                          Icons.cancel,
-                          const Color(0xFFE74C3C),
-                          isCompact: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  _buildStatCard(
-                    'Total Requests',
-                    stats['total'].toString(),
-                    Icons.delete_forever,
-                    const Color(0xFF4A90E2),
-                    isCompact: isTablet,
-                  ),
-                  SizedBox(width: isTablet ? 8 : 12),
-                  _buildStatCard(
-                    'Pending',
-                    stats['pending'].toString(),
-                    Icons.pending,
-                    const Color(0xFFF39C12),
-                    isCompact: isTablet,
-                  ),
-                  SizedBox(width: isTablet ? 8 : 12),
-                  _buildStatCard(
-                    'Approved',
-                    stats['approved'].toString(),
-                    Icons.check_circle,
-                    const Color(0xFF2ECC71),
-                    isCompact: isTablet,
-                  ),
-                  SizedBox(width: isTablet ? 8 : 12),
-                  _buildStatCard(
-                    'Rejected',
-                    stats['rejected'].toString(),
-                    Icons.cancel,
-                    const Color(0xFFE74C3C),
-                    isCompact: isTablet,
-                  ),
-                ],
-              ),
-      );
-    });
-  }
+        final isMobile = _isMobile(context);
+        final isTablet = _isTablet(context);
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color, {
-    bool isCompact = false,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.all(isCompact ? 12 : 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: isCompact ? 20 : 24),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: isCompact ? 20 : 24,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+        return Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
+          child: isMobile
+              ? Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Total',
+                            pinnedStats['total'].toString(), // FIXED
+                            Icons.delete_forever,
+                            const Color(0xFF4A90E2),
+                            isCompact: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Pending',
+                            pinnedStats['pending'].toString(), // FIXED
+                            Icons.pending,
+                            const Color(0xFFF39C12),
+                            isCompact: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Approved',
+                            pinnedStats['approved'].toString(), // FIXED
+                            Icons.check_circle,
+                            const Color(0xFF2ECC71),
+                            isCompact: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Rejected',
+                            pinnedStats['rejected'].toString(), // FIXED
+                            Icons.cancel,
+                            const Color(0xFFE74C3C),
+                            isCompact: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    _buildStatCard(
+                      'Total Requests',
+                      pinnedStats['total'].toString(), // FIXED
+                      Icons.delete_forever,
+                      const Color(0xFF4A90E2),
+                      isCompact: isTablet,
+                    ),
+                    SizedBox(width: isTablet ? 8 : 12),
+                    _buildStatCard(
+                      'Pending',
+                      pinnedStats['pending'].toString(), // FIXED
+                      Icons.pending,
+                      const Color(0xFFF39C12),
+                      isCompact: isTablet,
+                    ),
+                    SizedBox(width: isTablet ? 8 : 12),
+                    _buildStatCard(
+                      'Approved',
+                      pinnedStats['approved'].toString(), // FIXED
+                      Icons.check_circle,
+                      const Color(0xFF2ECC71),
+                      isCompact: isTablet,
+                    ),
+                    SizedBox(width: isTablet ? 8 : 12),
+                    _buildStatCard(
+                      'Rejected',
+                      pinnedStats['rejected'].toString(), // FIXED
+                      Icons.cancel,
+                      const Color(0xFFE74C3C),
+                      isCompact: isTablet,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: isCompact ? 4 : 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: isCompact ? 11 : 14,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+        );
+      });
+    }
+    Widget _buildStatCard(
+      String title,
+      String value,
+      IconData icon,
+      Color color, {
+      bool isCompact = false,
+    }) {
+      // CRITICAL: Add null safety check
+      final displayValue = value.isEmpty ? '0' : value;
 
+      return Expanded(
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 12 : 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(icon, color: color, size: isCompact ? 20 : 24),
+                  Text(
+                    displayValue, // FIXED: Use safe value
+                    style: TextStyle(
+                      fontSize: isCompact ? 20 : 24,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isCompact ? 4 : 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: isCompact ? 11 : 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   Widget _buildSearchAndFilters() {
     final isMobile = _isMobile(context);
 
@@ -1762,7 +1773,7 @@ class RequestDetailDialog extends StatelessWidget {
                 ),
               ],
 
-              // Attachments
+             // Attachments
               if (request.hasAttachments) ...[
                 SizedBox(height: isMobile ? 12 : 16),
                 Text(
@@ -1773,27 +1784,80 @@ class RequestDetailDialog extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: isMobile ? 6 : 8),
-                ...request.attachments.map((attachmentId) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.attach_file,
-                          size: isMobile ? 14 : 16,
+                
+                // NEW: Display images in a grid instead of just text
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isMobile ? 2 : 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: request.attachments.length,
+                  itemBuilder: (context, index) {
+                    final attachmentId = request.attachments[index];
+                    final imageUrl = Get.find<AuthRepository>()
+                        .appWriteProvider
+                        .getImageUrl(attachmentId);
+                    
+                    return GestureDetector(
+                      onTap: () {
+                        // Show full image in dialog
+                        _showFullImageDialog(context, imageUrl);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Attachment ID: $attachmentId',
-                            style: TextStyle(fontSize: isMobile ? 11 : 12),
-                            overflow: TextOverflow.ellipsis,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.broken_image,
+                                      color: Colors.grey.shade400,
+                                      size: isMobile ? 32 : 40,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Failed to load',
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 10 : 11,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }),
+                      ),
+                    );
+                  },
+                ),
               ],
 
               SizedBox(height: isMobile ? 20 : 24),
@@ -1856,6 +1920,90 @@ class RequestDetailDialog extends StatelessWidget {
       ),
     );
   }
+      void _showFullImageDialog(BuildContext context, String imageUrl) {
+      showDialog(
+        context: context,
+        barrierColor: Colors.black87,
+        builder: (BuildContext context) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(20),
+            child: Stack(
+              children: [
+                Center(
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.9,
+                      maxHeight: MediaQuery.of(context).size.height * 0.8,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey.shade400,
+                                  size: 64,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Failed to load image',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 20,
+                  right: 20,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black54,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
 }
 
 class DeleteRequestActionDialog extends StatefulWidget {
