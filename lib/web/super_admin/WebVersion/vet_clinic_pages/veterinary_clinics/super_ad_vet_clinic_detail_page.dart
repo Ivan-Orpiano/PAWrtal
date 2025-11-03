@@ -69,19 +69,39 @@ class _SuperAdminVetClinicDetailPageState
   }
 
   void _initializeServices() {
+    print('>>> ============================================');
+    print('>>> DETAIL PAGE: Initializing services');
+    print('>>> ============================================');
+
+    // Parse services from clinic's services string
     if (currentClinic!.services.isNotEmpty) {
       clinicServices = currentClinic!.services
           .split(',')
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
           .toList();
+
+      print(
+          '>>> Parsed ${clinicServices.length} services from clinic.services');
     }
-    
+
+    // Load medical services map AND gallery from settings
     if (currentSettings != null) {
-      medicalServices = Map<String, bool>.from(
-        currentSettings!.medicalServices
-      );
+      medicalServices =
+          Map<String, bool>.from(currentSettings!.medicalServices);
+
+      // CRITICAL: Also track gallery images for display
+      final galleryCount = currentSettings!.gallery.length;
+
+      print('>>> Loaded from settings:');
+      print('>>>   Medical services: ${medicalServices.length}');
+      print('>>>   Gallery images: $galleryCount');
+    } else {
+      print('>>> No settings available - empty medical services map');
+      medicalServices = {};
     }
+
+    print('>>> ============================================');
   }
 
   @override
@@ -120,7 +140,7 @@ class _SuperAdminVetClinicDetailPageState
         }
       }
     });
-    
+
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
@@ -133,6 +153,10 @@ class _SuperAdminVetClinicDetailPageState
 
   Future<void> _refreshClinicData() async {
     try {
+      print('>>> ============================================');
+      print('>>> DETAIL PAGE: Refreshing clinic data');
+      print('>>> ============================================');
+
       final clinicDoc =
           await authRepository.getClinicById(currentClinic?.documentId ?? '');
       final settingsDoc = await authRepository
@@ -140,29 +164,46 @@ class _SuperAdminVetClinicDetailPageState
 
       if (mounted && clinicDoc != null) {
         setState(() {
+          // Update clinic (including dashboardPic)
           currentClinic = Clinic.fromMap(clinicDoc.data);
           currentClinic!.documentId = clinicDoc.$id;
+
+          // Update settings (including gallery)
           currentSettings = settingsDoc;
-          
+
+          // Re-parse services
           if (currentClinic!.services.isNotEmpty) {
             clinicServices = currentClinic!.services
                 .split(',')
                 .map((s) => s.trim())
                 .where((s) => s.isNotEmpty)
                 .toList();
+          } else {
+            clinicServices = [];
           }
-          
+
+          // Re-load medical services
           if (currentSettings != null) {
-            medicalServices = Map<String, bool>.from(
-              currentSettings!.medicalServices
-            );
+            medicalServices =
+                Map<String, bool>.from(currentSettings!.medicalServices);
+          } else {
+            medicalServices = {};
           }
+
+          print('>>> ✓ Refresh complete');
+          print('>>>   Services: ${clinicServices.length}');
+          print('>>>   Medical services: ${medicalServices.length}');
+          print(
+              '>>>   Gallery images: ${currentSettings?.gallery.length ?? 0}');
+          print('>>>   Dashboard pic: ${currentClinic!.dashboardPic}');
         });
 
         _showUpdateNotification('Clinic information updated');
       }
+
+      print('>>> ============================================');
     } catch (e) {
-      print('Error refreshing clinic data: $e');
+      print('>>> Error refreshing clinic data: $e');
     }
   }
 
@@ -659,7 +700,8 @@ class _SuperAdminVetClinicDetailPageState
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error, color: Colors.red[700], size: 32),
+                              Icon(Icons.error,
+                                  color: Colors.red[700], size: 32),
                               const SizedBox(height: 8),
                               Text(
                                 'Failed to load',
@@ -868,7 +910,8 @@ class _SuperAdminVetClinicDetailPageState
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, Clinic clinic, bool isMobile) {
+  Widget _buildActionButtons(
+      BuildContext context, Clinic clinic, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 20),
       decoration: BoxDecoration(
@@ -921,7 +964,6 @@ class _SuperAdminVetClinicDetailPageState
             ],
           ),
           const SizedBox(height: 16),
-
           Row(
             children: [
               Expanded(
@@ -956,7 +998,6 @@ class _SuperAdminVetClinicDetailPageState
                 ),
               ),
               const SizedBox(width: 10),
-
               Expanded(
                 flex: 2,
                 child: Column(
@@ -986,7 +1027,6 @@ class _SuperAdminVetClinicDetailPageState
                       isMobile: isMobile,
                     ),
                     const SizedBox(height: 10),
-
                     _buildCompactActionCard(
                       icon: isDeleting
                           ? Icons.hourglass_empty
@@ -1263,7 +1303,6 @@ class _SuperAdminVetClinicDetailPageState
             ],
           ),
           const SizedBox(height: 20),
-          
           if (clinicServices.isEmpty)
             Container(
               padding: const EdgeInsets.all(32),
@@ -1294,7 +1333,7 @@ class _SuperAdminVetClinicDetailPageState
               runSpacing: 10,
               children: clinicServices.map((service) {
                 final isMedical = medicalServices[service] ?? false;
-                
+
                 return Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
@@ -1397,8 +1436,8 @@ class _SuperAdminVetClinicDetailPageState
                 );
               }).toList(),
             ),
-          
-          if (clinicServices.any((service) => medicalServices[service] == true)) ...[
+          if (clinicServices
+              .any((service) => medicalServices[service] == true)) ...[
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
@@ -1604,7 +1643,6 @@ class _SuperAdminVetClinicDetailPageState
             ],
           ),
           const SizedBox(height: 20),
-          
           ...settings.operatingHours.entries.map((entry) {
             final day = entry.key;
             final hours = entry.value;
@@ -1832,7 +1870,6 @@ class _SuperAdminVetClinicDetailPageState
             ],
           ),
           const SizedBox(height: 20),
-          
           _buildContactRow(
             Icons.location_on_rounded,
             'Address',
@@ -2033,7 +2070,6 @@ class _SuperAdminVetClinicDetailPageState
             ],
           ),
           const SizedBox(height: 20),
-          
           _buildAdminInfoRow(
             'Admin ID',
             clinic.adminId,
@@ -2278,7 +2314,6 @@ class _SuperAdminVetClinicDetailPageState
                   ],
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -2294,7 +2329,6 @@ class _SuperAdminVetClinicDetailPageState
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -2318,7 +2352,8 @@ class _SuperAdminVetClinicDetailPageState
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEA580C).withOpacity(0.2),
+                                  color:
+                                      const Color(0xFFEA580C).withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(
@@ -2394,7 +2429,6 @@ class _SuperAdminVetClinicDetailPageState
                   ],
                 ),
               ),
-
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
@@ -2655,61 +2689,85 @@ class _SuperAdminVetClinicDetailPageState
   }
 }
 
-  void _showDeletionResults(Map<String, dynamic> results, BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green[700], size: 28),
-            const SizedBox(width: 12),
-            const Text('Archiving Complete'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Successfully archived:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildResultRow(
-                'Appointments', '${results['appointmentsDeleted']}'),
-            _buildResultRow(
-                'Medical Records', '${results['medicalRecordsDeleted']}'),
-            _buildResultRow(
-                'Conversations', '${results['conversationsDeleted']}'),
-            _buildResultRow('Messages', '${results['messagesDeleted']}'),
-            _buildResultRow('Staff', '${results['staffDeleted']}'),
-            _buildResultRow('Gallery', '${results['galleryImagesDeleted']}'),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-            ),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+String getDashboardImageUrl(Clinic clinic, ClinicSettings? settings) {
+  // Priority 1: Check clinic.dashboardPic (authoritative source)
+  if (clinic.dashboardPic != null && clinic.dashboardPic!.isNotEmpty) {
+    return getDashImageUrl(clinic.dashboardPic!);
   }
 
-  Widget _buildResultRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // Priority 2: Check settings.dashboardPic (fallback)
+  if (settings != null && settings.dashboardPic.isNotEmpty) {
+    return getDashImageUrl(settings.dashboardPic);
+  }
+
+  // Priority 3: Use main clinic image
+  if (clinic.image.isNotEmpty) {
+    return getDashImageUrl(clinic.image);
+  }
+
+  // Priority 4: Use first gallery image if available
+  if (settings != null && settings.gallery.isNotEmpty) {
+    return getDashImageUrl(settings.gallery.first);
+  }
+
+  return ''; // No image available
+}
+
+
+
+void _showDeletionResults(Map<String, dynamic> results, BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
         children: [
-          Text(label),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Icon(Icons.check_circle, color: Colors.green[700], size: 28),
+          const SizedBox(width: 12),
+          const Text('Archiving Complete'),
         ],
       ),
-    );
-  }
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Successfully archived:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          _buildResultRow('Appointments', '${results['appointmentsDeleted']}'),
+          _buildResultRow(
+              'Medical Records', '${results['medicalRecordsDeleted']}'),
+          _buildResultRow(
+              'Conversations', '${results['conversationsDeleted']}'),
+          _buildResultRow('Messages', '${results['messagesDeleted']}'),
+          _buildResultRow('Staff', '${results['staffDeleted']}'),
+          _buildResultRow('Gallery', '${results['galleryImagesDeleted']}'),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+          ),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
 
+Widget _buildResultRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    ),
+  );
+}
