@@ -51,22 +51,22 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   List<String> selectedServices = [];
   final List<String> availableServices = [
     'General Checkup',
-      'Vaccination',
-      'Surgery',
-      'Dental Care',
-      'Emergency Care',
-      'Laboratory Tests',
-      'Microchipping',
-      'Spay/Neuter',
-      'X-Ray Imaging',
-      'Ultrasound',
-      'Blood Work',
-      'Behavioral Consultation',
-      'Nutritional Counseling',
-      'Parasite Treatment',
-      'Wound Care',
-      'Prescription Medications',
-      'Health Certificates',
+    'Vaccination',
+    'Surgery',
+    'Dental Care',
+    'Emergency Care',
+    'Laboratory Tests',
+    'Microchipping',
+    'Spay/Neuter',
+    'X-Ray Imaging',
+    'Ultrasound',
+    'Blood Work',
+    'Behavioral Consultation',
+    'Nutritional Counseling',
+    'Parasite Treatment',
+    'Wound Care',
+    'Prescription Medications',
+    'Health Certificates',
   ];
 
   bool _isServiceMedicalByDefault(String service) {
@@ -128,43 +128,62 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     );
   }
 
+  void _initializeData() {
+    // Initialize services from clinic's services string
+    if (widget.clinic.services.isNotEmpty) {
+      clinicServices = widget.clinic.services
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
 
-void _initializeData() {
- 
-  if (widget.clinic.services.isNotEmpty) {
-    clinicServices = widget.clinic.services
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-    
-   
-    selectedServices = List<String>.from(clinicServices);
-    
- 
-  }
-
-  // ✅ Initialize medical services map from settings
-  if (widget.settings != null) {
-    galleryImages = List.from(widget.settings!.gallery);
-    operatingHours = Map.from(widget.settings!.operatingHours);
-    appointmentDuration = widget.settings!.appointmentDuration;
-    maxAdvanceBooking = widget.settings!.maxAdvanceBooking;
-    autoAcceptAppointments = widget.settings!.autoAcceptAppointments;
-    isOpen = widget.settings!.isOpen;
-
-    // ✅ CRITICAL: Load medical services map
-    medicalServices = Map<String, bool>.from(widget.settings!.medicalServices);
-    
- 
-  } else {
-    operatingHours = _getDefaultOperatingHours();
-
-    for (var service in selectedServices) {
-      medicalServices[service] = _isServiceMedicalByDefault(service);
+      selectedServices = List<String>.from(clinicServices);
     }
+
+    // Initialize settings data if available
+    if (widget.settings != null) {
+      // Gallery images
+      galleryImages = List.from(widget.settings!.gallery);
+
+      // Operating hours
+      operatingHours = Map.from(widget.settings!.operatingHours);
+
+      // Appointment settings
+      appointmentDuration = widget.settings!.appointmentDuration;
+      maxAdvanceBooking = widget.settings!.maxAdvanceBooking;
+      autoAcceptAppointments = widget.settings!.autoAcceptAppointments;
+      isOpen = widget.settings!.isOpen;
+
+      // CRITICAL: Load medical services map from settings
+      medicalServices =
+          Map<String, bool>.from(widget.settings!.medicalServices);
+
+      print('>>> Super Admin Edit: Loaded medical services map');
+      print('>>> Medical services: $medicalServices');
+      print('>>> Selected services: $selectedServices');
+
+      // Ensure all selected services have medical status
+      for (var service in selectedServices) {
+        if (!medicalServices.containsKey(service)) {
+          medicalServices[service] = _isServiceMedicalByDefault(service);
+          print(
+              '>>> Added default medical status for: $service = ${medicalServices[service]}');
+        }
+      }
+    } else {
+      // No settings exist - create defaults
+      operatingHours = _getDefaultOperatingHours();
+
+      // Set default medical status for pre-selected services
+      for (var service in selectedServices) {
+        medicalServices[service] = _isServiceMedicalByDefault(service);
+      }
+    }
+
+    print('>>> Super Admin Edit: Initialization complete');
+    print('>>> Total services: ${selectedServices.length}');
+    print('>>> Medical services count: ${medicalServices.length}');
   }
-}
 
   Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
     return {
@@ -250,331 +269,340 @@ void _initializeData() {
     );
   }
 
- Widget _buildBasicInfoTab() {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(24),
-    child: Column(
-      children: [
-        // CHANGED: Clinic Gallery instead of single image
-        _buildSectionCard(
-          title: "Clinic Gallery",
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    "Upload images of your clinic (${galleryImages.length})",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const Spacer(),
-                  ElevatedButton.icon(
-                    onPressed: isLoadingImage ? null : _pickGalleryImages,
-                    icon: isLoadingImage
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.add_photo_alternate),
-                    label: Text(isLoadingImage ? 'Uploading...' : 'Add Images'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              
-              // Info message
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
+  Widget _buildBasicInfoTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // CHANGED: Clinic Gallery instead of single image
+          _buildSectionCard(
+            title: "Clinic Gallery",
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Upload multiple images to showcase your clinic. These will be displayed in your clinic profile.',
-                        style: TextStyle(
-                          color: Colors.blue[900],
-                          fontSize: 13,
-                        ),
+                    Text(
+                      "Upload images of your clinic (${galleryImages.length})",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: isLoadingImage ? null : _pickGalleryImages,
+                      icon: isLoadingImage
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.add_photo_alternate),
+                      label:
+                          Text(isLoadingImage ? 'Uploading...' : 'Add Images'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                        foregroundColor: Colors.white,
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Gallery display
-              if (galleryImages.isEmpty)
+                const SizedBox(height: 16),
+
+                // Info message
                 Container(
-                  height: 200,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[50],
+                    border: Border.all(color: Colors.blue[200]!),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Row(
                     children: [
-                      Icon(
-                        Icons.photo_library,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        "No images uploaded yet",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Click 'Add Images' to get started",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
+                      Icon(Icons.info_outline,
+                          color: Colors.blue[700], size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Upload multiple images to showcase your clinic. These will be displayed in your clinic profile.',
+                          style: TextStyle(
+                            color: Colors.blue[900],
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                )
-              else
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1,
-                  ),
-                  itemCount: galleryImages.length,
-                  itemBuilder: (context, index) {
-                    return Stack(
+                ),
+                const SizedBox(height: 16),
+
+                // Gallery display
+                if (galleryImages.isEmpty)
+                  Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[50],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Image container
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              getDashImageUrl(galleryImages[index]),
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
-                                          : null,
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.error_outline,
-                                        color: Colors.red[700],
-                                        size: 32,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        "Failed to load",
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.red[700],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                        Icon(
+                          Icons.photo_library,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "No images uploaded yet",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        
-                        // Delete button
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: InkWell(
-                            onTap: () => _confirmRemoveGalleryImage(index),
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.red[700],
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                        // Image number badge
-                        Positioned(
-                          bottom: 6,
-                          left: 6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Click 'Add Images' to get started",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
                           ),
                         ),
                       ],
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        _buildDashboardImageSection(),
-        const SizedBox(height: 24),
-        _buildSectionCard(
-          title: "Basic Information",
-          child: Column(
-            children: [
-              _buildTextField(
-                controller: clinicNameController,
-                label: "Clinic Name",
-                icon: Icons.business,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: emailController,
-                label: "Email",
-                icon: Icons.email,
-                keyboardType: TextInputType.emailAddress,
-                required: true,
-                enabled: false, 
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: addressController,
-                label: "Address",
-                icon: Icons.location_on,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: contactController,
-                label: "Contact Number",
-                icon: Icons.phone,
-                keyboardType: TextInputType.phone,
-                required: true,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: descriptionController,
-                label: "Description",
-                icon: Icons.description,
-                maxLines: 4,
-                hint: "Tell customers about your clinic...",
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: galleryImages.length,
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          // Image container
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.grey[300]!,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                getDashImageUrl(galleryImages[index]),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red[700],
+                                          size: 32,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Failed to load",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.red[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
 
-void _confirmRemoveGalleryImage(int index) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color.fromARGB(255, 248, 253, 255),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Remove Image?'),
-      content: const Text(
-        'Are you sure you want to remove this image from the gallery?',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context);
-            _removeGalleryImage(index);
-            _showSuccessSnackbar('Image removed from gallery');
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red[700],
-            foregroundColor: Colors.white,
+                          // Delete button
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: InkWell(
+                              onTap: () => _confirmRemoveGalleryImage(index),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[700],
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Image number badge
+                          Positioned(
+                            bottom: 6,
+                            left: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
-          child: const Text('Remove'),
+          const SizedBox(height: 24),
+          _buildDashboardImageSection(),
+          const SizedBox(height: 24),
+          _buildSectionCard(
+            title: "Basic Information",
+            child: Column(
+              children: [
+                _buildTextField(
+                  controller: clinicNameController,
+                  label: "Clinic Name",
+                  icon: Icons.business,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: emailController,
+                  label: "Email",
+                  icon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
+                  required: true,
+                  enabled: false,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: addressController,
+                  label: "Address",
+                  icon: Icons.location_on,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: contactController,
+                  label: "Contact Number",
+                  icon: Icons.phone,
+                  keyboardType: TextInputType.phone,
+                  required: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: descriptionController,
+                  label: "Description",
+                  icon: Icons.description,
+                  maxLines: 4,
+                  hint: "Tell customers about your clinic...",
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRemoveGalleryImage(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromARGB(255, 248, 253, 255),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove Image?'),
+        content: const Text(
+          'Are you sure you want to remove this image from the gallery?',
         ),
-      ],
-    ),
-  );
-}
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _removeGalleryImage(index);
+              _showSuccessSnackbar('Image removed from gallery');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[700],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildDashboardImageSection() {
     return _buildSectionCard(
@@ -676,113 +704,113 @@ void _confirmRemoveGalleryImage(int index) {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-        _buildSectionCard(
-          title: "Services Offered",
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ✅ Info box showing current status
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: selectedServices.isEmpty 
-                      ? Colors.orange[50] 
-                      : Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: selectedServices.isEmpty 
-                        ? Colors.orange[200]! 
-                        : Colors.blue[200]!,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      selectedServices.isEmpty 
-                          ? Icons.info_outline 
-                          : Icons.check_circle_outline,
-                      color: selectedServices.isEmpty 
-                          ? Colors.orange[700] 
-                          : Colors.blue[700],
-                      size: 20,
+          _buildSectionCard(
+            title: "Services Offered",
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ✅ Info box showing current status
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: selectedServices.isEmpty
+                        ? Colors.orange[50]
+                        : Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: selectedServices.isEmpty
+                          ? Colors.orange[200]!
+                          : Colors.blue[200]!,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
                         selectedServices.isEmpty
-                            ? "No services selected. You can add services or leave empty."
-                            : "${selectedServices.length} service(s) selected",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: selectedServices.isEmpty 
-                              ? Colors.orange[700] 
-                              : Colors.blue[700],
-                          fontWeight: FontWeight.w600,
+                            ? Icons.info_outline
+                            : Icons.check_circle_outline,
+                        color: selectedServices.isEmpty
+                            ? Colors.orange[700]
+                            : Colors.blue[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          selectedServices.isEmpty
+                              ? "No services selected. You can add services or leave empty."
+                              : "${selectedServices.length} service(s) selected",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: selectedServices.isEmpty
+                                ? Colors.orange[700]
+                                : Colors.blue[700],
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              
-              // ✅ Services chips
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: availableServices.map((service) {
-                  final isSelected = selectedServices.contains(service);
-                  final isMedical = medicalServices[service] ??
-                      _isServiceMedicalByDefault(service);
-                  return FilterChip(
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(service),
-                        if (isSelected && isMedical) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green[700],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Medical',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                const SizedBox(height: 16),
+
+                // ✅ Services chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: availableServices.map((service) {
+                    final isSelected = selectedServices.contains(service);
+                    final isMedical = medicalServices[service] ??
+                        _isServiceMedicalByDefault(service);
+                    return FilterChip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(service),
+                          if (isSelected && isMedical) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green[700],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Medical',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          selectedServices.add(service);
-                          medicalServices[service] =
-                              _isServiceMedicalByDefault(service);
-                        } else {
-                          selectedServices.remove(service);
-                          medicalServices.remove(service);
-                        }
-                      });
-                    },
-                    selectedColor: const Color.fromRGBO(81, 115, 153, 0.2),
-                    checkmarkColor: const Color.fromRGBO(81, 115, 153, 1),
-                  );
-                }).toList(),
-              ),
-            ],
+                      ),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            selectedServices.add(service);
+                            medicalServices[service] =
+                                _isServiceMedicalByDefault(service);
+                          } else {
+                            selectedServices.remove(service);
+                            medicalServices.remove(service);
+                          }
+                        });
+                      },
+                      selectedColor: const Color.fromRGBO(81, 115, 153, 0.2),
+                      checkmarkColor: const Color.fromRGBO(81, 115, 153, 1),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
-),
           const SizedBox(height: 24),
           _buildSectionCard(
             title: "Operating Hours",
@@ -1369,7 +1397,9 @@ void _confirmRemoveGalleryImage(int index) {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
 
-        // Upload dashboard image
+        print('>>> Uploading dashboard image...');
+
+        // Upload dashboard image to storage
         final uploadedFile = await authRepository.uploadImage(
           file.bytes != null
               ? InputFile.fromBytes(bytes: file.bytes!, filename: file.name)
@@ -1380,9 +1410,11 @@ void _confirmRemoveGalleryImage(int index) {
           newDashboardImageId = uploadedFile.$id;
         });
 
+        print('>>> ✓ Dashboard image uploaded: ${uploadedFile.$id}');
         _showSuccessSnackbar('Dashboard image uploaded successfully');
       }
     } catch (e) {
+      print('>>> Error uploading dashboard image: $e');
       _showErrorSnackbar('Error uploading dashboard image: ${e.toString()}');
     } finally {
       setState(() {
@@ -1420,6 +1452,7 @@ void _confirmRemoveGalleryImage(int index) {
 
     if (confirmed == true) {
       setState(() {
+        // Empty string signals deletion on save
         newDashboardImageId = '';
       });
       _showSuccessSnackbar('Dashboard image will be removed on save');
@@ -1438,18 +1471,24 @@ void _confirmRemoveGalleryImage(int index) {
           isLoadingImage = true;
         });
 
+        print('>>> Uploading ${result.files.length} gallery images...');
+
+        // Upload images to storage
         final uploadedFiles = await authRepository.uploadClinicGalleryImages(
           result.files,
         );
 
         setState(() {
+          // Add new image IDs to galleryImages list
           galleryImages.addAll(uploadedFiles.map((f) => f.$id));
           isLoadingImage = false;
         });
 
+        print('>>> ✓ Gallery images uploaded: ${uploadedFiles.length}');
         _showSuccessSnackbar('${uploadedFiles.length} images uploaded');
       }
     } catch (e) {
+      print('>>> Error uploading gallery images: $e');
       setState(() {
         isLoadingImage = false;
       });
@@ -1459,126 +1498,177 @@ void _confirmRemoveGalleryImage(int index) {
 
   void _removeGalleryImage(int index) {
     final imageId = galleryImages[index];
+
     setState(() {
+      // Add to removed list (will be deleted on save)
       removedGalleryImages.add(imageId);
+
+      // Remove from current gallery list
       galleryImages.removeAt(index);
     });
+
+    print('>>> Gallery image marked for removal: $imageId');
+    print('>>> Current gallery count: ${galleryImages.length}');
+    print('>>> Pending removal count: ${removedGalleryImages.length}');
   }
 
   Future<void> _saveAllChanges() async {
-    // Validation
     if (clinicNameController.text.trim().isEmpty) {
       _showErrorSnackbar('Clinic name is required');
       return;
     }
 
+    setState(() {
+      isSaving = true;
+    });
 
-  setState(() {
-    isSaving = true;
-  });
+    try {
+      print('>>> ============================================');
+      print('>>> SUPER ADMIN: SAVING CLINIC CHANGES');
+      print('>>> ============================================');
 
-  try {
-    // ✅ Handle dashboard image changes (existing code)
-    String? finalDashboardImageId;
+      // STEP 1: Handle dashboard image changes
+      String? finalDashboardImageId;
 
-    if (newDashboardImageId == '') {
-      if (widget.clinic.dashboardPic != null &&
-          widget.clinic.dashboardPic!.isNotEmpty) {
-        try {
-          await authRepository.deleteImage(widget.clinic.dashboardPic!);
-          print('>>> Old dashboard image deleted');
-        } catch (e) {
-          print('>>> Warning: Could not delete old dashboard image: $e');
+      if (newDashboardImageId == '') {
+        // User wants to remove dashboard image
+        if (widget.clinic.dashboardPic != null &&
+            widget.clinic.dashboardPic!.isNotEmpty) {
+          try {
+            await authRepository.deleteImage(widget.clinic.dashboardPic!);
+            print('>>> Old dashboard image deleted');
+          } catch (e) {
+            print('>>> Warning: Could not delete old dashboard image: $e');
+          }
         }
-      }
-      finalDashboardImageId = '';
-    } else if (newDashboardImageId != null) {
-      finalDashboardImageId = newDashboardImageId;
+        finalDashboardImageId = '';
+      } else if (newDashboardImageId != null) {
+        // User uploaded new dashboard image
+        finalDashboardImageId = newDashboardImageId;
 
-      if (widget.clinic.dashboardPic != null &&
-          widget.clinic.dashboardPic!.isNotEmpty &&
-          widget.clinic.dashboardPic != newDashboardImageId) {
-        try {
-          await authRepository.deleteImage(widget.clinic.dashboardPic!);
-          print('>>> Old dashboard image replaced');
-        } catch (e) {
-          print('>>> Warning: Could not delete old dashboard image: $e');
+        // Delete old dashboard image if different
+        if (widget.clinic.dashboardPic != null &&
+            widget.clinic.dashboardPic!.isNotEmpty &&
+            widget.clinic.dashboardPic != newDashboardImageId) {
+          try {
+            await authRepository.deleteImage(widget.clinic.dashboardPic!);
+            print('>>> Old dashboard image replaced');
+          } catch (e) {
+            print('>>> Warning: Could not delete old dashboard image: $e');
+          }
         }
+      } else {
+        // No change to dashboard image
+        finalDashboardImageId = widget.clinic.dashboardPic;
       }
-    } else {
-      finalDashboardImageId = widget.clinic.dashboardPic;
-    }
 
-    // ✅ Update clinic basic info (services can be empty now)
-    final clinicData = {
-      'clinicName': clinicNameController.text.trim(),
-      'address': addressController.text.trim(),
-      'contact': contactController.text.trim(),
-      'email': emailController.text.trim(),
-      'description': descriptionController.text.trim(),
-      'services': selectedServices.join(', '), // ✅ Can be empty string
-      'image': newMainImageId ?? widget.clinic.image,
-      'dashboardPic': finalDashboardImageId ?? '',
-    };
+      // STEP 2: Sanitize medical services map
+      final sanitizedMedicalServices = <String, bool>{};
+      for (var service in selectedServices) {
+        sanitizedMedicalServices[service] =
+            medicalServices[service] ?? _isServiceMedicalByDefault(service);
+      }
 
-    print('>>> Saving clinic with ${selectedServices.length} services');
+      print('>>> Selected services: $selectedServices');
+      print('>>> Medical services map: $sanitizedMedicalServices');
 
-    await authRepository.updateClinic(
-      widget.clinic.documentId!,
-      clinicData,
-    );
-
-    // Update or create settings
-    if (widget.settings != null) {
-      final settingsData = {
-        'clinicId': widget.clinic.documentId!,
-        'isOpen': isOpen,
-        'operatingHours': operatingHours,
-        'gallery': galleryImages,
-        'services': selectedServices, // ✅ Can be empty list
-        'medicalServices': medicalServices, // ✅ Can be empty map
-        'appointmentDuration': appointmentDuration,
-        'maxAdvanceBooking': maxAdvanceBooking,
-        'emergencyContact': emergencyContactController.text.trim(),
-        'specialInstructions': specialInstructionsController.text.trim(),
-        'autoAcceptAppointments': autoAcceptAppointments,
+      // STEP 3: Update clinic basic info (including dashboardPic)
+      final clinicData = {
+        'clinicName': clinicNameController.text.trim(),
+        'address': addressController.text.trim(),
+        'contact': contactController.text.trim(),
+        'email': emailController.text.trim(),
+        'description': descriptionController.text.trim(),
+        'services': selectedServices.join(', '),
+        'image': newMainImageId ?? widget.clinic.image,
+        'dashboardPic': finalDashboardImageId ??
+            '', // CRITICAL: Update dashboardPic in Clinic
       };
 
-      await authRepository.updateClinicSettings(
-        widget.settings!.copyWith(
+      print('>>> Updating clinic document...');
+      await authRepository.updateClinic(
+        widget.clinic.documentId!,
+        clinicData,
+      );
+      print('>>> ✓ Clinic document updated (including dashboardPic)');
+
+      // STEP 4: Update or create clinic settings
+      if (widget.settings != null) {
+        print('>>> Updating existing clinic settings...');
+
+        final updatedSettings = widget.settings!.copyWith(
           isOpen: isOpen,
           operatingHours: operatingHours,
-          gallery: galleryImages,
+          gallery: galleryImages, // CRITICAL: Update gallery in ClinicSettings
           services: selectedServices,
-          medicalServices: medicalServices,
+          medicalServices: sanitizedMedicalServices,
           appointmentDuration: appointmentDuration,
           maxAdvanceBooking: maxAdvanceBooking,
           emergencyContact: emergencyContactController.text.trim(),
           specialInstructions: specialInstructionsController.text.trim(),
           autoAcceptAppointments: autoAcceptAppointments,
-        ),
-      );
+          dashboardPic: finalDashboardImageId ??
+              '', // Also store in settings for reference
+        );
+
+        await authRepository.updateClinicSettings(updatedSettings);
+        print('>>> ✓ Clinic settings updated (including gallery)');
+      } else {
+        print('>>> Creating new clinic settings...');
+
+        final newSettings = ClinicSettings(
+          clinicId: widget.clinic.documentId!,
+          isOpen: isOpen,
+          operatingHours: operatingHours,
+          gallery: galleryImages, // CRITICAL: Initialize gallery
+          services: selectedServices,
+          medicalServices: sanitizedMedicalServices,
+          appointmentDuration: appointmentDuration,
+          maxAdvanceBooking: maxAdvanceBooking,
+          emergencyContact: emergencyContactController.text.trim(),
+          specialInstructions: specialInstructionsController.text.trim(),
+          autoAcceptAppointments: autoAcceptAppointments,
+          dashboardPic: finalDashboardImageId ?? '', // Store in settings
+        );
+
+        await authRepository.createClinicSettings(newSettings);
+        print('>>> ✓ New clinic settings created');
+      }
+
+      // STEP 5: Delete removed gallery images from storage
+      if (removedGalleryImages.isNotEmpty) {
+        print(
+            '>>> Deleting ${removedGalleryImages.length} removed gallery images...');
+        await authRepository.deleteClinicGalleryImages(removedGalleryImages);
+        print('>>> ✓ Gallery images deleted');
+      }
+
+      print('>>> ============================================');
+      print('>>> SUPER ADMIN: SAVE COMPLETE');
+      print('>>> ============================================');
+
+      _showSuccessSnackbar('Clinic updated successfully');
+
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ERROR SAVING CHANGES');
+      print('>>> Error: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+      _showErrorSnackbar('Error saving changes: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
+        });
+      }
     }
+  }
 
-    // Delete removed gallery images
-    if (removedGalleryImages.isNotEmpty) {
-      await authRepository.deleteClinicGalleryImages(removedGalleryImages);
-    }
-
-    _showSuccessSnackbar('Clinic updated successfully');
-
-          await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) {
-            Navigator.pop(context, true);
-          }
-        } catch (e) {
-          _showErrorSnackbar('Error saving changes: ${e.toString()}');
-        } finally {
-          setState(() {
-            isSaving = false;
-          });
-        }
-}
   void _handleBackPress() {
     if (isSaving) return;
 
@@ -1617,7 +1707,8 @@ void _confirmRemoveGalleryImage(int index) {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Color.fromARGB(255, 255, 255, 255)),
+            const Icon(Icons.check_circle,
+                color: Color.fromARGB(255, 255, 255, 255)),
             const SizedBox(width: 12),
             Text(message, style: const TextStyle(color: Colors.white)),
           ],
@@ -1645,5 +1736,26 @@ void _confirmRemoveGalleryImage(int index) {
         duration: const Duration(seconds: 5),
       ),
     );
+  }
+
+  bool _hasUnsavedChanges() {
+    // Check if gallery changed
+    final originalGallery = widget.settings?.gallery ?? [];
+    if (galleryImages.length != originalGallery.length ||
+        removedGalleryImages.isNotEmpty) {
+      return true;
+    }
+
+    // Check if dashboard image changed
+    if (newDashboardImageId != null) {
+      return true;
+    }
+
+    // Check other fields...
+    if (clinicNameController.text.trim() != widget.clinic.clinicName) {
+      return true;
+    }
+
+    return false;
   }
 }
