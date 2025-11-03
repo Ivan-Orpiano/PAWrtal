@@ -1462,8 +1462,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
               InkWell(
                 customBorder: const CircleBorder(),
                 onTap: () async {
-                  await _startConversationWithClinic(
-                      context);
+                  await _startConversationWithClinic(context);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -1494,7 +1493,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         return;
       }
 
-      // NEW: Check verification before starting conversation
+      // Check verification before starting conversation
       final canAccess = await _verificationGuard.canAccessFeature(
         context: context,
         userId: userSession.userId,
@@ -1504,10 +1503,9 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
       );
 
       if (!canAccess) {
-        return; // Guard will show verification dialog
+        return;
       }
 
-      // If verified, proceed with conversation
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -1518,15 +1516,32 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         ),
       );
 
+      print('=== FIXED MOBILE: Starting conversation with clinic ===');
+      print('User ID: ${userSession.userId}');
+      print('Clinic ID: ${widget.clinic.documentId}');
+
       final MessagingController messagingController =
           Get.find<MessagingController>();
 
+      // CRITICAL FIX: Use startConversationWithClinic which handles existing conversations
       final conversation = await messagingController
           .startConversationWithClinic(widget.clinic.documentId!);
 
       Navigator.pop(context);
 
-      if (conversation != null && context.mounted) {
+      if (conversation == null) {
+        if (context.mounted) {
+          _showErrorDialog(
+              context, 'Failed to start conversation. Please try again.');
+        }
+        return;
+      }
+
+      print('✅ Conversation ready: ${conversation.documentId}');
+
+      if (context.mounted) {
+        print('Navigating to messages page...');
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1539,13 +1554,12 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             ),
           ),
         );
-      } else {
-        if (context.mounted) {
-          _showErrorDialog(
-              context, 'Failed to start conversation. Please try again.');
-        }
+
+        print('✅ Navigation complete');
       }
     } catch (e) {
+      print('❌ Error in _startConversationWithClinic: $e');
+      print('Stack trace: ${StackTrace.current}');
       if (context.mounted) {
         Navigator.pop(context);
         _showErrorDialog(context, 'Error starting conversation: $e');

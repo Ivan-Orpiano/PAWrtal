@@ -91,13 +91,10 @@ class _WebClinicDescriptionUpdatedState
       return const SizedBox.shrink();
     }
 
-    // CRITICAL: Check if today is a closed date FIRST
     final isTodayClosedDate = _isTodayClosedDate();
-
     final isOpen = _clinicSettings!.isOpen;
     final isOpenNow = _clinicSettings!.isOpenNow();
 
-    // Get today's hours
     final today = DateTime.now().weekday;
     final dayName = _getDayName(today);
     final daySchedule = _clinicSettings!.operatingHours[dayName];
@@ -115,7 +112,6 @@ class _WebClinicDescriptionUpdatedState
     String statusText;
     IconData statusIcon;
 
-    // CRITICAL: Prioritize closed date status
     if (isTodayClosedDate) {
       statusColor = Colors.red;
       statusText = "Closed Today";
@@ -244,7 +240,7 @@ class _WebClinicDescriptionUpdatedState
         return;
       }
 
-      // NEW: Check verification before starting conversation
+      // Check verification before starting conversation
       final canAccess = await _verificationGuard.canAccessFeature(
         context: context,
         userId: userSession.userId,
@@ -254,7 +250,7 @@ class _WebClinicDescriptionUpdatedState
       );
 
       if (!canAccess) {
-        return; // Guard will show verification dialog
+        return;
       }
 
       showDialog(
@@ -265,20 +261,22 @@ class _WebClinicDescriptionUpdatedState
         ),
       );
 
-      // Check if controller exists, if not create it
       final MessagingController messagingController =
           Get.isRegistered<MessagingController>()
               ? Get.find<MessagingController>()
               : Get.put(MessagingController());
 
-      print('=== Starting conversation with clinic ===');
+      print('=== FIXED: Starting conversation with clinic ===');
+      print('User ID: ${userSession.userId}');
+      print('Clinic ID: ${widget.clinic.documentId}');
 
-      // Start or get existing conversation
+      // CRITICAL FIX: Use the proper method that checks for existing conversations
       final conversation = await messagingController
           .startConversationWithClinic(widget.clinic.documentId!);
 
+      Navigator.pop(context);
+
       if (conversation == null) {
-        Navigator.pop(context);
         if (context.mounted) {
           _showErrorDialog(
               context, 'Failed to start conversation. Please try again.');
@@ -286,19 +284,14 @@ class _WebClinicDescriptionUpdatedState
         return;
       }
 
-      print('Conversation created/found: ${conversation.documentId}');
+      print('✅ Conversation ready: ${conversation.documentId}');
 
-      // CRITICAL: Ensure conversation is set as current and data is loaded
-      // The startConversationWithClinic already does this, but we wait a bit
-      // to ensure real-time subscriptions are set up
+      // ADDED: Small delay to ensure real-time subscriptions are set up
       await Future.delayed(const Duration(milliseconds: 300));
-
-      Navigator.pop(context);
 
       if (context.mounted) {
         print('Navigating to messages tab...');
 
-        // Navigate to messages page using the home controller
         final homeController = Get.isRegistered<WebUserHomeController>()
             ? Get.find<WebUserHomeController>()
             : Get.put(WebUserHomeController());
@@ -306,16 +299,17 @@ class _WebClinicDescriptionUpdatedState
         // Switch to Messages tab (index 2)
         homeController.onItemSelected(2);
 
-        // Wait a bit for tab to switch
+        // Wait for tab to switch
         await Future.delayed(const Duration(milliseconds: 200));
 
         // Close the clinic page
         Navigator.pop(context);
 
-        print('Navigation complete');
+        print('✅ Navigation complete');
       }
     } catch (e) {
-      print('Error in _startConversationWithClinic: $e');
+      print('❌ Error in _startConversationWithClinic: $e');
+      print('Stack trace: ${StackTrace.current}');
       if (context.mounted) {
         Navigator.pop(context);
         _showErrorDialog(context, 'Error starting conversation: $e');
@@ -413,7 +407,6 @@ class _WebClinicDescriptionUpdatedState
             final openTime = dayData?['openTime'] ?? '';
             final closeTime = dayData?['closeTime'] ?? '';
 
-            // Convert to 12-hour format
             final openTime12 = _formatTimeTo12Hour(openTime);
             final closeTime12 = _formatTimeTo12Hour(closeTime);
 
@@ -567,10 +560,8 @@ class _WebClinicDescriptionUpdatedState
           ),
         ),
 
-        // Clinic status with message button
         _buildClinicStatus(),
 
-        // Contact Information Section
         Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
@@ -592,16 +583,10 @@ class _WebClinicDescriptionUpdatedState
           ),
         ),
 
-        // Operating Hours
         _buildOperatingHours(),
-
-        // Emergency Contact
         _buildEmergencyContact(),
-
-        // Special Instructions
         _buildSpecialInstructions(),
 
-        // Description Section
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
