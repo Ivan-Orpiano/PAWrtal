@@ -198,6 +198,93 @@ Future<void> addReply(String documentId, String reply) async {
     }
   }
 
+  /// Archive feedback with confirmation
+Future<void> archiveFeedback(String documentId) async {
+  try {
+    isLoading.value = true;
+    
+    // Get current admin/user info
+    final userName = _storage.read('name') ?? 'System';
+    
+    print('>>> Archiving feedback: $documentId by $userName');
+    
+    await authRepository.archiveFeedback(documentId, userName);
+    
+    // Remove from local list
+    allFeedback.removeWhere((f) => f.documentId == documentId);
+    
+    // Remove from pinned IDs if it was pinned
+    pinnedFeedbackIds.remove(documentId);
+    
+    allFeedback.refresh();
+    
+    Get.snackbar(
+      'Success',
+      'Feedback archived successfully',
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.green[100],
+      colorText: Colors.green[900],
+      icon: const Icon(Icons.archive, color: Colors.green),
+    );
+    
+    print('>>> Archive successful');
+  } catch (e) {
+    print('>>> Error archiving feedback: $e');
+    Get.snackbar(
+      'Error',
+      'Failed to archive feedback: $e',
+      duration: const Duration(seconds: 3),
+      backgroundColor: Colors.red[100],
+      colorText: Colors.red[900],
+      icon: const Icon(Icons.error, color: Colors.red),
+    );
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+/// Delete feedback permanently
+Future<void> deleteFeedback(String documentId, List<String> attachmentIds) async {
+  try {
+    isLoading.value = true;
+    
+    print('>>> Deleting feedback permanently: $documentId');
+    
+    await authRepository.deleteFeedback(documentId, attachmentIds);
+    
+    // Remove from local list
+    allFeedback.removeWhere((f) => f.documentId == documentId);
+    pinnedFeedbackIds.remove(documentId);
+    
+    allFeedback.refresh();
+    
+    Get.snackbar(
+      'Success',
+      'Feedback deleted permanently',
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.orange[100],
+      colorText: Colors.orange[900],
+      icon: const Icon(Icons.delete_forever, color: Colors.orange),
+    );
+    
+    print('>>> Delete successful');
+  } catch (e) {
+    print('>>> Error deleting feedback: $e');
+    Get.snackbar(
+      'Error',
+      'Failed to delete feedback: $e',
+      duration: const Duration(seconds: 3),
+      backgroundColor: Colors.red[100],
+      colorText: Colors.red[900],
+    );
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+
+
+
   /// Check if feedback is pinned
   bool isPinned(String feedbackId) {
     return pinnedFeedbackIds.contains(feedbackId);
