@@ -5,6 +5,7 @@ import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:appwrite/appwrite.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class OAuthCallbackPage extends StatefulWidget {
   const OAuthCallbackPage({super.key});
@@ -33,13 +34,28 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       print('>>> ============================================');
       print('>>> OAUTH CALLBACK HANDLER START');
       print('>>> Current URL: ${Uri.base}');
+      print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
       print('>>> ============================================');
 
-      // CRITICAL FIX: Wait longer and retry with exponential backoff
-      // This fixes the 401 error on deployed sites
-      await _waitForSession();
+      // WEB SPECIFIC: Check if we have OAuth query parameters
+      if (kIsWeb) {
+        final uri = Uri.base;
+        print('>>> Checking URL parameters...');
+        print('>>> Query params: ${uri.queryParameters}');
+        print('>>> Fragment: ${uri.fragment}');
+        
+        // Check if there's a userId or secret in URL (Appwrite OAuth callback params)
+        if (uri.queryParameters.containsKey('userId') || 
+            uri.queryParameters.containsKey('secret')) {
+          print('>>> ⚠️ OAuth parameters detected in URL - this is unexpected');
+          print('>>> This might indicate an OAuth flow issue');
+        }
+      }
 
-      // Step 1: Get authenticated user from Appwrite Auth
+      // CRITICAL: Try different session establishment strategies
+      await _establishSession();
+
+      // Step 1: Get authenticated user
       print('>>> Step 1: Getting authenticated user...');
       final user = await _appwriteProvider.account!.get();
 
@@ -57,13 +73,13 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       final session = await _appwriteProvider.account!.getSession(sessionId: 'current');
       print('>>> ✅ Session ID: ${session.$id}');
 
-      // Step 3: Check if user exists in Users database collection
+      // Step 3: Check if user exists in database
       print('>>> Step 3: Checking if user exists in Users database...');
       final existingUserDoc = await _authRepository.getUserById(user.$id);
 
       if (existingUserDoc == null) {
         print('>>> ❌ User NOT found in database');
-        print('>>> 🔨 Creating new user record in Users collection...');
+        print('>>> 🔨 Creating new user record...');
 
         try {
           final newUserDoc = await _authRepository.createUser({
@@ -83,30 +99,24 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
             "archivedDocumentId": null,
           });
 
-          print('>>> ✅ User created in database successfully!');
-          print('>>> Document ID: ${newUserDoc.$id}');
-          
+          print('>>> ✅ User created: ${newUserDoc.$id}');
           await _storage.write('userDocumentId', newUserDoc.$id);
           
         } catch (createError) {
-          print('>>> ❌ ERROR creating user in database: $createError');
+          print('>>> ❌ ERROR creating user: $createError');
           throw Exception('Failed to create user in database: $createError');
         }
       } else {
-        print('>>> ✅ User already exists in database (Sign-In flow)');
-        print('>>> User Document ID: ${existingUserDoc.$id}');
-        print('>>> Existing Role: ${existingUserDoc.data['role']}');
-        
+        print('>>> ✅ User exists: ${existingUserDoc.$id}');
         await _storage.write('userDocumentId', existingUserDoc.$id);
         
         final profilePictureId = existingUserDoc.data['profilePictureId'] as String?;
         if (profilePictureId != null && profilePictureId.isNotEmpty) {
           await _storage.write('userProfilePictureId', profilePictureId);
-          print('>>> Profile Picture ID: $profilePictureId');
         }
       }
 
-      // Step 4: Store authentication info in GetStorage
+      // Step 4: Store session data
       print('>>> Step 4: Storing session data...');
       await _storage.write('userId', user.$id);
       await _storage.write('sessionId', session.$id);
@@ -121,12 +131,8 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       print('>>> - email: ${_storage.read("email")}');
       print('>>> - userName: ${_storage.read("userName")}');
       print('>>> - role: ${_storage.read("role")}');
-      print('>>> - userDocumentId: ${_storage.read("userDocumentId")}');
       print('>>> ============================================');
 
-      // Step 5: Navigate to user home
-      print('>>> Step 5: Navigating to home...');
-      
       await Future.delayed(const Duration(milliseconds: 500));
       
       Get.offAllNamed(Routes.userHome);
@@ -145,21 +151,82 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
     }
   }
 
-  /// CRITICAL FIX: Wait for session with retry logic
-  /// This fixes the 401 error on deployed sites
-  Future<void> _waitForSession() async {
-    const maxAttempts = 5;
+  /// IMPROVED: Multiple strategies to establish session
+  Future<void> _establishSession() async {
+    print('>>> ============================================');
+    print('>>> ATTEMPTING TO ESTABLISH SESSION');
+    print('>>> ============================================');
+
+    // Strategy 1: Wait with retry (works for most cases)
+    try {
+      await _waitForSessionWithRetry();
+      print('>>> ✅ Session established via retry strategy');
+      return;
+    } catch (e) {
+      print('>>> ❌ Retry strategy failed: $e');
+    }
+
+    // Strategy 2: Check if session exists in cookies/storage (Web only)
+    if (kIsWeb) {
+      try {
+        print('>>> Trying to list existing sessions...');
+        final sessions = await _appwriteProvider.account!.listSessions();
+        
+        if (sessions.sessions.isNotEmpty) {
+          print('>>> ✅ Found ${sessions.sessions.length} existing session(s)');
+          // Session exists, should work now
+          return;
+        }
+      } catch (e) {
+        print('>>> Could not list sessions: $e');
+      }
+    }
+
+    // Strategy 3: Force create a new client with proper cookie handling
+    if (kIsWeb) {
+      try {
+        print('>>> Attempting to reinitialize Appwrite client...');
+        
+        // Reinitialize with explicit cookie settings
+        final newClient = Client()
+            .setEndpoint('https://cloud.appwrite.io/v1')
+            .setProject('67ef82500017dc404c6a');
+        
+        final newAccount = Account(newClient);
+        
+        // Try to get user with new client
+        final user = await newAccount.get();
+        
+        if (user != null) {
+          print('>>> ✅ Session established with new client');
+          // Update provider to use this client
+          _appwriteProvider.client = newClient;
+          _appwriteProvider.account = newAccount;
+          return;
+        }
+      } catch (e) {
+        print('>>> New client strategy failed: $e');
+      }
+    }
+
+    // If all strategies fail, throw error
+    throw Exception('Could not establish OAuth session. Please try again or use email/password login.');
+  }
+
+  /// Wait for session with exponential backoff
+  Future<void> _waitForSessionWithRetry() async {
+    const maxAttempts = 8; // Increased from 5 to 8
     const initialDelay = Duration(milliseconds: 1000);
     
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         print('>>> Waiting for session... Attempt ${attempt + 1}/$maxAttempts');
         
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
-        final delay = initialDelay * (1 << attempt);
+        // Progressive delays: 1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s
+        final delay = initialDelay * (attempt + 1);
         await Future.delayed(delay);
         
-        // Try to get the user - this will throw if session not ready
+        // Try to get user
         final user = await _appwriteProvider.account!.get();
         
         if (user != null) {
@@ -167,11 +234,10 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
           return;
         }
       } catch (e) {
-        print('>>> ⏳ Session not ready yet: $e');
+        print('>>> ⏳ Session not ready yet (attempt ${attempt + 1}): ${e.toString().substring(0, 100)}...');
         
         if (attempt == maxAttempts - 1) {
-          // Last attempt failed
-          throw Exception('Session timeout: Could not establish OAuth session after $maxAttempts attempts');
+          throw Exception('Session timeout after $maxAttempts attempts');
         }
       }
     }
@@ -185,7 +251,7 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         ),
         child: Container(
           padding: const EdgeInsets.all(24),
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 500),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -204,7 +270,13 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Failed to complete Google Sign-In. Please try again.',
+                kIsWeb 
+                  ? 'Google Sign-In failed on this browser. This might be due to:\n\n'
+                    '• Third-party cookies being blocked\n'
+                    '• Privacy/tracking protection enabled\n'
+                    '• Browser extensions blocking auth\n\n'
+                    'Try using email/password login or a different browser.'
+                  : 'Failed to complete Google Sign-In. Please try again.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -212,28 +284,51 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(
+                          color: Color.fromARGB(255, 81, 115, 153),
+                        ),
+                      ),
+                      onPressed: () {
+                        Get.back();
+                        // Try again
+                        _handleCallback();
+                      },
+                      child: const Text(
+                        'Try Again',
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 81, 115, 153),
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
-                  onPressed: () {
-                    Get.back();
-                    Get.offAllNamed(Routes.login);
-                  },
-                  child: const Text(
-                    'Back to Login',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Get.back();
+                        Get.offAllNamed(Routes.login);
+                      },
+                      child: const Text(
+                        'Back to Login',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -280,11 +375,26 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
             const SizedBox(height: 8),
             
             Text(
-              'Please wait while we set up your account',
+              kIsWeb 
+                ? 'This may take up to 30 seconds...'
+                : 'Please wait while we set up your account',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.black54,
               ),
             ),
+            
+            if (kIsWeb) ...[
+              const SizedBox(height: 16),
+              Text(
+                'If this takes too long, your browser may be blocking cookies',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ],
         ),
       ),
