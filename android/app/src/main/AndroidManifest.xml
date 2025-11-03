@@ -53,16 +53,16 @@
             
             <!-- CRITICAL FIX: Custom scheme for OAuth deep links -->
             <!-- This makes the app receive OAuth callbacks instead of opening browser -->
-            <intent-filter android:autoVerify="false">
+            <!-- <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.BROWSABLE" /> -->
                 
                 <!-- OAuth callback deep link -->
-                <data
+                <!-- <data
                     android:scheme="pawrtal"
-                    android:host="auth" />
-            </intent-filter>
+                    android:host="auth" /> -->
+            <!-- </intent-filter> -->
         </activity>
         
         <service
@@ -81,7 +81,10 @@
             android:resource="@color/colorAccent" />
             
         <!-- Appwrite OAuth callback -->
-        <activity android:exported="true" android:name="com.linusu.flutter_web_auth_2.CallbackActivity" >
+        <activity 
+            android:exported="true" 
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:launchMode="singleTop">
             <intent-filter android:label="flutter_web_auth_2">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

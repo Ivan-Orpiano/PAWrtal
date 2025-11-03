@@ -2,7 +2,6 @@ import 'package:capstone_app/firebase_options.dart';
 import 'package:capstone_app/mobile/mobile_main.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/dependency_injection.dart';
-import 'package:capstone_app/utils/mobile_oauth_handler.dart';
 import 'package:capstone_app/web/web_main.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -22,11 +21,6 @@ void main() async {
   await initializeDependencies();
 
   await _initializeSecurity();
-
-  if (!kIsWeb) {
-    await MobileOAuthHandler.initialize();
-    print('>>> Mobile OAuth handler initialized');
-  }
 
   runApp(kIsWeb ? const WebMain() : const MobileMain());
 }
@@ -95,13 +89,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
-  void dispose() {
-    // Cleanup OAuth handler
-    if (!kIsWeb) {
-      MobileOAuthHandler.dispose();
-    }
-    super.dispose();
-  }
 
   Widget build(BuildContext context) {
     return const GetMaterialApp(

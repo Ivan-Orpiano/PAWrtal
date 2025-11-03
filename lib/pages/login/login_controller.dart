@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
-
+import 'package:capstone_app/utils/mobile_oauth_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
@@ -415,20 +415,25 @@ class LoginController extends GetxController {
       isGoogleLoading.value = true;
       errorMessage.value = '';
 
-      print('>>> LOGIN: Initiating Google Sign-In...');
+      print('>>> LOGIN: Initiating Google Sign-In for Mobile...');
 
-      final appWriteProvider = Get.find<AppWriteProvider>();
+      if (kIsWeb) {
+        final appWriteProvider = Get.find<AppWriteProvider>();
+        await appWriteProvider.signInWithGoogle();
+      } else {
+        // Use the mobile OAuth handler which uses Appwrite SDK's createOAuth2Session
+        final success = await MobileOAuthHandler.initiateGoogleOAuth();
 
-      // This will redirect to Google OAuth
-      // After success, user will land on /auth/success -> /auth/callback
-      await appWriteProvider.signInWithGoogle();
-
-      // Code won't reach here due to redirect
+        if (!success) {
+          isGoogleLoading.value = false;
+          errorMessage.value =
+              'Google Sign-In failed. Please try again or use email/password.';
+        }
+      }
+      // If success, the handler will navigate to userHome automatically
     } catch (e) {
       print('>>> LOGIN: Google Sign-In error: $e');
-
       isGoogleLoading.value = false;
-
       errorMessage.value =
           'Google Sign-In failed. Please try again or use email/password.';
     }
