@@ -119,7 +119,7 @@ class SessionManager {
   /// Set up periodic session validation
   static void _setupPeriodicValidation() {
     // Check session every 5 minutes
-    Future.delayed(const Duration(minutes: 30), () {
+    Future.delayed(const Duration(minutes: 360), () {
       if (!isSessionValid()) {
         forceLogout(reason: 'Session expired due to inactivity');
       } else {

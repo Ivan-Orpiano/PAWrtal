@@ -67,7 +67,7 @@ Future<void> _checkExpiredSessions() async {
       final difference = now.difference(lastActivity).inMinutes;
 
       // If session older than 60 minutes, clear it
-      if (difference > 60) {
+      if (difference > 360) {
         print('>>> Session expired (${difference} minutes old)');
         print('>>> Clearing expired session...');
         await storage.erase();
