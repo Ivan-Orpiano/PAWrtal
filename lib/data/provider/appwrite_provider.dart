@@ -368,21 +368,9 @@ class AppWriteProvider {
         htmlHelper.redirectToUrl(oauthUrl);
         return true;
       } else {
-        // MOBILE: Use custom deep link scheme (NOT https://)
-        const String successUrl = 'pawrtal://auth/success';
-        const String failureUrl = 'pawrtal://auth/failure';
-
-        print('>>> Mobile Success URL: $successUrl');
-        print('>>> Mobile Failure URL: $failureUrl');
-
-        await account?.createOAuth2Session(
-          provider: OAuthProvider.google,
-          success: successUrl,
-          failure: failureUrl,
-          scopes: ['profile', 'email'],
-        );
-
-        print('>>> Mobile: OAuth session initiated');
+        // MOBILE: Return true to indicate OAuth should be handled by MobileOAuthHandler
+        // The actual OAuth flow is now handled in MobileOAuthHandler.initiateGoogleOAuth()
+        print('>>> Mobile: OAuth will be handled by MobileOAuthHandler');
         return true;
       }
     } catch (e) {
