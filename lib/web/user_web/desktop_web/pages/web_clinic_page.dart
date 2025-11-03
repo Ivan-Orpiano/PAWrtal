@@ -41,6 +41,9 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   late WebAppointmentController _appointmentController;
   late UnifiedVerificationGuard _verificationGuard; // NEW
 
+  String _clinicProfilePictureUrl = '';
+  bool _isLoadingProfilePicture = true;
+
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
     if (context != null) {
@@ -56,7 +59,7 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   // MODIFIED: Add verification check before toggling panel
   Future<void> _toggleAppointmentPanel() async {
     final session = Get.find<UserSessionService>();
-    
+
     // Check verification before showing appointment panel
     final canAccess = await _verificationGuard.canAccessFeature(
       context: context,
@@ -86,8 +89,10 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
       tag: widget.clinic.documentId,
     );
 
-    // NEW: Initialize verification guard
     _verificationGuard = UnifiedVerificationGuard(Get.find<AuthRepository>());
+
+    // NEW: Load clinic profile picture
+    _loadClinicProfilePicture();
   }
 
   @override
@@ -146,36 +151,76 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: widget.clinic.image.isNotEmpty
-                  ? Image.network(
-                      widget.clinic.image,
+              child: _isLoadingProfilePicture
+                  ? Container(
                       height: 40,
                       width: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Image.asset(
-                          'lib/images/test_image.jpg',
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    )
+                  : _clinicProfilePictureUrl.isNotEmpty
+                      ? Image.network(
+                          _clinicProfilePictureUrl,
                           height: 40,
                           width: 40,
                           fit: BoxFit.cover,
-                        );
-                      },
-                    )
-                  : Image.asset(
-                      'lib/images/test_image.jpg',
-                      height: 40,
-                      width: 40,
-                      fit: BoxFit.cover,
-                    ),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 40,
+                              width: 40,
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print(
+                                '>>> Error loading clinic profile picture: $error');
+                            return Container(
+                              height: 40,
+                              width: 40,
+                              color: Colors.grey[300],
+                              child: Icon(Icons.business,
+                                  color: Colors.grey[600], size: 24),
+                            );
+                          },
+                        )
+                      : Container(
+                          height: 40,
+                          width: 40,
+                          color: Colors.grey[300],
+                          child: Icon(Icons.business,
+                              color: Colors.grey[600], size: 24),
+                        ),
             ),
             const SizedBox(width: 18),
             Expanded(
               child: Text(
                 widget.clinic.clinicName,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 16),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
               ),
-            )
+            ),
           ],
         ),
         const Padding(
@@ -437,7 +482,8 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                     InkWell(
                       onTap: _toggleAppointmentPanel,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: const Color(0xFF5173B8),
                           borderRadius: const BorderRadius.only(
@@ -464,7 +510,8 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                             const Spacer(),
                             IconButton(
                               onPressed: _toggleAppointmentPanel,
-                              icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                              icon: const Icon(Icons.close,
+                                  color: Colors.white, size: 20),
                               tooltip: 'Close',
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
@@ -482,7 +529,8 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                           child: EnhancedWebAppointmentPanel(
                             key: appointmentKey,
                             clinic: widget.clinic,
-                            maxHeight: getAppointmentPanelMaxHeight(screenHeight),
+                            maxHeight:
+                                getAppointmentPanelMaxHeight(screenHeight),
                             compact: true,
                           ),
                         ),
@@ -509,5 +557,37 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
             )
           : null,
     );
+  }
+
+  Future<void> _loadClinicProfilePicture() async {
+    try {
+      final authRepository = Get.find<AuthRepository>();
+
+      if (widget.clinic.profilePictureId != null &&
+          widget.clinic.profilePictureId!.isNotEmpty) {
+        final profilePicUrl = authRepository
+            .getClinicProfilePictureUrl(widget.clinic.profilePictureId!);
+
+        setState(() {
+          _clinicProfilePictureUrl = profilePicUrl;
+          _isLoadingProfilePicture = false;
+        });
+
+        print('>>> Clinic profile picture URL loaded: $profilePicUrl');
+      } else {
+        // Fallback to clinic.image if no profile picture
+        setState(() {
+          _clinicProfilePictureUrl = widget.clinic.image;
+          _isLoadingProfilePicture = false;
+        });
+        print('>>> Using fallback clinic image');
+      }
+    } catch (e) {
+      print('>>> Error loading clinic profile picture: $e');
+      setState(() {
+        _clinicProfilePictureUrl = widget.clinic.image;
+        _isLoadingProfilePicture = false;
+      });
+    }
   }
 }

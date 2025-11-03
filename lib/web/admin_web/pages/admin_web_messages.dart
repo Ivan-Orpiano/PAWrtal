@@ -138,7 +138,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         _controller.subscribeToClinicConversationUpdates(_clinicId!);
 
         print('>>> Step 5: Setting up real-time conversation stream...');
-        _setupRealtimeConversationStream(_clinicId!);
 
         print('>>> Step 6: Checking for pending conversation to open...');
         await _checkForPendingConversation();
@@ -250,30 +249,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
   }
 
-  void _setupRealtimeConversationStream(String clinicId) {
-    try {
-      print(
-          '>>> Setting up real-time conversation stream for clinic: $clinicId');
-
-      _authRepository.subscribeToConversations(clinicId).listen(
-        (realtimeMessage) {
-          print('>>> Real-time event received: ${realtimeMessage.events}');
-          print('>>> Event type: ${realtimeMessage.events.first}');
-          _refreshConversationsList();
-        },
-        onError: (error) {
-          print('>>> Error in real-time stream: $error');
-        },
-        onDone: () {
-          print('>>> Real-time stream closed');
-        },
-      );
-
-      print('>>> Real-time conversation stream setup complete');
-    } catch (e) {
-      print('>>> Error setting up real-time stream: $e');
-    }
-  }
+  
 
   Future<void> _setCurrentUserOnline() async {
     try {
@@ -299,17 +275,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
   }
 
-  Future<void> _refreshConversationsList() async {
-    try {
-      print('>>> Refreshing conversation list...');
-      if (_clinicId != null) {
-        await _controller.loadClinicConversations(_clinicId!);
-        print('>>> Conversation list refreshed');
-      }
-    } catch (e) {
-      print('>>> Error refreshing conversation list: $e');
-    }
-  }
+  
 
   Future<Map<String, dynamic>> _getUserData(String userId) async {
     if (_userCache.containsKey(userId)) {
@@ -371,6 +337,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   Future<void> _openConversationInMobile(
       Conversation conversation, String userId, String userName) async {
+    print('>>> Opening mobile conversation for: $userName');
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -383,10 +351,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         ),
       ),
     );
-
-    if (mounted) {
-      await _controller.loadClinicConversations(_clinicId!);
-    }
   }
 
   @override
@@ -1401,13 +1365,28 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
   void initState() {
     super.initState();
     _loadUserProfile();
+
+    // Wait for build to complete, then open conversation
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('>>> [MOBILE] Opening conversation...');
       widget.controller.openConversation(
         widget.conversation,
         widget.userId,
         'user',
       );
+
+      // Set up real-time subscription
+      print('>>> [MOBILE] Setting up real-time message subscription...');
+      widget.controller.subscribeToMessages(widget.conversation.documentId!);
     });
+  }
+
+  @override
+  void dispose() {
+    print('>>> [MOBILE] Disposing and pausing subscriptions...');
+    // Only pause subscription - no reloads
+    widget.controller.pauseMessageSubscription();
+    super.dispose();
   }
 
   Future<void> _loadUserProfile() async {
@@ -1501,9 +1480,39 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
               }
 
               if (widget.controller.currentMessages.isEmpty) {
-                return _buildEmptyMessageState(userData);
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Start a conversation",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Send a message to ${userData['name'] ?? widget.userName}",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
 
+              // Clean, efficient list - no refresh() calls means no full rebuilds
               return ListView.builder(
                 controller: widget.controller.scrollController,
                 padding:
@@ -1622,49 +1631,12 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
     );
   }
 
-  Widget _buildEmptyMessageState(Map<String, dynamic> userData) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            "Start a conversation",
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Send a message to ${userData['name'] ?? widget.userName}",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMessageBubble(Message message, Map<String, dynamic> userData) {
-    // CRITICAL FIX: Check if sender is EITHER admin user ID OR clinic ID
-    final adminUserId = widget.authRepository; // Get from auth repository
-    final clinicId = widget.controller.currentClinicId.value;
-
-    final isFromAdmin =
-        message.senderId == widget.controller.currentClinicId.value ||
-            message.senderId == Get.find<UserSessionService>().userId;
-
-    final isCurrentUser = isFromAdmin;
+    final userSessionService = Get.find<UserSessionService>();
+    final isFromAdmin = message.senderId == userSessionService.userId;
+    final isFromClinic =
+        message.senderId == widget.controller.currentClinicId.value;
+    final isCurrentUser = isFromAdmin || isFromClinic;
 
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,

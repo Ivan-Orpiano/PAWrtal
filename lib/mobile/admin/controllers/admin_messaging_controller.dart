@@ -437,7 +437,6 @@ class AdminMessagingController extends GetxController {
             conversations.indexWhere((c) => c.documentId == conversationId);
         if (index != -1) {
           conversations[index] = updatedConversation;
-          conversations.refresh();
         }
 
         print('>>> Conversation marked as read successfully');
@@ -582,7 +581,7 @@ class AdminMessagingController extends GetxController {
 
         await _authRepository.updateConversationStarter(updatedStarter);
         conversationStarters[starterIndex] = updatedStarter;
-        conversationStarters.refresh();
+        // ❌ REMOVE THIS LINE: conversationStarters.refresh();
 
         print('>>> Auto-reply starter set successfully');
         Get.snackbar(
@@ -617,7 +616,7 @@ class AdminMessagingController extends GetxController {
 
         await _authRepository.updateConversationStarter(updatedStarter);
         conversationStarters[starterIndex] = updatedStarter;
-        conversationStarters.refresh();
+        // ❌ REMOVE THIS LINE: conversationStarters.refresh();
 
         Get.snackbar(
           'Success',
@@ -923,7 +922,7 @@ class AdminMessagingController extends GetxController {
 
   void subscribeToMessages(String conversationId) {
     print('>>> ============================================');
-    print('>>> SUBSCRIBING TO MESSAGES');
+    print('>>> SUBSCRIBING TO MESSAGES (CONTROLLER)');
     print('>>> Conversation ID: $conversationId');
     print('>>> ============================================');
 
@@ -941,10 +940,7 @@ class AdminMessagingController extends GetxController {
       _messageSubscription = _authRepository
           .subscribeToMessages(conversationId)
           .listen((realtimeMessage) {
-        print('>>> ════════════════════════════════════════');
-        print('>>> REAL-TIME MESSAGE EVENT RECEIVED');
-        print('>>> Events: ${realtimeMessage.events}');
-        print('>>> Time: ${DateTime.now()}');
+        print('>>> [CONTROLLER] Real-time event: ${realtimeMessage.events}');
 
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.create')) {
@@ -954,57 +950,46 @@ class AdminMessagingController extends GetxController {
             final messageWithId =
                 message.copyWith(documentId: messageData['\$id']);
 
-            print('>>> 📨 NEW MESSAGE DETAILS:');
-            print('>>>   - Message ID: ${messageWithId.documentId}');
-            print('>>>   - Sender ID: ${messageWithId.senderId}');
-            print('>>>   - Message Text: "${messageWithId.messageText}"');
-
             // Check for duplicates
-            final existingIndex = currentMessages.indexWhere((m) =>
-                m.documentId == messageWithId.documentId ||
-                (m.messageText == messageWithId.messageText &&
-                    m.senderId == messageWithId.senderId &&
-                    m.messageTimestamp
-                            .difference(messageWithId.messageTimestamp)
-                            .abs()
-                            .inSeconds <
-                        2));
+            final existingIndex = currentMessages
+                .indexWhere((m) => m.documentId == messageWithId.documentId);
 
             if (existingIndex == -1) {
-              print('>>> ✅ Adding message to list');
+              print('>>> [CONTROLLER] ✅ Adding message to list');
               currentMessages.add(messageWithId);
-              currentMessages.refresh();
 
+              // CRITICAL FIX: Remove .refresh() call!
+              // Since currentMessages is .obs and inside Obx(), it's already reactive
+              // The .add() operation alone will trigger the Obx to rebuild efficiently
+              // .refresh() forces a FULL list rebuild which causes the "reload" effect
+
+              // currentMessages.refresh(); // ❌ REMOVE THIS LINE!
+
+              // Scroll to bottom after the widget tree updates
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _scrollToBottom();
               });
 
+              // Mark as read if message is from other user
               if (messageWithId.senderId != _userSession.userId &&
                   currentConversation.value?.documentId == conversationId) {
                 markConversationAsRead(conversationId);
               }
-
-              // REMOVED: Auto-reply check from here
-              // It's now handled in subscribeToClinicConversationUpdates
             } else {
-              print('>>> ⚠️ Duplicate message detected - skipping');
+              print('>>> [CONTROLLER] ⚠️ Duplicate - skipping');
             }
           } catch (e) {
-            print('>>> ❌ ERROR processing message: $e');
-            print('>>> Stack: ${StackTrace.current}');
+            print('>>> [CONTROLLER] ❌ Error: $e');
           }
-        } else {
-          print('>>> ℹ️ Not a create event - ignoring');
         }
-        print('>>> ────────────────────────────────────────');
       }, onError: (error) {
-        print('>>> ❌ SUBSCRIPTION ERROR: $error');
+        print('>>> [CONTROLLER] ❌ Error: $error');
         _activeConversationId = null;
       });
 
-      print('>>> ✅ Message subscription established');
+      print('>>> [CONTROLLER] ✅ Subscription established');
     } catch (e) {
-      print('>>> ❌ Error setting up subscription: $e');
+      print('>>> [CONTROLLER] ❌ Setup error: $e');
       _activeConversationId = null;
     }
   }
@@ -1048,12 +1033,16 @@ class AdminMessagingController extends GetxController {
       print('>>> ✅ AUTO-REPLY SENT SUCCESSFULLY');
       print('>>> ═══════════════════════════════════════════');
 
-      // If the conversation is currently open, reload messages
-      if (currentConversation.value?.documentId == conversationId) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        await loadConversationMessages(conversationId);
-        print('>>> ✅ Messages reloaded for current conversation');
-      }
+      // ❌ REMOVE THIS ENTIRE BLOCK! This is causing the reload!
+      // The real-time subscription will pick up the new message automatically
+      // if (currentConversation.value?.documentId == conversationId) {
+      //   await Future.delayed(const Duration(milliseconds: 500));
+      //   await loadConversationMessages(conversationId);
+      //   print('>>> ✅ Messages reloaded for current conversation');
+      // }
+
+      // ✅ ADD THIS INSTEAD: Just log that real-time will handle it
+      print('>>> Real-time subscription will deliver the auto-reply message');
     } catch (e) {
       print('>>> ═══════════════════════════════════════════');
       print('>>> ❌ AUTO-REPLY ERROR: $e');
@@ -1102,5 +1091,17 @@ class AdminMessagingController extends GetxController {
 
   void disposeMessageSubscriptions() {
     _cancelAllSubscriptions();
+  }
+
+  void pauseMessageSubscription() {
+    print('>>> ⏸️ Pausing controller message subscription');
+    _messageSubscription?.cancel();
+    _messageSubscription = null;
+    _activeConversationId = null;
+  }
+
+  void resumeMessageSubscription(String conversationId) {
+    print('>>> ▶️ Resuming controller message subscription');
+    subscribeToMessages(conversationId);
   }
 }

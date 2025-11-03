@@ -35,6 +35,8 @@ class ClinicSettingsController extends GetxController {
   var closedDates = <String>[].obs;
   var selectedClosedDates = <DateTime>[].obs;
 
+  var clinicProfilePictureUrl = ''.obs;
+
   // Form controllers - Make them nullable initially
   TextEditingController? _clinicNameController;
   TextEditingController? _addressController;
@@ -329,6 +331,26 @@ class ClinicSettingsController extends GetxController {
     }
   }
 
+  Future<void> _loadClinicProfilePictureUrl() async {
+    try {
+      if (clinic.value?.profilePictureId != null &&
+          clinic.value!.profilePictureId!.isNotEmpty) {
+        final profilePicUrl = authRepository
+            .getClinicProfilePictureUrl(clinic.value!.profilePictureId!);
+
+        clinicProfilePictureUrl.value = profilePicUrl;
+        print('>>> Clinic profile picture URL loaded: $profilePicUrl');
+      } else {
+        // Fallback to clinic.image if no profile picture
+        clinicProfilePictureUrl.value = clinic.value?.image ?? '';
+        print('>>> Using fallback clinic image');
+      }
+    } catch (e) {
+      print('>>> Error loading clinic profile picture: $e');
+      clinicProfilePictureUrl.value = clinic.value?.image ?? '';
+    }
+  }
+
   void _populateClinicFields() {
     if (clinic.value == null) {
       print('>>> Cannot populate clinic fields - clinic is null');
@@ -345,6 +367,9 @@ class ClinicSettingsController extends GetxController {
       contactController.text = clinic.value!.contact;
       emailController.text = clinic.value!.email;
       descriptionController.text = clinic.value!.description;
+
+      // NEW: Load clinic profile picture URL
+      _loadClinicProfilePictureUrl();
 
       print('>>> ✅ Clinic fields populated');
     } catch (e) {
