@@ -1,6 +1,6 @@
 class SecurityConfig {
   // Session timeout (in minutes)
-  static const int sessionTimeoutMinutes = 60;
+  static const int sessionTimeoutMinutes = 360;
 
   // Maximum login attempts before lockout
   static const int maxLoginAttempts = 5;
