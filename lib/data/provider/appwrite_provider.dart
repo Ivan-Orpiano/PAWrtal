@@ -18,6 +18,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/id_verification/utils/name_validator.dart';
 
+
 enum AuthStatus {
   uninitialized,
   authenticated,
@@ -4075,24 +4076,69 @@ class AppWriteProvider {
     }
   }
 
-  /// Archive feedback
-  Future<void> archiveFeedback(String documentId, String archivedBy) async {
-    try {
-      await databases!.updateDocument(
-        databaseId: AppwriteConstants.dbID,
-        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-        documentId: documentId,
-        data: {
-          'archivedAt': DateTime.now().toIso8601String(),
-          'archivedBy': archivedBy,
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-      );
-    } catch (e) {
-      print('Error archiving feedback: $e');
-      rethrow;
-    }
+ /// Archive feedback - UPDATED to set isArchived flag
+Future<void> archiveFeedback(String documentId, String archivedBy) async {
+  try {
+    await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+      documentId: documentId,
+      data: {
+        'isArchived': true, 
+        'archivedAt': DateTime.now().toIso8601String(),
+        'archivedBy': archivedBy,
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+    );
+  } catch (e) {
+    rethrow;
   }
+}
+
+  /// Migrate existing feedback to add isArchived field
+Future<void> migrateFeedbackArchiveField() async {
+  try {
+  
+
+    final result = await databases!.listDocuments(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+      queries: [Query.limit(500)],
+    );
+
+    print('>>> Found ${result.documents.length} feedback records');
+
+    int updated = 0;
+    for (var doc in result.documents) {
+      try {
+        // Check if isArchived field exists
+        if (!doc.data.containsKey('isArchived')) {
+          print('>>> Updating feedback: ${doc.$id}');
+
+          // If it has archivedAt, mark as archived, otherwise not archived
+          final bool shouldBeArchived = doc.data['archivedAt'] != null;
+
+          await databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+            documentId: doc.$id,
+            data: {
+              'isArchived': shouldBeArchived,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+          );
+
+          updated++;
+       
+        }
+      } catch (e) {
+      
+      }
+    }
+  } catch (e) {
+  }
+}
+
 
   /// Delete feedback
   Future<void> deleteFeedback(

@@ -199,7 +199,7 @@ class _SuperAdminVetClinicDetailPageState
           print('>>>   Dashboard pic: ${currentClinic!.dashboardPic}');
         });
 
-        _showUpdateNotification('Clinic information updated');
+        // _showUpdateNotification('Clinic information updated');
       }
 
       print('>>> ============================================');
@@ -1021,8 +1021,8 @@ class _SuperAdminVetClinicDetailPageState
                                 ),
                               );
                               if (result == true) {
-                                _showUpdateNotification(
-                                    'Clinic updated successfully');
+                                // _showUpdateNotification(
+                                //     'Clinic updated successfully');
                               }
                             },
                       isMobile: isMobile,

@@ -1782,7 +1782,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       print('>>> SUPER ADMIN: SAVE COMPLETE');
       print('>>> ============================================');
 
-      _showSuccessSnackbar('Clinic updated successfully');
+      // _showSuccessSnackbar('Clinic updated successfully');
 
       await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {

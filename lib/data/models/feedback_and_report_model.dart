@@ -12,8 +12,9 @@ class FeedbackAndReport {
   final FeedbackStatus status;
   final String appVersion;
   final bool isPinned; 
-final DateTime? pinnedAt; 
-final String? pinnedBy; 
+  final DateTime? pinnedAt; 
+  final String? pinnedBy; 
+  final bool isArchived;
   final String deviceInfo;
   final String platform;
   final DateTime submittedAt;
@@ -42,6 +43,7 @@ final String? pinnedBy;
     this.isPinned = false, 
     this.pinnedAt,
     this.pinnedBy,
+    this.isArchived = false,
     required this.deviceInfo,
     required this.platform,
     DateTime? submittedAt,
@@ -82,6 +84,7 @@ final String? pinnedBy;
       isPinned: map['isPinned'] ?? false,
       pinnedAt: map['pinnedAt'] != null ? DateTime.parse(map['pinnedAt']) : null,
       pinnedBy: map['pinnedBy'], 
+      isArchived: map['isArchived'] ?? false,
       deviceInfo: map['deviceInfo'] ?? '',
       platform: map['platform'] ?? 'web',
       submittedAt: map['submittedAt'] != null
@@ -115,6 +118,7 @@ final String? pinnedBy;
       'platform': platform,
       'submittedAt': submittedAt.toIso8601String(),
       'updatedAt': now,
+      'isArchived': isArchived,
       'archivedAt': archivedAt?.toIso8601String(),
       'archivedBy': archivedBy,
       'reportedBy': reportedBy,
@@ -152,6 +156,7 @@ final String? pinnedBy;
     bool? isPinned, 
     DateTime? pinnedAt, 
     String? pinnedBy,
+    bool? isArchived,
   }) {
     return FeedbackAndReport(
       documentId: documentId ?? this.documentId,
@@ -178,6 +183,7 @@ final String? pinnedBy;
       isPinned: isPinned ?? this.isPinned, 
       pinnedAt: pinnedAt ?? this.pinnedAt,
       pinnedBy: pinnedBy ?? this.pinnedBy,
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 }

@@ -198,7 +198,7 @@ Future<void> addReply(String documentId, String reply) async {
     }
   }
 
-  /// Archive feedback with confirmation
+ /// Archive feedback with confirmation
 Future<void> archiveFeedback(String documentId) async {
   try {
     isLoading.value = true;
@@ -210,12 +210,13 @@ Future<void> archiveFeedback(String documentId) async {
     
     await authRepository.archiveFeedback(documentId, userName);
     
-    // Remove from local list
+    // CRITICAL: Remove from local list
     allFeedback.removeWhere((f) => f.documentId == documentId);
     
     // Remove from pinned IDs if it was pinned
     pinnedFeedbackIds.remove(documentId);
     
+    // Force refresh
     allFeedback.refresh();
     
     Get.snackbar(

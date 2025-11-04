@@ -143,8 +143,22 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildMobileStatsCards() {
-    return Obx(() => Container(
+    Widget _buildMobileStatsCards() {
+      return Obx(() {
+        // 🎯 CRITICAL FIX: Calculate stats from VISIBLE feedback only
+        final visibleFeedback = controller.filteredFeedback
+            .where((f) => !f.isPinned && !f.isArchived)
+            .toList();
+
+        final stats = {
+          'total': visibleFeedback.length,
+          'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+          'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+          'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+          'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
+        };
+
+        return Container(
           color: const Color.fromRGBO(248, 253, 255, 1),
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -154,7 +168,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Total',
-                      controller.feedbackStats['total']?.toString() ?? '0',
+                      stats['total']?.toString() ?? '0',
                       Colors.blue,
                       Icons.feedback,
                     ),
@@ -163,7 +177,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Pending',
-                      controller.feedbackStats['pending']?.toString() ?? '0',
+                      stats['pending']?.toString() ?? '0',
                       Colors.orange,
                       Icons.schedule,
                     ),
@@ -172,7 +186,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Progress',
-                      controller.feedbackStats['inProgress']?.toString() ?? '0',
+                      stats['inProgress']?.toString() ?? '0',
                       Colors.blue,
                       Icons.autorenew,
                     ),
@@ -185,7 +199,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Completed',
-                      controller.feedbackStats['completed']?.toString() ?? '0',
+                      stats['completed']?.toString() ?? '0',
                       Colors.green,
                       Icons.check_circle,
                     ),
@@ -194,7 +208,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Critical',
-                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      stats['critical']?.toString() ?? '0',
                       Colors.red,
                       Icons.warning,
                     ),
@@ -203,8 +217,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
             ],
           ),
-        ));
-  }
+        );
+      });
+    }
 
   Widget _buildCompactStatCard(
       String title, String value, Color color, IconData icon) {
@@ -457,9 +472,22 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       floatingActionButton: _buildPinnedFAB(),
     );
   }
+    Widget _buildTabletStatsCards() {
+      return Obx(() {
+    
+        final visibleFeedback = controller.filteredFeedback
+            .where((f) => !f.isPinned && !f.isArchived)
+            .toList();
 
-  Widget _buildTabletStatsCards() {
-    return Obx(() => Container(
+        final stats = {
+          'total': visibleFeedback.length,
+          'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+          'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+          'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+          'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
+        };
+
+        return Container(
           color: const Color.fromRGBO(248, 253, 255, 1),
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -468,21 +496,21 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                 children: [
                   _buildStatCard(
                     'Total',
-                    controller.feedbackStats['total']?.toString() ?? '0',
+                    stats['total']?.toString() ?? '0',
                     Colors.blue,
                     Icons.feedback,
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
                     'Pending',
-                    controller.feedbackStats['pending']?.toString() ?? '0',
+                    stats['pending']?.toString() ?? '0',
                     Colors.orange,
                     Icons.schedule,
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
                     'In Progress',
-                    controller.feedbackStats['inProgress']?.toString() ?? '0',
+                    stats['inProgress']?.toString() ?? '0',
                     Colors.blue,
                     Icons.autorenew,
                   ),
@@ -494,7 +522,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildStatCard(
                       'Completed',
-                      controller.feedbackStats['completed']?.toString() ?? '0',
+                      stats['completed']?.toString() ?? '0',
                       Colors.green,
                       Icons.check_circle,
                     ),
@@ -503,7 +531,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildStatCard(
                       'Critical',
-                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      stats['critical']?.toString() ?? '0',
                       Colors.red,
                       Icons.warning,
                     ),
@@ -522,8 +550,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
             ],
           ),
-        ));
-  }
+        );
+      });
+    }
 
   Widget _buildTabletFiltersSection() {
     return Container(
@@ -688,19 +717,19 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-Widget _buildStatsCards() {
+  Widget _buildStatsCards() {
     return Obx(() {
-      // 🚫 Calculate stats ONLY for unpinned feedback
-      final unpinnedFeedback = controller.allFeedback
-          .where((f) => !f.isPinned)
+     
+      final activeUnpinnedFeedback = controller.allFeedback
+          .where((f) => !f.isPinned && !f.isArchived) 
           .toList();
 
       final stats = {
-        'total': unpinnedFeedback.length,
-        'pending': unpinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length,
-        'inProgress': unpinnedFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
-        'completed': unpinnedFeedback.where((f) => f.status == FeedbackStatus.completed).length,
-        'critical': unpinnedFeedback.where((f) => f.priority == Priority.critical).length,
+        'total': activeUnpinnedFeedback.length,
+        'pending': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+        'inProgress': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+        'completed': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+        'critical': activeUnpinnedFeedback.where((f) => f.priority == Priority.critical).length,
       };
 
       return Container(
@@ -950,63 +979,61 @@ Widget _buildStatsCards() {
     }
   }
 
- Widget _buildFeedbackList({bool isMobile = false, bool isTablet = false}) {
-    return Obx(() {
-      if (controller.isLoadingFeedback.value) {
-        return const Center(child: CircularProgressIndicator());
-      }
+    Widget _buildFeedbackList({bool isMobile = false, bool isTablet = false}) {
+      return Obx(() {
+        if (controller.isLoadingFeedback.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      // 🚫 FILTER OUT PINNED FEEDBACK - Only show unpinned items
-      final unpinnedFeedback = controller.filteredFeedback
-          .where((feedback) => !feedback.isPinned)
-          .toList();
+        final visibleFeedback = controller.filteredFeedback
+            .where((feedback) => !feedback.isPinned && !feedback.isArchived) 
+            .toList();
 
-      if (unpinnedFeedback.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.feedback_outlined, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No feedback found',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+        if (visibleFeedback.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.feedback_outlined, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No feedback found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                controller.filteredFeedback.isNotEmpty
-                    ? 'All feedback items are pinned'
-                    : 'No feedback items to display',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
+                const SizedBox(height: 8),
+                Text(
+                  controller.filteredFeedback.isEmpty
+                      ? 'No feedback items to display'
+                      : 'All feedback items are ${controller.filteredFeedback.every((f) => f.isPinned) ? "pinned" : "archived"}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
+          itemCount: visibleFeedback.length,
+          itemBuilder: (context, index) {
+            final feedback = visibleFeedback[index];
+            if (isMobile) {
+              return _buildMobileFeedbackCard(feedback);
+            } else if (isTablet) {
+              return _buildTabletFeedbackCard(feedback);
+            }
+            return _buildFeedbackCard(feedback);
+          },
         );
-      }
-
-      return ListView.builder(
-        padding: EdgeInsets.all(isMobile ? 12 : 16),
-        itemCount: unpinnedFeedback.length,
-        itemBuilder: (context, index) {
-          final feedback = unpinnedFeedback[index];
-          if (isMobile) {
-            return _buildMobileFeedbackCard(feedback);
-          } else if (isTablet) {
-            return _buildTabletFeedbackCard(feedback);
-          }
-          return _buildFeedbackCard(feedback);
-        },
-      );
-    });
-  }
-
+      });
+    }
   // ==================== MOBILE FEEDBACK CARD ====================
   Widget _buildMobileFeedbackCard(FeedbackAndReport feedback) {
     return Obx(() {
@@ -1985,138 +2012,378 @@ Widget _buildStatsCards() {
     }
   }
 
-  void _archiveFeedback(FeedbackAndReport feedback) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: Row(
-          children: [
-            Icon(Icons.archive, color: Colors.orange[700], size: 24),
-            const SizedBox(width: 12),
-            const Text(
-              'Archive Feedback',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Are you sure you want to archive this feedback?',
-              style: TextStyle(
-                color: Colors.grey[800],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.subject, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          feedback.subject,
-                          style: TextStyle(
-                            color: Colors.grey[800],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        feedback.userName,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+    void _archiveFeedback(FeedbackAndReport feedback) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: 450,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.orange[50]!,
+                  Colors.deepOrange[50]!,
                 ],
               ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Archived feedback can be permanently deleted after few days.',
-                      style: TextStyle(
-                        color: Colors.orange[900],
-                        fontSize: 12,
-                      ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 🎨 Animated Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.orange[700]!, Colors.orange[500]!],
+                    ),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
                   ),
-                ],
-              ),
+                  child: Column(
+                    children: [
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 600),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.archive_rounded,
+                                color: Colors.white,
+                                size: 48,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Archive Feedback',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Remove from active view',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 📋 Content Section
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      // Feedback Preview Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.orange[200]!, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.feedback,
+                                    color: Colors.orange[700],
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        feedback.subject,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.grey[800],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.person_outline,
+                                              size: 14, color: Colors.grey[600]),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              feedback.userName,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Divider(color: Colors.grey[300], height: 1),
+                            const SizedBox(height: 12),
+                            // Status and Priority badges
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildMiniStatusBadge(feedback.status),
+                                _buildMiniPriorityBadge(feedback.priority),
+                                _buildMiniTypeBadge(feedback.feedbackType),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Warning Box
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange[300]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.info_outline,
+                                color: Colors.orange[800],
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'What happens next?',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.orange[900],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'This feedback will be moved to archive. It can be permanently deleted after review.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[800],
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 🎯 Action Buttons
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Cancel'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.grey[700],
+                            side: BorderSide(color: Colors.grey[300]!),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                        onPressed: () async {
+                          // Close the dialog first
+                          Navigator.pop(context);
+                          
+                          // Archive the feedback
+                          await controller.archiveFeedback(feedback.documentId!);
+                          
+                          // Show success message (already handled in controller)
+                        },
+                        icon: const Icon(Icons.archive, size: 20),
+                        label: const Text(
+                          'Archive Now',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 4,
+                          shadowColor: Colors.orange.withOpacity(0.5),
+                        ),
+                      ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+      );
+    }
+
+// 🎨 Helper methods for mini badges (add these after _archiveFeedback method)
+Widget _buildMiniStatusBadge(FeedbackStatus status) {
+  Color color = _getStatusColor(status);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_getStatusIcon(status), size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          status.displayName,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              controller.archiveFeedback(feedback.documentId!);
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.archive, size: 18),
-            label: const Text('Archive'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[600],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildMiniPriorityBadge(Priority priority) {
+  Color color = _getPriorityColor(priority);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_getPriorityIcon(priority), size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          priority.displayName,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildMiniTypeBadge(FeedbackType type) {
+  Color color = _getTypeColor(type);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Text(
+      type.displayName,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: color,
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showFeedbackDetails(FeedbackAndReport feedback) {
     showDialog(
