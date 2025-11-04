@@ -1,12 +1,11 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/utils/image_helper.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:appwrite/appwrite.dart';
-import 'package:capstone_app/web/admin_web/components/clinic/clinic_settings_controller.dart';
 
 class SuperAdminEditClinicPage extends StatefulWidget {
   final Clinic clinic;
@@ -129,7 +128,12 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   void _initializeData() {
-    // Initialize services from clinic's services string
+    print('>>> ============================================');
+    print('>>> SUPER ADMIN EDIT: Initializing data');
+    print('>>> Clinic: ${widget.clinic.clinicName}');
+    print('>>> ============================================');
+
+    // Parse services from clinic's services string
     if (widget.clinic.services.isNotEmpty) {
       clinicServices = widget.clinic.services
           .split(',')
@@ -138,14 +142,19 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           .toList();
 
       selectedServices = List<String>.from(clinicServices);
+      print('>>> Loaded ${clinicServices.length} services');
     }
 
     // Initialize settings data if available
     if (widget.settings != null) {
-      // Gallery images
-      galleryImages = List.from(widget.settings!.gallery);
+      // CRITICAL FIX: Load gallery images as URLs directly (not file IDs)
+      galleryImages = List<String>.from(widget.settings!.gallery);
+      print('>>> Loaded ${galleryImages.length} gallery images (as URLs)');
+      if (galleryImages.isNotEmpty) {
+        print('>>> First gallery image: ${galleryImages.first}');
+      }
 
-      // Operating hours
+      // Load operating hours
       operatingHours = Map.from(widget.settings!.operatingHours);
 
       // Appointment settings
@@ -157,21 +166,21 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       // CRITICAL: Load medical services map from settings
       medicalServices =
           Map<String, bool>.from(widget.settings!.medicalServices);
-
-      print('>>> Super Admin Edit: Loaded medical services map');
-      print('>>> Medical services: $medicalServices');
-      print('>>> Selected services: $selectedServices');
+      print('>>> Loaded ${medicalServices.length} medical service mappings');
 
       // Ensure all selected services have medical status
       for (var service in selectedServices) {
         if (!medicalServices.containsKey(service)) {
           medicalServices[service] = _isServiceMedicalByDefault(service);
-          print(
-              '>>> Added default medical status for: $service = ${medicalServices[service]}');
         }
       }
+
+      // CRITICAL FIX: Load dashboard pic as URL directly (not file ID)
+      if (widget.settings!.dashboardPic.isNotEmpty) {
+        newDashboardImageId = widget.settings!.dashboardPic;
+        print('>>> Dashboard pic loaded: $newDashboardImageId');
+      }
     } else {
-      // No settings exist - create defaults
       operatingHours = _getDefaultOperatingHours();
 
       // Set default medical status for pre-selected services
@@ -180,9 +189,8 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       }
     }
 
-    print('>>> Super Admin Edit: Initialization complete');
-    print('>>> Total services: ${selectedServices.length}');
-    print('>>> Medical services count: ${medicalServices.length}');
+    print('>>> Initialization complete');
+    print('>>> ============================================');
   }
 
   Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
@@ -1197,14 +1205,59 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     );
   }
 
+  String getDashImageUrl(String imageReference) {
+    // Since we're storing full URLs, just return them directly
+    if (imageReference.isEmpty) {
+      return '';
+    }
+
+    // If it's already a URL, return it
+    if (imageReference.startsWith('http')) {
+      return imageReference;
+    }
+
+    // If somehow it's still a file ID, construct the URL
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageReference/view?project=${AppwriteConstants.projectID}';
+  }
+
   Widget _buildDashboardImagePreview() {
+    print('>>> ============================================');
+    print('>>> Building dashboard preview');
+    print('>>> newDashboardImageId: $newDashboardImageId');
+    print('>>> settings.dashboardPic: ${widget.settings?.dashboardPic}');
+    print('>>> ============================================');
+
+    // Priority 1: New dashboard image (just uploaded)
     if (newDashboardImageId != null && newDashboardImageId!.isNotEmpty) {
       return Stack(
         fit: StackFit.expand,
         children: [
           Image.network(
-            getDashImageUrl(newDashboardImageId!),
+            newDashboardImageId!, // Already a URL
             fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: Colors.grey[200],
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('>>> ❌ Error loading new dashboard image: $error');
+              return Container(
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Icon(Icons.error, color: Colors.red, size: 48),
+                ),
+              );
+            },
           ),
           Positioned(
             top: 8,
@@ -1236,14 +1289,15 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       );
     }
 
+    // Priority 2: Marked for removal
     if (newDashboardImageId == '' &&
-        widget.clinic.dashboardPic != null &&
-        widget.clinic.dashboardPic!.isNotEmpty) {
+        widget.settings?.dashboardPic != null &&
+        widget.settings!.dashboardPic.isNotEmpty) {
       return Stack(
         fit: StackFit.expand,
         children: [
           Image.network(
-            getDashImageUrl(widget.clinic.dashboardPic!),
+            widget.settings!.dashboardPic, // Already a URL
             fit: BoxFit.cover,
             color: Colors.red.withOpacity(0.3),
             colorBlendMode: BlendMode.color,
@@ -1276,14 +1330,38 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       );
     }
 
-    if (widget.clinic.dashboardPic != null &&
-        widget.clinic.dashboardPic!.isNotEmpty) {
+    // Priority 3: Existing dashboard pic from settings
+    if (widget.settings?.dashboardPic != null &&
+        widget.settings!.dashboardPic.isNotEmpty) {
       return Stack(
         fit: StackFit.expand,
         children: [
           Image.network(
-            getDashImageUrl(widget.clinic.dashboardPic!),
+            widget.settings!.dashboardPic, // Already a URL
             fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: Colors.grey[200],
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('>>> ❌ Error loading existing dashboard image: $error');
+              return Container(
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Icon(Icons.error, color: Colors.red, size: 48),
+                ),
+              );
+            },
           ),
           Positioned(
             top: 8,
@@ -1314,7 +1392,73 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         ],
       );
     }
-    return const SizedBox();
+
+    // Priority 4: First gallery image as fallback
+    if (galleryImages.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            galleryImages.first, // Already a URL
+            fit: BoxFit.cover,
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue[700],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.photo_library, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'GALLERY',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Priority 5: No image available
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.photo, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+              'No image available',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _extractFileIdFromUrl(String url) {
+    if (!url.contains('/files/')) {
+      return url; // Already a file ID or invalid
+    }
+
+    final regex = RegExp(r'/files/([^/]+)/');
+    final match = regex.firstMatch(url);
+    return match?.group(1) ?? url;
   }
 
   Widget _buildTimeField({
@@ -1347,42 +1491,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     );
   }
 
-  Future<void> _pickMainImage() async {
-    try {
-      setState(() {
-        isLoadingImage = true;
-      });
-
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-
-        // Upload image
-        final uploadedFile = await authRepository.uploadImage(
-          file.bytes != null
-              ? InputFile.fromBytes(bytes: file.bytes!, filename: file.name)
-              : InputFile.fromPath(path: file.path!, filename: file.name),
-        );
-
-        setState(() {
-          newMainImageId = uploadedFile.$id;
-        });
-
-        _showSuccessSnackbar('Image uploaded successfully');
-      }
-    } catch (e) {
-      _showErrorSnackbar('Error uploading image: ${e.toString()}');
-    } finally {
-      setState(() {
-        isLoadingImage = false;
-      });
-    }
-  }
-
   Future<void> _pickDashboardImage() async {
     try {
       setState(() {
@@ -1397,7 +1505,9 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
 
+        print('>>> ============================================');
         print('>>> Uploading dashboard image...');
+        print('>>> ============================================');
 
         // Upload dashboard image to storage
         final uploadedFile = await authRepository.uploadImage(
@@ -1407,14 +1517,19 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         );
 
         setState(() {
-          newDashboardImageId = uploadedFile.$id;
+          // CRITICAL FIX: Store full URL, not file ID
+          final imageUrl =
+              '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${uploadedFile.$id}/view?project=${AppwriteConstants.projectID}';
+          newDashboardImageId = imageUrl;
+          print('>>> Dashboard image URL: $imageUrl');
         });
 
-        print('>>> ✓ Dashboard image uploaded: ${uploadedFile.$id}');
+        print('>>> Dashboard image uploaded: ${uploadedFile.$id}');
+        print('>>> ============================================');
         _showSuccessSnackbar('Dashboard image uploaded successfully');
       }
     } catch (e) {
-      print('>>> Error uploading dashboard image: $e');
+      print('>>> ❌ Error uploading dashboard image: $e');
       _showErrorSnackbar('Error uploading dashboard image: ${e.toString()}');
     } finally {
       setState(() {
@@ -1471,7 +1586,9 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           isLoadingImage = true;
         });
 
+        print('>>> ============================================');
         print('>>> Uploading ${result.files.length} gallery images...');
+        print('>>> ============================================');
 
         // Upload images to storage
         final uploadedFiles = await authRepository.uploadClinicGalleryImages(
@@ -1479,16 +1596,23 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         );
 
         setState(() {
-          // Add new image IDs to galleryImages list
-          galleryImages.addAll(uploadedFiles.map((f) => f.$id));
+          // CRITICAL FIX: Store full URLs, not file IDs
+          for (var file in uploadedFiles) {
+            final imageUrl =
+                '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${file.$id}/view?project=${AppwriteConstants.projectID}';
+            galleryImages.add(imageUrl);
+            print('>>> Added gallery image URL: $imageUrl');
+          }
           isLoadingImage = false;
         });
 
-        print('>>> ✓ Gallery images uploaded: ${uploadedFiles.length}');
+        print('>>> Successfully uploaded ${uploadedFiles.length} images');
+        print('>>> Total gallery count: ${galleryImages.length}');
+        print('>>> ============================================');
         _showSuccessSnackbar('${uploadedFiles.length} images uploaded');
       }
     } catch (e) {
-      print('>>> Error uploading gallery images: $e');
+      print('>>> ❌ Error uploading gallery images: $e');
       setState(() {
         isLoadingImage = false;
       });
@@ -1497,17 +1621,17 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   void _removeGalleryImage(int index) {
-    final imageId = galleryImages[index];
+    final imageUrl = galleryImages[index];
 
     setState(() {
-      // Add to removed list (will be deleted on save)
-      removedGalleryImages.add(imageId);
+      // CRITICAL FIX: Store URL in removed list (will be converted to ID during deletion)
+      removedGalleryImages.add(imageUrl);
 
       // Remove from current gallery list
       galleryImages.removeAt(index);
     });
 
-    print('>>> Gallery image marked for removal: $imageId');
+    print('>>> Gallery image marked for removal: $imageUrl');
     print('>>> Current gallery count: ${galleryImages.length}');
     print('>>> Pending removal count: ${removedGalleryImages.length}');
   }
@@ -1528,39 +1652,46 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       print('>>> ============================================');
 
       // STEP 1: Handle dashboard image changes
-      String? finalDashboardImageId;
+      String finalDashboardImageId = '';
 
       if (newDashboardImageId == '') {
         // User wants to remove dashboard image
-        if (widget.clinic.dashboardPic != null &&
-            widget.clinic.dashboardPic!.isNotEmpty) {
+        if (widget.settings?.dashboardPic != null &&
+            widget.settings!.dashboardPic.isNotEmpty) {
+          final oldImageId =
+              _extractFileIdFromUrl(widget.settings!.dashboardPic);
           try {
-            await authRepository.deleteImage(widget.clinic.dashboardPic!);
-            print('>>> Old dashboard image deleted');
+            await authRepository.deleteImage(oldImageId);
+            print('>>> Old dashboard image deleted: $oldImageId');
           } catch (e) {
             print('>>> Warning: Could not delete old dashboard image: $e');
           }
         }
         finalDashboardImageId = '';
-      } else if (newDashboardImageId != null) {
+      } else if (newDashboardImageId != null &&
+          newDashboardImageId!.isNotEmpty) {
         // User uploaded new dashboard image
-        finalDashboardImageId = newDashboardImageId;
+        finalDashboardImageId = newDashboardImageId!;
 
         // Delete old dashboard image if different
-        if (widget.clinic.dashboardPic != null &&
-            widget.clinic.dashboardPic!.isNotEmpty &&
-            widget.clinic.dashboardPic != newDashboardImageId) {
+        if (widget.settings?.dashboardPic != null &&
+            widget.settings!.dashboardPic.isNotEmpty &&
+            widget.settings!.dashboardPic != newDashboardImageId) {
+          final oldImageId =
+              _extractFileIdFromUrl(widget.settings!.dashboardPic);
           try {
-            await authRepository.deleteImage(widget.clinic.dashboardPic!);
-            print('>>> Old dashboard image replaced');
+            await authRepository.deleteImage(oldImageId);
+            print('>>> Old dashboard image replaced: $oldImageId');
           } catch (e) {
             print('>>> Warning: Could not delete old dashboard image: $e');
           }
         }
       } else {
-        // No change to dashboard image
-        finalDashboardImageId = widget.clinic.dashboardPic;
+        // No change to dashboard image - keep existing
+        finalDashboardImageId = widget.settings?.dashboardPic ?? '';
       }
+
+      print('>>> Final dashboard image: $finalDashboardImageId');
 
       // STEP 2: Sanitize medical services map
       final sanitizedMedicalServices = <String, bool>{};
@@ -1572,7 +1703,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       print('>>> Selected services: $selectedServices');
       print('>>> Medical services map: $sanitizedMedicalServices');
 
-      // STEP 3: Update clinic basic info (including dashboardPic)
+      // STEP 3: Update clinic basic info
       final clinicData = {
         'clinicName': clinicNameController.text.trim(),
         'address': addressController.text.trim(),
@@ -1581,8 +1712,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         'description': descriptionController.text.trim(),
         'services': selectedServices.join(', '),
         'image': newMainImageId ?? widget.clinic.image,
-        'dashboardPic': finalDashboardImageId ??
-            '', // CRITICAL: Update dashboardPic in Clinic
+        'dashboardPic': finalDashboardImageId, // Store as URL
       };
 
       print('>>> Updating clinic document...');
@@ -1590,7 +1720,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         widget.clinic.documentId!,
         clinicData,
       );
-      print('>>> ✓ Clinic document updated (including dashboardPic)');
+      print('>>> Clinic document updated');
 
       // STEP 4: Update or create clinic settings
       if (widget.settings != null) {
@@ -1599,7 +1729,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         final updatedSettings = widget.settings!.copyWith(
           isOpen: isOpen,
           operatingHours: operatingHours,
-          gallery: galleryImages, // CRITICAL: Update gallery in ClinicSettings
+          gallery: galleryImages, // Store as URLs
           services: selectedServices,
           medicalServices: sanitizedMedicalServices,
           appointmentDuration: appointmentDuration,
@@ -1607,12 +1737,11 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           emergencyContact: emergencyContactController.text.trim(),
           specialInstructions: specialInstructionsController.text.trim(),
           autoAcceptAppointments: autoAcceptAppointments,
-          dashboardPic: finalDashboardImageId ??
-              '', // Also store in settings for reference
+          dashboardPic: finalDashboardImageId, // Store as URL
         );
 
         await authRepository.updateClinicSettings(updatedSettings);
-        print('>>> ✓ Clinic settings updated (including gallery)');
+        print('>>> Clinic settings updated');
       } else {
         print('>>> Creating new clinic settings...');
 
@@ -1620,7 +1749,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           clinicId: widget.clinic.documentId!,
           isOpen: isOpen,
           operatingHours: operatingHours,
-          gallery: galleryImages, // CRITICAL: Initialize gallery
+          gallery: galleryImages, // Store as URLs
           services: selectedServices,
           medicalServices: sanitizedMedicalServices,
           appointmentDuration: appointmentDuration,
@@ -1628,19 +1757,25 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           emergencyContact: emergencyContactController.text.trim(),
           specialInstructions: specialInstructionsController.text.trim(),
           autoAcceptAppointments: autoAcceptAppointments,
-          dashboardPic: finalDashboardImageId ?? '', // Store in settings
+          dashboardPic: finalDashboardImageId, // Store as URL
         );
 
         await authRepository.createClinicSettings(newSettings);
-        print('>>> ✓ New clinic settings created');
+        print('>>> New clinic settings created');
       }
 
       // STEP 5: Delete removed gallery images from storage
       if (removedGalleryImages.isNotEmpty) {
         print(
             '>>> Deleting ${removedGalleryImages.length} removed gallery images...');
-        await authRepository.deleteClinicGalleryImages(removedGalleryImages);
-        print('>>> ✓ Gallery images deleted');
+
+        // Extract file IDs from URLs
+        final fileIdsToDelete = removedGalleryImages
+            .map((url) => _extractFileIdFromUrl(url))
+            .toList();
+
+        await authRepository.deleteClinicGalleryImages(fileIdsToDelete);
+        print('>>> Gallery images deleted');
       }
 
       print('>>> ============================================');
@@ -1736,26 +1871,5 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         duration: const Duration(seconds: 5),
       ),
     );
-  }
-
-  bool _hasUnsavedChanges() {
-    // Check if gallery changed
-    final originalGallery = widget.settings?.gallery ?? [];
-    if (galleryImages.length != originalGallery.length ||
-        removedGalleryImages.isNotEmpty) {
-      return true;
-    }
-
-    // Check if dashboard image changed
-    if (newDashboardImageId != null) {
-      return true;
-    }
-
-    // Check other fields...
-    if (clinicNameController.text.trim() != widget.clinic.clinicName) {
-      return true;
-    }
-
-    return false;
   }
 }
