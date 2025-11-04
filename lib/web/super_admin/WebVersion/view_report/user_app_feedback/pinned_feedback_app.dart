@@ -182,83 +182,327 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
   }
 
   // ==================== PINNED STATS CARD ====================
-  Widget _buildPinnedStatsCard() {
-    return Obx(() {
-      final pinnedCount = pinnedFeedback.length;
-      final criticalCount =
-          pinnedFeedback.where((f) => f.priority == Priority.critical).length;
-      final pendingCount =
-          pinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length;
+ // Replace the _buildPinnedStatsCard method in pinned_feedback_app.dart
 
-      return Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.amber[700]!, Colors.amber[500]!],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.amber.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+Widget _buildPinnedStatsCard() {
+  return Obx(() {
+    final pinnedCount = pinnedFeedback.length;
+    final criticalCount =
+        pinnedFeedback.where((f) => f.priority == Priority.critical).length;
+    final pendingCount =
+        pinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.amber[700]!, Colors.amber[500]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.push_pin,
-                color: Colors.white,
-                size: 32,
-              ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: const Icon(
+              Icons.push_pin,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$pinnedCount Pinned Reports',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildClickablePriorityFilter(
+                      Icons.warning,
+                      '$criticalCount Critical',
+                      Priority.critical,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildClickableStatusFilter(
+                      Icons.schedule,
+                      '$pendingCount Pending',
+                      FeedbackStatus.pending,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  });
+}
+
+// 🎯 NEW: Clickable Priority Filter Chip
+Widget _buildClickablePriorityFilter(
+  IconData icon,
+  String label,
+  Priority priority,
+) {
+  return Obx(() {
+    final isActive = controller.priorityFilter.value == priority;
+
+    return PopupMenuButton<Priority>(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      tooltip: 'Filter by Priority',
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!),
+      ),
+      onSelected: (Priority? selectedPriority) {
+        if (selectedPriority == null) {
+          controller.updateFilters(clearPriority: true);
+        } else {
+          controller.updateFilters(priority: selectedPriority);
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return [
+          PopupMenuItem<Priority>(
+            value: null,
+            child: Row(
+              children: [
+                Icon(Icons.clear_all, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 12),
+                const Text(
+                  'Show All',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          ...Priority.values.map((Priority p) {
+            final isSelected = p == controller.priorityFilter.value;
+            final priorityColor = _getPriorityColor(p);
+            final priorityIcon = _getPriorityIcon(p);
+
+            return PopupMenuItem<Priority>(
+              value: p,
+              child: Row(
                 children: [
-                  Text(
-                    '$pinnedCount Pinned Reports',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: priorityColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      priorityIcon,
+                      size: 16,
+                      color: priorityColor,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildPinnedStatChip(
-                        Icons.warning,
-                        '$criticalCount Critical',
-                        Colors.red[900]!,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      p.displayName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? priorityColor : Colors.grey[800],
                       ),
-                      const SizedBox(width: 12),
-                      _buildPinnedStatChip(
-                        Icons.schedule,
-                        '$pendingCount Pending',
-                        Colors.orange[900]!,
-                      ),
-                    ],
+                    ),
                   ),
+                  if (isSelected)
+                    Icon(Icons.check, size: 18, color: priorityColor),
                 ],
               ),
+            );
+          }),
+        ];
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? Colors.white.withOpacity(0.3)
+              : Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive
+                ? Colors.white.withOpacity(0.6)
+                : Colors.white.withOpacity(0.3),
+            width: isActive ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.arrow_drop_down,
+              color: Colors.white,
+              size: 16,
             ),
           ],
         ),
-      );
-    });
-  }
+      ),
+    );
+  });
+}
+
+// 🎯 NEW: Clickable Status Filter Chip
+Widget _buildClickableStatusFilter(
+  IconData icon,
+  String label,
+  FeedbackStatus status,
+) {
+  return Obx(() {
+    final isActive = controller.statusFilter.value == status;
+
+    return PopupMenuButton<FeedbackStatus>(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      tooltip: 'Filter by Status',
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!),
+      ),
+      onSelected: (FeedbackStatus? selectedStatus) {
+        if (selectedStatus == null) {
+          controller.updateFilters(clearStatus: true);
+        } else {
+          controller.updateFilters(status: selectedStatus);
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return [
+          PopupMenuItem<FeedbackStatus>(
+            value: null,
+            child: Row(
+              children: [
+                Icon(Icons.clear_all, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 12),
+                const Text(
+                  'Show All',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          ...FeedbackStatus.values.map((FeedbackStatus s) {
+            final isSelected = s == controller.statusFilter.value;
+            final statusColor = _getStatusColor(s);
+            final statusIcon = _getStatusIcon(s);
+
+            return PopupMenuItem<FeedbackStatus>(
+              value: s,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      statusIcon,
+                      size: 16,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      s.displayName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? statusColor : Colors.grey[800],
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(Icons.check, size: 18, color: statusColor),
+                ],
+              ),
+            );
+          }),
+        ];
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? Colors.white.withOpacity(0.3)
+              : Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive
+                ? Colors.white.withOpacity(0.6)
+                : Colors.white.withOpacity(0.3),
+            width: isActive ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.arrow_drop_down,
+              color: Colors.white,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  });
+}
 
   Widget _buildPinnedStatChip(IconData icon, String label, Color color) {
     return Container(
@@ -740,7 +984,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
     }
   }
 
- void _showFeedbackDetails(FeedbackAndReport feedback) {
+void _showFeedbackDetails(FeedbackAndReport feedback) {
   showDialog(
     context: context,
     builder: (context) => Dialog(

@@ -70,4 +70,7 @@ Future<void> initializeDependencies() async {
   print('>>> ✓ WebUserHomeController initialized');
 
   await authRepo.appWriteProvider.migrateReviewsArchiveField();
+  
+  await Get.find<AuthRepository>().migrateFeedbackArchiveField();
+  
 }

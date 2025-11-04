@@ -14,15 +14,16 @@ class WebFeedbackController extends GetxController {
   final AuthRepository authRepository;
   final UserSessionService session;
 
-
   WebFeedbackController({
     required this.authRepository,
     required this.session,
   });
-
-  final Rx<UserDailyReportTracker?> dailyTracker = Rx<UserDailyReportTracker?>(null);
-  final RxBool isCheckingLimit = false.obs;
   
+
+  final Rx<UserDailyReportTracker?> dailyTracker =
+      Rx<UserDailyReportTracker?>(null);
+  final RxBool isCheckingLimit = false.obs;
+
   // User-side properties
   RxList<PlatformFile> selectedFiles = <PlatformFile>[].obs;
   RxBool isSubmitting = false.obs;
@@ -40,81 +41,80 @@ class WebFeedbackController extends GetxController {
   final Rxn<FeedbackCategory> categoryFilter = Rxn<FeedbackCategory>();
   final Rxn<Priority> priorityFilter = Rxn<Priority>();
   final RxString searchQuery = ''.obs;
+  final RxBool isLoading = false.obs;
 
   final RxInt spamDetectedCount = 0.obs;
   final RxInt autoArchivedCount = 0.obs;
   final RxBool isCleaningSpam = false.obs;
 
-    Timer? _autoRefreshTimer;
-    
+  Timer? _autoRefreshTimer;
+
   // Pinned feedback IDs
   final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
 
+  /// Toggle pin status
+  Future<void> togglePin(String feedbackId) async {
+    try {
+      print('>>> Toggling pin for feedback: $feedbackId');
 
-/// Toggle pin status
-Future<void> togglePin(String feedbackId) async {
-  try {
-    print('>>> Toggling pin for feedback: $feedbackId');
+      // Find the feedback item
+      final feedbackIndex =
+          allFeedback.indexWhere((f) => f.documentId == feedbackId);
 
-    // Find the feedback item
-    final feedbackIndex =
-        allFeedback.indexWhere((f) => f.documentId == feedbackId);
+      if (feedbackIndex == -1) {
+        print('>>> Error: Feedback not found');
+        return;
+      }
 
-    if (feedbackIndex == -1) {
-      print('>>> Error: Feedback not found');
-      return;
+      final feedback = allFeedback[feedbackIndex];
+      final newPinStatus = !feedback.isPinned;
+
+      // Get current admin/user info
+      final userName =
+          session.userName.isNotEmpty ? session.userName : 'System';
+
+      print('>>> New pin status: $newPinStatus');
+      print('>>> Pinned by: $userName');
+
+      // Update in database
+      await authRepository.toggleFeedbackPin(
+        feedbackId,
+        newPinStatus,
+        userName,
+      );
+
+      // Update local state
+      if (newPinStatus) {
+        pinnedFeedbackIds.add(feedbackId);
+      } else {
+        pinnedFeedbackIds.remove(feedbackId);
+      }
+
+      // Update the feedback object
+      allFeedback[feedbackIndex] = feedback.copyWith(
+        isPinned: newPinStatus,
+        pinnedAt: newPinStatus ? DateTime.now() : null,
+        pinnedBy: newPinStatus ? userName : null,
+      );
+
+      allFeedback.refresh();
+
+      _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
+
+      print('>>> Pin toggle successful');
+    } catch (e) {
+      print('>>> Error toggling pin: $e');
+      _showError('Failed to toggle pin');
     }
-
-    final feedback = allFeedback[feedbackIndex];
-    final newPinStatus = !feedback.isPinned;
-
-    // Get current admin/user info
-    final userName = session.userName.isNotEmpty ? session.userName : 'System';
-
-    print('>>> New pin status: $newPinStatus');
-    print('>>> Pinned by: $userName');
-
-    // Update in database
-    await authRepository.toggleFeedbackPin(
-      feedbackId,
-      newPinStatus,
-      userName,
-    );
-
-    // Update local state
-    if (newPinStatus) {
-      pinnedFeedbackIds.add(feedbackId);
-    } else {
-      pinnedFeedbackIds.remove(feedbackId);
-    }
-
-    // Update the feedback object
-    allFeedback[feedbackIndex] = feedback.copyWith(
-      isPinned: newPinStatus,
-      pinnedAt: newPinStatus ? DateTime.now() : null,
-      pinnedBy: newPinStatus ? userName : null,
-    );
-
-    allFeedback.refresh();
-
-    _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
-
-    print('>>> Pin toggle successful');
-  } catch (e) {
-    print('>>> Error toggling pin: $e');
-    _showError('Failed to toggle pin');
   }
-}
 
-
-    // Check if feedback is pinned
-    bool isPinned(String feedbackId) {
-      return pinnedFeedbackIds.contains(feedbackId);
-    }
+  // Check if feedback is pinned
+  bool isPinned(String feedbackId) {
+    return pinnedFeedbackIds.contains(feedbackId);
+  }
 
   // Statistics
   RxMap<String, int> feedbackStats = <String, int>{}.obs;
-
 
   @override
   void onInit() {
@@ -123,12 +123,12 @@ Future<void> togglePin(String feedbackId) async {
     final role = session.userRole;
     if (role == 'admin' || role == 'staff') {
       loadAllFeedback();
-     _loadDailyReportTracker();
+      _loadDailyReportTracker();
 
-      //Auto-clean spam 
-       Future.delayed(const Duration(seconds: 2), () {
-      autoCleanSpamFeedback();
-    });
+      //Auto-clean spam
+      Future.delayed(const Duration(seconds: 2), () {
+        autoCleanSpamFeedback();
+      });
 
       _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
         filterFeedback(); // Re-sort with updated time calculations
@@ -136,48 +136,48 @@ Future<void> togglePin(String feedbackId) async {
     }
   }
 
-   @override
-    void onClose() {
-      _autoRefreshTimer?.cancel();
-      super.onClose();
-    }
+  @override
+  void onClose() {
+    _autoRefreshTimer?.cancel();
+    super.onClose();
+  }
 
- Future<void> _loadDailyReportTracker() async {
+  Future<void> _loadDailyReportTracker() async {
     try {
       isCheckingLimit.value = true;
-      
+
       final userId = session.userId;
       if (userId.isEmpty) {
         print('>>> No user ID, skipping tracker load');
         return;
       }
-      
+
       print('>>> Loading daily report tracker for user: $userId');
-      
+
       // Get user's feedback submissions from last 24 hours
       final allFeedback = await authRepository.getUserFeedback(userId);
-      
+
       final now = DateTime.now();
       final last24Hours = now.subtract(Duration(hours: 24));
-      
+
       // Count reports in last 24 hours
       final recentReports = allFeedback.where((feedback) {
         return feedback.submittedAt.isAfter(last24Hours);
       }).toList();
-      
+
       print('>>> Found ${recentReports.length} reports in last 24 hours');
-      
+
       // Find the oldest report timestamp to use as reset time
       DateTime lastResetAt = now.subtract(Duration(hours: 24));
       DateTime? lastReportAt;
-      
+
       if (recentReports.isNotEmpty) {
         // Sort by submission time
         recentReports.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
         lastResetAt = recentReports.first.submittedAt;
         lastReportAt = recentReports.last.submittedAt;
       }
-      
+
       // Create tracker
       final tracker = UserDailyReportTracker(
         userId: userId,
@@ -185,7 +185,7 @@ Future<void> togglePin(String feedbackId) async {
         lastResetAt: lastResetAt,
         lastReportAt: lastReportAt ?? now,
       );
-      
+
       // Check if needs reset
       if (tracker.needsReset) {
         print('>>> Tracker needs reset (>24 hours old)');
@@ -193,25 +193,25 @@ Future<void> togglePin(String feedbackId) async {
       } else {
         dailyTracker.value = tracker;
       }
-      
+
       print('>>> Daily tracker loaded:');
       print('>>>   Reports today: ${dailyTracker.value!.reportCount}/3');
       print('>>>   Remaining: ${dailyTracker.value!.remainingReports}');
-      print('>>>   Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
-      
+      print(
+          '>>>   Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
     } catch (e) {
       print('>>> Error loading daily tracker: $e');
     } finally {
       isCheckingLimit.value = false;
     }
   }
-   bool canSubmitFeedback() {
-    
+
+  bool canSubmitFeedback() {
     if (dailyTracker.value == null) {
       print('>>> No tracker loaded, allowing submission');
       return true;
     }
-    
+
     // Check if needs reset first
     if (dailyTracker.value!.needsReset) {
       print('>>> Tracker needs reset, resetting now...');
@@ -219,39 +219,39 @@ Future<void> togglePin(String feedbackId) async {
       return true;
     }
 
-    
-    
     final canSubmit = !dailyTracker.value!.hasExceededLimit;
-    
+
     if (!canSubmit) {
       print('>>> Daily limit exceeded: ${dailyTracker.value!.reportCount}/3');
-      print('>>> Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
+      print(
+          '>>> Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
     }
-    
+
     return canSubmit;
   }
-   /// Get remaining reports count
+
+  /// Get remaining reports count
   int getRemainingReports() {
     if (dailyTracker.value == null) return 3;
-    
+
     if (dailyTracker.value!.needsReset) {
       return 3;
     }
-    
+
     return dailyTracker.value!.remainingReports;
   }
-  
+
   /// Get time until reset as formatted string
   String getTimeUntilReset() {
     if (dailyTracker.value == null) return 'N/A';
-    
+
     if (dailyTracker.value!.needsReset) {
       return 'Ready to reset';
     }
-    
+
     return _formatDuration(dailyTracker.value!.timeUntilReset);
   }
-  
+
   /// Format duration to readable string
   String _formatDuration(Duration duration) {
     if (duration.inHours > 0) {
@@ -465,11 +465,9 @@ Future<void> togglePin(String feedbackId) async {
 
   /// Submit feedback
   Future<bool> submitFeedback() async {
-
     if (!canSubmitFeedback()) {
       _showError(
-        'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.'
-      );
+          'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.');
       return false;
     }
     if (!validateForm()) return false;
@@ -497,7 +495,7 @@ Future<void> togglePin(String feedbackId) async {
         return false;
       }
 
-  List<String> attachmentIds = [];
+      List<String> attachmentIds = [];
 
       // Upload attachments if provided
       if (selectedFiles.isNotEmpty) {
@@ -538,7 +536,8 @@ Future<void> togglePin(String feedbackId) async {
       // STEP 3: Update daily tracker AFTER successful submission
       if (dailyTracker.value != null) {
         dailyTracker.value = dailyTracker.value!.incrementCount();
-        print('>>> Updated tracker: ${dailyTracker.value!.reportCount}/3 reports');
+        print(
+            '>>> Updated tracker: ${dailyTracker.value!.reportCount}/3 reports');
       } else {
         // Create new tracker if doesn't exist
         dailyTracker.value = UserDailyReportTracker(
@@ -554,9 +553,7 @@ Future<void> togglePin(String feedbackId) async {
 
       // Show success with remaining count
       final remaining = getRemainingReports();
-      _showSuccess(
-        "Feedback submitted! ($remaining reports remaining today)"
-      );
+      _showSuccess("Feedback submitted! ($remaining reports remaining today)");
 
       return true;
     } catch (e, stackTrace) {
@@ -573,26 +570,25 @@ Future<void> togglePin(String feedbackId) async {
   /// Clear the feedback form completely
   void clearForm() {
     print('=== CLEARING FORM ===');
-    
+
     // Clear text values
     subject.value = '';
     description.value = '';
-    
+
     // Clear file selections
     selectedFiles.clear();
-    
+
     // Reset to DEFAULT selections
     selectedType.value = FeedbackType.bug;
     selectedCategory.value = FeedbackCategory.other;
-    
-    
+
     // Force refresh
     subject.refresh();
     description.refresh();
     selectedFiles.refresh();
     selectedType.refresh();
     selectedCategory.refresh();
-    
+
     print('Form cleared successfully');
     print('Type: ${selectedType.value.displayName}');
     print('Category: ${selectedCategory.value.displayName}');
@@ -616,317 +612,324 @@ Future<void> togglePin(String feedbackId) async {
   // ============= ADMIN-SIDE METHODS =============
 
   /// Load all feedback for admin
-/// Load all feedback for admin
-Future<void> loadAllFeedback() async {
-  isLoadingFeedback.value = true;
+  /// Load all feedback for admin
+  Future<void> loadAllFeedback() async {
+    isLoadingFeedback.value = true;
 
-  try {
-    // ✅ CHANGED: Pass null to load ALL feedback, then filter locally
-    final feedback = await authRepository.getAllFeedback(
-      status: null,  // Don't filter by status in database
-      priority: null, // Don't filter by priority in database
-    );
+    try {
+      // ✅ CHANGED: Pass null to load ALL feedback, then filter locally
+      final feedback = await authRepository.getAllFeedback(
+        status: null, // Don't filter by status in database
+        priority: null, // Don't filter by priority in database
+      );
 
-    allFeedback.value = feedback;
-    
-    // Load pinned IDs from database
-    pinnedFeedbackIds.value = feedback
-        .where((f) => f.isPinned)
-        .map((f) => f.documentId!)
-        .toSet();
-    
-    print('>>> Loaded ${pinnedFeedbackIds.length} pinned feedback items');
-    
-    // ✅ IMPORTANT: Apply filters AFTER loading (preserves user's filter selections)
-    filterFeedback();
-    updateStatistics();
-  } catch (e) {
-    _showError("Failed to load feedback: $e");
-  } finally {
-    isLoadingFeedback.value = false;
+      allFeedback.value = feedback;
+
+      // Load pinned IDs from database
+      pinnedFeedbackIds.value =
+          feedback.where((f) => f.isPinned).map((f) => f.documentId!).toSet();
+
+      print('>>> Loaded ${pinnedFeedbackIds.length} pinned feedback items');
+
+      // ✅ IMPORTANT: Apply filters AFTER loading (preserves user's filter selections)
+      filterFeedback();
+      updateStatistics();
+    } catch (e) {
+      _showError("Failed to load feedback: $e");
+    } finally {
+      isLoadingFeedback.value = false;
+    }
   }
-}
 
-      /// Checks subject + description for gibberish, scrambled words, and duplicates per user
-      Future<void> autoCleanSpamFeedback() async {
-        try {
-          print('>>> ============================================');
-          print('>>> STARTING ENHANCED SPAM & REDUNDANCY CLEANUP');
-          print('>>> ============================================');
+  /// Checks subject + description for gibberish, scrambled words, and duplicates per user
+  Future<void> autoCleanSpamFeedback() async {
+    try {
+      print('>>> ============================================');
+      print('>>> STARTING ENHANCED SPAM & REDUNDANCY CLEANUP');
+      print('>>> ============================================');
 
-          isCleaningSpam.value = true;
-          int spamDetected = 0;
-          int redundantDetected = 0;
-          int totalArchived = 0;
+      isCleaningSpam.value = true;
+      int spamDetected = 0;
+      int redundantDetected = 0;
+      int totalArchived = 0;
 
-          final feedbackToCheck = allFeedback.where((f) {
-            // Only check non-archived, active feedback
-            return f.archivedAt == null;
-          }).toList();
+      final feedbackToCheck = allFeedback.where((f) {
+        // Only check non-archived, active feedback
+        return f.archivedAt == null;
+      }).toList();
 
-          print('>>> Checking ${feedbackToCheck.length} feedbacks...');
+      print('>>> Checking ${feedbackToCheck.length} feedbacks...');
 
-          // Group feedback by user for redundancy check
-          final Map<String, List<FeedbackAndReport>> feedbackByUser = {};
-          for (var feedback in feedbackToCheck) {
-            feedbackByUser.putIfAbsent(feedback.userId, () => []).add(feedback);
-          }
+      // Group feedback by user for redundancy check
+      final Map<String, List<FeedbackAndReport>> feedbackByUser = {};
+      for (var feedback in feedbackToCheck) {
+        feedbackByUser.putIfAbsent(feedback.userId, () => []).add(feedback);
+      }
 
-          print('>>> Total users: ${feedbackByUser.length}');
+      print('>>> Total users: ${feedbackByUser.length}');
 
-          // Process each user's feedback
-          for (var userId in feedbackByUser.keys) {
-            final userFeedbacks = feedbackByUser[userId]!;
-            print('\n>>> 👤 Checking user: $userId (${userFeedbacks.length} feedbacks)');
+      // Process each user's feedback
+      for (var userId in feedbackByUser.keys) {
+        final userFeedbacks = feedbackByUser[userId]!;
+        print(
+            '\n>>> 👤 Checking user: $userId (${userFeedbacks.length} feedbacks)');
 
-            // Sort by submission time (oldest first)
-            userFeedbacks.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+        // Sort by submission time (oldest first)
+        userFeedbacks.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
 
-            for (int i = 0; i < userFeedbacks.length; i++) {
-              final currentFeedback = userFeedbacks[i];
+        for (int i = 0; i < userFeedbacks.length; i++) {
+          final currentFeedback = userFeedbacks[i];
 
-              try {
-                // STEP 1: Check for gibberish/scrambled words
-                final isSpam = FeedbackSpamDetector.isSpamOrGibberish(
-                  subject: currentFeedback.subject,
-                  description: currentFeedback.description,
+          try {
+            // STEP 1: Check for gibberish/scrambled words
+            final isSpam = FeedbackSpamDetector.isSpamOrGibberish(
+              subject: currentFeedback.subject,
+              description: currentFeedback.description,
+            );
+
+            if (isSpam) {
+              spamDetected++;
+              print('>>>   🚫 SPAM DETECTED: "${currentFeedback.subject}"');
+
+              await _archiveWithReason(
+                currentFeedback.documentId!,
+                'Auto-archived: Gibberish/Scrambled content detected',
+              );
+              totalArchived++;
+              continue; // Skip to next feedback
+            }
+
+            // STEP 2: Check for redundant submissions (compare with previous feedbacks)
+            if (i > 0) {
+              final previousFeedbacks = userFeedbacks
+                  .sublist(0, i)
+                  .map((f) => {
+                        'subject': f.subject,
+                        'description': f.description,
+                      })
+                  .toList();
+
+              final isRedundant = FeedbackSpamDetector.hasRedundantSubmissions(
+                userId: userId,
+                currentSubject: currentFeedback.subject,
+                currentDescription: currentFeedback.description,
+                userPreviousFeedbacks: previousFeedbacks,
+              );
+
+              if (isRedundant) {
+                redundantDetected++;
+                print(
+                    '>>>   🔄 REDUNDANT DETECTED: "${currentFeedback.subject}"');
+
+                await _archiveWithReason(
+                  currentFeedback.documentId!,
+                  'Auto-archived: Duplicate/Redundant submission',
                 );
-
-                if (isSpam) {
-                  spamDetected++;
-                  print('>>>   🚫 SPAM DETECTED: "${currentFeedback.subject}"');
-                  
-                  await _archiveWithReason(
-                    currentFeedback.documentId!,
-                    'Auto-archived: Gibberish/Scrambled content detected',
-                  );
-                  totalArchived++;
-                  continue; // Skip to next feedback
-                }
-
-                // STEP 2: Check for redundant submissions (compare with previous feedbacks)
-                if (i > 0) {
-                  final previousFeedbacks = userFeedbacks.sublist(0, i).map((f) => {
-                    'subject': f.subject,
-                    'description': f.description,
-                  }).toList();
-
-                  final isRedundant = FeedbackSpamDetector.hasRedundantSubmissions(
-                    userId: userId,
-                    currentSubject: currentFeedback.subject,
-                    currentDescription: currentFeedback.description,
-                    userPreviousFeedbacks: previousFeedbacks,
-                  );
-
-                  if (isRedundant) {
-                    redundantDetected++;
-                    print('>>>   🔄 REDUNDANT DETECTED: "${currentFeedback.subject}"');
-                    
-                    await _archiveWithReason(
-                      currentFeedback.documentId!,
-                      'Auto-archived: Duplicate/Redundant submission',
-                    );
-                    totalArchived++;
-                  }
-                }
-
-              } catch (e) {
-                print('>>>   ❌ Error checking feedback ${currentFeedback.documentId}: $e');
+                totalArchived++;
               }
             }
+          } catch (e) {
+            print(
+                '>>>   ❌ Error checking feedback ${currentFeedback.documentId}: $e');
           }
-
-          spamDetectedCount.value = spamDetected;
-          autoArchivedCount.value = totalArchived;
-
-          print('\n>>> ============================================');
-          print('>>> CLEANUP COMPLETE');
-          print('>>> Spam Detected: $spamDetected');
-          print('>>> Redundant Detected: $redundantDetected');
-          print('>>> Total Archived: $totalArchived');
-          print('>>> ============================================');
-
-          if (totalArchived > 0) {
-            _showSuccess('Auto-cleaned $totalArchived spam/redundant feedback(s)');
-            await loadAllFeedback(); // Refresh list
-          } else {
-            _showInfo('✅ All feedbacks look good - no spam detected!');
-          }
-
-        } catch (e) {
-          print('>>> ❌ Error in auto spam cleanup: $e');
-          _showError('Spam cleanup failed: $e');
-        } finally {
-          isCleaningSpam.value = false;
         }
       }
 
-      /// Helper: Archive feedback with custom reason
-      Future<void> _archiveWithReason(String documentId, String reason) async {
-        try {
-          await authRepository.appWriteProvider.databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-            documentId: documentId,
-            data: {
-              'archivedAt': DateTime.now().toIso8601String(),
-              'archivedBy': 'System (Auto-cleanup)',
-              'archiveReason': reason,
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
-        } catch (e) {
-          print('>>> Error archiving feedback: $e');
-          rethrow;
-        }
+      spamDetectedCount.value = spamDetected;
+      autoArchivedCount.value = totalArchived;
+
+      print('\n>>> ============================================');
+      print('>>> CLEANUP COMPLETE');
+      print('>>> Spam Detected: $spamDetected');
+      print('>>> Redundant Detected: $redundantDetected');
+      print('>>> Total Archived: $totalArchived');
+      print('>>> ============================================');
+
+      if (totalArchived > 0) {
+        _showSuccess('Auto-cleaned $totalArchived spam/redundant feedback(s)');
+        await loadAllFeedback(); // Refresh list
+      } else {
+        _showInfo('✅ All feedbacks look good - no spam detected!');
       }
+    } catch (e) {
+      print('>>> ❌ Error in auto spam cleanup: $e');
+      _showError('Spam cleanup failed: $e');
+    } finally {
+      isCleaningSpam.value = false;
+    }
+  }
 
-      /// Manual check if feedback is spam (subject + description)
-      Future<bool> checkIfSpam(FeedbackAndReport feedback) async {
-        return FeedbackSpamDetector.isSpamOrGibberish(
-          subject: feedback.subject,
-          description: feedback.description,
-        );
-      }
+  /// Helper: Archive feedback with custom reason
+  Future<void> _archiveWithReason(String documentId, String reason) async {
+    try {
+      await authRepository.appWriteProvider.databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'archivedAt': DateTime.now().toIso8601String(),
+          'archivedBy': 'System (Auto-cleanup)',
+          'archiveReason': reason,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      print('>>> Error archiving feedback: $e');
+      rethrow;
+    }
+  }
 
-      /// Get detailed spam analysis
-      Map<String, dynamic> getSpamAnalysis(FeedbackAndReport feedback) {
-        return FeedbackSpamDetector.analyzeMessage(
-          subject: feedback.subject,
-          description: feedback.description,
-        );
-      }
+  /// Manual check if feedback is spam (subject + description)
+  Future<bool> checkIfSpam(FeedbackAndReport feedback) async {
+    return FeedbackSpamDetector.isSpamOrGibberish(
+      subject: feedback.subject,
+      description: feedback.description,
+    );
+  }
 
-      /// Check if user has redundant submissions
-      Future<bool> checkUserRedundancy(FeedbackAndReport currentFeedback) async {
-        final userFeedbacks = allFeedback
-            .where((f) => 
-                f.userId == currentFeedback.userId && 
-                f.documentId != currentFeedback.documentId &&
-                f.archivedAt == null)
-            .toList();
+  /// Get detailed spam analysis
+  Map<String, dynamic> getSpamAnalysis(FeedbackAndReport feedback) {
+    return FeedbackSpamDetector.analyzeMessage(
+      subject: feedback.subject,
+      description: feedback.description,
+    );
+  }
 
-        if (userFeedbacks.isEmpty) return false;
+  /// Check if user has redundant submissions
+  Future<bool> checkUserRedundancy(FeedbackAndReport currentFeedback) async {
+    final userFeedbacks = allFeedback
+        .where((f) =>
+            f.userId == currentFeedback.userId &&
+            f.documentId != currentFeedback.documentId &&
+            f.archivedAt == null)
+        .toList();
 
-        final previousFeedbacks = userFeedbacks.map((f) => {
-          'subject': f.subject,
-          'description': f.description,
-        }).toList();
+    if (userFeedbacks.isEmpty) return false;
 
-        return FeedbackSpamDetector.hasRedundantSubmissions(
-          userId: currentFeedback.userId,
-          currentSubject: currentFeedback.subject,
-          currentDescription: currentFeedback.description,
-          userPreviousFeedbacks: previousFeedbacks,
-        );
-      }
+    final previousFeedbacks = userFeedbacks
+        .map((f) => {
+              'subject': f.subject,
+              'description': f.description,
+            })
+        .toList();
 
+    return FeedbackSpamDetector.hasRedundantSubmissions(
+      userId: currentFeedback.userId,
+      currentSubject: currentFeedback.subject,
+      currentDescription: currentFeedback.description,
+      userPreviousFeedbacks: previousFeedbacks,
+    );
+  }
 
+  /// Filter feedback based on current filters
+  void filterFeedback() {
+    var filtered = allFeedback.toList();
 
+    // Apply search query
+    if (searchQuery.value.isNotEmpty) {
+      filtered = filtered.where((f) {
+        final query = searchQuery.value.toLowerCase();
 
+        final subjectMatch = f.subject.toLowerCase().contains(query);
+        final categoryMatch =
+            f.category.displayName.toLowerCase().contains(query);
+        final typeMatch =
+            f.feedbackType.displayName.toLowerCase().contains(query);
+        final nameMatch = f.userName.toLowerCase().contains(query);
+        final emailMatch = f.userEmail.toLowerCase().contains(query);
+        final descriptionMatch = f.description.toLowerCase().contains(query);
 
-    /// Filter feedback based on current filters
-    void filterFeedback() {
-      var filtered = allFeedback.toList();
-
-      // Apply search query
-      if (searchQuery.value.isNotEmpty) {
-        filtered = filtered.where((f) {
-          final query = searchQuery.value.toLowerCase();
-
-          final subjectMatch = f.subject.toLowerCase().contains(query);
-          final categoryMatch = f.category.displayName.toLowerCase().contains(query);
-          final typeMatch = f.feedbackType.displayName.toLowerCase().contains(query);
-          final nameMatch = f.userName.toLowerCase().contains(query);
-          final emailMatch = f.userEmail.toLowerCase().contains(query);
-          final descriptionMatch = f.description.toLowerCase().contains(query);
-
-          return subjectMatch ||
-              categoryMatch ||
-              typeMatch ||
-              nameMatch ||
-              emailMatch ||
-              descriptionMatch;
-        }).toList();
-      }
-
-      // Apply filters
-      if (statusFilter.value != null) {
-        filtered = filtered.where((f) => f.status == statusFilter.value).toList();
-      }
-
-      if (priorityFilter.value != null) {
-        filtered = filtered.where((f) => f.priority == priorityFilter.value).toList();
-      }
-
-      if (typeFilter.value != null) {
-        filtered = filtered.where((f) => f.feedbackType == typeFilter.value).toList();
-      }
-
-      if (categoryFilter.value != null) {
-        filtered = filtered.where((f) => f.category == categoryFilter.value).toList();
-      }
-
-    
-      filtered.sort((a, b) {
-        // ═══════════════════════════════════════════════════════
-        // PRIORITY 1: Pinned items ALWAYS appear first
-        // ═══════════════════════════════════════════════════════
-        final aPinned = pinnedFeedbackIds.contains(a.documentId);
-        final bPinned = pinnedFeedbackIds.contains(b.documentId);
-        
-        if (aPinned && !bPinned) return -1; // a is pinned, b is not → a comes first
-        if (!aPinned && bPinned) return 1;  // b is pinned, a is not → b comes first
-
-        // ═══════════════════════════════════════════════════════
-        // PRIORITY 2: Critical priority items (within pinned group or unpinned group)
-        // ═══════════════════════════════════════════════════════
-        final priorityOrder = <Priority, int>{
-          Priority.critical: 0,  // Highest priority
-          Priority.high: 1,
-          Priority.medium: 2,
-          Priority.low: 3,       // Lowest priority
-        };
-
-        final aPriority = priorityOrder[a.priority] ?? 999;
-        final bPriority = priorityOrder[b.priority] ?? 999;
-
-        if (aPriority != bPriority) {
-          return aPriority.compareTo(bPriority); // Lower number = higher priority
-        }
-
-        // ═══════════════════════════════════════════════════════
-        // PRIORITY 3: Latest submission date (NEWEST FIRST)
-        // ═══════════════════════════════════════════════════════
-        // b.compareTo(a) gives DESCENDING order (latest first)
-        return b.submittedAt.compareTo(a.submittedAt);
-      });
-
-      filteredFeedback.value = filtered;
-      
-      // Debug log for verification
-      if (filtered.isNotEmpty) {
-        print('>>> Filtered ${filtered.length} feedbacks');
-        print('>>> Top 3 items:');
-        for (int i = 0; i < (filtered.length > 3 ? 3 : filtered.length); i++) {
-          final f = filtered[i];
-          print('>>>   ${i + 1}. ${f.subject} | ${f.isPinned ? "📌 PINNED" : "⚪"} | ${f.priority.displayName} | ${_formatDebugDate(f.submittedAt)}');
-        }
-      }
+        return subjectMatch ||
+            categoryMatch ||
+            typeMatch ||
+            nameMatch ||
+            emailMatch ||
+            descriptionMatch;
+      }).toList();
     }
 
-    /// Helper method for debug logging (add this to your controller)
-    String _formatDebugDate(DateTime date) {
-      final now = DateTime.now();
-      final diff = now.difference(date);
-      
-      if (diff.inMinutes < 1) return 'Just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-      if (diff.inHours < 24) return '${diff.inHours}h ago';
-      if (diff.inDays < 7) return '${diff.inDays}d ago';
-      
-      return '${date.day}/${date.month}/${date.year}';
+    // Apply filters
+    if (statusFilter.value != null) {
+      filtered = filtered.where((f) => f.status == statusFilter.value).toList();
     }
+
+    if (priorityFilter.value != null) {
+      filtered =
+          filtered.where((f) => f.priority == priorityFilter.value).toList();
+    }
+
+    if (typeFilter.value != null) {
+      filtered =
+          filtered.where((f) => f.feedbackType == typeFilter.value).toList();
+    }
+
+    if (categoryFilter.value != null) {
+      filtered =
+          filtered.where((f) => f.category == categoryFilter.value).toList();
+    }
+
+    filtered.sort((a, b) {
+      // ═══════════════════════════════════════════════════════
+      // PRIORITY 1: Pinned items ALWAYS appear first
+      // ═══════════════════════════════════════════════════════
+      final aPinned = pinnedFeedbackIds.contains(a.documentId);
+      final bPinned = pinnedFeedbackIds.contains(b.documentId);
+
+      if (aPinned && !bPinned)
+        return -1; // a is pinned, b is not → a comes first
+      if (!aPinned && bPinned)
+        return 1; // b is pinned, a is not → b comes first
+
+      // ═══════════════════════════════════════════════════════
+      // PRIORITY 2: Critical priority items (within pinned group or unpinned group)
+      // ═══════════════════════════════════════════════════════
+      final priorityOrder = <Priority, int>{
+        Priority.critical: 0, // Highest priority
+        Priority.high: 1,
+        Priority.medium: 2,
+        Priority.low: 3, // Lowest priority
+      };
+
+      final aPriority = priorityOrder[a.priority] ?? 999;
+      final bPriority = priorityOrder[b.priority] ?? 999;
+
+      if (aPriority != bPriority) {
+        return aPriority.compareTo(bPriority); // Lower number = higher priority
+      }
+
+      // ═══════════════════════════════════════════════════════
+      // PRIORITY 3: Latest submission date (NEWEST FIRST)
+      // ═══════════════════════════════════════════════════════
+      // b.compareTo(a) gives DESCENDING order (latest first)
+      return b.submittedAt.compareTo(a.submittedAt);
+    });
+
+    filteredFeedback.value = filtered;
+
+    // Debug log for verification
+    if (filtered.isNotEmpty) {
+      print('>>> Filtered ${filtered.length} feedbacks');
+      print('>>> Top 3 items:');
+      for (int i = 0; i < (filtered.length > 3 ? 3 : filtered.length); i++) {
+        final f = filtered[i];
+        print(
+            '>>>   ${i + 1}. ${f.subject} | ${f.isPinned ? "📌 PINNED" : "⚪"} | ${f.priority.displayName} | ${_formatDebugDate(f.submittedAt)}');
+      }
+    }
+  }
+
+  /// Helper method for debug logging (add this to your controller)
+  String _formatDebugDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+
+    return '${date.day}/${date.month}/${date.year}';
+  }
 
   /// Update feedback statistics
   void updateStatistics() {
@@ -999,28 +1002,42 @@ Future<void> loadAllFeedback() async {
     }
   }
 
-  /// Archive feedback
-  Future<void> archiveFeedback(String documentId) async {
-    try {
-      final archivedBy = session.userName;
-      await authRepository.archiveFeedback(documentId, archivedBy);
-
-      final index = allFeedback.indexWhere((f) => f.documentId == documentId);
-      if (index != -1) {
-        allFeedback[index] = allFeedback[index].copyWith(
-          archivedAt: DateTime.now(),
-          archivedBy: archivedBy,
-        );
-      }
-
-      filterFeedback();
-      updateStatistics();
-
-      _showSuccess("Feedback has been archived");
-    } catch (e) {
-      _showError("Failed to archive feedback: $e");
-    }
+ /// Archive feedback with confirmation
+Future<void> archiveFeedback(String documentId) async {
+  try {
+    isLoading.value = true;
+    
+    // Get current admin/user info
+    final userName = session.userName.isNotEmpty ? session.userName : 'System';
+    
+    print('>>> Archiving feedback: $documentId by $userName');
+    
+    await authRepository.archiveFeedback(documentId, userName);
+    
+    // CRITICAL: Remove from BOTH lists
+    allFeedback.removeWhere((f) => f.documentId == documentId);
+    filteredFeedback.removeWhere((f) => f.documentId == documentId);
+    
+    // Remove from pinned IDs if it was pinned
+    pinnedFeedbackIds.remove(documentId);
+    
+    // Force refresh both lists
+    allFeedback.refresh();
+    filteredFeedback.refresh();
+    
+    // Update statistics
+    updateStatistics();
+    
+    _showSuccess('Feedback archived successfully');
+    
+    print('>>> Archive successful');
+  } catch (e) {
+    print('>>> Error archiving feedback: $e');
+    _showError('Failed to archive feedback: $e');
+  } finally {
+    isLoading.value = false;
   }
+}
 
   /// Delete feedback permanently
   Future<void> deleteFeedback(
@@ -1046,44 +1063,44 @@ Future<void> loadAllFeedback() async {
   }
 
   /// Update filters
-/// Update filters
-void updateFilters({
-  FeedbackStatus? status,
-  Priority? priority,
-  FeedbackType? type,
-  FeedbackCategory? category,
-  bool clearStatus = false,
-  bool clearPriority = false,
-  bool clearType = false,
-  bool clearCategory = false,
-}) {
-  // Clear filters if explicitly requested OR if null value is passed
-  if (clearStatus || status == null) {
-    statusFilter.value = null;
-  } else {
-    statusFilter.value = status;
-  }
-  
-  if (clearPriority || priority == null) {
-    priorityFilter.value = null;
-  } else {
-    priorityFilter.value = priority;
-  }
-  
-  if (clearType || type == null) {
-    typeFilter.value = null;
-  } else {
-    typeFilter.value = type;
-  }
-  
-  if (clearCategory || category == null) {
-    categoryFilter.value = null;
-  } else {
-    categoryFilter.value = category;
-  }
+  /// Update filters
+  void updateFilters({
+    FeedbackStatus? status,
+    Priority? priority,
+    FeedbackType? type,
+    FeedbackCategory? category,
+    bool clearStatus = false,
+    bool clearPriority = false,
+    bool clearType = false,
+    bool clearCategory = false,
+  }) {
+    // Clear filters if explicitly requested OR if null value is passed
+    if (clearStatus || status == null) {
+      statusFilter.value = null;
+    } else {
+      statusFilter.value = status;
+    }
 
-  filterFeedback();
-}
+    if (clearPriority || priority == null) {
+      priorityFilter.value = null;
+    } else {
+      priorityFilter.value = priority;
+    }
+
+    if (clearType || type == null) {
+      typeFilter.value = null;
+    } else {
+      typeFilter.value = type;
+    }
+
+    if (clearCategory || category == null) {
+      categoryFilter.value = null;
+    } else {
+      categoryFilter.value = category;
+    }
+
+    filterFeedback();
+  }
 
   /// Clear all filters
   void clearFilters() {
