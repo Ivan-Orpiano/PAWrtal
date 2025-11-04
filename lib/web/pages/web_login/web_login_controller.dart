@@ -2,8 +2,6 @@ import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/utils/session_sync_service.dart';
-import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/utils/web_error_handler.dart';
 import 'package:capstone_app/utils/web_loading_helper.dart';
 import 'package:flutter/material.dart';
@@ -187,8 +185,6 @@ class WebLoginController extends GetxController {
 
       // Store the role
       await _getStorage.write("role", role);
-
-      _initializeSessionSync(userId, role);
 
       _initializeSecureSession(userId, role);
 
@@ -380,34 +376,6 @@ class WebLoginController extends GetxController {
     SessionManager.cleanupOldData();
 
     print('>>> Secure session initialized');
-    print('>>> ============================================');
-  }
-
-  void _initializeSessionSync(String userId, String role) {
-    print('>>> ============================================');
-    print('>>> WEB: INITIALIZING SESSION SYNC');
-    print('>>> User ID: $userId');
-    print('>>> Role: $role');
-    print('>>> ============================================');
-
-    try {
-      // Generate unique session token
-      final userSession = Get.find<UserSessionService>();
-      final sessionToken = userSession.generateSessionToken();
-
-      // Start session monitoring
-      final sessionSync = Get.find<SessionSyncService>();
-      sessionSync.startMonitoring(
-        userId: userId,
-        sessionToken: sessionToken,
-      );
-
-      print('>>> Session sync initialized successfully');
-    } catch (e) {
-      print('>>> Error initializing session sync: $e');
-      // Don't fail login if session sync fails
-    }
-
     print('>>> ============================================');
   }
 }

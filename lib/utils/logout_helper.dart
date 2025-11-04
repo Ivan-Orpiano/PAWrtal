@@ -1,7 +1,6 @@
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/utils/session_sync_service.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -26,22 +25,11 @@ class LogoutHelper {
         barrierDismissible: false,
       );
 
-      // Step 0.5: Broadcast logout event to other tabs
-      print('>>> Step 0.5: Broadcasting logout to other tabs...');
-      if (Get.isRegistered<SessionSyncService>()) {
-        final sessionSync = Get.find<SessionSyncService>();
-        sessionSync.broadcastSessionChange(
-          event: 'logout',
-          data: {'userId': _getStorage.read('userId')},
-        );
-        sessionSync.stopMonitoring();
-        print('>>> Logout broadcasted');
-      }
       // Step 1: Clear MessagingController FIRST (before logout)
       print('>>> Step 1: Clearing MessagingController...');
       if (Get.isRegistered<MessagingController>()) {
         final messagingController = Get.find<MessagingController>();
-
+        
         // Set user offline
         try {
           await messagingController.setUserOffline();
@@ -49,11 +37,11 @@ class LogoutHelper {
         } catch (e) {
           print('>>> Warning: Could not set user offline: $e');
         }
-
+        
         // Clear all messaging data
         messagingController.clearAllData();
         print('>>> MessagingController data cleared');
-
+        
         // Delete the controller instance
         Get.delete<MessagingController>();
         print('>>> MessagingController deleted from GetX');
@@ -78,7 +66,7 @@ class LogoutHelper {
       bool serverLogoutSuccess = false;
       try {
         final appWriteProvider = Get.find<AppWriteProvider>();
-
+        
         if (sessionId != null && sessionId.isNotEmpty) {
           // Try to delete specific session
           print('>>> Attempting to delete session: $sessionId');
@@ -94,11 +82,11 @@ class LogoutHelper {
         }
       } catch (e) {
         print('>>> ⚠️ Server logout error: $e');
-
+        
         // CRITICAL FIX: Even if session deletion fails, continue with logout
         // This handles the case where session is already invalid/expired
         final errorMessage = e.toString().toLowerCase();
-        if (errorMessage.contains('unauthorized') ||
+        if (errorMessage.contains('unauthorized') || 
             errorMessage.contains('session') ||
             errorMessage.contains('guests')) {
           print('>>> Session already invalid, proceeding with local cleanup');
@@ -140,8 +128,7 @@ class LogoutHelper {
 
       print('>>> ============================================');
       print('>>> LOGOUT COMPLETED SUCCESSFULLY');
-      print(
-          '>>> Server logout: ${serverLogoutSuccess ? "✅" : "⚠️ (local only)"}');
+      print('>>> Server logout: ${serverLogoutSuccess ? "✅" : "⚠️ (local only)"}');
       print('>>> ============================================');
 
       // Show success message
@@ -183,8 +170,7 @@ class LogoutHelper {
   }
 
   /// Alternative logout with custom navigation
-  static Future<void> logoutWithNavigation(
-      BuildContext context, String route) async {
+  static Future<void> logoutWithNavigation(BuildContext context, String route) async {
     try {
       print('>>> ============================================');
       print('>>> LOGOUT WITH CUSTOM NAVIGATION');
@@ -256,7 +242,7 @@ class LogoutHelper {
     for (String key in keys) {
       _getStorage.remove(key);
     }
-
+    
     print('>>> Cleared ${keys.length} storage keys');
   }
 

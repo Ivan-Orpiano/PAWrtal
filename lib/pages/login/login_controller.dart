@@ -4,8 +4,6 @@ import 'package:capstone_app/notification/services/in_app_notification_service.d
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
-import 'package:capstone_app/utils/session_sync_service.dart';
-import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -281,8 +279,6 @@ class LoginController extends GetxController {
 
       _getStorage.write("role", role);
       _getStorage.write("email", userEmail);
-
-      _initializeSessionSync(userId, role);
 
       _initializeSecureSession(userId, role);
 
@@ -562,33 +558,5 @@ class LoginController extends GetxController {
         colorText: Colors.red.shade900,
       );
     }
-  }
-
-  void _initializeSessionSync(String userId, String role) {
-    print('>>> ============================================');
-    print('>>> INITIALIZING SESSION SYNC');
-    print('>>> User ID: $userId');
-    print('>>> Role: $role');
-    print('>>> ============================================');
-
-    try {
-      // Generate unique session token
-      final userSession = Get.find<UserSessionService>();
-      final sessionToken = userSession.generateSessionToken();
-
-      // Start session monitoring
-      final sessionSync = Get.find<SessionSyncService>();
-      sessionSync.startMonitoring(
-        userId: userId,
-        sessionToken: sessionToken,
-      );
-
-      print('>>> Session sync initialized successfully');
-    } catch (e) {
-      print('>>> Error initializing session sync: $e');
-      // Don't fail login if session sync fails
-    }
-
-    print('>>> ============================================');
   }
 }
