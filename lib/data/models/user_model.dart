@@ -10,7 +10,7 @@ class User {
   // ID verification fields
   bool idVerified;
   String? idVerifiedAt;
-  String? verificationDocumentId; 
+  String? verificationDocumentId;
 
   // Archive/Soft Delete fields
   bool isArchived;
@@ -28,7 +28,8 @@ class User {
         archivedBy = map["archivedBy"] as String?,
         archiveReason = map["archiveReason"] as String?,
         archivedDocumentId = map["archivedDocumentId"] as String?,
-        profilePictureId = map["profilePictureId"] as String? { // NEW
+        profilePictureId = map["profilePictureId"] as String? {
+    // NEW
     documentId = map["\$id"] ?? '';
     userId = map["userId"] ?? '';
     name = map["name"] ?? '';
@@ -44,7 +45,7 @@ class User {
       'phone': phone,
       'email': email,
       'role': role,
-      'profilePictureId': profilePictureId, 
+      'profilePictureId': profilePictureId,
       'idVerified': idVerified,
       'idVerifiedAt': idVerifiedAt,
       'verificationDocumentId': verificationDocumentId,
@@ -54,6 +55,43 @@ class User {
       'archiveReason': archiveReason,
       'archivedDocumentId': archivedDocumentId,
     };
+  }
+
+  User copyWith({
+    String? userId,
+    String? name,
+    String? email,
+    String? role,
+    String? phone,
+    String? documentId,
+    String? profilePictureId,
+    bool? idVerified,
+    String? idVerifiedAt,
+    String? verificationDocumentId,
+    bool? isArchived,
+    String? archivedAt,
+    String? archivedBy,
+    String? archiveReason,
+    String? archivedDocumentId,
+  }) {
+    return User.fromMap({
+      'userId': userId ?? this.userId,
+      'name': name ?? this.name,
+      'email': email ?? this.email,
+      'role': role ?? this.role,
+      'phone': phone ?? this.phone,
+      '\$id': documentId ?? this.documentId,
+      'profilePictureId': profilePictureId ?? this.profilePictureId,
+      'idVerified': idVerified ?? this.idVerified,
+      'idVerifiedAt': idVerifiedAt ?? this.idVerifiedAt,
+      'verificationDocumentId':
+          verificationDocumentId ?? this.verificationDocumentId,
+      'isArchived': isArchived ?? this.isArchived,
+      'archivedAt': archivedAt ?? this.archivedAt,
+      'archivedBy': archivedBy ?? this.archivedBy,
+      'archiveReason': archiveReason ?? this.archiveReason,
+      'archivedDocumentId': archivedDocumentId ?? this.archivedDocumentId,
+    });
   }
 
   // Helper getter to check if user needs ID verification
@@ -75,14 +113,14 @@ class User {
   // Helper getter for archive status
   String get archiveStatusText {
     if (!isArchived) return 'Active';
-    
+
     if (archivedAt != null) {
       try {
         final archived = DateTime.parse(archivedAt!);
         final deletionDate = archived.add(const Duration(days: 30));
         final now = DateTime.now();
         final daysLeft = deletionDate.difference(now).inDays;
-        
+
         if (daysLeft <= 0) {
           return 'Pending Permanent Deletion';
         }
@@ -91,14 +129,14 @@ class User {
         return 'Archived';
       }
     }
-    
+
     return 'Archived';
   }
 
   // Helper getter to check if user can be recovered
   bool get canBeRecovered {
     if (!isArchived || archivedAt == null) return false;
-    
+
     try {
       final archived = DateTime.parse(archivedAt!);
       final deletionDate = archived.add(const Duration(days: 30));

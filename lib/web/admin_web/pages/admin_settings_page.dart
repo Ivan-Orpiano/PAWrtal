@@ -1,10 +1,15 @@
+import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart' hide User;
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
+import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_change_pass_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_feedback_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_pfp_controller.dart';
+import 'package:capstone_app/web/admin_web/components/appbar/admin_verify_user_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/staff_change_pass_controller.dart';
 
 import 'package:flutter/material.dart';
@@ -99,6 +104,17 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   int selectedIndex = 0;
   final GetStorage storage = GetStorage();
 
+  final TextEditingController _searchController = TextEditingController();
+  User? _searchedUser;
+  bool _isSearching = false;
+  String? _searchError;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _navigateToDashboard() {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -115,13 +131,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       ),
     );
   }
-
-  static const List<String> menuItems = [
-    'Profile',
-    'Settings',
-    'Help',
-    'Send feedback',
-  ];
 
   @override
   void initState() {
@@ -217,9 +226,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   children: [
                     _buildSidebarItem('Profile', Icons.person, 0),
                     _buildSidebarItem('Settings', Icons.settings, 1),
-                    _buildSidebarItem('Help', Icons.help_outline, 2),
+                    _buildSidebarItem('Verify User', Icons.verified_user, 2),
+                    _buildSidebarItem('Help', Icons.help_outline, 3),
                     _buildSidebarItem(
-                        'Send Feedback', Icons.feedback_outlined, 3),
+                        'Send Feedback', Icons.feedback_outlined, 4),
                     const Divider(color: Colors.grey),
                     _buildSidebarItem('Sign out', Icons.logout, -1,
                         isDestructive: true),
@@ -340,8 +350,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 const SizedBox(height: 8),
                 _buildDrawerItem('Profile', Icons.person, 0),
                 _buildDrawerItem('Settings', Icons.settings, 1),
-                _buildDrawerItem('Help', Icons.help_outline, 2),
-                _buildDrawerItem('Send Feedback', Icons.feedback_outlined, 3),
+                _buildDrawerItem('Verify User', Icons.verified_user, 2),
+                _buildDrawerItem('Help', Icons.help_outline, 3),
+                _buildDrawerItem('Send Feedback', Icons.feedback_outlined, 4),
                 const Divider(color: Colors.grey),
                 _buildDrawerItem('Sign out', Icons.logout, -1,
                     isDestructive: true),
@@ -544,8 +555,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       case 1:
         return _buildSettingsContent();
       case 2:
-        return _buildHelpContent();
+        return _buildVerifyUserContent();
       case 3:
+        return _buildHelpContent();
+      case 4:
         return _buildFeedbackContent();
       default:
         return _buildProfileContent();
@@ -1398,15 +1411,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                       spreadRadius: 1,
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Active',
-                style: TextStyle(
-                  color: Colors.green[700],
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -3454,5 +3458,1103 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     }
 
     return urlOrId;
+  }
+
+  Widget _buildUserDetailRow(
+    IconData icon,
+    String label,
+    String value,
+    Color iconColor,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: iconColor),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _searchUserForVerification() async {
+    final query = _searchController.text.trim();
+
+    if (query.isEmpty) {
+      setState(() {
+        _searchError = 'Please enter an email address';
+        _searchedUser = null;
+      });
+      return;
+    }
+
+    // Basic email validation
+    if (!_isValidEmail(query)) {
+      setState(() {
+        _searchError = 'Please enter a valid email address';
+        _searchedUser = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+      _searchedUser = null;
+    });
+
+    try {
+      print('>>> ============================================');
+      print('>>> SEARCHING USER BY EMAIL');
+      print('>>> Email: $query');
+      print('>>> ============================================');
+
+      final authRepository = Get.find<AuthRepository>();
+
+      // Search by email ONLY (more secure)
+      final emailResults =
+          await authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        queries: [
+          Query.equal('email', query),
+          Query.limit(1),
+        ],
+      );
+
+      if (emailResults.documents.isNotEmpty) {
+        final userDoc = emailResults.documents.first;
+        final user = User.fromMap(userDoc.data);
+        user.documentId = userDoc.$id;
+
+        print('>>> ============================================');
+        print('>>> USER FOUND');
+        print('>>> Name: ${user.name}');
+        print('>>> Email: ${user.email}');
+        print('>>> Role: ${user.role}');
+        print('>>> ID Verified: ${user.idVerified}');
+        print('>>> Is Archived: ${user.isArchived}');
+        print('>>> ============================================');
+
+        setState(() {
+          _searchedUser = user;
+          _isSearching = false;
+          _searchError = null;
+        });
+      } else {
+        print('>>> User not found with email: $query');
+        setState(() {
+          _searchedUser = null;
+          _isSearching = false;
+          _searchError =
+              'No user found with this email address. Please check the email and try again.';
+        });
+      }
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR SEARCHING USER: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
+
+      setState(() {
+        _searchedUser = null;
+        _isSearching = false;
+        _searchError = 'Error searching for user. Please try again.';
+      });
+    }
+  }
+
+  bool _isValidEmail(String email) {
+    // Basic email regex pattern
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+    return emailRegex.hasMatch(email);
+  }
+
+// Clear search results
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchedUser = null;
+      _searchError = null;
+    });
+  }
+
+  Widget _buildVerifyUserContent() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(_isMobile ? 16 : 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Section
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.green[400]!, Colors.teal[400]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.verified_user,
+                      color: Colors.green[600], size: 24),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Verify User',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Search and verify users by email address',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Search Section
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.search,
+                            color: Colors.blue[700], size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Search User',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Security Note
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.security, color: Colors.blue[700], size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Search by email address only for security purposes',
+                            style: TextStyle(
+                              color: Colors.blue[700],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Enter user email address (e.g., user@example.com)',
+                            hintStyle: TextStyle(color: Colors.grey[400]),
+                            prefixIcon: Icon(Icons.email_outlined,
+                                color: Colors.grey[600]),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                  color: Colors.blue, width: 2),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: Colors.red, width: 1),
+                            ),
+                            contentPadding: const EdgeInsets.all(16),
+                          ),
+                          onSubmitted: (_) => _searchUserForVerification(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed:
+                            _isSearching ? null : _searchUserForVerification,
+                        icon: _isSearching
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.search, size: 18),
+                        label: Text(_isSearching ? 'Searching...' : 'Search'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Error message
+                  if (_searchError != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline,
+                              color: Colors.red[700], size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _searchError!,
+                              style: TextStyle(
+                                  color: Colors.red[700], fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // User Info Card
+          _buildUserInfoCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserInfoCard() {
+    if (_searchedUser == null) {
+      return Container(
+        padding: const EdgeInsets.all(48),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No user searched yet',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Search for a user by email address to view their details',
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // User found - display info
+    final user = _searchedUser!;
+    final isAlreadyVerified = user.idVerified;
+
+    final verifyController = Get.put(
+      AdminVerifyUserController(Get.find<AuthRepository>()),
+      tag: 'verify_user_${user.userId}',
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header with user status
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue[50]!, Colors.cyan[50]!],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(Icons.person, color: Colors.blue[700], size: 22),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Text(
+                    'User Information',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color:
+                        user.isArchived ? Colors.red[100] : Colors.green[100],
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: user.isArchived
+                          ? Colors.red[300]!
+                          : Colors.green[300]!,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: user.isArchived
+                              ? Colors.red[600]
+                              : Colors.green[600],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        user.isArchived ? 'ARCHIVED' : 'ACTIVE',
+                        style: TextStyle(
+                          color: user.isArchived
+                              ? Colors.red[700]
+                              : Colors.green[700],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // User Details
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // Profile Picture and Name
+                Row(
+                  children: [
+                    _buildUserProfilePicture(user),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.name,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user.email,
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                // User Details Grid
+                _buildUserDetailRow(
+                  Icons.email_outlined,
+                  'Email',
+                  user.email,
+                  Colors.blue,
+                ),
+                const SizedBox(height: 16),
+                _buildUserDetailRow(
+                  Icons.phone_outlined,
+                  'Phone',
+                  user.phone?.isNotEmpty == true ? user.phone! : 'Not provided',
+                  Colors.green,
+                ),
+                const SizedBox(height: 16),
+                _buildUserDetailRow(
+                  Icons.shield_outlined,
+                  'Role',
+                  user.role.toUpperCase(),
+                  Colors.orange,
+                ),
+                const SizedBox(height: 16),
+                _buildUserDetailRow(
+                  Icons.verified_outlined,
+                  'ID Verification Status',
+                  isAlreadyVerified ? 'Verified' : 'Not Verified',
+                  isAlreadyVerified ? Colors.green : Colors.red,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Verify Button or Status Messages
+                Obx(() {
+                  if (verifyController.isVerifying.value) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.blue[700]!),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Verifying user...',
+                            style: TextStyle(
+                              color: Colors.blue[700],
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (isAlreadyVerified) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.green[700], size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'User Already Verified',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (user.idVerifiedAt != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Verified on: ${DateTime.parse(user.idVerifiedAt!).toString().split(' ')[0]}',
+                                    style: TextStyle(
+                                      color: Colors.green[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (user.isArchived) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.block, color: Colors.red[700], size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Cannot verify archived user',
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _showVerifyConfirmationDialog(user, verifyController),
+                      icon: const Icon(Icons.verified, size: 20),
+                      label: const Text(
+                        'Verify User',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  );
+                }),
+
+                // Error message
+                Obx(() {
+                  if (verifyController.errorMessage.value.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline,
+                            color: Colors.red[700], size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            verifyController.errorMessage.value,
+                            style:
+                                TextStyle(color: Colors.red[700], fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserProfilePicture(User user) {
+    // Check if user has a profile picture
+    if (user.hasProfilePicture) {
+      final imageUrl = Get.find<AuthRepository>()
+          .getUserProfilePictureUrl(user.profilePictureId!);
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(40),
+        child: Image.network(
+          imageUrl,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey[200],
+              ),
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                  strokeWidth: 2,
+                  color: Colors.purple[600],
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            print('>>> Error loading user profile picture: $error');
+            return _buildDefaultUserAvatar(user.name);
+          },
+        ),
+      );
+    }
+
+    // Show default avatar if no profile picture
+    return _buildDefaultUserAvatar(user.name);
+  }
+
+  Widget _buildDefaultUserAvatar(String userName) {
+    final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Colors.purple.withOpacity(0.7), Colors.purple],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showVerifyConfirmationDialog(
+      User user, AdminVerifyUserController controller) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: _isMobile ? double.infinity : 450,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.green[400]!, Colors.green[600]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.verified_user,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Verify User',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Confirm verification',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      // User info summary
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                _buildUserProfilePicture(user),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user.name,
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        user.email,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Confirmation message
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Colors.green.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.green[700], size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Are you sure you want to verify this user? This action will mark them as a verified user.',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey[400]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Verify User',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    // If user confirmed, proceed with verification
+    if (confirmed == true) {
+      final success = await controller.verifyUser(user);
+
+      if (success) {
+        _showSnackbar(
+          'Success',
+          'User ${user.name} verified successfully',
+          Colors.green,
+        );
+
+        // Refresh user data
+        setState(() {
+          _searchedUser = user.copyWith(
+            idVerified: true,
+            idVerifiedAt: DateTime.now().toIso8601String(),
+          );
+        });
+      } else {
+        _showSnackbar(
+          'Error',
+          controller.errorMessage.value.isNotEmpty
+              ? controller.errorMessage.value
+              : 'Failed to verify user',
+          Colors.red,
+        );
+      }
+    }
   }
 }

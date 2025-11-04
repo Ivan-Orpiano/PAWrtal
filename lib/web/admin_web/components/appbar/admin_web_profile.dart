@@ -397,13 +397,25 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                         },
                       ),
                     ),
+                    // NEW: Verify User menu item (only show for admins, not staff)
+                    if (!isStaff)
+                      SizedBox(
+                        width: double.infinity,
+                        child: _popupItem(
+                          "Verify User",
+                          Icons.verified_user_outlined,
+                          () {
+                            _navigateToAdminSettings(2);
+                          },
+                        ),
+                      ),
                     SizedBox(
                       width: double.infinity,
                       child: _popupItem(
                         "Help & Support",
                         Icons.help_outline,
                         () {
-                          _navigateToAdminSettings(2);
+                          _navigateToAdminSettings(3);
                         },
                       ),
                     ),
@@ -413,7 +425,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                         "Send Feedback",
                         Icons.feedback_outlined,
                         () {
-                          _navigateToAdminSettings(3);
+                          _navigateToAdminSettings(4);
                         },
                       ),
                     ),
