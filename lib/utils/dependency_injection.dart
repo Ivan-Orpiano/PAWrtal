@@ -1,10 +1,11 @@
+// lib/init/dependency_injection.dart
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
+import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
-import 'package:capstone_app/utils/session_sync_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -22,15 +23,12 @@ Future<void> initializeDependencies() async {
 
   Get.put(AppWriteProvider());
   Get.put(AuthRepository(Get.find<AppWriteProvider>()));
-  
-  // NEW: Initialize SessionSyncService
-  Get.put(SessionSyncService(), permanent: true);
-  print('>>> ✓ Session Sync Service initialized');
-  
   Get.put(
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
+   final authRepo = Get.find<AuthRepository>();
+  
   print('>>> ✓ Archive Service initialized and running');
 
   Get.put(
@@ -53,9 +51,23 @@ Future<void> initializeDependencies() async {
   );
   print('>>> ✓ In-App Notification Service registered (will initialize after login)');
 
+  Get.put(
+    AppointmentReminderService(
+      authRepository: Get.find<AuthRepository>(),
+      appwriteProvider: Get.find<AppWriteProvider>(),
+      session: Get.find<UserSessionService>(),
+    ),
+    permanent: true,
+  );
+  print('>>> ✓ Appointment Reminder Service initialized and running');
+
   Get.put(DashboardController());
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
+  
+  // ADD THIS LINE - Register WebUserHomeController globally
   Get.put(WebUserHomeController(), permanent: true);
   print('>>> ✓ WebUserHomeController initialized');
+
+  await authRepo.appWriteProvider.migrateReviewsArchiveField();
 }
