@@ -105,17 +105,6 @@ class _WebSettingsAndEverythingPageState
     super.dispose();
   }
 
-  void _showSnackbar(String title, String message, Color backgroundColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -659,16 +648,12 @@ class _WebSettingsAndEverythingPageState
                                           print(
                                               '>>> Stored profile picture ID in GetStorage: $newFileId');
                                           setState(() {});
-                                          _showSnackbar(
-                                              'Success',
-                                              'Profile picture updated',
-                                              Colors.green);
+                                          _showSuccess(
+                                              'Profile picture updated successfully');
                                         }
                                       } else {
-                                        _showSnackbar(
-                                            'Error',
-                                            'User document not found',
-                                            Colors.red);
+                                        _showError(
+                                            'User document ID not found. Please log in again.');
                                       }
                                     },
                               style: ElevatedButton.styleFrom(
@@ -1149,33 +1134,6 @@ class _WebSettingsAndEverythingPageState
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              // Wrap(
-                              //   spacing: 10,
-                              //   runSpacing: 10,
-                              //   children: [
-                              //     _buildActionChip(
-                              //       icon: Icons.open_in_new,
-                              //       label: 'Open Article',
-                              //       color: Colors.blue,
-                              //       onTap: () => _showSnackbar(
-                              //           'Info',
-                              //           'Opening detailed article...',
-                              //           Colors.blue),
-                              //     ),
-                              //     _buildActionChip(
-                              //       icon: Icons.link,
-                              //       label: 'Copy Link',
-                              //       color: Colors.green,
-                              //       onTap: () {
-                              //         Clipboard.setData(
-                              //             ClipboardData(text: item.answer));
-                              //         _showSnackbar('Success', 'Link copied!',
-                              //             Colors.green);
-                              //       },
-                              //     ),
-                              //   ],
-                              // ),
-                              const SizedBox(height: 16),
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -1199,10 +1157,7 @@ class _WebSettingsAndEverythingPageState
                                       children: [
                                         Expanded(
                                           child: OutlinedButton.icon(
-                                            onPressed: () => _showSnackbar(
-                                                'Thank you',
-                                                'Glad we could help!',
-                                                Colors.green),
+                                            onPressed: () => _showSuccess('Glad we could help!'),
                                             icon: Icon(Icons.thumb_up_outlined,
                                                 size: 16,
                                                 color: Colors.green[700]),
@@ -1229,10 +1184,7 @@ class _WebSettingsAndEverythingPageState
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: OutlinedButton.icon(
-                                            onPressed: () => _showSnackbar(
-                                                'Feedback',
-                                                'We\'ll improve this',
-                                                Colors.orange),
+                                            onPressed: () => _showInfo('We\'ll improve this'),
                                             icon: Icon(
                                                 Icons.thumb_down_outlined,
                                                 size: 16,
@@ -2164,8 +2116,7 @@ class _WebSettingsAndEverythingPageState
               if (isSwitch)
                 Switch(
                   value: value,
-                  onChanged: (v) => _showSnackbar(
-                      'Settings', 'Setting updated', Colors.green),
+                  onChanged: (v) => _showSuccess('Setting updated'),
                   activeColor: iconColor,
                 )
               else
@@ -2233,8 +2184,7 @@ class _WebSettingsAndEverythingPageState
                 storage.write("phone", phoneController.text);
                 Navigator.of(context).pop();
                 setState(() {});
-                _showSnackbar(
-                    'Success', 'Profile updated successfully', Colors.green);
+                _showSuccess('Profile updated successfully');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
@@ -2283,8 +2233,7 @@ class _WebSettingsAndEverythingPageState
                 storage.write("bio", bioController.text);
                 Navigator.of(context).pop();
                 setState(() {});
-                _showSnackbar(
-                    'Success', 'Bio updated successfully', Colors.green);
+                _showSuccess( 'Bio updated successfully');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
@@ -2405,11 +2354,7 @@ void _showChangePasswordDialog() {
       Navigator.of(context).pop();
 
       // Show success message
-      _showSnackbar(
-        'Success',
-        'Password changed successfully. Please use your new password next time you sign in.',
-        Colors.green,
-      );
+      _showSuccess( 'Password changed successfully');
 
       // Clear controllers
       currentPasswordController.dispose();
@@ -2436,7 +2381,7 @@ void _showChangePasswordDialog() {
         newPasswordError.value = errorMessage;
       } else {
         // Generic error
-        _showSnackbar('Error', errorMessage, Colors.red);
+        _showError(errorMessage);
       }
     }
   }
@@ -2708,10 +2653,7 @@ void _showChangePasswordDialog() {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _showSnackbar(
-                    'Info',
-                    'Account deactivation requires admin approval',
-                    Colors.orange);
+                _showWarning('Not yet implemented');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -2892,4 +2834,68 @@ void _showChangePasswordDialog() {
     ),
   );
 }
+
+  void _showCompactNotification(String message,
+      {required Color bgColor,
+      required IconData icon,
+      required Color iconColor}) {
+    Get.rawSnackbar(
+      messageText: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: iconColor, size: 16),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: bgColor,
+      snackPosition: SnackPosition.TOP,
+      borderRadius: 4,
+      margin: const EdgeInsets.only(top: 16, right: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      duration: const Duration(seconds: 2),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+      maxWidth: 300,
+    );
+  }
+
+  void _showSuccess(String message) {
+    _showCompactNotification(message,
+        bgColor: Colors.green[600]!,
+        icon: Icons.check_circle_outline,
+        iconColor: Colors.white);
+  }
+
+  void _showError(String message) {
+    _showCompactNotification(message,
+        bgColor: Colors.red[600]!,
+        icon: Icons.error_outline,
+        iconColor: Colors.white);
+  }
+
+  void _showInfo(String message) {
+    _showCompactNotification(message,
+        bgColor: Colors.blue[600]!,
+        icon: Icons.info_outline,
+        iconColor: Colors.white);
+  }
+
+  void _showWarning(String message) {
+    _showCompactNotification(message,
+        bgColor: Colors.amber[700]!,
+        icon: Icons.warning_amber,
+        iconColor: Colors.white);
+  }
 }
