@@ -146,173 +146,183 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       ),
     );
   }
-    Widget _buildDashboardStats() {
-      return Obx(() {
-        // CRITICAL FIX: Calculate stats for PINNED requests only
-        final pinnedRequests = _controller.filteredRequests
-            .where((request) => request.isPinned)
-            .toList();
 
-        final pinnedStats = {
-          'total': pinnedRequests.length,
-          'pending': pinnedRequests.where((r) => r.status == 'pending').length,
-          'approved': pinnedRequests.where((r) => r.status == 'approved').length,
-          'rejected': pinnedRequests.where((r) => r.status == 'rejected').length,
-        };
 
-        final isMobile = _isMobile(context);
-        final isTablet = _isTablet(context);
+      Widget _buildDashboardStats() {
+        return Obx(() {
+         
+          final totalStats = {
+            'total': _controller.filteredRequests.length,
+            'pending': _controller.filteredRequests.where((r) => r.status == 'pending').length,
+            'approved': _controller.filteredRequests.where((r) => r.status == 'approved').length,
+            'rejected': _controller.filteredRequests.where((r) => r.status == 'rejected').length,
+          };
 
-        return Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: EdgeInsets.all(isMobile ? 12 : 16),
-          child: isMobile
-              ? Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            'Total',
-                            pinnedStats['total'].toString(), // FIXED
+          // 🎯 BONUS: Also show pinned count for reference
+          final pinnedCount = _controller.filteredRequests
+              .where((r) => r.isPinned)
+              .length;
+
+          final isMobile = _isMobile(context);
+          final isTablet = _isTablet(context);
+
+          return Container(
+            color: const Color.fromRGBO(248, 253, 255, 1),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
+            child: Column(
+              children: [
+              
+                // 📊 Main stats cards (showing ALL requests, not just pinned)
+                isMobile
+                    ? Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Total',
+                                  totalStats['total'].toString(),
+                                  Icons.delete_forever,
+                                  const Color(0xFF4A90E2),
+                                  isCompact: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Pending',
+                                  totalStats['pending'].toString(),
+                                  Icons.pending,
+                                  const Color(0xFFF39C12),
+                                  isCompact: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Approved',
+                                  totalStats['approved'].toString(),
+                                  Icons.check_circle,
+                                  const Color(0xFF2ECC71),
+                                  isCompact: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Rejected',
+                                  totalStats['rejected'].toString(),
+                                  Icons.cancel,
+                                  const Color(0xFFE74C3C),
+                                  isCompact: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          _buildStatCard(
+                            'Total Requests',
+                            totalStats['total'].toString(),
                             Icons.delete_forever,
                             const Color(0xFF4A90E2),
-                            isCompact: true,
+                            isCompact: isTablet,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildStatCard(
+                          SizedBox(width: isTablet ? 8 : 12),
+                          _buildStatCard(
                             'Pending',
-                            pinnedStats['pending'].toString(), // FIXED
+                            totalStats['pending'].toString(),
                             Icons.pending,
                             const Color(0xFFF39C12),
-                            isCompact: true,
+                            isCompact: isTablet,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
+                          SizedBox(width: isTablet ? 8 : 12),
+                          _buildStatCard(
                             'Approved',
-                            pinnedStats['approved'].toString(), // FIXED
+                            totalStats['approved'].toString(),
                             Icons.check_circle,
                             const Color(0xFF2ECC71),
-                            isCompact: true,
+                            isCompact: isTablet,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildStatCard(
+                          SizedBox(width: isTablet ? 8 : 12),
+                          _buildStatCard(
                             'Rejected',
-                            pinnedStats['rejected'].toString(), // FIXED
+                            totalStats['rejected'].toString(),
                             Icons.cancel,
                             const Color(0xFFE74C3C),
-                            isCompact: true,
+                            isCompact: isTablet,
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    _buildStatCard(
-                      'Total Requests',
-                      pinnedStats['total'].toString(), // FIXED
-                      Icons.delete_forever,
-                      const Color(0xFF4A90E2),
-                      isCompact: isTablet,
-                    ),
-                    SizedBox(width: isTablet ? 8 : 12),
-                    _buildStatCard(
-                      'Pending',
-                      pinnedStats['pending'].toString(), // FIXED
-                      Icons.pending,
-                      const Color(0xFFF39C12),
-                      isCompact: isTablet,
-                    ),
-                    SizedBox(width: isTablet ? 8 : 12),
-                    _buildStatCard(
-                      'Approved',
-                      pinnedStats['approved'].toString(), // FIXED
-                      Icons.check_circle,
-                      const Color(0xFF2ECC71),
-                      isCompact: isTablet,
-                    ),
-                    SizedBox(width: isTablet ? 8 : 12),
-                    _buildStatCard(
-                      'Rejected',
-                      pinnedStats['rejected'].toString(), // FIXED
-                      Icons.cancel,
-                      const Color(0xFFE74C3C),
-                      isCompact: isTablet,
-                    ),
-                  ],
-                ),
-        );
-      });
-    }
-    Widget _buildStatCard(
-      String title,
-      String value,
-      IconData icon,
-      Color color, {
-      bool isCompact = false,
-    }) {
-      // CRITICAL: Add null safety check
-      final displayValue = value.isEmpty ? '0' : value;
+                        ],
+                      ),
+              ],
+            ),
+          );
+        });
+      }
 
-      return Expanded(
-        child: Container(
-          padding: EdgeInsets.all(isCompact ? 12 : 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(icon, color: color, size: isCompact ? 20 : 24),
-                  Text(
-                    displayValue, // FIXED: Use safe value
-                    style: TextStyle(
-                      fontSize: isCompact ? 20 : 24,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: isCompact ? 4 : 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: isCompact ? 11 : 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+      // ✅ KEEP THE _buildStatCard METHOD AS IS (no changes needed)
+      Widget _buildStatCard(
+        String title,
+        String value,
+        IconData icon,
+        Color color, {
+        bool isCompact = false,
+      }) {
+        final displayValue = value.isEmpty ? '0' : value;
+
+        return Expanded(
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Icon(icon, color: color, size: isCompact ? 20 : 24),
+                    Text(
+                      displayValue,
+                      style: TextStyle(
+                        fontSize: isCompact ? 20 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isCompact ? 4 : 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: isCompact ? 11 : 14,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    }
+        );
+      }
   Widget _buildSearchAndFilters() {
     final isMobile = _isMobile(context);
 

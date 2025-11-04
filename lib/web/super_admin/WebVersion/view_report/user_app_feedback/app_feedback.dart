@@ -143,8 +143,22 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildMobileStatsCards() {
-    return Obx(() => Container(
+    Widget _buildMobileStatsCards() {
+      return Obx(() {
+        // 🎯 CRITICAL FIX: Calculate stats from VISIBLE feedback only
+        final visibleFeedback = controller.filteredFeedback
+            .where((f) => !f.isPinned && !f.isArchived)
+            .toList();
+
+        final stats = {
+          'total': visibleFeedback.length,
+          'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+          'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+          'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+          'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
+        };
+
+        return Container(
           color: const Color.fromRGBO(248, 253, 255, 1),
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -154,7 +168,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Total',
-                      controller.feedbackStats['total']?.toString() ?? '0',
+                      stats['total']?.toString() ?? '0',
                       Colors.blue,
                       Icons.feedback,
                     ),
@@ -163,7 +177,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Pending',
-                      controller.feedbackStats['pending']?.toString() ?? '0',
+                      stats['pending']?.toString() ?? '0',
                       Colors.orange,
                       Icons.schedule,
                     ),
@@ -172,7 +186,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Progress',
-                      controller.feedbackStats['inProgress']?.toString() ?? '0',
+                      stats['inProgress']?.toString() ?? '0',
                       Colors.blue,
                       Icons.autorenew,
                     ),
@@ -185,7 +199,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Completed',
-                      controller.feedbackStats['completed']?.toString() ?? '0',
+                      stats['completed']?.toString() ?? '0',
                       Colors.green,
                       Icons.check_circle,
                     ),
@@ -194,7 +208,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildCompactStatCard(
                       'Critical',
-                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      stats['critical']?.toString() ?? '0',
                       Colors.red,
                       Icons.warning,
                     ),
@@ -203,8 +217,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
             ],
           ),
-        ));
-  }
+        );
+      });
+    }
 
   Widget _buildCompactStatCard(
       String title, String value, Color color, IconData icon) {
@@ -457,9 +472,22 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
       floatingActionButton: _buildPinnedFAB(),
     );
   }
+    Widget _buildTabletStatsCards() {
+      return Obx(() {
+    
+        final visibleFeedback = controller.filteredFeedback
+            .where((f) => !f.isPinned && !f.isArchived)
+            .toList();
 
-  Widget _buildTabletStatsCards() {
-    return Obx(() => Container(
+        final stats = {
+          'total': visibleFeedback.length,
+          'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+          'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+          'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+          'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
+        };
+
+        return Container(
           color: const Color.fromRGBO(248, 253, 255, 1),
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -468,21 +496,21 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                 children: [
                   _buildStatCard(
                     'Total',
-                    controller.feedbackStats['total']?.toString() ?? '0',
+                    stats['total']?.toString() ?? '0',
                     Colors.blue,
                     Icons.feedback,
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
                     'Pending',
-                    controller.feedbackStats['pending']?.toString() ?? '0',
+                    stats['pending']?.toString() ?? '0',
                     Colors.orange,
                     Icons.schedule,
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
                     'In Progress',
-                    controller.feedbackStats['inProgress']?.toString() ?? '0',
+                    stats['inProgress']?.toString() ?? '0',
                     Colors.blue,
                     Icons.autorenew,
                   ),
@@ -494,7 +522,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildStatCard(
                       'Completed',
-                      controller.feedbackStats['completed']?.toString() ?? '0',
+                      stats['completed']?.toString() ?? '0',
                       Colors.green,
                       Icons.check_circle,
                     ),
@@ -503,7 +531,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   Expanded(
                     child: _buildStatCard(
                       'Critical',
-                      controller.feedbackStats['critical']?.toString() ?? '0',
+                      stats['critical']?.toString() ?? '0',
                       Colors.red,
                       Icons.warning,
                     ),
@@ -522,8 +550,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               ),
             ],
           ),
-        ));
-  }
+        );
+      });
+    }
 
   Widget _buildTabletFiltersSection() {
     return Container(
@@ -690,9 +719,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
 
   Widget _buildStatsCards() {
     return Obx(() {
-      // 🔥 CRITICAL FIX: Calculate stats ONLY for unpinned AND unarchived feedback
+     
       final activeUnpinnedFeedback = controller.allFeedback
-          .where((f) => !f.isPinned && !f.isArchived) // 🔥 NEW: Exclude archived
+          .where((f) => !f.isPinned && !f.isArchived) 
           .toList();
 
       final stats = {
