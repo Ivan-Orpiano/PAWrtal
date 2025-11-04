@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/image_helper.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_staff_management_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_edit_clinic_page.dart';
@@ -2692,28 +2693,43 @@ class _SuperAdminVetClinicDetailPageState
 String getDashboardImageUrl(Clinic clinic, ClinicSettings? settings) {
   // Priority 1: Check clinic.dashboardPic (authoritative source)
   if (clinic.dashboardPic != null && clinic.dashboardPic!.isNotEmpty) {
-    return getDashImageUrl(clinic.dashboardPic!);
+    return clinic.dashboardPic!; // Already a URL
   }
 
   // Priority 2: Check settings.dashboardPic (fallback)
   if (settings != null && settings.dashboardPic.isNotEmpty) {
-    return getDashImageUrl(settings.dashboardPic);
+    return settings.dashboardPic; // Already a URL
   }
 
   // Priority 3: Use main clinic image
   if (clinic.image.isNotEmpty) {
-    return getDashImageUrl(clinic.image);
+    return clinic.image.startsWith('http')
+        ? clinic.image
+        : '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${clinic.image}/view?project=${AppwriteConstants.projectID}';
   }
 
   // Priority 4: Use first gallery image if available
   if (settings != null && settings.gallery.isNotEmpty) {
-    return getDashImageUrl(settings.gallery.first);
+    return settings.gallery.first; // Already a URL
   }
 
   return ''; // No image available
 }
 
+String getDashImageUrl(String imageReference) {
+  // Since we're storing full URLs, just return them directly
+  if (imageReference.isEmpty) {
+    return '';
+  }
 
+  // If it's already a URL, return it
+  if (imageReference.startsWith('http')) {
+    return imageReference;
+  }
+
+  // If somehow it's still a file ID, construct the URL
+  return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageReference/view?project=${AppwriteConstants.projectID}';
+}
 
 void _showDeletionResults(Map<String, dynamic> results, BuildContext context) {
   showDialog(
