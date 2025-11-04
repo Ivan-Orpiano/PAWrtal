@@ -148,6 +148,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       clinicSettings: controller.clinicSettingsMap[clinic.documentId ?? ''],
                     )
                   ),
+                  Container(
+                    color: Colors.transparent,
+                    height: 100
+                  ),
               ],
             );
           });
