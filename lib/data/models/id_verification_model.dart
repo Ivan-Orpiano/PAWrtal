@@ -10,6 +10,7 @@ class IdVerification {
   String? countryCode;
   String? fullName;
   String? birthDate;
+  String? verifyByClinic; // NEW: Clinic ID that verified the user
   DateTime createdAt;
   DateTime updatedAt;
   DateTime? verifiedAt;
@@ -27,6 +28,7 @@ class IdVerification {
     this.countryCode,
     this.fullName,
     this.birthDate,
+    this.verifyByClinic, // NEW
     DateTime? createdAt,
     DateTime? updatedAt,
     this.verifiedAt,
@@ -47,6 +49,7 @@ class IdVerification {
       countryCode: map['countryCode'] as String?,
       fullName: map['fullName'] as String?,
       birthDate: map['birthDate'] as String?,
+      verifyByClinic: map['verifyByClinic'] as String?, // NEW
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'] as String)
           : DateTime.now(),
@@ -72,6 +75,7 @@ class IdVerification {
       'countryCode': countryCode,
       'fullName': fullName,
       'birthDate': birthDate,
+      'verifyByClinic': verifyByClinic, // NEW
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'verifiedAt': verifiedAt?.toIso8601String(),
@@ -91,6 +95,7 @@ class IdVerification {
     String? countryCode,
     String? fullName,
     String? birthDate,
+    String? verifyByClinic, // NEW
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? verifiedAt,
@@ -108,6 +113,7 @@ class IdVerification {
       countryCode: countryCode ?? this.countryCode,
       fullName: fullName ?? this.fullName,
       birthDate: birthDate ?? this.birthDate,
+      verifyByClinic: verifyByClinic ?? this.verifyByClinic, // NEW
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       verifiedAt: verifiedAt ?? this.verifiedAt,
@@ -118,4 +124,8 @@ class IdVerification {
   bool get isVerified => status == 'approved';
   bool get isPending => status == 'pending' || status == 'in_progress';
   bool get isRejected => status == 'rejected';
+
+  // NEW: Check if verified by clinic
+  bool get isVerifiedByClinic =>
+      verifyByClinic != null && verifyByClinic!.isNotEmpty;
 }
