@@ -22,31 +22,32 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  final Map<String, dynamic> _clinicCache = {}; // Cache clinic data
+  final Map<String, dynamic> _clinicCache = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Load conversations ONCE on init
+    // STEP 1: Load conversations once
+    print('>>> MESSAGES PAGE: Loading initial conversations');
     _messagingController.loadUserConversations();
-    
-    // Real-time updates will handle everything else
+
+    // STEP 2: CRITICAL - Subscribe to real-time updates
+    print('>>> MESSAGES PAGE: Setting up real-time subscription');
     _messagingController.subscribeToConversationUpdates();
-    
-    // Check if we need to restore a preserved conversation from desktop/tablet
+
+    // STEP 3: Check if we need to restore a conversation from layout transition
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_messagingController.shouldRestoreConversation()) {
+        print('>>> MESSAGES PAGE: Restoring preserved conversation');
         final data = _messagingController.selectedConversationData.value!;
         final conversation = data['conversation'] as Conversation;
         final receiverId = data['receiverId'] as String;
         final receiverType = data['receiverType'] as String;
-        
-        // Get clinic/user data
+
         final conversationData = await _getConversationData(conversation);
-        
-        // Navigate to the conversation
+
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -60,7 +61,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
             ),
           ),
         );
-        
+
         _messagingController.clearPreservedConversation();
       }
     });
@@ -77,8 +78,9 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // Only refresh when app comes back from background (to catch missed updates)
+    // Only refresh when app resumes (to catch any missed real-time updates)
     if (state == AppLifecycleState.resumed) {
+      print('>>> MESSAGES PAGE: App resumed, refreshing conversations');
       _messagingController.loadUserConversations();
     }
   }
@@ -117,7 +119,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
           'name': clinic.clinicName,
           'image': clinic.image,
           'profilePictureId': clinic.profilePictureId ?? '',
-          'isOnline': false, // Will be updated with real status
+          'isOnline': false,
         };
 
         _clinicCache[cacheKey] = conversationData;
@@ -153,7 +155,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
               width: size,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                // Fallback to regular image if profile picture fails
                 return fallbackImage.isNotEmpty
                     ? Image.network(
                         fallbackImage,
@@ -207,9 +208,13 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
       future: _getConversationData(conversation),
       builder: (context, snapshot) {
         final data = snapshot.data ??
-            {'name': 'Loading...', 'image': '', 'profilePictureId': '', 'isOnline': false};
+            {
+              'name': 'Loading...',
+              'image': '',
+              'profilePictureId': '',
+              'isOnline': false
+            };
 
-        // Use userUnreadCount for user side
         final hasUnreadMessages = conversation.userUnreadCount > 0;
 
         return InkWell(
@@ -228,7 +233,8 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                 ),
               ),
             );
-            // No need to manually refresh - real-time will handle it
+            // REMOVED: Manual refresh - real-time handles it
+            // _messagingController.loadUserConversations();
           },
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -253,11 +259,9 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
             ),
             child: Row(
               children: [
-                // Profile Image with Online Status
                 Stack(
                   children: [
                     _buildProfileImage(data, 50),
-                    // Online status indicator
                     if (data['isOnline'])
                       Positioned(
                         bottom: 0,
@@ -275,8 +279,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                   ],
                 ),
                 const SizedBox(width: 12),
-
-                // Conversation Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,7 +440,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // Conversations List
+                  // Conversations List - WRAPPED IN OBX FOR REAL-TIME UPDATES
                   Expanded(
                     child: Obx(() {
                       if (_messagingController.isLoading.value) {
@@ -517,18 +519,15 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                         );
                       }
 
-                      return RefreshIndicator(
-                        onRefresh: () async {
-                          await _messagingController.loadUserConversations();
+                      // REMOVED: RefreshIndicator - no manual refresh needed!
+                      // Real-time updates handle everything automatically
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        itemCount: filteredConversations.length,
+                        itemBuilder: (context, index) {
+                          final conversation = filteredConversations[index];
+                          return _buildConversationTile(conversation);
                         },
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          itemCount: filteredConversations.length,
-                          itemBuilder: (context, index) {
-                            final conversation = filteredConversations[index];
-                            return _buildConversationTile(conversation);
-                          },
-                        ),
                       );
                     }),
                   ),
