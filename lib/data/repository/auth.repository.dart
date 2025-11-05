@@ -1647,16 +1647,15 @@ class AuthRepository {
   Future<void> archiveFeedback(String documentId, String archivedBy) async {
     try {
       print('>>> REPOSITORY: Archiving feedback: $documentId');
-      
+
       await appWriteProvider.archiveFeedback(documentId, archivedBy);
-      
+
       print('>>> REPOSITORY: Archive successful');
     } catch (e) {
       print('>>> REPOSITORY: Archive failed: $e');
       rethrow;
     }
   }
-
 
   Future<void> deleteFeedback(String documentId, List<String> attachmentIds) {
     return appWriteProvider.deleteFeedback(documentId, attachmentIds);
@@ -1668,9 +1667,8 @@ class AuthRepository {
   }
 
   Future<void> migrateFeedbackArchiveField() {
-  return appWriteProvider.migrateFeedbackArchiveField();
-}
-
+    return appWriteProvider.migrateFeedbackArchiveField();
+  }
 
   Future<void> deleteFeedbackAttachments(List<String> fileIds) {
     return appWriteProvider.deleteFeedbackAttachments(fileIds);
@@ -2773,5 +2771,13 @@ class AuthRepository {
       secret: secret,
       newPassword: newPassword,
     );
+  }
+
+  Stream<RealtimeMessage> subscribeToUserConversations(String userId) {
+    return appWriteProvider.subscribeToUserConversations(userId);
+  }
+
+  Stream<RealtimeMessage> subscribeToClinicConversations(String clinicId) {
+    return appWriteProvider.subscribeToClinicConversations(clinicId);
   }
 }

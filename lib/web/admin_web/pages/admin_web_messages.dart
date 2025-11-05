@@ -249,8 +249,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
   }
 
-  
-
   Future<void> _setCurrentUserOnline() async {
     try {
       final userId = _userSession.userId;
@@ -274,8 +272,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       print('>>> Error setting user offline: $e');
     }
   }
-
-  
 
   Future<Map<String, dynamic>> _getUserData(String userId) async {
     if (_userCache.containsKey(userId)) {
@@ -933,14 +929,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                     }),
                   ],
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.call),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(Icons.info_outline),
-                onPressed: () {},
               ),
             ],
           ),

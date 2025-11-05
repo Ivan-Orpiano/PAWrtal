@@ -33,7 +33,6 @@ class MessagingController extends GetxController {
   final shouldAutoSelectConversation = false.obs;
   final selectedConversationData = Rxn<Map<String, dynamic>>();
 
-
   // Text controller for message input
   final messageController = TextEditingController();
   final scrollController = ScrollController();
@@ -94,7 +93,7 @@ class MessagingController extends GetxController {
   // ADDED: Method to clear all data (call this on logout)
   void clearAllData() {
     print('=== Clearing MessagingController data ===');
-    
+
     // Cancel subscriptions
     _messageSubscription?.cancel();
     _messageSubscription = null;
@@ -108,15 +107,15 @@ class MessagingController extends GetxController {
     currentMessages.clear();
     conversationStarters.clear();
     userStatuses.clear();
-    
+
     // Clear current conversation state
     currentConversation.value = null;
     currentReceiverId.value = '';
     currentReceiverType.value = '';
-    
+
     // Clear text input
     messageController.clear();
-    
+
     print('MessagingController data cleared');
   }
 
@@ -138,117 +137,118 @@ class MessagingController extends GetxController {
     }
   }
 
-Future<Conversation?> startConversationWithClinic(String clinicId) async {
-  try {
-    isLoading.value = true;
+  Future<Conversation?> startConversationWithClinic(String clinicId) async {
+    try {
+      isLoading.value = true;
 
-    print('=== DEBUG: User Starting conversation ===');
-    print('User ID: ${_userSession.userId}');
-    print('Clinic ID: $clinicId');
+      print('=== DEBUG: User Starting conversation ===');
+      print('User ID: ${_userSession.userId}');
+      print('Clinic ID: $clinicId');
 
-    if (!AppwriteConstants.messagingCollectionsConfigured) {
+      if (!AppwriteConstants.messagingCollectionsConfigured) {
+        Get.snackbar(
+          'Setup Required',
+          'Messaging collections need to be created in AppWrite database first.',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+        return null;
+      }
+
+      if (_userSession.userId.isEmpty) {
+        print('ERROR: User ID is empty');
+        Get.snackbar(
+          'Login Required',
+          'Please log in first to start a conversation.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return null;
+      }
+
+      if (clinicId.isEmpty) {
+        print('ERROR: Clinic ID is empty');
+        Get.snackbar(
+          'Error',
+          'Invalid clinic information.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return null;
+      }
+
+      // Get or create conversation
+      print('Creating/getting conversation...');
+      final conversation = await _authRepository.getOrCreateConversation(
+          _userSession.userId, clinicId);
+
+      if (conversation == null) {
+        print(
+            'ERROR: Failed to create/get conversation - conversation is null');
+        Get.snackbar(
+          'Error',
+          'Failed to create conversation. Please check your internet connection and try again.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+        return null;
+      }
+
+      print('SUCCESS: Conversation created/found: ${conversation.documentId}');
+
+      // Update conversations list - add to TOP or move existing to TOP
+      final existingIndex = conversations
+          .indexWhere((c) => c.documentId == conversation.documentId);
+
+      if (existingIndex != -1) {
+        print('Conversation exists, moving to top');
+        conversations.removeAt(existingIndex);
+      } else {
+        print('New conversation, adding to top');
+      }
+      conversations.insert(0, conversation);
+
+      // CRITICAL: Set as current conversation IMMEDIATELY
+      currentConversation.value = conversation;
+      currentReceiverId.value = clinicId;
+      currentReceiverType.value = 'clinic';
+
+      print(
+          'Current conversation set: ${currentConversation.value?.documentId}');
+
+      // Subscribe to real-time messages FIRST (so we catch any incoming messages)
+      print('Subscribing to messages...');
+      subscribeToMessages(conversation.documentId!);
+
+      // Load conversation data
+      print('Loading conversation data...');
+      await Future.wait([
+        loadConversationMessages(conversation.documentId!),
+        loadConversationStarters(clinicId),
+      ]);
+
+      print('SUCCESS: Conversation setup complete');
+      print('Messages loaded: ${currentMessages.length}');
+      print('Starters loaded: ${conversationStarters.length}');
+
+      return conversation;
+    } catch (e) {
+      print('ERROR: Exception in startConversationWithClinic: $e');
+      print('Stack trace: ${StackTrace.current}');
       Get.snackbar(
-        'Setup Required',
-        'Messaging collections need to be created in AppWrite database first.',
-        backgroundColor: Colors.orange,
+        'Error',
+        'Failed to start conversation: $e',
+        backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 5),
       );
       return null;
+    } finally {
+      isLoading.value = false;
     }
-
-    if (_userSession.userId.isEmpty) {
-      print('ERROR: User ID is empty');
-      Get.snackbar(
-        'Login Required',
-        'Please log in first to start a conversation.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return null;
-    }
-
-    if (clinicId.isEmpty) {
-      print('ERROR: Clinic ID is empty');
-      Get.snackbar(
-        'Error',
-        'Invalid clinic information.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return null;
-    }
-
-    // Get or create conversation
-    print('Creating/getting conversation...');
-    final conversation = await _authRepository.getOrCreateConversation(
-        _userSession.userId, clinicId);
-
-    if (conversation == null) {
-      print('ERROR: Failed to create/get conversation - conversation is null');
-      Get.snackbar(
-        'Error',
-        'Failed to create conversation. Please check your internet connection and try again.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 5),
-      );
-      return null;
-    }
-
-    print('SUCCESS: Conversation created/found: ${conversation.documentId}');
-    
-    // Update conversations list - add to TOP or move existing to TOP
-    final existingIndex = conversations.indexWhere(
-      (c) => c.documentId == conversation.documentId
-    );
-    
-    if (existingIndex != -1) {
-      print('Conversation exists, moving to top');
-      conversations.removeAt(existingIndex);
-    } else {
-      print('New conversation, adding to top');
-    }
-    conversations.insert(0, conversation);
-    
-    // CRITICAL: Set as current conversation IMMEDIATELY
-    currentConversation.value = conversation;
-    currentReceiverId.value = clinicId;
-    currentReceiverType.value = 'clinic';
-    
-    print('Current conversation set: ${currentConversation.value?.documentId}');
-
-    // Subscribe to real-time messages FIRST (so we catch any incoming messages)
-    print('Subscribing to messages...');
-    subscribeToMessages(conversation.documentId!);
-
-    // Load conversation data
-    print('Loading conversation data...');
-    await Future.wait([
-      loadConversationMessages(conversation.documentId!),
-      loadConversationStarters(clinicId),
-    ]);
-
-    print('SUCCESS: Conversation setup complete');
-    print('Messages loaded: ${currentMessages.length}');
-    print('Starters loaded: ${conversationStarters.length}');
-    
-    return conversation;
-  } catch (e) {
-    print('ERROR: Exception in startConversationWithClinic: $e');
-    print('Stack trace: ${StackTrace.current}');
-    Get.snackbar(
-      'Error',
-      'Failed to start conversation: $e',
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-    );
-    return null;
-  } finally {
-    isLoading.value = false;
   }
-}
 
   Future<void> openConversation(
       Conversation conversation, String receiverId, String receiverType) async {
@@ -509,29 +509,58 @@ Future<Conversation?> startConversationWithClinic(String clinicId) async {
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToConversationUpdates() {
+    print('>>> ============================================');
+    print('>>> CONTROLLER: Setting up conversation subscription');
+    print('>>> User ID: ${_userSession.userId}');
+    print('>>> ============================================');
+
     _conversationSubscription?.cancel();
+
+    // CRITICAL FIX: Use subscribeToUserConversations instead of subscribeToConversations
     _conversationSubscription = _authRepository
-        .subscribeToConversations(_userSession.userId)
+        .subscribeToUserConversations(_userSession.userId)
         .listen((realtimeMessage) {
-      print('Real-time conversation event: ${realtimeMessage.events}');
+      print('>>> ============================================');
+      print('>>> REAL-TIME CONVERSATION EVENT RECEIVED');
+      print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
+      print('>>> Events: ${realtimeMessage.events}');
+      print('>>> ============================================');
 
       try {
         final conversationData = realtimeMessage.payload;
+
+        print('>>> Conversation data:');
+        print('>>>   - Conversation ID: ${conversationData['\$id']}');
+        print('>>>   - User ID: ${conversationData['userId']}');
+        print('>>>   - Clinic ID: ${conversationData['clinicId']}');
+        print('>>>   - Last Message: ${conversationData['lastMessageText']}');
+        print('>>>   - User Unread: ${conversationData['userUnreadCount']}');
+
         final updatedConversation = Conversation.fromMap(conversationData);
         final conversationWithId =
             updatedConversation.copyWith(documentId: conversationData['\$id']);
 
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.update')) {
+          print('>>> Event type: UPDATE');
           _handleConversationUpdate(conversationWithId);
         } else if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.create')) {
+          print('>>> Event type: CREATE');
           _handleNewConversation(conversationWithId);
         }
+
+        print('>>> ============================================');
       } catch (e) {
-        print('Error processing conversation update: $e');
+        print('>>> ============================================');
+        print('>>> ERROR processing conversation update: $e');
+        print('>>> Stack trace: ${StackTrace.current}');
+        print('>>> ============================================');
       }
     });
+
+    print('>>> ✓ Subscription active');
+    print('>>> ============================================');
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
@@ -696,51 +725,52 @@ Future<Conversation?> startConversationWithClinic(String clinicId) async {
   }
 
   /// Preserve conversation data for layout transitions
-void preserveConversationForTransition() {
-  if (currentConversation.value != null) {
-    selectedConversationData.value = {
-      'conversation': currentConversation.value,
-      'receiverId': currentReceiverId.value,
-      'receiverType': currentReceiverType.value,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-    shouldAutoSelectConversation.value = true;
-    print('>>> Preserved conversation: ${currentConversation.value?.documentId}');
+  void preserveConversationForTransition() {
+    if (currentConversation.value != null) {
+      selectedConversationData.value = {
+        'conversation': currentConversation.value,
+        'receiverId': currentReceiverId.value,
+        'receiverType': currentReceiverType.value,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      shouldAutoSelectConversation.value = true;
+      print(
+          '>>> Preserved conversation: ${currentConversation.value?.documentId}');
+    }
   }
-}
 
-/// Clear preserved conversation data after it's been used
-void clearPreservedConversation() {
-  selectedConversationData.value = null;
-  shouldAutoSelectConversation.value = false;
-  print('>>> Cleared preserved conversation');
-}
+  /// Clear preserved conversation data after it's been used
+  void clearPreservedConversation() {
+    selectedConversationData.value = null;
+    shouldAutoSelectConversation.value = false;
+    print('>>> Cleared preserved conversation');
+  }
 
-/// Check if we should restore a preserved conversation
-bool shouldRestoreConversation() {
-  if (selectedConversationData.value == null) return false;
-  
-  // Only restore if preserved within last 5 seconds (to prevent stale data)
-  final timestamp = selectedConversationData.value!['timestamp'] as int;
-  final age = DateTime.now().millisecondsSinceEpoch - timestamp;
-  return age < 5000; // 5 seconds
-}
+  /// Check if we should restore a preserved conversation
+  bool shouldRestoreConversation() {
+    if (selectedConversationData.value == null) return false;
 
-/// Restore the preserved conversation
-Future<void> restorePreservedConversation() async {
-  if (!shouldRestoreConversation()) {
+    // Only restore if preserved within last 5 seconds (to prevent stale data)
+    final timestamp = selectedConversationData.value!['timestamp'] as int;
+    final age = DateTime.now().millisecondsSinceEpoch - timestamp;
+    return age < 5000; // 5 seconds
+  }
+
+  /// Restore the preserved conversation
+  Future<void> restorePreservedConversation() async {
+    if (!shouldRestoreConversation()) {
+      clearPreservedConversation();
+      return;
+    }
+
+    final data = selectedConversationData.value!;
+    final conversation = data['conversation'] as Conversation;
+    final receiverId = data['receiverId'] as String;
+    final receiverType = data['receiverType'] as String;
+
+    print('>>> Restoring conversation: ${conversation.documentId}');
+
+    await openConversation(conversation, receiverId, receiverType);
     clearPreservedConversation();
-    return;
   }
-
-  final data = selectedConversationData.value!;
-  final conversation = data['conversation'] as Conversation;
-  final receiverId = data['receiverId'] as String;
-  final receiverType = data['receiverType'] as String;
-
-  print('>>> Restoring conversation: ${conversation.documentId}');
-  
-  await openConversation(conversation, receiverId, receiverType);
-  clearPreservedConversation();
-}
 }
