@@ -100,39 +100,39 @@ class LandingPage extends GetView<LandingController> {
           return ListView(
             children: [
               // Welcome Banner (only for landing page)
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF517399), Color(0xFF6B8EB3)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Welcome to PAWrtal',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Find the best veterinary clinics for your pets',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Container(
+              //   margin: const EdgeInsets.all(16),
+              //   padding: const EdgeInsets.all(20),
+              //   decoration: BoxDecoration(
+              //     gradient: const LinearGradient(
+              //       colors: [Color(0xFF517399), Color(0xFF6B8EB3)],
+              //       begin: Alignment.topLeft,
+              //       end: Alignment.bottomRight,
+              //     ),
+              //     borderRadius: BorderRadius.circular(16),
+              //   ),
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       const Text(
+              //         'Welcome to PAWrtal',
+              //         style: TextStyle(
+              //           fontSize: 24,
+              //           fontWeight: FontWeight.bold,
+              //           color: Colors.white,
+              //         ),
+              //       ),
+              //       const SizedBox(height: 8),
+              //       Text(
+              //         'Find the best veterinary clinics for your pets',
+              //         style: TextStyle(
+              //           fontSize: 15,
+              //           color: Colors.white.withOpacity(0.9),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
               // Search Bar
               Padding(
