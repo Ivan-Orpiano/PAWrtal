@@ -17,8 +17,9 @@ class RouteGuard extends GetMiddleware {
     print('>>> Target route: $route');
     print('>>> ============================================');
 
-    // Allow public routes (login, signup, splash)
-    if (route == Routes.login || 
+    // Allow public routes (landing, login, signup, splash)
+    if (route == Routes.landing ||
+        route == Routes.login || 
         route == Routes.signup || 
         route == Routes.splash) {
       print('>>> Public route - allowing access');
@@ -35,22 +36,22 @@ class RouteGuard extends GetMiddleware {
     print('>>> - Session ID: ${sessionId != null ? "EXISTS" : "NOT FOUND"}');
     print('>>> - Role: ${role ?? "NOT FOUND"}');
 
-    // If no session, redirect to login
+    // If no session, redirect to landing page
     if (userId == null || sessionId == null || role == null) {
-      print('>>> âœ— No valid session - redirecting to login');
+      print('>>> ✗ No valid session - redirecting to landing');
       print('>>> ============================================');
       
       // Clear any invalid session data
       _storage.erase();
       
-      return const RouteSettings(name: Routes.login);
+      return const RouteSettings(name: Routes.landing);
     }
 
     // Validate role-based access
     final hasAccess = _validateRoleAccess(route, role);
 
     if (!hasAccess) {
-      print('>>> âœ— Unauthorized access attempt!');
+      print('>>> ✗ Unauthorized access attempt!');
       print('>>> User role: $role');
       print('>>> Target route: $route');
       print('>>> ============================================');
@@ -62,7 +63,7 @@ class RouteGuard extends GetMiddleware {
       return RouteSettings(name: _getHomeRouteForRole(role));
     }
 
-    print('>>> âœ" Access granted');
+    print('>>> ✓ Access granted');
     print('>>> ============================================');
     return null;
   }
@@ -109,7 +110,7 @@ class RouteGuard extends GetMiddleware {
     final timestamp = DateTime.now().toIso8601String();
     
     print('>>> ============================================');
-    print('>>> ðŸšØ SECURITY VIOLATION DETECTED ðŸšØ');
+    print('>>> 🚨 SECURITY VIOLATION DETECTED 🚨');
     print('>>> Timestamp: $timestamp');
     print('>>> User ID: $userId');
     print('>>> User Role: $role');

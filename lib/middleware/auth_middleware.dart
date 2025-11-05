@@ -20,7 +20,8 @@ class AuthMiddleware extends GetMiddleware {
     print('>>> AUTH MIDDLEWARE: Page called - ${page?.name}');
     
     // Skip validation for public pages
-    if (page?.name == Routes.login || 
+    if (page?.name == Routes.landing ||
+        page?.name == Routes.login || 
         page?.name == Routes.signup || 
         page?.name == Routes.splash) {
       return page;
@@ -38,7 +39,7 @@ class AuthMiddleware extends GetMiddleware {
       final sessionId = _storage.read('sessionId');
       
       if (sessionId == null) {
-        print('>>> âš ï¸ No session ID found');
+        print('>>> ⚠️ No session ID found');
         return;
       }
 
@@ -49,13 +50,13 @@ class AuthMiddleware extends GetMiddleware {
       final isValid = await appWriteProvider.isSessionValid();
 
       if (!isValid) {
-        print('>>> âœ— Session invalid - logging out');
+        print('>>> ✗ Session invalid - logging out');
         _handleInvalidSession();
       } else {
-        print('>>> âœ" Session valid');
+        print('>>> ✓ Session valid');
       }
     } catch (e) {
-      print('>>> âœ— Session validation error: $e');
+      print('>>> ✗ Session validation error: $e');
       _handleInvalidSession();
     }
   }
@@ -65,9 +66,9 @@ class AuthMiddleware extends GetMiddleware {
     // Clear storage
     _storage.erase();
     
-    // Redirect to login
+    // Redirect to landing page
     Future.delayed(Duration.zero, () {
-      Get.offAllNamed(Routes.login);
+      Get.offAllNamed(Routes.landing);
       Get.snackbar(
         'Session Expired',
         'Please log in again',
