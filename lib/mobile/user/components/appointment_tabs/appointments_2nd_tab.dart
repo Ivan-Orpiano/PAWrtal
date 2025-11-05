@@ -177,6 +177,10 @@ class EnhancedAPSecondTab extends StatelessWidget {
                 },
               ),
             ),
+            Container(
+              height: 100,
+              color: Colors.transparent
+            ),
           ],
         ),
       );

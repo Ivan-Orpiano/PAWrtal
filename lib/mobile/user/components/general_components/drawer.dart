@@ -25,6 +25,8 @@ class _MyDrawerState extends State<MyDrawer>
   late User currentUser;
   bool isLoading = true;
   bool isIdVerified = false;
+  String? profilePictureId;
+  String profilePictureUrl = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -64,9 +66,23 @@ class _MyDrawerState extends State<MyDrawer>
         final verificationStatus =
             await appWriteProvider.getUserVerificationStatus(user.$id);
 
+        // Load profile picture
+        final userDoc = await appWriteProvider.getUserById(user.$id);
+        String? pfpId;
+        String pfpUrl = '';
+
+        if (userDoc != null) {
+          pfpId = userDoc.data['profilePictureId'] as String?;
+          if (pfpId != null && pfpId.isNotEmpty) {
+            pfpUrl = authRepository.getUserProfilePictureUrl(pfpId);
+          }
+        }
+
         setState(() {
           currentUser = user;
           isIdVerified = verificationStatus['isVerified'] as bool? ?? false;
+          profilePictureId = pfpId;
+          profilePictureUrl = pfpUrl;
           isLoading = false;
         });
         _animationController.forward();
@@ -218,11 +234,106 @@ class _MyDrawerState extends State<MyDrawer>
     );
   }
 
+  Widget _buildProfileAvatar(double size) {
+    if (profilePictureUrl.isNotEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1976D2).withOpacity(0.3),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: Image.network(
+            profilePictureUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildPlaceholderAvatar(size);
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[200],
+                ),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    return _buildPlaceholderAvatar(size);
+  }
+
+  Widget _buildPlaceholderAvatar(double size) {
+    final initial = currentUser.name.isNotEmpty 
+        ? currentUser.name[0].toUpperCase() 
+        : 'U';
+    
+    return Container(
+      padding: EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1976D2).withOpacity(0.3),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+        ),
+        child: Center(
+          child: Text(
+            initial,
+            style: TextStyle(
+              color: const Color(0xFF1976D2),
+              fontSize: size * 0.4,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildUserProfile() {
     return LayoutBuilder(
       builder: (context, constraints) {
         double screenHeight = MediaQuery.of(context).size.height;
         bool isSmallScreen = screenHeight < 700;
+        
+        final avatarSize = _getResponsiveSize(screenHeight, 100, 
+            minSize: 0.6, maxSize: 1.0);
 
         // Determine if user should show ID verification (only for regular users, not admin/staff)
         final shouldShowIdVerification =
@@ -237,40 +348,8 @@ class _MyDrawerState extends State<MyDrawer>
                 minSize: 0.6, maxSize: 1.0)),
             child: Column(
               children: [
-                // Profile Avatar
-                Container(
-                  padding: EdgeInsets.all(
-                      _getResponsiveSize(screenHeight, 4, minSize: 0.5)),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF1976D2).withOpacity(0.3),
-                        blurRadius:
-                            _getResponsiveSize(screenHeight, 20, minSize: 0.5),
-                        spreadRadius:
-                            _getResponsiveSize(screenHeight, 2, minSize: 0.5),
-                      ),
-                    ],
-                  ),
-                  child: Container(
-                    padding: EdgeInsets.all(
-                        _getResponsiveSize(screenHeight, 20, minSize: 0.6)),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: const Color(0xFF1976D2),
-                      size: _getResponsiveSize(screenHeight, 50,
-                          minSize: 0.6, maxSize: 1.0),
-                    ),
-                  ),
-                ),
+                // Profile Avatar with profile picture
+                _buildProfileAvatar(avatarSize),
                 SizedBox(
                     height: _getResponsiveSize(screenHeight, 20,
                         minSize: 0.5, maxSize: 0.8)),
@@ -363,14 +442,19 @@ class _MyDrawerState extends State<MyDrawer>
                                   minSize: 0.6)),
                           GestureDetector(
                             onTap: () async {
-                                    Navigator.of(context).pop();
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const WebSettingsAndEverythingPageHandler(
-                                                initialIndex: 0),
-                                      ),
-                                    );
+                              Navigator.of(context).pop();
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const WebSettingsAndEverythingPageHandler(
+                                          initialIndex: 0),
+                                ),
+                              );
+                              
+                              // Refresh data if verification was completed
+                              if (result == true) {
+                                await _loadUserData();
+                              }
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -451,15 +535,20 @@ class _MyDrawerState extends State<MyDrawer>
                               _buildAnimatedListTile(
                                   icon: Icons.person_rounded,
                                   title: "Profile",
-                                  onTap: () {
+                                  onTap: () async {
                                     Navigator.of(context).pop();
-                                    Navigator.of(context).push(
+                                    final result = await Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             const WebSettingsAndEverythingPageHandler(
                                                 initialIndex: 0),
                                       ),
                                     );
+                                    
+                                    // Refresh profile picture if updated
+                                    if (result == true) {
+                                      await _loadUserData();
+                                    }
                                   }),
                               _buildAnimatedListTile(
                                 icon: Icons.settings_rounded,

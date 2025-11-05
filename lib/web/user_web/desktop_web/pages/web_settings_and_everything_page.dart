@@ -300,35 +300,34 @@ class _WebSettingsAndEverythingPageState
 
   // Replace the _buildProfileContent() method in WebSettingsAndEverythingPage with this:
 
-  Widget _buildProfileContent() {
-    final userEmail = storage.read("email") ?? "user@example.com";
-    final userName = storage.read("userName") ?? "User";
-    final userRole = storage.read("role") ?? "user";
-    final userPhone = storage.read("phone") ?? "+1 (555) 000-0000";
-    final userBio = storage.read("bio") ?? "";
-    final userJoinDate = storage.read("joinDate") ?? "January 2024";
-    final userId = storage.read("userId") ?? "";
+Widget _buildProfileContent() {
+  final userEmail = storage.read("email") ?? "user@example.com";
+  final userName = storage.read("userName") ?? "User";
+  final userRole = storage.read("role") ?? "user";
+  final userPhone = storage.read("phone") ?? "+63";
+  final userId = storage.read("userId") ?? "";
+  final idVerified = storage.read("idVerified") ?? false;
+  final idVerifiedAt = storage.read("idVerifiedAt") as String?;
 
-    // Use the consistent key name
-    final profilePictureId = storage.read("userProfilePictureId") as String?;
+  // Use the consistent key name
+  final profilePictureId = storage.read("userProfilePictureId") as String?;
 
-    // Initialize profile picture controller
-    final profilePictureController = Get.put(
-      UserPfpController(authRepository: Get.find<AuthRepository>()),
-      tag: 'user_profile_picture',
-    );
+  // Initialize profile picture controller
+  final profilePictureController = Get.put(
+    UserPfpController(authRepository: Get.find<AuthRepository>()),
+    tag: 'user_profile_picture',
+  );
 
-    // Set current profile picture if exists
-    if (profilePictureId != null && profilePictureId.isNotEmpty) {
-      profilePictureController.setCurrentProfilePicture(profilePictureId);
-      print(
-          '>>> Profile picture controller initialized with: $profilePictureId');
-    }
+  // Set current profile picture if exists
+  if (profilePictureId != null && profilePictureId.isNotEmpty) {
+    profilePictureController.setCurrentProfilePicture(profilePictureId);
+    print('>>> Profile picture controller initialized with: $profilePictureId');
+  }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(32),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -712,11 +711,12 @@ class _WebSettingsAndEverythingPageState
                 value: userPhone,
                 iconColor: Colors.green,
               ),
+              if (idVerified && idVerifiedAt != null)
               _buildModernInfoTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Member Since',
-                value: userJoinDate,
-                iconColor: Colors.orange,
+                icon: Icons.verified_user,
+                label: 'ID Verified On',
+                value: _formatVerificationDate(idVerifiedAt),
+                iconColor: Colors.teal,
                 isLast: true,
               ),
             ],
@@ -731,50 +731,6 @@ class _WebSettingsAndEverythingPageState
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 backgroundColor: Colors.blue.withOpacity(0.08),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildModernCard(
-            title: 'About',
-            icon: Icons.info_outline,
-            iconColor: Colors.indigo,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Text(
-                  userBio.isEmpty
-                      ? 'No bio added yet. Share something about yourself!'
-                      : userBio,
-                  style: TextStyle(
-                    color:
-                        userBio.isEmpty ? Colors.grey[500] : Colors.grey[700],
-                    fontSize: 14,
-                    fontStyle:
-                        userBio.isEmpty ? FontStyle.italic : FontStyle.normal,
-                    height: 1.6,
-                  ),
-                ),
-              ),
-            ],
-            action: TextButton.icon(
-              onPressed: () => _showEditBioDialog(userBio),
-              icon: Icon(Icons.edit_outlined,
-                  size: 16, color: Colors.indigo[700]),
-              label: Text('Edit Bio',
-                  style: TextStyle(
-                      color: Colors.indigo[700], fontWeight: FontWeight.w600)),
-              style: TextButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                backgroundColor: Colors.indigo.withOpacity(0.08),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
@@ -1959,56 +1915,72 @@ class _WebSettingsAndEverythingPageState
     );
   }
 
-  Widget _buildModernInfoTile({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color iconColor,
-    bool isLast = false,
-  }) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: iconColor),
+Widget _buildModernInfoTile({
+  required IconData icon,
+  required String label,
+  required String value,
+  required Color iconColor,
+  bool isLast = false,
+}) {
+  return Column(
+    children: [
+      Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-        if (!isLast) const SizedBox(height: 16),
-      ],
-    );
+          ),
+        ],
+      ),
+      if (!isLast) const SizedBox(height: 16),
+    ],
+  );
+}
+
+// Helper method to format verification date
+String _formatVerificationDate(String? isoDate) {
+  if (isoDate == null || isoDate.isEmpty) return 'Unknown';
+  
+  try {
+    final date = DateTime.parse(isoDate);
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  } catch (e) {
+    return 'Unknown';
   }
+}
 
   Widget _buildSecurityOption({
     required IconData icon,
@@ -2129,124 +2101,332 @@ class _WebSettingsAndEverythingPageState
     );
   }
 
-  void _showEditProfileDialog() {
-    final nameController =
-        TextEditingController(text: storage.read("userName") ?? "");
-    final phoneController =
-        TextEditingController(text: storage.read("phone") ?? "");
+void _showEditProfileDialog() {
+  final nameController = TextEditingController(text: storage.read("userName") ?? "");
+  
+  // Set default to +63 if phone is empty or null
+  String currentPhone = storage.read("phone") ?? "+63";
+  if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
+    currentPhone = "+63";
+  }
+  final phoneController = TextEditingController(text: currentPhone);
+  
+  final nameError = Rx<String?>(null);
+  final phoneError = Rx<String?>(null);
+  final isLoading = false.obs;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('Edit Profile',
-              style: TextStyle(color: Colors.black87)),
-          content: SingleChildScrollView(
-            child: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    style: const TextStyle(color: Colors.black87),
-                    decoration: InputDecoration(
-                      labelText: 'Full Name',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: phoneController,
-                    style: const TextStyle(color: Colors.black87),
-                    decoration: InputDecoration(
-                      labelText: 'Phone Number',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                storage.write("userName", nameController.text);
-                storage.write("phone", phoneController.text);
-                Navigator.of(context).pop();
-                setState(() {});
-                _showSuccess('Profile updated successfully');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Save Changes'),
-            ),
-          ],
-        );
-      },
-    );
+  // Phone validation function with Philippines format
+  String? validatePhone(String phone) {
+    if (phone.isEmpty) {
+      return 'Phone number is required';
+    }
+    
+    // Remove spaces and special characters for validation
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Check if it starts with +63 (Philippines)
+    if (!cleanPhone.startsWith('+63')) {
+      return 'Please use Philippines format: +63XXXXXXXXXX';
+    }
+    
+    // Check if it's a valid Philippine phone format (+63 followed by 10 digits)
+    if (!RegExp(r'^\+63\d{10}$').hasMatch(cleanPhone)) {
+      return 'Invalid Philippine phone number format';
+    }
+    
+    return null;
   }
 
-  void _showEditBioDialog(String currentBio) {
-    final bioController = TextEditingController(text: currentBio);
+  // Name validation function
+  String? validateName(String name) {
+    if (name.isEmpty) {
+      return 'Name is required';
+    }
+    
+    if (name.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    
+    if (name.length > 100) {
+      return 'Name is too long';
+    }
+    
+    return null;
+  }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          title:
-              const Text('Edit Bio', style: TextStyle(color: Colors.black87)),
-          content: SizedBox(
+  // Update profile function
+  Future<void> updateProfile() async {
+    // Clear previous errors
+    nameError.value = null;
+    phoneError.value = null;
+
+    final name = nameController.text.trim();
+    final phone = phoneController.text.trim();
+
+    bool hasError = false;
+
+    // Validate name
+    final nameValidation = validateName(name);
+    if (nameValidation != null) {
+      nameError.value = nameValidation;
+      hasError = true;
+    }
+
+    // Validate phone
+    final phoneValidation = validatePhone(phone);
+    if (phoneValidation != null) {
+      phoneError.value = phoneValidation;
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    try {
+      isLoading.value = true;
+
+      final userDocId = storage.read("userDocumentId") as String?;
+      
+      if (userDocId == null || userDocId.isEmpty) {
+        throw Exception('User document ID not found. Please log in again.');
+      }
+
+      print('>>> Updating user profile...');
+      print('>>> Document ID: $userDocId');
+      print('>>> New Name: $name');
+      print('>>> New Phone: $phone');
+
+      // Update in Appwrite
+      final authRepository = Get.find<AuthRepository>();
+      await authRepository.updateUserProfile(
+        documentId: userDocId,
+        fields: {
+          'name': name,
+          'phone': phone,
+        },
+      );
+
+      print('>>> ✅ Profile updated successfully in Appwrite');
+
+      // Update GetStorage
+      await storage.write("userName", name);
+      await storage.write("phone", phone);
+
+      print('>>> ✅ Local storage updated');
+
+      isLoading.value = false;
+
+      // Close dialog
+      Navigator.of(context).pop();
+
+      // Refresh UI
+      setState(() {});
+
+      // Show success message
+      _showSuccess('Profile updated successfully');
+
+      // Dispose controllers
+      nameController.dispose();
+      phoneController.dispose();
+
+    } catch (e) {
+      print('>>> ERROR updating profile: $e');
+      isLoading.value = false;
+
+      String errorMessage = 'Failed to update profile. Please try again.';
+
+      if (e.toString().contains('Document') && e.toString().contains('not found')) {
+        errorMessage = 'User profile not found. Please log in again.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+
+      _showError(errorMessage);
+    }
+  }
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.edit_outlined,
+                color: Colors.blue[700],
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Edit Profile',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: SizedBox(
             width: 400,
-            child: TextField(
-              controller: bioController,
-              maxLines: 5,
-              maxLength: 200,
-              style: const TextStyle(color: Colors.black87),
-              decoration: InputDecoration(
-                hintText: 'Tell us about yourself...',
-                hintStyle: TextStyle(color: Colors.grey[500]),
-                border: const OutlineInputBorder(),
-                counterText: '',
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name Field
+                Obx(() => TextField(
+                  controller: nameController,
+                  maxLength: 100,
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    labelStyle: TextStyle(color: Colors.grey[600]),
+                    errorText: nameError.value,
+                    errorMaxLines: 2,
+                    counterText: '',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.blue, width: 2),
+                    ),
+                    prefixIcon: const Icon(Icons.person_outline),
+                  ),
+                  onChanged: (value) {
+                    if (nameError.value != null) {
+                      nameError.value = null;
+                    }
+                  },
+                )),
+                const SizedBox(height: 20),
+                
+                // Phone Field with PH prefix
+                Obx(() => TextField(
+                  controller: phoneController,
+                  maxLength: 20,
+                  style: const TextStyle(color: Colors.black87),
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'Phone Number (Philippines)',
+                    labelStyle: TextStyle(color: Colors.grey[600]),
+                    hintText: '+63 9XX XXX XXXX',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    helperText: 'Format: +63 followed by 10 digits',
+                    helperStyle: TextStyle(color: Colors.grey[500], fontSize: 11),
+                    errorText: phoneError.value,
+                    errorMaxLines: 2,
+                    counterText: '',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.blue, width: 2),
+                    ),
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    prefixText: '',
+                  ),
+                  onChanged: (value) {
+                    // Auto-add +63 if user removes it
+                    if (!value.startsWith('+63') && value.isNotEmpty) {
+                      phoneController.text = '+63${value.replaceAll('+63', '')}';
+                      phoneController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: phoneController.text.length),
+                      );
+                    }
+                    if (phoneError.value != null) {
+                      phoneError.value = null;
+                    }
+                  },
+                )),
+                const SizedBox(height: 16),
+                
+                // Info box
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.blue[700],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Changes will be saved to your account',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                storage.write("bio", bioController.text);
-                Navigator.of(context).pop();
-                setState(() {});
-                _showSuccess( 'Bio updated successfully');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              nameController.dispose();
+              phoneController.dispose();
+            },
+            child: const Text('Cancel'),
+          ),
+          Obx(() => ElevatedButton(
+            onPressed: isLoading.value ? null : updateProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text('Save'),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
             ),
-          ],
-        );
-      },
-    );
-  }
-
+            child: isLoading.value
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text('Save Changes'),
+          )),
+        ],
+      );
+    },
+  );
+}
 
 void _showChangePasswordDialog() {
   final currentPasswordController = TextEditingController();

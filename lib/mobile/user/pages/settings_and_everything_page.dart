@@ -9,6 +9,7 @@ import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/mobile/user/controllers/mobile_user_pfp_controller.dart';
 
 class FAQItem {
   final String question;
@@ -84,6 +85,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
   late MobileFeedbackController feedbackController;
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  late MobileUserPfpController profilePictureController;
 
   static const List<String> menuItems = [
     'Profile',
@@ -101,7 +103,19 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       authRepository: Get.find<AuthRepository>(),
       session: Get.find<UserSessionService>(),
     ));
+
+    profilePictureController = Get.put(
+      MobileUserPfpController(authRepository: Get.find<AuthRepository>()),
+      tag: 'mobile_user_profile_picture',
+    );
+    
+    // Initialize with current profile picture if exists
+    final profilePictureId = storage.read("userProfilePictureId") as String?;
+    if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      profilePictureController.setCurrentProfilePicture(profilePictureId);
+    }
   }
+  
 
   @override
   void dispose() {
@@ -249,7 +263,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
               ),
               child: Column(
                 children: [
-                  Stack(
+                  Obx(() => Stack(
                     children: [
                       Container(
                         decoration: BoxDecoration(
@@ -262,27 +276,34 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          radius: 45,
-                          backgroundColor: Colors.transparent,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [Colors.blue[400]!, Colors.purple[500]!],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              await profilePictureController.pickProfilePicture();
+                              
+                              // Auto-save if a file was picked
+                              if (profilePictureController.hasChanges()) {
+                                final userDocId = storage.read("userDocumentId") as String?;
+                                if (userDocId != null && userDocId.isNotEmpty) {
+                                  final newFileId = await profilePictureController
+                                      .saveProfilePicture(userDocId);
+
+                                  // Store in GetStorage after successful upload
+                                  if (newFileId != null && newFileId.isNotEmpty) {
+                                    await storage.write('userProfilePictureId', newFileId);
+                                    setState(() {});
+                                    _showSuccess('Profile picture updated successfully');
+                                  }
+                                } else {
+                                  _showError('User document ID not found. Please log in again.');
+                                }
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(45),
+                            child: profilePictureController.getPreviewImage(
+                              size: 90,
+                              userName: userName,
                             ),
                           ),
                         ),
@@ -290,28 +311,52 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: GestureDetector(
-                          onTap: () => _showInfo('Profile photo upload coming soon'),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [Colors.blue[500]!, Colors.blue[700]!]),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue.withOpacity(0.4),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              await profilePictureController.pickProfilePicture();
+                              
+                              // Auto-save if a file was picked
+                              if (profilePictureController.hasChanges()) {
+                                final userDocId = storage.read("userDocumentId") as String?;
+                                if (userDocId != null && userDocId.isNotEmpty) {
+                                  final newFileId = await profilePictureController
+                                      .saveProfilePicture(userDocId);
+
+                                  // Store in GetStorage after successful upload
+                                  if (newFileId != null && newFileId.isNotEmpty) {
+                                    await storage.write('userProfilePictureId', newFileId);
+                                    setState(() {});
+                                    _showSuccess('Profile picture updated successfully');
+                                  }
+                                } else {
+                                  _showError('User document ID not found. Please log in again.');
+                                }
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [Colors.blue[500]!, Colors.blue[700]!]),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.withOpacity(0.4),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                             ),
-                            child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                           ),
                         ),
                       ),
                     ],
-                  ),
+                  )),
                   const SizedBox(height: 16),
                   Text(
                     userName,
@@ -339,6 +384,39 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  Obx(() => profilePictureController.isUploading.value
+                  ? Container(
+                      margin: const EdgeInsets.only(top: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            height: 14,
+                            width: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Uploading...',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -442,13 +520,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 value: userPhone,
                 iconColor: Colors.green,
               ),
-              _buildModernInfoTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Member Since',
-                value: userJoinDate,
-                iconColor: Colors.orange,
-                isLast: true,
-              ),
             ],
             action: TextButton.icon(
               onPressed: _showEditProfileDialog,
@@ -461,45 +532,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
               ),
             ),
           ),
-          
-          const SizedBox(height: 16),
-          
-          // About Card
-          _buildModernCard(
-            title: 'About',
-            icon: Icons.info_outline,
-            iconColor: Colors.indigo,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Text(
-                  userBio.isEmpty ? 'No bio added yet. Share something about yourself!' : userBio,
-                  style: TextStyle(
-                    color: userBio.isEmpty ? Colors.grey[500] : Colors.grey[700],
-                    fontSize: 12,
-                    fontStyle: userBio.isEmpty ? FontStyle.italic : FontStyle.normal,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
-            action: TextButton.icon(
-              onPressed: () => _showEditBioDialog(userBio),
-              icon: Icon(Icons.edit_outlined, size: 14, color: Colors.indigo[700]),
-              label: Text('Edit', style: TextStyle(color: Colors.indigo[700], fontWeight: FontWeight.w600, fontSize: 12)),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                backgroundColor: Colors.indigo.withOpacity(0.08),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-          
           const SizedBox(height: 16),
           
           // Account Security Card
@@ -1773,114 +1805,466 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
   }
 
   // Dialog methods
-  void _showEditProfileDialog() {
-    final nameController = TextEditingController(text: storage.read("userName") ?? "");
-    final phoneController = TextEditingController(text: storage.read("phone") ?? "");
+void _showEditProfileDialog() {
+  final nameController = TextEditingController(text: storage.read("userName") ?? "");
+  
+  // Set default to +63 if phone is empty or null
+  String currentPhone = storage.read("phone") ?? "+63";
+  if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
+    currentPhone = "+63";
+  }
+  final phoneController = TextEditingController(text: currentPhone);
+  
+  final nameError = Rx<String?>(null);
+  final phoneError = Rx<String?>(null);
+  final isLoading = false.obs;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: const Text('Edit Profile', style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  style: const TextStyle(color: Colors.black87, fontSize: 14),
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.person_outline, size: 20),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneController,
-                  style: const TextStyle(color: Colors.black87, fontSize: 14),
-                  decoration: InputDecoration(
-                    labelText: 'Phone Number',
-                    labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel', style: TextStyle(fontSize: 13)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                storage.write("userName", nameController.text);
-                storage.write("phone", phoneController.text);
-                Navigator.of(context).pop();
-                setState(() {});
-                _showSuccess('Profile updated successfully');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Save', style: TextStyle(fontSize: 13)),
-            ),
-          ],
-        );
-      },
-    );
+  // Phone validation function with Philippines format
+  String? validatePhone(String phone) {
+    if (phone.isEmpty) {
+      return 'Phone number is required';
+    }
+    
+    // Remove spaces and special characters for validation
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Check if it starts with +63 (Philippines)
+    if (!cleanPhone.startsWith('+63')) {
+      return 'Please use Philippines format: +63XXXXXXXXXX';
+    }
+    
+    // Check if it's a valid Philippine phone format (+63 followed by 10 digits)
+    if (!RegExp(r'^\+63\d{10}$').hasMatch(cleanPhone)) {
+      return 'Invalid Philippine phone number format';
+    }
+    
+    return null;
   }
 
-  void _showEditBioDialog(String currentBio) {
-    final bioController = TextEditingController(text: currentBio);
+  // Name validation function
+  String? validateName(String name) {
+    if (name.isEmpty) {
+      return 'Name is required';
+    }
+    
+    if (name.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    
+    if (name.length > 100) {
+      return 'Name is too long';
+    }
+    
+    return null;
+  }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: const Text('Edit Bio', style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600)),
-          content: TextField(
-            controller: bioController,
-            maxLines: 4,
-            maxLength: 200,
-            style: const TextStyle(color: Colors.black87, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Tell us about yourself...',
-              hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
-              border: const OutlineInputBorder(),
-            ),
+  // Update profile function
+  Future<void> updateProfile() async {
+    // Clear previous errors
+    nameError.value = null;
+    phoneError.value = null;
+
+    final name = nameController.text.trim();
+    final phone = phoneController.text.trim();
+
+    bool hasError = false;
+
+    // Validate name
+    final nameValidation = validateName(name);
+    if (nameValidation != null) {
+      nameError.value = nameValidation;
+      hasError = true;
+    }
+
+    // Validate phone
+    final phoneValidation = validatePhone(phone);
+    if (phoneValidation != null) {
+      phoneError.value = phoneValidation;
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    try {
+      isLoading.value = true;
+
+      final userDocId = storage.read("userDocumentId") as String?;
+      
+      if (userDocId == null || userDocId.isEmpty) {
+        throw Exception('User document ID not found. Please log in again.');
+      }
+
+      print('>>> Updating user profile...');
+      print('>>> Document ID: $userDocId');
+      print('>>> New Name: $name');
+      print('>>> New Phone: $phone');
+
+      // Update in Appwrite
+      final authRepository = Get.find<AuthRepository>();
+      await authRepository.updateUserProfile(
+        documentId: userDocId,
+        fields: {
+          'name': name,
+          'phone': phone,
+        },
+      );
+
+      print('>>> ✅ Profile updated successfully in Appwrite');
+
+      // Update GetStorage
+      await storage.write("userName", name);
+      await storage.write("phone", phone);
+
+      print('>>> ✅ Local storage updated');
+
+      isLoading.value = false;
+
+      // Close dialog
+      Navigator.of(context).pop();
+
+      // Refresh UI
+      setState(() {});
+
+      // Show success message
+      _showSuccess('Profile updated successfully');
+
+      // Dispose controllers
+      nameController.dispose();
+      phoneController.dispose();
+
+    } catch (e) {
+      print('>>> ERROR updating profile: $e');
+      isLoading.value = false;
+
+      String errorMessage = 'Failed to update profile. Please try again.';
+
+      if (e.toString().contains('Document') && e.toString().contains('not found')) {
+        errorMessage = 'User profile not found. Please log in again.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+
+      _showError(errorMessage);
+    }
+  }
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (BuildContext context) {
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel', style: TextStyle(fontSize: 13)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                storage.write("bio", bioController.text);
-                Navigator.of(context).pop();
-                setState(() {});
-                _showSuccess('Bio updated successfully');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Text('Save', style: TextStyle(fontSize: 13)),
+              child: Column(
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.blue[400]!, Colors.blue[600]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.edit_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Profile',
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Update your profile information',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 22),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          nameController.dispose();
+                          phoneController.dispose();
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Name Field
+                    Text(
+                      'Full Name',
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Obx(() => TextField(
+                      controller: nameController,
+                      maxLength: 100,
+                      style: const TextStyle(color: Colors.black87, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Enter your full name',
+                        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                        errorText: nameError.value,
+                        errorMaxLines: 2,
+                        errorStyle: const TextStyle(fontSize: 11),
+                        counterText: '',
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+                        ),
+                        prefixIcon: Icon(Icons.person_outline, size: 20, color: Colors.grey[600]),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                      onChanged: (value) {
+                        if (nameError.value != null) {
+                          nameError.value = null;
+                        }
+                      },
+                    )),
+                    const SizedBox(height: 16),
+                    
+                    // Phone Field with PH prefix
+                    Text(
+                      'Phone Number (Philippines)',
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Obx(() => TextField(
+                      controller: phoneController,
+                      maxLength: 20,
+                      style: const TextStyle(color: Colors.black87, fontSize: 14),
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        hintText: '+63 9XX XXX XXXX',
+                        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                        helperText: 'Format: +63 followed by 10 digits',
+                        helperStyle: TextStyle(color: Colors.grey[500], fontSize: 10),
+                        errorText: phoneError.value,
+                        errorMaxLines: 2,
+                        errorStyle: const TextStyle(fontSize: 11),
+                        counterText: '',
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+                        ),
+                        prefixIcon: Icon(Icons.phone_outlined, size: 20, color: Colors.grey[600]),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                      onChanged: (value) {
+                        // Auto-add +63 if user removes it
+                        if (!value.startsWith('+63') && value.isNotEmpty) {
+                          phoneController.text = '+63${value.replaceAll('+63', '')}';
+                          phoneController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: phoneController.text.length),
+                          );
+                        }
+                        if (phoneError.value != null) {
+                          phoneError.value = null;
+                        }
+                      },
+                    )),
+                    const SizedBox(height: 16),
+                    
+                    // Info box
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue[50]!, Colors.cyan[50]!],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.blue[700],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Changes will be saved to your account',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 80), // Space for bottom button
+                  ],
+                ),
+              ),
+            ),
+            
+            // Bottom Action Button
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Obx(() => ElevatedButton(
+                  onPressed: isLoading.value ? null : updateProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[600],
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[400],
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: isLoading.value
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_circle_outline, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                )),
+              ),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
 void _showChangePasswordDialog() {
   final currentPasswordController = TextEditingController();
