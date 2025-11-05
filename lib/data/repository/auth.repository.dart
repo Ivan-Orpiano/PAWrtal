@@ -2780,4 +2780,14 @@ class AuthRepository {
   Stream<RealtimeMessage> subscribeToClinicConversations(String clinicId) {
     return appWriteProvider.subscribeToClinicConversations(clinicId);
   }
+
+  Future<Document> updateUserProfile({
+  required String documentId,
+  Map<String, dynamic>? fields,
+}) {
+  return appWriteProvider.updateUserProfile(
+    documentId: documentId,
+    fields: fields,
+  );
+}
 }

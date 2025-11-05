@@ -8161,4 +8161,39 @@ Stream<RealtimeMessage> subscribeToClinicConversations(String clinicId) {
       });
 }
 
+Future<Document> updateUserProfile({
+  required String documentId,
+  Map<String, dynamic>? fields,
+}) async {
+  try {
+    print('>>> ============================================');
+    print('>>> UPDATING USER PROFILE');
+    print('>>> Document ID: $documentId');
+    print('>>> ============================================');
+
+    if (fields == null || fields.isEmpty) {
+      throw Exception('No fields provided for update');
+    }
+
+    print('>>> Fields to update: ${fields.keys.toList()}');
+
+    final doc = await databases!.updateDocument(
+      databaseId: AppwriteConstants.dbID,
+      collectionId: AppwriteConstants.usersCollectionID,
+      documentId: documentId,
+      data: fields,
+    );
+
+    print('>>> ✅ User profile updated successfully');
+    print('>>> ============================================');
+
+    return doc;
+  } catch (e) {
+    print('>>> ============================================');
+    print('>>> ❌ ERROR updating user profile: $e');
+    print('>>> ============================================');
+    rethrow;
+  }
+}
+
 }
