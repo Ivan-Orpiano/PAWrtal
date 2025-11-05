@@ -9,6 +9,7 @@ import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
+import 'package:capstone_app/mobile/user/controllers/mobile_user_pfp_controller.dart';
 
 class FAQItem {
   final String question;
@@ -84,6 +85,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
   late MobileFeedbackController feedbackController;
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  late MobileUserPfpController profilePictureController;
 
   static const List<String> menuItems = [
     'Profile',
@@ -101,7 +103,19 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       authRepository: Get.find<AuthRepository>(),
       session: Get.find<UserSessionService>(),
     ));
+
+    profilePictureController = Get.put(
+      MobileUserPfpController(authRepository: Get.find<AuthRepository>()),
+      tag: 'mobile_user_profile_picture',
+    );
+    
+    // Initialize with current profile picture if exists
+    final profilePictureId = storage.read("userProfilePictureId") as String?;
+    if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      profilePictureController.setCurrentProfilePicture(profilePictureId);
+    }
   }
+  
 
   @override
   void dispose() {
@@ -249,7 +263,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
               ),
               child: Column(
                 children: [
-                  Stack(
+                  Obx(() => Stack(
                     children: [
                       Container(
                         decoration: BoxDecoration(
@@ -262,27 +276,34 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          radius: 45,
-                          backgroundColor: Colors.transparent,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [Colors.blue[400]!, Colors.purple[500]!],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              await profilePictureController.pickProfilePicture();
+                              
+                              // Auto-save if a file was picked
+                              if (profilePictureController.hasChanges()) {
+                                final userDocId = storage.read("userDocumentId") as String?;
+                                if (userDocId != null && userDocId.isNotEmpty) {
+                                  final newFileId = await profilePictureController
+                                      .saveProfilePicture(userDocId);
+
+                                  // Store in GetStorage after successful upload
+                                  if (newFileId != null && newFileId.isNotEmpty) {
+                                    await storage.write('userProfilePictureId', newFileId);
+                                    setState(() {});
+                                    _showSuccess('Profile picture updated successfully');
+                                  }
+                                } else {
+                                  _showError('User document ID not found. Please log in again.');
+                                }
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(45),
+                            child: profilePictureController.getPreviewImage(
+                              size: 90,
+                              userName: userName,
                             ),
                           ),
                         ),
@@ -290,28 +311,52 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: GestureDetector(
-                          onTap: () => _showInfo('Profile photo upload coming soon'),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [Colors.blue[500]!, Colors.blue[700]!]),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue.withOpacity(0.4),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              await profilePictureController.pickProfilePicture();
+                              
+                              // Auto-save if a file was picked
+                              if (profilePictureController.hasChanges()) {
+                                final userDocId = storage.read("userDocumentId") as String?;
+                                if (userDocId != null && userDocId.isNotEmpty) {
+                                  final newFileId = await profilePictureController
+                                      .saveProfilePicture(userDocId);
+
+                                  // Store in GetStorage after successful upload
+                                  if (newFileId != null && newFileId.isNotEmpty) {
+                                    await storage.write('userProfilePictureId', newFileId);
+                                    setState(() {});
+                                    _showSuccess('Profile picture updated successfully');
+                                  }
+                                } else {
+                                  _showError('User document ID not found. Please log in again.');
+                                }
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [Colors.blue[500]!, Colors.blue[700]!]),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.withOpacity(0.4),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                             ),
-                            child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                           ),
                         ),
                       ),
                     ],
-                  ),
+                  )),
                   const SizedBox(height: 16),
                   Text(
                     userName,
@@ -339,6 +384,39 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  Obx(() => profilePictureController.isUploading.value
+                  ? Container(
+                      margin: const EdgeInsets.only(top: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            height: 14,
+                            width: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Uploading...',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
