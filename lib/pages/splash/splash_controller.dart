@@ -11,11 +11,24 @@ class SplashController extends GetxController {
   @override
   void onReady() async {
     super.onReady();
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 2));
 
+    final userId = _getStorage.read("userId");
+    final sessionId = _getStorage.read("sessionId");
     final role = _getStorage.read("role");
 
-    if (role != null) {
+    print('>>> ============================================');
+    print('>>> SPLASH: Checking user session');
+    print('>>> User ID: ${userId ?? "NOT FOUND"}');
+    print('>>> Session ID: ${sessionId != null ? "EXISTS" : "NOT FOUND"}');
+    print('>>> Role: ${role ?? "NOT FOUND"}');
+    print('>>> ============================================');
+
+    // Check if user has a valid session
+    if (userId != null && sessionId != null && role != null) {
+      print('>>> ✅ Valid session found - routing to home');
+      
+      // Route based on role
       switch (role) {
         case "admin":
           Get.offAllNamed(Routes.adminHome);
@@ -30,11 +43,15 @@ class SplashController extends GetxController {
           Get.offAllNamed(Routes.userHome);
           break;
         default:
-          Get.offAllNamed(Routes.login);
+          print('>>> ⚠️ Unknown role: $role');
+          Get.offAllNamed(Routes.landing);
           break;
       }
     } else {
-      Get.offAllNamed(Routes.login);
+      print('>>> ℹ️ No session found - routing to landing page');
+      Get.offAllNamed(Routes.landing);
     }
+
+    print('>>> ============================================');
   }
 }

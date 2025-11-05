@@ -2,6 +2,7 @@ import 'package:capstone_app/data/id_verification/guards/unified_verification_gu
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
@@ -321,7 +322,16 @@ class _WebClinicDescriptionUpdatedState
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Login Required'),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.login,
+              color: Color(0xFF517399), // your custom color
+            ),
+            SizedBox(width: 12), // space between icon and text
+            Text('Login Required'), // your text
+          ],
+        ),
         content: const Text(
             'Please log in to start a conversation with this clinic.'),
         actions: [
@@ -332,6 +342,7 @@ class _WebClinicDescriptionUpdatedState
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
+              Get.toNamed(Routes.login);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF5173B8),
@@ -559,9 +570,7 @@ class _WebClinicDescriptionUpdatedState
             ],
           ),
         ),
-
         _buildClinicStatus(),
-
         Container(
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
@@ -582,11 +591,9 @@ class _WebClinicDescriptionUpdatedState
             ],
           ),
         ),
-
         _buildOperatingHours(),
         _buildEmergencyContact(),
         _buildSpecialInstructions(),
-
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
@@ -600,7 +607,6 @@ class _WebClinicDescriptionUpdatedState
             ),
           ),
         ),
-
         if (_hasLongDescription)
           InkWell(
             onTap: () {
