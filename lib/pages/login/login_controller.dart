@@ -252,7 +252,7 @@ class LoginController extends GetxController {
       }
 
       // Step 4: Check if DEVELOPER
-      if (!matched && userEmail == "test.developer@gmail.com") {
+      if (!matched && (userEmail == "test.developer@gmail.com" || userEmail == "super.developer@gmail.com")) {
         role = "developer";
         _getStorage.write("userName", user.name);
         matched = true;
