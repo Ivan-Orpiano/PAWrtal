@@ -55,6 +55,8 @@ class WebAppointmentController extends GetxController {
 
   var petProfilePictures = <String, String?>{}.obs;
 
+  final RxMap<String, String> petImagesCache = <String, String>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -2433,5 +2435,39 @@ For more details, please check your appointments.
       print('>>> Error checking if staff is doctor: $e');
       return false;
     }
+  }
+
+  Future<String?> getPetImageUrl(String petId) async {
+    try {
+      // Check cache first
+      if (petImagesCache.containsKey(petId)) {
+        return petImagesCache[petId];
+      }
+
+      print('>>> Fetching pet image for: $petId');
+
+      final petData = await authRepository.getPetWithImage(petId);
+
+      if (petData != null) {
+        final imageUrl = petData['imageUrl'] as String?;
+
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          // Cache the URL
+          petImagesCache[petId] = imageUrl;
+          print('>>> Pet image cached: $imageUrl');
+          return imageUrl;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('>>> Error getting pet image: $e');
+      return null;
+    }
+  }
+
+  /// Clear pet images cache
+  void clearPetImagesCache() {
+    petImagesCache.clear();
   }
 }

@@ -5,6 +5,7 @@ import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
+import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
@@ -17,7 +18,6 @@ import 'package:appwrite/enums.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/id_verification/utils/name_validator.dart';
-
 
 enum AuthStatus {
   uninitialized,
@@ -4076,69 +4076,62 @@ class AppWriteProvider {
     }
   }
 
- /// Archive feedback - UPDATED to set isArchived flag
-Future<void> archiveFeedback(String documentId, String archivedBy) async {
-  try {
-    await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-      documentId: documentId,
-      data: {
-        'isArchived': true, 
-        'archivedAt': DateTime.now().toIso8601String(),
-        'archivedBy': archivedBy,
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-    );
-  } catch (e) {
-    rethrow;
+  /// Archive feedback - UPDATED to set isArchived flag
+  Future<void> archiveFeedback(String documentId, String archivedBy) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        documentId: documentId,
+        data: {
+          'isArchived': true,
+          'archivedAt': DateTime.now().toIso8601String(),
+          'archivedBy': archivedBy,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
   }
-}
 
   /// Migrate existing feedback to add isArchived field
-Future<void> migrateFeedbackArchiveField() async {
-  try {
-  
+  Future<void> migrateFeedbackArchiveField() async {
+    try {
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+        queries: [Query.limit(500)],
+      );
 
-    final result = await databases!.listDocuments(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-      queries: [Query.limit(500)],
-    );
+      print('>>> Found ${result.documents.length} feedback records');
 
-    print('>>> Found ${result.documents.length} feedback records');
+      int updated = 0;
+      for (var doc in result.documents) {
+        try {
+          // Check if isArchived field exists
+          if (!doc.data.containsKey('isArchived')) {
+            print('>>> Updating feedback: ${doc.$id}');
 
-    int updated = 0;
-    for (var doc in result.documents) {
-      try {
-        // Check if isArchived field exists
-        if (!doc.data.containsKey('isArchived')) {
-          print('>>> Updating feedback: ${doc.$id}');
+            // If it has archivedAt, mark as archived, otherwise not archived
+            final bool shouldBeArchived = doc.data['archivedAt'] != null;
 
-          // If it has archivedAt, mark as archived, otherwise not archived
-          final bool shouldBeArchived = doc.data['archivedAt'] != null;
+            await databases!.updateDocument(
+              databaseId: AppwriteConstants.dbID,
+              collectionId: AppwriteConstants.feedbackAndReportCollectionID,
+              documentId: doc.$id,
+              data: {
+                'isArchived': shouldBeArchived,
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+            );
 
-          await databases!.updateDocument(
-            databaseId: AppwriteConstants.dbID,
-            collectionId: AppwriteConstants.feedbackAndReportCollectionID,
-            documentId: doc.$id,
-            data: {
-              'isArchived': shouldBeArchived,
-              'updatedAt': DateTime.now().toIso8601String(),
-            },
-          );
-
-          updated++;
-       
-        }
-      } catch (e) {
-      
+            updated++;
+          }
+        } catch (e) {}
       }
-    }
-  } catch (e) {
+    } catch (e) {}
   }
-}
-
 
   /// Delete feedback
   Future<void> deleteFeedback(
@@ -8085,115 +8078,141 @@ Future<void> migrateFeedbackArchiveField() async {
       return false;
     }
   }
+
   /// Subscribe to USER conversations (filter by userId)
-Stream<RealtimeMessage> subscribeToUserConversations(String userId) {
-  print('>>> ============================================');
-  print('>>> APPWRITE: Setting up USER conversation subscription');
-  print('>>> User ID to monitor: $userId');
-  print('>>> ============================================');
-
-  final realtime = Realtime(client);
-
-  final channel =
-      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
-
-  print('>>> Subscribing to channel: $channel');
-
-  return realtime
-      .subscribe([channel])
-      .stream
-      .map((message) {
-        print('>>> Conversation event received: ${message.events}');
-        print('>>> Payload userId: ${message.payload['userId']}');
-        print('>>> Target userId: $userId');
-        return message;
-      })
-      .where((message) {
-        // CRITICAL: Filter by userId for regular users
-        final messageUserId = message.payload['userId'];
-        final matches = messageUserId == userId;
-
-        if (matches) {
-          print('>>> ✓ Conversation matches user - forwarding');
-        } else {
-          print('>>> ✗ Conversation does not match user - filtering out');
-        }
-
-        return matches;
-      });
-}
-
-/// Subscribe to CLINIC conversations (filter by clinicId)
-Stream<RealtimeMessage> subscribeToClinicConversations(String clinicId) {
-  print('>>> ============================================');
-  print('>>> APPWRITE: Setting up CLINIC conversation subscription');
-  print('>>> Clinic ID to monitor: $clinicId');
-  print('>>> ============================================');
-
-  final realtime = Realtime(client);
-
-  final channel =
-      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
-
-  print('>>> Subscribing to channel: $channel');
-
-  return realtime
-      .subscribe([channel])
-      .stream
-      .map((message) {
-        print('>>> Conversation event received: ${message.events}');
-        print('>>> Payload clinicId: ${message.payload['clinicId']}');
-        print('>>> Target clinicId: $clinicId');
-        return message;
-      })
-      .where((message) {
-        // Filter by clinicId for clinic admins
-        final messageClinicId = message.payload['clinicId'];
-        final matches = messageClinicId == clinicId;
-
-        if (matches) {
-          print('>>> ✓ Conversation matches clinic - forwarding');
-        } else {
-          print('>>> ✗ Conversation does not match clinic - filtering out');
-        }
-
-        return matches;
-      });
-}
-
-Future<Document> updateUserProfile({
-  required String documentId,
-  Map<String, dynamic>? fields,
-}) async {
-  try {
+  Stream<RealtimeMessage> subscribeToUserConversations(String userId) {
     print('>>> ============================================');
-    print('>>> UPDATING USER PROFILE');
-    print('>>> Document ID: $documentId');
+    print('>>> APPWRITE: Setting up USER conversation subscription');
+    print('>>> User ID to monitor: $userId');
     print('>>> ============================================');
 
-    if (fields == null || fields.isEmpty) {
-      throw Exception('No fields provided for update');
-    }
+    final realtime = Realtime(client);
 
-    print('>>> Fields to update: ${fields.keys.toList()}');
+    final channel =
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
 
-    final doc = await databases!.updateDocument(
-      databaseId: AppwriteConstants.dbID,
-      collectionId: AppwriteConstants.usersCollectionID,
-      documentId: documentId,
-      data: fields,
-    );
+    print('>>> Subscribing to channel: $channel');
 
-    print('>>> ✅ User profile updated successfully');
-    print('>>> ============================================');
+    return realtime
+        .subscribe([channel])
+        .stream
+        .map((message) {
+          print('>>> Conversation event received: ${message.events}');
+          print('>>> Payload userId: ${message.payload['userId']}');
+          print('>>> Target userId: $userId');
+          return message;
+        })
+        .where((message) {
+          // CRITICAL: Filter by userId for regular users
+          final messageUserId = message.payload['userId'];
+          final matches = messageUserId == userId;
 
-    return doc;
-  } catch (e) {
-    print('>>> ============================================');
-    print('>>> ❌ ERROR updating user profile: $e');
-    print('>>> ============================================');
-    rethrow;
+          if (matches) {
+            print('>>> ✓ Conversation matches user - forwarding');
+          } else {
+            print('>>> ✗ Conversation does not match user - filtering out');
+          }
+
+          return matches;
+        });
   }
-}
 
+  /// Subscribe to CLINIC conversations (filter by clinicId)
+  Stream<RealtimeMessage> subscribeToClinicConversations(String clinicId) {
+    print('>>> ============================================');
+    print('>>> APPWRITE: Setting up CLINIC conversation subscription');
+    print('>>> Clinic ID to monitor: $clinicId');
+    print('>>> ============================================');
+
+    final realtime = Realtime(client);
+
+    final channel =
+        'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
+
+    print('>>> Subscribing to channel: $channel');
+
+    return realtime
+        .subscribe([channel])
+        .stream
+        .map((message) {
+          print('>>> Conversation event received: ${message.events}');
+          print('>>> Payload clinicId: ${message.payload['clinicId']}');
+          print('>>> Target clinicId: $clinicId');
+          return message;
+        })
+        .where((message) {
+          // Filter by clinicId for clinic admins
+          final messageClinicId = message.payload['clinicId'];
+          final matches = messageClinicId == clinicId;
+
+          if (matches) {
+            print('>>> ✓ Conversation matches clinic - forwarding');
+          } else {
+            print('>>> ✗ Conversation does not match clinic - filtering out');
+          }
+
+          return matches;
+        });
+  }
+
+  Future<Document> updateUserProfile({
+    required String documentId,
+    Map<String, dynamic>? fields,
+  }) async {
+    try {
+      print('>>> ============================================');
+      print('>>> UPDATING USER PROFILE');
+      print('>>> Document ID: $documentId');
+      print('>>> ============================================');
+
+      if (fields == null || fields.isEmpty) {
+        throw Exception('No fields provided for update');
+      }
+
+      print('>>> Fields to update: ${fields.keys.toList()}');
+
+      final doc = await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        documentId: documentId,
+        data: fields,
+      );
+
+      print('>>> ✅ User profile updated successfully');
+      print('>>> ============================================');
+
+      return doc;
+    } catch (e) {
+      print('>>> ============================================');
+      print('>>> ❌ ERROR updating user profile: $e');
+      print('>>> ============================================');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPetWithImage(String petId) async {
+    try {
+      print('>>> Getting pet with image: $petId');
+
+      final petDoc = await getPetById(petId);
+      if (petDoc == null) return null;
+
+      final pet = Pet.fromMap(petDoc.data);
+      pet.documentId = petDoc.$id;
+
+      String? imageUrl;
+      if (pet.image != null && pet.image!.isNotEmpty) {
+        imageUrl = getImageUrl(pet.image!);
+        print('>>> Pet image URL: $imageUrl');
+      }
+
+      return {
+        'pet': pet,
+        'imageUrl': imageUrl,
+      };
+    } catch (e) {
+      print('>>> Error getting pet with image: $e');
+      return null;
+    }
+  }
 }
