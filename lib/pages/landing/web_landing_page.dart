@@ -1,5 +1,6 @@
 import 'package:capstone_app/pages/landing/landing_controller.dart';
 import 'package:capstone_app/pages/landing/landing_page.dart';
+import 'package:capstone_app/pages/landing/web_landing_clinic_page.dart';
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_dashboard_page.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
@@ -45,7 +46,7 @@ class _DesktopTabletLanding extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final horizontalPadding = getResponsivePadding(screenWidth);
-    
+
     // Get controller
     final controller = Get.find<LandingController>();
 
@@ -266,7 +267,7 @@ class _LandingDashboardContent extends StatelessWidget {
           itemCount: filters.length,
           itemBuilder: (context, index) {
             final filter = filters[index];
-            
+
             // ✅ Wrap ONLY the item that needs reactivity
             return Obx(() {
               final isSelected = controller.selectedFilter.value == filter;
@@ -275,8 +276,8 @@ class _LandingDashboardContent extends StatelessWidget {
               return GestureDetector(
                 onTap: () => controller.setFilter(filter),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Column(
                     children: [
                       Text(
@@ -286,9 +287,8 @@ class _LandingDashboardContent extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 16,
                           color: isSelected ? Colors.black : Colors.grey,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       if (isSelected)
@@ -421,10 +421,11 @@ class _LandingDashboardContent extends StatelessWidget {
         hoverColor: const Color(0x00000000),
         onTap: () {
           // Navigate to landing clinic page (no login required)
-          Navigator.pushNamed(
+          Navigator.push(
             context,
-            '/landing/clinic',
-            arguments: clinic,
+            MaterialPageRoute(
+              builder: (context) => WebLandingClinicPage(clinic: clinic),
+            ),
           );
         },
         child: SizedBox(
@@ -680,7 +681,8 @@ class _LandingDashboardContent extends StatelessWidget {
     String serviceLower = service.toLowerCase();
     if (serviceLower.contains('vaccination')) return Icons.vaccines_outlined;
     if (serviceLower.contains('surgery')) return Icons.local_hospital_outlined;
-    if (serviceLower.contains('checkup')) return Icons.health_and_safety_outlined;
+    if (serviceLower.contains('checkup'))
+      return Icons.health_and_safety_outlined;
     if (serviceLower.contains('grooming')) return Icons.pets_outlined;
     if (serviceLower.contains('dental')) return Icons.medication_outlined;
     return Icons.medical_services_outlined;
