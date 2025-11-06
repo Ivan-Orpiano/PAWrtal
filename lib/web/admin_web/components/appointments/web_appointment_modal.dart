@@ -1,8 +1,10 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_pet_card_view.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/dialogs/model_record_view_dialog.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/dialogs/owner_details_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -50,29 +52,87 @@ class WebAppointmentModal extends StatelessWidget {
   Widget _buildHeader(WebAppointmentController controller) {
     return Row(
       children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            gradient: LinearGradient(
-              colors: _getStatusGradient(appointment.status),
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        // Pet Image with FIXED userId parameter
+        FutureBuilder<String?>(
+          future: controller.getPetImageByUserId(
+            appointment.petId,
+            appointment.userId, // ✅ CRITICAL: Pass userId for composite key
           ),
-          child: const Icon(
-            Icons.pets,
-            color: Colors.white,
-            size: 30,
-          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  color: Colors.grey[200],
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
+
+            final imageUrl = snapshot.data;
+
+            if (imageUrl != null && imageUrl.isNotEmpty) {
+              // Show pet image
+              return Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('>>> Error loading pet image: $error');
+                      return _buildDefaultPetIcon();
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+
+            // Fallback to default icon
+            return _buildDefaultPetIcon();
+          },
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Pet name with View Card button
               Row(
                 children: [
                   Flexible(
@@ -86,7 +146,43 @@ class WebAppointmentModal extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // View Pet Card button
+                  Tooltip(
+                    message: 'View Owner Details',
+                    child: InkWell(
+                      onTap: () => _showOwnerDetails(controller),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.purple.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.person,
+                              size: 18,
+                              color: Colors.purple,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Owner Details',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.purple,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Tooltip(
                     message: 'View Pet Card',
                     child: InkWell(
@@ -168,6 +264,27 @@ class WebAppointmentModal extends StatelessWidget {
           iconSize: 24,
         ),
       ],
+    );
+  }
+
+// Helper method for default pet icon
+  Widget _buildDefaultPetIcon() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: LinearGradient(
+          colors: _getStatusGradient(appointment.status),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Icon(
+        Icons.pets,
+        color: Colors.white,
+        size: 30,
+      ),
     );
   }
 
@@ -1380,6 +1497,79 @@ class WebAppointmentModal extends StatelessWidget {
       return '${duration.inHours}h ${duration.inMinutes % 60}m';
     } else {
       return '${duration.inMinutes}m';
+    }
+  }
+
+  void _showOwnerDetails(WebAppointmentController controller) async {
+    // Show loading indicator
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      print('>>> Loading owner details for user: ${appointment.userId}');
+
+      // Get user document
+      final userDoc =
+          await controller.authRepository.getUserById(appointment.userId);
+
+      // Close loading indicator
+      Get.back();
+
+      if (userDoc == null) {
+        print('>>> ERROR: User not found');
+        Get.snackbar(
+          'Error',
+          'Could not load owner information',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      print('>>> User found: ${userDoc.data['name']}');
+
+      // Convert to User model
+      final owner = User.fromMap(userDoc.data);
+
+      // Close current modal first
+      Navigator.of(Get.context!).pop();
+
+      // Small delay for smooth transition
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Show owner details dialog
+      await showDialog(
+        context: Get.context!,
+        builder: (context) => OwnerDetailsDialog(owner: owner),
+      );
+
+      // Reopen appointment modal
+      await Future.delayed(const Duration(milliseconds: 100));
+      showDialog(
+        context: Get.context!,
+        builder: (context) => WebAppointmentModal(appointment: appointment),
+      );
+    } catch (e, stackTrace) {
+      print('>>> ERROR loading owner details: $e');
+      print('>>> Stack trace: $stackTrace');
+
+      // Close loading indicator if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Failed to load owner information: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
     }
   }
 }

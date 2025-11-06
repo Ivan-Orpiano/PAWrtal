@@ -2782,12 +2782,16 @@ class AuthRepository {
   }
 
   Future<Document> updateUserProfile({
-  required String documentId,
-  Map<String, dynamic>? fields,
-}) {
-  return appWriteProvider.updateUserProfile(
-    documentId: documentId,
-    fields: fields,
-  );
-}
+    required String documentId,
+    Map<String, dynamic>? fields,
+  }) {
+    return appWriteProvider.updateUserProfile(
+      documentId: documentId,
+      fields: fields,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getPetWithImage(String petId) {
+    return appWriteProvider.getPetWithImage(petId);
+  }
 }

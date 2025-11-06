@@ -1,5 +1,7 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
+import 'package:capstone_app/data/models/user_model.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/dialogs/owner_details_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -136,42 +138,132 @@ class _WebNonMedicalAppointmentModalState
   Widget _buildHeader(WebAppointmentController controller) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blue.shade400, Colors.blue.shade600],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.withOpacity(0.3),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+        // Pet Image with FIXED userId parameter
+        FutureBuilder<String?>(
+          future: controller.getPetImageByUserId(
+            widget.appointment.petId,
+            widget.appointment
+                .userId, // ✅ CRITICAL: Pass userId for composite key
           ),
-          child: const Icon(
-            Icons.content_cut,
-            color: Colors.white,
-            size: 28,
-          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            }
+
+            final imageUrl = snapshot.data;
+
+            if (imageUrl != null && imageUrl.isNotEmpty) {
+              return Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('>>> Error loading pet image: $error');
+                      return _buildDefaultIcon();
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+
+            return _buildDefaultIcon();
+          },
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Complete Service',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 81, 115, 153),
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Complete Service',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 81, 115, 153),
+                      ),
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'View Owner Details',
+                    child: InkWell(
+                      onTap: () => _showOwnerDetails(controller),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.purple.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.person,
+                              size: 16,
+                              color: Colors.purple,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Owner',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.purple,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -196,6 +288,33 @@ class _WebNonMedicalAppointmentModalState
           tooltip: 'Close',
         ),
       ],
+    );
+  }
+
+  Widget _buildDefaultIcon() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade400, Colors.blue.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.pets,
+        color: Colors.white,
+        size: 28,
+      ),
     );
   }
 
@@ -503,5 +622,65 @@ class _WebNonMedicalAppointmentModalState
         ),
       ],
     );
+  }
+
+  void _showOwnerDetails(WebAppointmentController controller) async {
+    // Show loading indicator
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      print('>>> Loading owner details for user: ${widget.appointment.userId}');
+
+      // Get user document
+      final userDoc = await controller.authRepository
+          .getUserById(widget.appointment.userId);
+
+      // Close loading indicator
+      Get.back();
+
+      if (userDoc == null) {
+        print('>>> ERROR: User not found');
+        Get.snackbar(
+          'Error',
+          'Could not load owner information',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      print('>>> User found: ${userDoc.data['name']}');
+
+      // Convert to User model
+      final owner = User.fromMap(userDoc.data);
+
+      // Show owner details dialog
+      await showDialog(
+        context: context,
+        builder: (context) => OwnerDetailsDialog(owner: owner),
+      );
+    } catch (e, stackTrace) {
+      print('>>> ERROR loading owner details: $e');
+      print('>>> Stack trace: $stackTrace');
+
+      // Close loading indicator if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Failed to load owner information: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 }
