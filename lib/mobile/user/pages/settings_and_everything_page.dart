@@ -227,9 +227,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
     final userEmail = storage.read("email") ?? "user@example.com";
     final userName = storage.read("userName") ?? "User";
     final userRole = storage.read("role") ?? "user";
-    final userPhone = storage.read("phone") ?? "+1 (555) 000-0000";
-    final userBio = storage.read("bio") ?? "";
-    final userJoinDate = storage.read("joinDate") ?? "January 2024";
+    final userPhone = storage.read("phone") ?? "09";
     final userId = storage.read("userId") ?? "";
 
     return SingleChildScrollView(
@@ -1808,10 +1806,10 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
 void _showEditProfileDialog() {
   final nameController = TextEditingController(text: storage.read("userName") ?? "");
   
-  // Set default to +63 if phone is empty or null
-  String currentPhone = storage.read("phone") ?? "+63";
+  // Set default to 09 if phone is empty or null
+  String currentPhone = storage.read("phone") ?? "09";
   if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
-    currentPhone = "+63";
+    currentPhone = "09";
   }
   final phoneController = TextEditingController(text: currentPhone);
   
@@ -1825,20 +1823,53 @@ void _showEditProfileDialog() {
       return 'Phone number is required';
     }
     
-    // Remove spaces and special characters for validation
-    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    // Remove spaces for validation
+    final cleanPhone = phone.replaceAll(' ', '');
     
-    // Check if it starts with +63 (Philippines)
-    if (!cleanPhone.startsWith('+63')) {
-      return 'Please use Philippines format: +63XXXXXXXXXX';
+    // Check if it starts with 09 (Philippines mobile format)
+    if (!cleanPhone.startsWith('09')) {
+      return 'Please use Philippines format: 09XX XXX XXXX';
     }
     
-    // Check if it's a valid Philippine phone format (+63 followed by 10 digits)
-    if (!RegExp(r'^\+63\d{10}$').hasMatch(cleanPhone)) {
+    // Check if it's a valid Philippine mobile format (09 followed by 9 digits = 11 total)
+    if (!RegExp(r'^09\d{9}$').hasMatch(cleanPhone)) {
       return 'Invalid Philippine phone number format';
     }
     
     return null;
+  }
+
+  // Format phone number with spaces for display
+  String formatPhoneNumber(String phone) {
+    // Remove all spaces first
+    String cleaned = phone.replaceAll(' ', '');
+    
+    // If empty or just "0", return "09"
+    if (cleaned.isEmpty || cleaned == '0') {
+      return '09';
+    }
+    
+    // If starts with 0 but not 09, force 09
+    if (cleaned.startsWith('0') && !cleaned.startsWith('09')) {
+      cleaned = '09${cleaned.substring(1)}';
+    }
+    
+    // If doesn't start with 0, prepend 09
+    if (!cleaned.startsWith('0')) {
+      cleaned = '09$cleaned';
+    }
+    
+    // Apply formatting: 0XXX XXX XXXX
+    if (cleaned.length <= 4) {
+      return cleaned;
+    } else if (cleaned.length <= 7) {
+      return '${cleaned.substring(0, 4)} ${cleaned.substring(4)}';
+    } else if (cleaned.length <= 11) {
+      return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}';
+    } else {
+      // Limit to 11 digits
+      return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 11)}';
+    }
   }
 
   // Name validation function
@@ -2106,7 +2137,7 @@ void _showEditProfileDialog() {
                     )),
                     const SizedBox(height: 16),
                     
-                    // Phone Field with PH prefix
+                    // Phone Field with PH format
                     Text(
                       'Phone Number (Philippines)',
                       style: TextStyle(
@@ -2118,13 +2149,13 @@ void _showEditProfileDialog() {
                     const SizedBox(height: 8),
                     Obx(() => TextField(
                       controller: phoneController,
-                      maxLength: 20,
+                      maxLength: 13, // "0XXX XXX XXXX" = 13 characters with spaces
                       style: const TextStyle(color: Colors.black87, fontSize: 14),
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
-                        hintText: '+63 9XX XXX XXXX',
+                        hintText: '0XXX XXX XXXX',
                         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-                        helperText: 'Format: +63 followed by 10 digits',
+                        helperText: 'Format: 09 followed by 9 digits',
                         helperStyle: TextStyle(color: Colors.grey[500], fontSize: 10),
                         errorText: phoneError.value,
                         errorMaxLines: 2,
@@ -2152,11 +2183,12 @@ void _showEditProfileDialog() {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                       onChanged: (value) {
-                        // Auto-add +63 if user removes it
-                        if (!value.startsWith('+63') && value.isNotEmpty) {
-                          phoneController.text = '+63${value.replaceAll('+63', '')}';
-                          phoneController.selection = TextSelection.fromPosition(
-                            TextPosition(offset: phoneController.text.length),
+                        // Format the phone number as user types
+                        final formatted = formatPhoneNumber(value);
+                        if (formatted != value) {
+                          phoneController.value = TextEditingValue(
+                            text: formatted,
+                            selection: TextSelection.collapsed(offset: formatted.length),
                           );
                         }
                         if (phoneError.value != null) {
