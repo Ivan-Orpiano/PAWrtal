@@ -120,55 +120,67 @@ class SignUpController extends GetxController {
                     children: [
                       _buildTermsSection(
                         "1. Acceptance of Terms",
-                        "By accessing and using PAWrtal, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.",
+                        "By accessing or using PAWrtal, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must discontinue use of the service immediately.",
                       ),
                       _buildTermsSection(
-                        "2. User Account",
-                        "You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account. You must notify us immediately of any unauthorized use of your account.",
+                        "2. User Accounts",
+                        "You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to provide accurate, current, and complete information during registration. You must immediately notify the PAWrtal Developers of any unauthorized use or security breach. Misuse or fraudulent activity may result in suspension or termination of your account.",
                       ),
                       _buildTermsSection(
                         "3. Privacy Policy",
-                        "Your use of PAWrtal is also governed by our Privacy Policy. We collect and process personal information in accordance with applicable data protection laws. We are committed to protecting your privacy and handling your data with care.",
+                        "Your use of PAWrtal is also governed by our Privacy Policy. The platform collects and processes data—including your name, contact details, location, pet information, and appointment records—in accordance with Philippine Data Privacy Laws (RA 10173). We are committed to protecting your privacy and will only use your data to operate, maintain, and improve the services offered by PAWrtal.",
                       ),
                       _buildTermsSection(
-                        "4. User Data",
-                        "We collect information you provide when creating an account, including your name, email address, and other relevant details for providing our veterinary services. This data is used solely for the purpose of service delivery and improvement.",
+                        "4. User Data and Information Handling",
+                        "PAWrtal collects data you provide when registering, scheduling appointments, or updating your pet’s information. This may include personal details, pet records, geolocation data, and chat communication. Your information is used exclusively for scheduling, clinic management, and improving veterinary services. Data is never sold or shared without your consent, except as required by law.",
                       ),
                       _buildTermsSection(
                         "5. Service Usage",
-                        "PAWrtal provides veterinary clinic management services including appointment scheduling, medical records management, and communication tools. You agree to use the service only for lawful purposes and in accordance with these terms.",
+                        "PAWrtal provides an integrated platform for veterinary clinics, professionals, and pet owners. Core features include appointment booking, consultation and medical record management, vaccination tracking, virtual pet cards, chat and notification systems, and feedback tools. Users agree to use PAWrtal only for lawful purposes and to follow all professional veterinary advice for medical concerns.",
                       ),
                       _buildTermsSection(
                         "6. Prohibited Activities",
-                        "You may not use PAWrtal to transmit any harmful code, interfere with the service, attempt unauthorized access, or engage in any activity that disrupts or impairs the service. Violations may result in account termination.",
+                        "You may not upload or distribute viruses, attempt unauthorized access, use PAWrtal for illegal or fraudulent activity, post misleading information, or disrupt the system’s functionality. Violations may result in immediate account termination, data removal, or legal action.",
                       ),
                       _buildTermsSection(
-                        "7. Intellectual Property",
-                        "All content, features, and functionality of PAWrtal are owned by us and are protected by international copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, or create derivative works without our express permission.",
+                        "7. Roles and Responsibilities",
+                        "Developers maintain the system’s performance, security, and integrity. Admins (veterinary clinics) manage their clinic profiles, services, and schedules. Staff handle appointments, vaccinations, and client communication. Veterinary Professionals (Doctors) provide legitimate medical advice, perform vaccinations, and maintain records. Users (Pet Owners) schedule appointments, manage their pet data, and communicate responsibly. All users must act ethically and protect confidential information.",
                       ),
                       _buildTermsSection(
-                        "8. Limitation of Liability",
-                        "PAWrtal shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service. Our total liability shall not exceed the amount paid by you for the service.",
+                        "8. Intellectual Property",
+                        "All content, design, code, and features of PAWrtal are owned by the Developers and protected under Philippine law. However, medical and vaccination records created by veterinary professionals remain the property of the respective clinics. Reproduction or redistribution of any platform component without written consent is prohibited.",
                       ),
                       _buildTermsSection(
                         "9. Medical Disclaimer",
-                        "PAWrtal is a management tool and does not provide veterinary medical advice. Always consult with qualified veterinary professionals for medical decisions. We are not responsible for medical outcomes.",
+                        "PAWrtal connects pet owners with licensed veterinary professionals who provide real consultations, treatments, and vaccinations. All medical advice and procedures are performed solely by registered veterinarians or authorized staff. PAWrtal does not employ or control these professionals and is not liable for the results of veterinary services. Always follow professional veterinary judgment for medical decisions.",
                       ),
                       _buildTermsSection(
-                        "10. Changes to Terms",
-                        "We reserve the right to modify these terms at any time. We will notify users of any material changes via email or through the service. Continued use after changes constitutes acceptance of the new terms.",
+                        "10. Veterinary Professional Responsibilities",
+                        "Veterinary professionals using PAWrtal must ensure the accuracy of medical data, vaccination logs, and treatment notes. They must maintain client confidentiality, comply with all veterinary and data privacy laws, and use PAWrtal only for legitimate veterinary purposes. Sharing confidential client data outside authorized use may result in account suspension.",
                       ),
                       _buildTermsSection(
-                        "11. Termination",
-                        "We reserve the right to terminate or suspend your account at any time for violations of these terms. Upon termination, your right to use the service will immediately cease.",
+                        "11. Limitation of Liability",
+                        "While the Developers strive to provide a reliable system, they are not liable for technical issues, inaccurate clinic data, delayed appointments, or indirect damages arising from the use of PAWrtal. The Developers’ total liability shall not exceed any amount paid (if applicable) for the use of the platform.",
                       ),
                       _buildTermsSection(
-                        "12. Contact Information",
-                        "For questions about these Terms and Conditions, please contact us through our support channels. We aim to respond to all inquiries within 48 hours.",
+                        "12. Connectivity and Availability",
+                        "Some features, such as appointment booking, notifications, and clinic locator, require an active internet connection. PAWrtal is available on Android and Web platforms. Veterinary clinics listed are limited to those within San Jose del Monte, Bulacan.",
+                      ),
+                      _buildTermsSection(
+                        "13. Changes to Terms",
+                        "The Developers reserve the right to modify or update these Terms and Conditions at any time. Users will be notified through email or in-app messages of any significant changes. Continued use after updates means you accept the revised terms.",
+                      ),
+                      _buildTermsSection(
+                        "14. Termination of Access",
+                        "The Developers may suspend or terminate accounts that violate these terms, engage in fraudulent actions, or harm the platform. Upon termination, access to related data will be removed immediately. Clinics and professionals are responsible for backing up their patient records before termination.",
+                      ),
+                      _buildTermsSection(
+                        "15. Contact Information",
+                        "For inquiries, technical concerns, or questions about these Terms and Conditions, please contact: support@pawrtal.ph. The PAWrtal Developers aim to respond to inquiries within 48 hours.",
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        "Last Updated: October 2025",
+                        "Last Updated: November 2025",
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
@@ -272,11 +284,13 @@ class SignUpController extends GetxController {
         // Show OTP verification dialog
         _showOTPVerificationDialog(email, name);
       } else {
-        generalError.value = result['message'] ?? 'Failed to send verification code';
+        generalError.value =
+            result['message'] ?? 'Failed to send verification code';
       }
     } catch (error) {
       print('>>> Error sending OTP: $error');
-      generalError.value = 'Network error. Please check your connection and try again.';
+      generalError.value =
+          'Network error. Please check your connection and try again.';
     } finally {
       isSendingOTP.value = false;
     }
@@ -358,7 +372,7 @@ class SignUpController extends GetxController {
 
       // OTP verified! Now create the account
       print('>>> OTP verified! Creating account...');
-      
+
       final user = await _authRepository.signup({
         "userId": ID.unique(),
         "name": nameController.text.trim(),
