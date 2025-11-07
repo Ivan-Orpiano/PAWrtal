@@ -241,11 +241,23 @@ class LoginController extends GetxController {
         if (userDoc != null) {
           role = userDoc.data["role"];
           _getStorage.write("customerId", userDoc.$id);
+          _getStorage.write("userDocumentId", userDoc.$id);  // ✅ Store document ID
           _getStorage.write("userName", user.name);
+          
+          // ✅✅ ADD THESE TWO LINES ✅✅
+          final phone = userDoc.data["phone"] as String?;
+          _getStorage.write("phone", phone ?? "");
+          
+          // ✅✅ ALSO STORE PROFILE PICTURE ID ✅✅
+          final profilePictureId = userDoc.data["profilePictureId"] as String?;
+          _getStorage.write("userProfilePictureId", profilePictureId ?? "");
+          
           matched = true;
           print('>>> ✓ CUSTOMER FOUND');
           print('>>> Role: $role');
           print('>>> Customer ID: ${userDoc.$id}');
+          print('>>> Phone: ${phone ?? "Not set"}');  // ✅ Log it
+          print('>>> Profile Picture ID: ${profilePictureId ?? "Not set"}');  // ✅ Log it
         } else {
           print('>>> ✗ Not a customer account');
         }

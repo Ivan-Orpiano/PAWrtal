@@ -303,24 +303,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         }).toList();
         break;
 
-      case 'Available Today':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return true;
-
-          // Check if today is a closed date
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          // Available today if: isOpen, open today (by schedule), and NOT a closed date
-          return settings.isOpen &&
-              settings.isOpenToday() &&
-              !isTodayClosedDate;
-        }).toList();
-        break;
-
       case 'Closed':
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
@@ -403,7 +385,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     final filters = [
       'All',
       'Open',
-      'Available Today',
       'Closed',
       'Popular',
     ];
@@ -490,21 +471,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
           return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
-        }).length;
-
-      case 'Available Today':
-        return allClinics.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return true;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return settings.isOpen &&
-              settings.isOpenToday() &&
-              !isTodayClosedDate;
         }).length;
 
       case 'Closed':

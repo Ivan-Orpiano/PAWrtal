@@ -22,7 +22,6 @@ class _MyTagsState extends State<MyTags> {
   final List<String> tags = [
     "All",
     "Open",
-    "Available Today",
     "Closed",
     "Popular",
   ];

@@ -380,8 +380,6 @@ class _WebSettingsAndEverythingPageState
             userRole: userRole,
             showButton: true,
             onVerificationComplete: () {
-              // This callback is triggered when verification is completed
-              // You can refresh the page or show a success message
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Verification submitted successfully!'),
@@ -739,60 +737,6 @@ class _WebSettingsAndEverythingPageState
                 onTap: _showChangePasswordDialog,
               ),
             ],
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red[200]!, width: 1.5),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red[100],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.warning_amber_rounded,
-                          color: Colors.red[700], size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Danger Zone',
-                      style: TextStyle(
-                          color: Colors.red[800],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Irreversible actions that require careful consideration',
-                  style: TextStyle(color: Colors.red[700], fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _showDeactivateAccountDialog,
-                  icon: const Icon(Icons.person_off_outlined, size: 18),
-                  label: const Text('Deactivate Account'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red[700],
-                    side: BorderSide(color: Colors.red[300]!, width: 1.5),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
