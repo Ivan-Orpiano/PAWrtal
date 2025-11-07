@@ -598,64 +598,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
 
           const SizedBox(height: 16),
 
-          // Danger Zone
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red[200]!, width: 1.5),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.red[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.warning_amber_rounded,
-                          color: Colors.red[700], size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Danger Zone',
-                      style: TextStyle(
-                          color: Colors.red[800],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Irreversible actions',
-                  style: TextStyle(color: Colors.red[700], fontSize: 11),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _showDeactivateAccountDialog,
-                  icon: const Icon(Icons.person_off_outlined, size: 16),
-                  label: const Text('Deactivate Account',
-                      style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red[700],
-                    side: BorderSide(color: Colors.red[300]!, width: 1.5),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
           // Sign Out Button
           SizedBox(
             width: double.infinity,
