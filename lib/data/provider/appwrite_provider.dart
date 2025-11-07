@@ -198,43 +198,48 @@ class AppWriteProvider {
       }
 
       // Step 4: Regular user/customer
-      print('>>> Step 4: Regular user login...');
-      String? role = user.prefs.data["role"];
-      print('>>> Role from prefs: $role');
+        print('>>> Step 4: Regular user login...');
+        String? role = user.prefs.data["role"];
+        String? phone; // ADD THIS
+        print('>>> Role from prefs: $role');
 
-      if (role == null || role.isEmpty) {
-        print('>>> No role in prefs, checking database...');
-        try {
-          final userDoc = await getUserById(user.$id);
-          if (userDoc != null) {
-            role = userDoc.data['role'] ?? 'customer';
-            print('>>> Role from database: $role');
-          } else {
-            print('>>> No user doc found, defaulting to customer');
+        if (role == null || role.isEmpty) {
+          print('>>> No role in prefs, checking database...');
+          try {
+            final userDoc = await getUserById(user.$id);
+            if (userDoc != null) {
+              role = userDoc.data['role'] ?? 'customer';
+              phone = userDoc.data['phone'] as String?; // ADD THIS
+              print('>>> Role from database: $role');
+              print('>>> Phone from database: $phone'); // ADD THIS
+            } else {
+              print('>>> No user doc found, defaulting to customer');
+              role = 'customer';
+            }
+          } catch (e) {
+            print('>>> Error fetching from database: $e');
             role = 'customer';
           }
-        } catch (e) {
-          print('>>> Error fetching from database: $e');
-          role = 'customer';
         }
-      }
 
-      print('>>> Final role: $role');
+        print('>>> Final role: $role');
 
-      // Store regular user data in GetStorage
-      _storage.write('userId', user.$id);
-      _storage.write('email', user.email);
-      _storage.write('userName', user.name);
-      _storage.write('role', role);
-      // clinicId is not stored for regular users, or set to empty string
-      _storage.write('clinicId', '');
+        // Store regular user data in GetStorage
+        _storage.write('userId', user.$id);
+        _storage.write('email', user.email);
+        _storage.write('userName', user.name);
+        _storage.write('role', role);
+        _storage.write('phone', phone ?? ''); // ADD THIS
+        // clinicId is not stored for regular users, or set to empty string
+        _storage.write('clinicId', '');
 
-      print('>>> Stored in GetStorage:');
-      print('>>> - userId: ${user.$id}');
-      print('>>> - email: ${user.email}');
-      print('>>> - userName: ${user.name}');
-      print('>>> - role: $role');
-      print('>>> ============================================');
+        print('>>> Stored in GetStorage:');
+        print('>>> - userId: ${user.$id}');
+        print('>>> - email: ${user.email}');
+        print('>>> - userName: ${user.name}');
+        print('>>> - role: $role');
+        print('>>> - phone: ${phone ?? "Not set"}'); // ADD THIS
+        print('>>> ============================================');
 
       print('>>> Step 5: Fetching profile picture...');
       try {
