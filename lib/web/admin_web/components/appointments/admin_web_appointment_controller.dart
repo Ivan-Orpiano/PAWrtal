@@ -8,6 +8,7 @@ import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:appwrite/appwrite.dart';
@@ -1611,7 +1612,10 @@ class WebAppointmentController extends GetxController {
     String? declineReason,
   }) async {
     try {
-      print('>>> Sending appointment notification');
+      print('>>> ============================================');
+      print('>>> SENDING APPOINTMENT NOTIFICATION');
+      print('>>> Status: $status');
+      print('>>> ============================================');
 
       // Get user details
       final userDoc = await authRepository.getUserById(appointment.userId);
@@ -1635,25 +1639,99 @@ class WebAppointmentController extends GetxController {
         return;
       }
 
+      // NEW: Get user's notification preferences
+      final notificationPrefsService =
+          Get.find<NotificationPreferencesService>();
+      final userDocId = userDoc.data['\$id'] ?? appointment.userId;
+      final userPreferences =
+          await notificationPrefsService.getPreferencesForUser(userDocId);
+
+      print('>>> User notification preferences:');
+      print('>>>   Push: ${userPreferences.pushNotificationsEnabled}');
+      print('>>>   Email: ${userPreferences.emailNotificationsEnabled}');
+
       // Use AppwriteProvider to send notifications
       final appwriteProvider = Get.find<AppWriteProvider>();
 
-      await appwriteProvider.notifyAppointmentStatusChange(
-        userId: appointment.userId,
-        userEmail: userEmail,
-        userName: userName,
-        status: status,
-        petName: petName,
-        clinicName: clinicName,
-        service: appointment.service,
-        appointmentDateTime: appointment.dateTime,
-        appointmentId: appointment.documentId!,
-        declineReason: declineReason,
-      );
+      // Prepare notification data
+      String pushTitle;
+      String pushBody;
 
-      print('>>> Notification sent successfully');
+      switch (status) {
+        case 'accepted':
+          pushTitle = 'Appointment Confirmed! 🎉';
+          pushBody =
+              'Your appointment for $petName at $clinicName has been accepted.';
+          break;
+        case 'declined':
+          pushTitle = 'Appointment Update';
+          pushBody = 'Your appointment for $petName was declined.';
+          break;
+        case 'in_progress':
+          pushTitle = 'Appointment Started';
+          pushBody = '$petName is now being attended to.';
+          break;
+        case 'completed':
+          pushTitle = 'Appointment Completed ✓';
+          pushBody = '$petName\'s appointment is complete.';
+          break;
+        default:
+          pushTitle = 'Appointment Update';
+          pushBody = 'Your appointment for $petName has been updated.';
+      }
+
+      // 1. Send push notification ONLY if user has it enabled
+      if (userPreferences.pushNotificationsEnabled) {
+        print('>>> Sending push notification...');
+        await appwriteProvider.sendPushNotification(
+          title: pushTitle,
+          body: pushBody,
+          userIds: [appointment.userId],
+          data: {
+            'type': 'appointment',
+            'status': status,
+            'appointmentId': appointment.documentId!,
+            'petName': petName,
+            'clinicName': clinicName,
+          },
+        );
+        print('>>> ✅ Push notification sent');
+      } else {
+        print('>>> ⏭️ Push notifications disabled by user, skipping');
+      }
+
+      // 2. Send email ONLY if user has it enabled (only for accepted/declined)
+      if (status == 'accepted' || status == 'declined') {
+        if (userPreferences.emailNotificationsEnabled) {
+          print('>>> Sending email notification...');
+          await appwriteProvider.sendEmail(
+            to: userEmail,
+            subject: status == 'accepted'
+                ? 'Appointment Confirmed - PAWrtal'
+                : 'Appointment Update - PAWrtal',
+            htmlContent: appwriteProvider.buildEmailTemplate(
+              userName: userName,
+              petName: petName,
+              clinicName: clinicName,
+              service: appointment.service,
+              appointmentDateTime: appointment.dateTime,
+              status: status,
+              declineReason: declineReason,
+            ),
+            userId: appointment.userId,
+          );
+          print('>>> ✅ Email sent');
+        } else {
+          print('>>> ⏭️ Email notifications disabled by user, skipping');
+        }
+      }
+
+      print('>>> Notifications processed based on user preferences');
+      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error sending notification: $e');
+      print('>>> ============================================');
+      print('>>> ❌ Error sending notification: $e');
+      print('>>> ============================================');
       // Don't fail the operation if notification fails
     }
   }
