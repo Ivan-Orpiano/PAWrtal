@@ -4,6 +4,7 @@ import 'package:capstone_app/mobile/user/components/dashboard_components/dashboa
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
+import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:get/get.dart';
@@ -27,8 +28,8 @@ Future<void> initializeDependencies() async {
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
-   final authRepo = Get.find<AuthRepository>();
-  
+  final authRepo = Get.find<AuthRepository>();
+
   print('>>> ✓ Archive Service initialized and running');
 
   Get.put(
@@ -49,7 +50,8 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-  print('>>> ✓ In-App Notification Service registered (will initialize after login)');
+  print(
+      '>>> ✓ In-App Notification Service registered (will initialize after login)');
 
   Get.put(
     AppointmentReminderService(
@@ -61,16 +63,24 @@ Future<void> initializeDependencies() async {
   );
   print('>>> ✓ Appointment Reminder Service initialized and running');
 
+  // NEW: Register Notification Preferences Service
+  Get.put(
+    NotificationPreferencesService(
+      authRepository: Get.find<AuthRepository>(),
+    ),
+    permanent: true,
+  );
+  print('>>> ✓ Notification Preferences Service initialized');
+
   Get.put(DashboardController());
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
-  
+
   // ADD THIS LINE - Register WebUserHomeController globally
   Get.put(WebUserHomeController(), permanent: true);
   print('>>> ✓ WebUserHomeController initialized');
 
   await authRepo.appWriteProvider.migrateReviewsArchiveField();
-  
+
   await Get.find<AuthRepository>().migrateFeedbackArchiveField();
-  
 }

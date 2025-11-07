@@ -5,7 +5,7 @@ class User {
   late String role;
   String? phone;
   String? documentId;
-  String? profilePictureId; // NEW: Profile picture field
+  String? profilePictureId;
 
   // ID verification fields
   bool idVerified;
@@ -19,6 +19,10 @@ class User {
   String? archiveReason;
   String? archivedDocumentId;
 
+  // Notification preferences fields (NEW)
+  bool pushNotificationsEnabled;
+  bool emailNotificationsEnabled;
+
   User.fromMap(Map<String, dynamic> map)
       : idVerified = map["idVerified"] as bool? ?? false,
         idVerifiedAt = map["idVerifiedAt"] as String?,
@@ -28,8 +32,10 @@ class User {
         archivedBy = map["archivedBy"] as String?,
         archiveReason = map["archiveReason"] as String?,
         archivedDocumentId = map["archivedDocumentId"] as String?,
-        profilePictureId = map["profilePictureId"] as String? {
-    // NEW
+        profilePictureId = map["profilePictureId"] as String?,
+        // NEW: Notification preferences (default to true if not set)
+        pushNotificationsEnabled = map["pushNotificationsEnabled"] as bool? ?? true,
+        emailNotificationsEnabled = map["emailNotificationsEnabled"] as bool? ?? true {
     documentId = map["\$id"] ?? '';
     userId = map["userId"] ?? '';
     name = map["name"] ?? '';
@@ -54,6 +60,9 @@ class User {
       'archivedBy': archivedBy,
       'archiveReason': archiveReason,
       'archivedDocumentId': archivedDocumentId,
+      // NEW: Include notification preferences
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'emailNotificationsEnabled': emailNotificationsEnabled,
     };
   }
 
@@ -73,6 +82,8 @@ class User {
     String? archivedBy,
     String? archiveReason,
     String? archivedDocumentId,
+    bool? pushNotificationsEnabled,
+    bool? emailNotificationsEnabled,
   }) {
     return User.fromMap({
       'userId': userId ?? this.userId,
@@ -91,6 +102,8 @@ class User {
       'archivedBy': archivedBy ?? this.archivedBy,
       'archiveReason': archiveReason ?? this.archiveReason,
       'archivedDocumentId': archivedDocumentId ?? this.archivedDocumentId,
+      'pushNotificationsEnabled': pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      'emailNotificationsEnabled': emailNotificationsEnabled ?? this.emailNotificationsEnabled,
     });
   }
 
@@ -146,8 +159,26 @@ class User {
     }
   }
 
-  // NEW: Helper getter to check if user has profile picture
+  // Helper getter to check if user has profile picture
   bool get hasProfilePicture {
     return profilePictureId != null && profilePictureId!.isNotEmpty;
+  }
+
+  // NEW: Helper getter to check if any notifications are disabled
+  bool get hasNotificationsDisabled {
+    return !pushNotificationsEnabled || !emailNotificationsEnabled;
+  }
+
+  // NEW: Helper getter for notification status summary
+  String get notificationStatusSummary {
+    if (pushNotificationsEnabled && emailNotificationsEnabled) {
+      return 'All notifications enabled';
+    } else if (!pushNotificationsEnabled && !emailNotificationsEnabled) {
+      return 'All notifications disabled';
+    } else if (!pushNotificationsEnabled) {
+      return 'Push notifications disabled';
+    } else {
+      return 'Email notifications disabled';
+    }
   }
 }

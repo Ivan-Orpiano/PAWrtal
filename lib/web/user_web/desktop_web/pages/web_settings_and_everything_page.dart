@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/id_verification/widgets/verification_status_widget.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/user_web/controllers/web_user_pfp_controller.dart';
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
@@ -82,12 +83,12 @@ class WebSettingsAndEverythingPage extends StatefulWidget {
 }
 
 class _WebSettingsAndEverythingPageState
-  extends State<WebSettingsAndEverythingPage> {
+    extends State<WebSettingsAndEverythingPage> {
   int selectedIndex = 0;
   final GetStorage storage = GetStorage();
   late TextEditingController subjectController;
   late TextEditingController descriptionController;
-  
+
   get feedbackController => null;
 
   @override
@@ -193,7 +194,6 @@ class _WebSettingsAndEverythingPageState
       ),
     );
   }
-  
 
   double _getResponsivePadding() => MediaQuery.of(context).size.width * 0.02;
 
@@ -300,31 +300,32 @@ class _WebSettingsAndEverythingPageState
 
   // Replace the _buildProfileContent() method in WebSettingsAndEverythingPage with this:
 
-Widget _buildProfileContent() {
-  final userEmail = storage.read("email") ?? "user@example.com";
-  final userName = storage.read("userName") ?? "User";
-  final userRole = storage.read("role") ?? "user";
-  final userPhone = storage.read("phone") ?? "09XX XXX XXXX";
-  final userId = storage.read("userId") ?? "";
-  // Use the consistent key name
-  final profilePictureId = storage.read("userProfilePictureId") as String?;
+  Widget _buildProfileContent() {
+    final userEmail = storage.read("email") ?? "user@example.com";
+    final userName = storage.read("userName") ?? "User";
+    final userRole = storage.read("role") ?? "user";
+    final userPhone = storage.read("phone") ?? "09XX XXX XXXX";
+    final userId = storage.read("userId") ?? "";
+    // Use the consistent key name
+    final profilePictureId = storage.read("userProfilePictureId") as String?;
 
-  // Initialize profile picture controller
-  final profilePictureController = Get.put(
-    UserPfpController(authRepository: Get.find<AuthRepository>()),
-    tag: 'user_profile_picture',
-  );
+    // Initialize profile picture controller
+    final profilePictureController = Get.put(
+      UserPfpController(authRepository: Get.find<AuthRepository>()),
+      tag: 'user_profile_picture',
+    );
 
-  // Set current profile picture if exists
-  if (profilePictureId != null && profilePictureId.isNotEmpty) {
-    profilePictureController.setCurrentProfilePicture(profilePictureId);
-    print('>>> Profile picture controller initialized with: $profilePictureId');
-  }
+    // Set current profile picture if exists
+    if (profilePictureId != null && profilePictureId.isNotEmpty) {
+      profilePictureController.setCurrentProfilePicture(profilePictureId);
+      print(
+          '>>> Profile picture controller initialized with: $profilePictureId');
+    }
 
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(32),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -703,12 +704,11 @@ Widget _buildProfileContent() {
                 iconColor: Colors.purple,
               ),
               _buildModernInfoTile(
-                icon: Icons.phone_outlined,
-                label: 'Phone Number',
-                value: userPhone,
-                iconColor: Colors.green,
-                isLast: true
-              ),
+                  icon: Icons.phone_outlined,
+                  label: 'Phone Number',
+                  value: userPhone,
+                  iconColor: Colors.green,
+                  isLast: true),
             ],
             action: TextButton.icon(
               onPressed: _showEditProfileDialog,
@@ -800,6 +800,8 @@ Widget _buildProfileContent() {
   }
 
   Widget _buildSettingsContent() {
+    final notificationPrefsService = Get.find<NotificationPreferencesService>();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -828,11 +830,11 @@ Widget _buildProfileContent() {
                 ),
               ),
               const SizedBox(width: 16),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Settings',
                       style: TextStyle(
                         color: Colors.black87,
@@ -841,49 +843,232 @@ Widget _buildProfileContent() {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Customize your application experience',
-                      style: TextStyle(
-                          color: Colors.grey[600], fontSize: 14, height: 1.4),
-                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
+          // Notifications Card
           _buildModernCard(
             title: 'Notifications',
             icon: Icons.notifications_outlined,
             iconColor: Colors.orange,
             children: [
-              _buildModernSettingTile(
-                icon: Icons.email_outlined,
-                title: 'Email Notifications',
-                subtitle: 'Get important updates via email',
-                iconColor: Colors.red,
-                value: false,
+              // Info banner about in-app notifications
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue[50]!, Colors.cyan[50]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Colors.blue[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'In-app notifications are always enabled to keep you updated within PAWrtal',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue[700],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.notifications_active_outlined,
-                title: 'Push Notifications (For Mobile Application)',
-                subtitle: 'Receive real-time updates and alerts',
-                iconColor: Colors.orange,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.vibration_outlined,
-                title: 'Sound & Vibration (For Mobile Application)',
-                subtitle: 'Enable notification sounds',
-                iconColor: Colors.purple,
-                value: true,
-              ),
+
+              // Push Notifications Toggle
+              Obx(() => _buildFunctionalSettingTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: 'Push Notifications',
+                    subtitle: 'Receive notifications on your mobile device',
+                    iconColor: Colors.orange,
+                    value: notificationPrefsService.isPushEnabled,
+                    isLoading: notificationPrefsService.isLoading.value,
+                    onChanged: (value) async {
+                      final success = await notificationPrefsService
+                          .updatePushNotificationPreference(value);
+                      if (success) {
+                        _showSuccess(value
+                            ? 'Push notifications enabled'
+                            : 'Push notifications disabled');
+                      } else {
+                        _showError(
+                            'Failed to update preference. Please try again.');
+                        // Revert the toggle
+                        await notificationPrefsService.loadPreferences();
+                      }
+                    },
+                  )),
+              const SizedBox(height: 10),
+
+              // Email Notifications Toggle
+              Obx(() => _buildFunctionalSettingTile(
+                    icon: Icons.email_outlined,
+                    title: 'Email Notifications',
+                    subtitle: 'Receive appointment updates via email',
+                    iconColor: Colors.red,
+                    value: notificationPrefsService.isEmailEnabled,
+                    isLoading: notificationPrefsService.isLoading.value,
+                    onChanged: (value) async {
+                      final success = await notificationPrefsService
+                          .updateEmailNotificationPreference(value);
+                      if (success) {
+                        _showSuccess(value
+                            ? 'Email notifications enabled'
+                            : 'Email notifications disabled');
+                      } else {
+                        _showError(
+                            'Failed to update preference. Please try again.');
+                        // Revert the toggle
+                        await notificationPrefsService.loadPreferences();
+                      }
+                    },
+                  )),
+              const SizedBox(height: 16),
+
+              // Current notification status summary
+              Obx(() {
+                final prefs = notificationPrefsService.preferences.value;
+                String statusText;
+                Color statusColor;
+                IconData statusIcon;
+
+                if (prefs.pushNotificationsEnabled &&
+                    prefs.emailNotificationsEnabled) {
+                  statusText = 'All notifications are enabled';
+                  statusColor = Colors.green;
+                  statusIcon = Icons.check_circle;
+                } else if (!prefs.pushNotificationsEnabled &&
+                    !prefs.emailNotificationsEnabled) {
+                  statusText = 'Push and email notifications are disabled';
+                  statusColor = Colors.red;
+                  statusIcon = Icons.notifications_off;
+                } else if (!prefs.pushNotificationsEnabled) {
+                  statusText = 'Push notifications are disabled';
+                  statusColor = Colors.orange;
+                  statusIcon = Icons.notifications_paused;
+                } else {
+                  statusText = 'Email notifications are disabled';
+                  statusColor = Colors.orange;
+                  statusIcon = Icons.email_outlined;
+                }
+
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(statusIcon, size: 14, color: statusColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: statusColor.withOpacity(0.9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFunctionalSettingTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color iconColor,
+    required bool value,
+    required bool isLoading,
+    required Function(bool) onChanged,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                ],
+              ),
+            ),
+            if (isLoading)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              )
+            else
+              Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeColor: iconColor,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1103,7 +1288,8 @@ Widget _buildProfileContent() {
                                       children: [
                                         Expanded(
                                           child: OutlinedButton.icon(
-                                            onPressed: () => _showSuccess('Glad we could help!'),
+                                            onPressed: () => _showSuccess(
+                                                'Glad we could help!'),
                                             icon: Icon(Icons.thumb_up_outlined,
                                                 size: 16,
                                                 color: Colors.green[700]),
@@ -1130,7 +1316,8 @@ Widget _buildProfileContent() {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: OutlinedButton.icon(
-                                            onPressed: () => _showInfo('We\'ll improve this'),
+                                            onPressed: () => _showInfo(
+                                                'We\'ll improve this'),
                                             icon: Icon(
                                                 Icons.thumb_down_outlined,
                                                 size: 16,
@@ -1797,7 +1984,7 @@ Widget _buildProfileContent() {
     );
   }
 
- // NEW: Limit exceeded banner
+  // NEW: Limit exceeded banner
   Widget _buildLimitExceededBanner(WebFeedbackController controller) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1905,72 +2092,82 @@ Widget _buildProfileContent() {
     );
   }
 
-Widget _buildModernInfoTile({
-  required IconData icon,
-  required String label,
-  required String value,
-  required Color iconColor,
-  bool isLast = false,
-}) {
-  return Column(
-    children: [
-      Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+  Widget _buildModernInfoTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color iconColor,
+    bool isLast = false,
+  }) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: iconColor),
             ),
-            child: Icon(icon, size: 18, color: iconColor),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      if (!isLast) const SizedBox(height: 16),
-    ],
-  );
-}
+          ],
+        ),
+        if (!isLast) const SizedBox(height: 16),
+      ],
+    );
+  }
 
 // Helper method to format verification date
-String _formatVerificationDate(String? isoDate) {
-  if (isoDate == null || isoDate.isEmpty) return 'Unknown';
-  
-  try {
-    final date = DateTime.parse(isoDate);
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  } catch (e) {
-    return 'Unknown';
+  String _formatVerificationDate(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) return 'Unknown';
+
+    try {
+      final date = DateTime.parse(isoDate);
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    } catch (e) {
+      return 'Unknown';
+    }
   }
-}
 
   Widget _buildSecurityOption({
     required IconData icon,
@@ -2091,744 +2288,756 @@ String _formatVerificationDate(String? isoDate) {
     );
   }
 
-void _showEditProfileDialog() {
-  final nameController = TextEditingController(text: storage.read("userName") ?? "");
-  
-  // Set default to 09 if phone is empty or null
-  String currentPhone = storage.read("phone") ?? "09";
-  if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
-    currentPhone = "09";
-  }
-  final phoneController = TextEditingController(text: currentPhone);
-  
-  final nameError = Rx<String?>(null);
-  final phoneError = Rx<String?>(null);
-  final isLoading = false.obs;
+  void _showEditProfileDialog() {
+    final nameController =
+        TextEditingController(text: storage.read("userName") ?? "");
 
-  // Phone validation function with Philippines format
-  String? validatePhone(String phone) {
-    if (phone.isEmpty) {
-      return 'Phone number is required';
+    // Set default to 09 if phone is empty or null
+    String currentPhone = storage.read("phone") ?? "09";
+    if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
+      currentPhone = "09";
     }
-    
-    // Remove spaces for validation
-    final cleanPhone = phone.replaceAll(' ', '');
-    
-    // Check if it starts with 09 (Philippines mobile format)
-    if (!cleanPhone.startsWith('09')) {
-      return 'Please use Philippines format: 09XX XXX XXXX';
-    }
-    
-    // Check if it's a valid Philippine mobile format (09 followed by 9 digits = 11 total)
-    if (!RegExp(r'^09\d{9}$').hasMatch(cleanPhone)) {
-      return 'Invalid Philippine phone number format';
-    }
-    
-    return null;
-  }
+    final phoneController = TextEditingController(text: currentPhone);
 
-  // Format phone number with spaces for display
-  String formatPhoneNumber(String phone) {
-    // Remove all spaces first
-    String cleaned = phone.replaceAll(' ', '');
-    
-    // If empty or just "0", return "09"
-    if (cleaned.isEmpty || cleaned == '0') {
-      return '09';
-    }
-    
-    // If starts with 0 but not 09, force 09
-    if (cleaned.startsWith('0') && !cleaned.startsWith('09')) {
-      cleaned = '09${cleaned.substring(1)}';
-    }
-    
-    // If doesn't start with 0, prepend 09
-    if (!cleaned.startsWith('0')) {
-      cleaned = '09$cleaned';
-    }
-    
-    // Apply formatting: 0XXX XXX XXXX
-    if (cleaned.length <= 4) {
-      return cleaned;
-    } else if (cleaned.length <= 7) {
-      return '${cleaned.substring(0, 4)} ${cleaned.substring(4)}';
-    } else if (cleaned.length <= 11) {
-      return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}';
-    } else {
-      // Limit to 11 digits
-      return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 11)}';
-    }
-  }
+    final nameError = Rx<String?>(null);
+    final phoneError = Rx<String?>(null);
+    final isLoading = false.obs;
 
-  // Name validation function
-  String? validateName(String name) {
-    if (name.isEmpty) {
-      return 'Name is required';
-    }
-    
-    if (name.length < 2) {
-      return 'Name must be at least 2 characters';
-    }
-    
-    if (name.length > 100) {
-      return 'Name is too long';
-    }
-    
-    return null;
-  }
-
-  // Update profile function
-  Future<void> updateProfile() async {
-    // Clear previous errors
-    nameError.value = null;
-    phoneError.value = null;
-
-    final name = nameController.text.trim();
-    final phone = phoneController.text.trim();
-
-    bool hasError = false;
-
-    // Validate name
-    final nameValidation = validateName(name);
-    if (nameValidation != null) {
-      nameError.value = nameValidation;
-      hasError = true;
-    }
-
-    // Validate phone
-    final phoneValidation = validatePhone(phone);
-    if (phoneValidation != null) {
-      phoneError.value = phoneValidation;
-      hasError = true;
-    }
-
-    if (hasError) return;
-
-    try {
-      isLoading.value = true;
-
-      final userDocId = storage.read("userDocumentId") as String?;
-      
-      if (userDocId == null || userDocId.isEmpty) {
-        throw Exception('User document ID not found. Please log in again.');
+    // Phone validation function with Philippines format
+    String? validatePhone(String phone) {
+      if (phone.isEmpty) {
+        return 'Phone number is required';
       }
 
-      print('>>> Updating user profile...');
-      print('>>> Document ID: $userDocId');
-      print('>>> New Name: $name');
-      print('>>> New Phone: $phone');
+      // Remove spaces for validation
+      final cleanPhone = phone.replaceAll(' ', '');
 
-      // Update in Appwrite
-      final authRepository = Get.find<AuthRepository>();
-      await authRepository.updateUserProfile(
-        documentId: userDocId,
-        fields: {
-          'name': name,
-          'phone': phone,
-        },
-      );
-
-      print('>>> ✅ Profile updated successfully in Appwrite');
-
-      // Update GetStorage
-      await storage.write("userName", name);
-      await storage.write("phone", phone);
-
-      print('>>> ✅ Local storage updated');
-
-      isLoading.value = false;
-
-      // Close dialog
-      Navigator.of(context).pop();
-
-      // Refresh UI
-      setState(() {});
-
-      // Show success message
-      _showSuccess('Profile updated successfully');
-
-      // Dispose controllers
-      nameController.dispose();
-      phoneController.dispose();
-
-    } catch (e) {
-      print('>>> ERROR updating profile: $e');
-      isLoading.value = false;
-
-      String errorMessage = 'Failed to update profile. Please try again.';
-
-      if (e.toString().contains('Document') && e.toString().contains('not found')) {
-        errorMessage = 'User profile not found. Please log in again.';
-      } else if (e.toString().contains('network')) {
-        errorMessage = 'Network error. Please check your connection.';
+      // Check if it starts with 09 (Philippines mobile format)
+      if (!cleanPhone.startsWith('09')) {
+        return 'Please use Philippines format: 09XX XXX XXXX';
       }
 
-      _showError(errorMessage);
-    }
-  }
+      // Check if it's a valid Philippine mobile format (09 followed by 9 digits = 11 total)
+      if (!RegExp(r'^09\d{9}$').hasMatch(cleanPhone)) {
+        return 'Invalid Philippine phone number format';
+      }
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.edit_outlined,
-                color: Colors.blue[700],
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Edit Profile',
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Name Field
-                Obx(() => TextField(
-                  controller: nameController,
-                  maxLength: 100,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    labelStyle: TextStyle(color: Colors.grey[600]),
-                    errorText: nameError.value,
-                    errorMaxLines: 2,
-                    counterText: '',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.blue, width: 2),
-                    ),
-                    prefixIcon: const Icon(Icons.person_outline),
-                  ),
-                  onChanged: (value) {
-                    if (nameError.value != null) {
-                      nameError.value = null;
-                    }
-                  },
-                )),
-                const SizedBox(height: 20),
-                
-                // Phone Field with PH prefix
-                  Obx(() => TextField(
-                    controller: phoneController,
-                    maxLength: 13, // "0XXX XXX XXXX" = 13 characters with spaces
-                    style: const TextStyle(color: Colors.black87),
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Phone Number (Philippines)',
-                      labelStyle: TextStyle(color: Colors.grey[600]),
-                      hintText: '0XXX XXX XXXX',
-                      hintStyle: TextStyle(color: Colors.grey[400]),
-                      helperText: 'Format: 09 followed by 9 digits',
-                      helperStyle: TextStyle(color: Colors.grey[500], fontSize: 11),
-                      errorText: phoneError.value,
-                      errorMaxLines: 2,
-                      counterText: '',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue, width: 2),
-                      ),
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                    ),
-                    onChanged: (value) {
-                      // Format the phone number as user types
-                      final formatted = formatPhoneNumber(value);
-                      if (formatted != value) {
-                        phoneController.value = TextEditingValue(
-                          text: formatted,
-                          selection: TextSelection.collapsed(offset: formatted.length),
-                        );
-                      }
-                      if (phoneError.value != null) {
-                        phoneError.value = null;
-                      }
-                    },
-                  )),
-                const SizedBox(height: 16),
-                
-                // Info box
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.blue.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: Colors.blue[700],
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Changes will be saved to your account',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[700],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              nameController.dispose();
-              phoneController.dispose();
-            },
-            child: const Text('Cancel'),
-          ),
-          Obx(() => ElevatedButton(
-            onPressed: isLoading.value ? null : updateProfile,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
-            ),
-            child: isLoading.value
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('Save Changes'),
-          )),
-        ],
-      );
-    },
-  );
-}
-
-void _showChangePasswordDialog() {
-  final currentPasswordController = TextEditingController();
-  final newPasswordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
-  
-  final currentPasswordVisible = false.obs;
-  final newPasswordVisible = false.obs;
-  final confirmPasswordVisible = false.obs;
-  
-  final currentPasswordError = Rx<String?>(null);
-  final newPasswordError = Rx<String?>(null);
-  final confirmPasswordError = Rx<String?>(null);
-  final isLoading = false.obs;
-
-  // Password validation function
-  String? validatePassword(String password) {
-    if (password.isEmpty) {
-      return 'Password is required';
-    }
-    
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
-    }
-    
-    // Check for uppercase letter
-    if (!password.contains(RegExp(r'[A-Z]'))) {
-      return 'Password must contain at least one uppercase letter';
-    }
-    
-    // Check for number
-    if (!password.contains(RegExp(r'[0-9]'))) {
-      return 'Password must contain at least one number';
-    }
-    
-    // Check for special character
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      return 'Password must contain at least one special character';
-    }
-    
-    return null;
-  }
-
-  // Change password function
-  Future<void> changePassword() async {
-    // Clear previous errors
-    currentPasswordError.value = null;
-    newPasswordError.value = null;
-    confirmPasswordError.value = null;
-
-    final currentPassword = currentPasswordController.text.trim();
-    final newPassword = newPasswordController.text.trim();
-    final confirmPassword = confirmPasswordController.text.trim();
-
-    bool hasError = false;
-
-    // Validate current password
-    if (currentPassword.isEmpty) {
-      currentPasswordError.value = 'Please enter your current password';
-      hasError = true;
+      return null;
     }
 
-    // Validate new password
-    final newPasswordValidation = validatePassword(newPassword);
-    if (newPasswordValidation != null) {
-      newPasswordError.value = newPasswordValidation;
-      hasError = true;
-    }
+    // Format phone number with spaces for display
+    String formatPhoneNumber(String phone) {
+      // Remove all spaces first
+      String cleaned = phone.replaceAll(' ', '');
 
-    // Check if new password is same as current
-    if (newPassword.isNotEmpty && currentPassword.isNotEmpty && 
-        newPassword == currentPassword) {
-      newPasswordError.value = 'New password must be different from current password';
-      hasError = true;
-    }
+      // If empty or just "0", return "09"
+      if (cleaned.isEmpty || cleaned == '0') {
+        return '09';
+      }
 
-    // Validate password confirmation
-    if (confirmPassword.isEmpty) {
-      confirmPasswordError.value = 'Please confirm your new password';
-      hasError = true;
-    } else if (newPassword != confirmPassword) {
-      confirmPasswordError.value = 'Passwords do not match';
-      hasError = true;
-    }
+      // If starts with 0 but not 09, force 09
+      if (cleaned.startsWith('0') && !cleaned.startsWith('09')) {
+        cleaned = '09${cleaned.substring(1)}';
+      }
 
-    if (hasError) return;
+      // If doesn't start with 0, prepend 09
+      if (!cleaned.startsWith('0')) {
+        cleaned = '09$cleaned';
+      }
 
-    try {
-      isLoading.value = true;
-
-      print('>>> Attempting to change password...');
-
-      // Appwrite's updatePassword automatically verifies old password
-      final authRepository = Get.find<AuthRepository>();
-      await authRepository.appWriteProvider.account!.updatePassword(
-        password: newPassword,
-        oldPassword: currentPassword,
-      );
-
-      print('>>> ✅ Password updated successfully');
-
-      isLoading.value = false;
-
-      // Close dialog
-      Navigator.of(context).pop();
-
-      // Show success message
-      _showSuccess( 'Password changed successfully');
-
-      // Clear controllers
-      currentPasswordController.dispose();
-      newPasswordController.dispose();
-      confirmPasswordController.dispose();
-
-    } catch (e) {
-      print('>>> ERROR changing password: $e');
-      isLoading.value = false;
-
-      String errorMessage = 'Failed to change password. Please try again.';
-
-      // Handle specific Appwrite errors
-      if (e.toString().contains('user_invalid_credentials') || 
-          e.toString().contains('Invalid credentials') ||
-          e.toString().contains('invalid_credentials')) {
-        errorMessage = 'Current password is incorrect';
-        currentPasswordError.value = errorMessage;
-      } else if (e.toString().contains('password_recently_used')) {
-        errorMessage = 'This password was recently used. Please choose a different one.';
-        newPasswordError.value = errorMessage;
-      } else if (e.toString().contains('password')) {
-        errorMessage = 'Invalid password format. Please try again.';
-        newPasswordError.value = errorMessage;
+      // Apply formatting: 0XXX XXX XXXX
+      if (cleaned.length <= 4) {
+        return cleaned;
+      } else if (cleaned.length <= 7) {
+        return '${cleaned.substring(0, 4)} ${cleaned.substring(4)}';
+      } else if (cleaned.length <= 11) {
+        return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}';
       } else {
-        // Generic error
+        // Limit to 11 digits
+        return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 11)}';
+      }
+    }
+
+    // Name validation function
+    String? validateName(String name) {
+      if (name.isEmpty) {
+        return 'Name is required';
+      }
+
+      if (name.length < 2) {
+        return 'Name must be at least 2 characters';
+      }
+
+      if (name.length > 100) {
+        return 'Name is too long';
+      }
+
+      return null;
+    }
+
+    // Update profile function
+    Future<void> updateProfile() async {
+      // Clear previous errors
+      nameError.value = null;
+      phoneError.value = null;
+
+      final name = nameController.text.trim();
+      final phone = phoneController.text.trim();
+
+      bool hasError = false;
+
+      // Validate name
+      final nameValidation = validateName(name);
+      if (nameValidation != null) {
+        nameError.value = nameValidation;
+        hasError = true;
+      }
+
+      // Validate phone
+      final phoneValidation = validatePhone(phone);
+      if (phoneValidation != null) {
+        phoneError.value = phoneValidation;
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      try {
+        isLoading.value = true;
+
+        final userDocId = storage.read("userDocumentId") as String?;
+
+        if (userDocId == null || userDocId.isEmpty) {
+          throw Exception('User document ID not found. Please log in again.');
+        }
+
+        print('>>> Updating user profile...');
+        print('>>> Document ID: $userDocId');
+        print('>>> New Name: $name');
+        print('>>> New Phone: $phone');
+
+        // Update in Appwrite
+        final authRepository = Get.find<AuthRepository>();
+        await authRepository.updateUserProfile(
+          documentId: userDocId,
+          fields: {
+            'name': name,
+            'phone': phone,
+          },
+        );
+
+        print('>>> ✅ Profile updated successfully in Appwrite');
+
+        // Update GetStorage
+        await storage.write("userName", name);
+        await storage.write("phone", phone);
+
+        print('>>> ✅ Local storage updated');
+
+        isLoading.value = false;
+
+        // Close dialog
+        Navigator.of(context).pop();
+
+        // Refresh UI
+        setState(() {});
+
+        // Show success message
+        _showSuccess('Profile updated successfully');
+
+        // Dispose controllers
+        nameController.dispose();
+        phoneController.dispose();
+      } catch (e) {
+        print('>>> ERROR updating profile: $e');
+        isLoading.value = false;
+
+        String errorMessage = 'Failed to update profile. Please try again.';
+
+        if (e.toString().contains('Document') &&
+            e.toString().contains('not found')) {
+          errorMessage = 'User profile not found. Please log in again.';
+        } else if (e.toString().contains('network')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+
         _showError(errorMessage);
       }
     }
-  }
 
-  Widget _buildRequirement(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, top: 4),
-      child: Row(
-        children: [
-          Icon(
-            Icons.check_circle_outline,
-            size: 14,
-            color: Colors.grey[600],
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.edit_outlined,
+                  color: Colors.blue[700],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Edit Profile',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name Field
+                  Obx(() => TextField(
+                        controller: nameController,
+                        maxLength: 100,
+                        style: const TextStyle(color: Colors.black87),
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          errorText: nameError.value,
+                          errorMaxLines: 2,
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: Colors.blue, width: 2),
+                          ),
+                          prefixIcon: const Icon(Icons.person_outline),
+                        ),
+                        onChanged: (value) {
+                          if (nameError.value != null) {
+                            nameError.value = null;
+                          }
+                        },
+                      )),
+                  const SizedBox(height: 20),
+
+                  // Phone Field with PH prefix
+                  Obx(() => TextField(
+                        controller: phoneController,
+                        maxLength:
+                            13, // "0XXX XXX XXXX" = 13 characters with spaces
+                        style: const TextStyle(color: Colors.black87),
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number (Philippines)',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          hintText: '0XXX XXX XXXX',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          helperText: 'Format: 09 followed by 9 digits',
+                          helperStyle:
+                              TextStyle(color: Colors.grey[500], fontSize: 11),
+                          errorText: phoneError.value,
+                          errorMaxLines: 2,
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: Colors.blue, width: 2),
+                          ),
+                          prefixIcon: const Icon(Icons.phone_outlined),
+                        ),
+                        onChanged: (value) {
+                          // Format the phone number as user types
+                          final formatted = formatPhoneNumber(value);
+                          if (formatted != value) {
+                            phoneController.value = TextEditingValue(
+                              text: formatted,
+                              selection: TextSelection.collapsed(
+                                  offset: formatted.length),
+                            );
+                          }
+                          if (phoneError.value != null) {
+                            phoneError.value = null;
+                          }
+                        },
+                      )),
+                  const SizedBox(height: 16),
+
+                  // Info box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: Colors.blue[700],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Changes will be saved to your account',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                nameController.dispose();
+                phoneController.dispose();
+              },
+              child: const Text('Cancel'),
+            ),
+            Obx(() => ElevatedButton(
+                  onPressed: isLoading.value ? null : updateProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: isLoading.value
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Save Changes'),
+                )),
+          ],
+        );
+      },
     );
   }
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
+  void _showChangePasswordDialog() {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    final currentPasswordVisible = false.obs;
+    final newPasswordVisible = false.obs;
+    final confirmPasswordVisible = false.obs;
+
+    final currentPasswordError = Rx<String?>(null);
+    final newPasswordError = Rx<String?>(null);
+    final confirmPasswordError = Rx<String?>(null);
+    final isLoading = false.obs;
+
+    // Password validation function
+    String? validatePassword(String password) {
+      if (password.isEmpty) {
+        return 'Password is required';
+      }
+
+      if (password.length < 8) {
+        return 'Password must be at least 8 characters';
+      }
+
+      // Check for uppercase letter
+      if (!password.contains(RegExp(r'[A-Z]'))) {
+        return 'Password must contain at least one uppercase letter';
+      }
+
+      // Check for number
+      if (!password.contains(RegExp(r'[0-9]'))) {
+        return 'Password must contain at least one number';
+      }
+
+      // Check for special character
+      if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+        return 'Password must contain at least one special character';
+      }
+
+      return null;
+    }
+
+    // Change password function
+    Future<void> changePassword() async {
+      // Clear previous errors
+      currentPasswordError.value = null;
+      newPasswordError.value = null;
+      confirmPasswordError.value = null;
+
+      final currentPassword = currentPasswordController.text.trim();
+      final newPassword = newPasswordController.text.trim();
+      final confirmPassword = confirmPasswordController.text.trim();
+
+      bool hasError = false;
+
+      // Validate current password
+      if (currentPassword.isEmpty) {
+        currentPasswordError.value = 'Please enter your current password';
+        hasError = true;
+      }
+
+      // Validate new password
+      final newPasswordValidation = validatePassword(newPassword);
+      if (newPasswordValidation != null) {
+        newPasswordError.value = newPasswordValidation;
+        hasError = true;
+      }
+
+      // Check if new password is same as current
+      if (newPassword.isNotEmpty &&
+          currentPassword.isNotEmpty &&
+          newPassword == currentPassword) {
+        newPasswordError.value =
+            'New password must be different from current password';
+        hasError = true;
+      }
+
+      // Validate password confirmation
+      if (confirmPassword.isEmpty) {
+        confirmPasswordError.value = 'Please confirm your new password';
+        hasError = true;
+      } else if (newPassword != confirmPassword) {
+        confirmPasswordError.value = 'Passwords do not match';
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      try {
+        isLoading.value = true;
+
+        print('>>> Attempting to change password...');
+
+        // Appwrite's updatePassword automatically verifies old password
+        final authRepository = Get.find<AuthRepository>();
+        await authRepository.appWriteProvider.account!.updatePassword(
+          password: newPassword,
+          oldPassword: currentPassword,
+        );
+
+        print('>>> ✅ Password updated successfully');
+
+        isLoading.value = false;
+
+        // Close dialog
+        Navigator.of(context).pop();
+
+        // Show success message
+        _showSuccess('Password changed successfully');
+
+        // Clear controllers
+        currentPasswordController.dispose();
+        newPasswordController.dispose();
+        confirmPasswordController.dispose();
+      } catch (e) {
+        print('>>> ERROR changing password: $e');
+        isLoading.value = false;
+
+        String errorMessage = 'Failed to change password. Please try again.';
+
+        // Handle specific Appwrite errors
+        if (e.toString().contains('user_invalid_credentials') ||
+            e.toString().contains('Invalid credentials') ||
+            e.toString().contains('invalid_credentials')) {
+          errorMessage = 'Current password is incorrect';
+          currentPasswordError.value = errorMessage;
+        } else if (e.toString().contains('password_recently_used')) {
+          errorMessage =
+              'This password was recently used. Please choose a different one.';
+          newPasswordError.value = errorMessage;
+        } else if (e.toString().contains('password')) {
+          errorMessage = 'Invalid password format. Please try again.';
+          newPasswordError.value = errorMessage;
+        } else {
+          // Generic error
+          _showError(errorMessage);
+        }
+      }
+    }
+
+    Widget _buildRequirement(String text) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 8, top: 4),
+        child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.lock_outline,
-                color: Colors.blue[700],
-                size: 24,
-              ),
+            Icon(
+              Icons.check_circle_outline,
+              size: 14,
+              color: Colors.grey[600],
             ),
-            const SizedBox(width: 12),
-            const Text(
-              'Change Password',
+            const SizedBox(width: 8),
+            Text(
+              text,
               style: TextStyle(
-                color: Colors.black87,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: Colors.grey[700],
               ),
             ),
           ],
         ),
-        content: SizedBox(
-          width: 450,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Password Requirements Info
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.blue.withOpacity(0.2),
-                      width: 1,
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.lock_outline,
+                  color: Colors.blue[700],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Change Password',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 450,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Password Requirements Info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.2),
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 16,
-                            color: Colors.blue[700],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Password Requirements:',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
                               color: Colors.blue[700],
                             ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Password Requirements:',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildRequirement('At least 8 characters'),
+                        _buildRequirement('One uppercase letter (A-Z)'),
+                        _buildRequirement('One number (0-9)'),
+                        _buildRequirement('One special character (!@#\$%^&*)'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Current Password Field
+                  Obx(() => TextField(
+                        controller: currentPasswordController,
+                        obscureText: !currentPasswordVisible.value,
+                        maxLength: 50,
+                        style: const TextStyle(color: Colors.black87),
+                        decoration: InputDecoration(
+                          labelText: 'Current Password',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          counterText: '',
+                          errorText: currentPasswordError.value,
+                          errorMaxLines: 2,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              currentPasswordVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              currentPasswordVisible.value =
+                                  !currentPasswordVisible.value;
+                            },
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _buildRequirement('At least 8 characters'),
-                      _buildRequirement('One uppercase letter (A-Z)'),
-                      _buildRequirement('One number (0-9)'),
-                      _buildRequirement('One special character (!@#\$%^&*)'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                        ),
+                        onChanged: (value) {
+                          if (currentPasswordError.value != null) {
+                            currentPasswordError.value = null;
+                          }
+                        },
+                      )),
+                  const SizedBox(height: 16),
 
-                // Current Password Field
-                Obx(() => TextField(
-                  controller: currentPasswordController,
-                  obscureText: !currentPasswordVisible.value,
-                  maxLength: 50,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: InputDecoration(
-                    labelText: 'Current Password',
-                    labelStyle: TextStyle(color: Colors.grey[600]),
-                    counterText: '',
-                    errorText: currentPasswordError.value,
-                    errorMaxLines: 2,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        currentPasswordVisible.value
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        currentPasswordVisible.value = !currentPasswordVisible.value;
-                      },
-                    ),
-                  ),
-                  onChanged: (value) {
-                    if (currentPasswordError.value != null) {
-                      currentPasswordError.value = null;
-                    }
-                  },
-                )),
-                const SizedBox(height: 16),
+                  // New Password Field
+                  Obx(() => TextField(
+                        controller: newPasswordController,
+                        obscureText: !newPasswordVisible.value,
+                        maxLength: 50,
+                        style: const TextStyle(color: Colors.black87),
+                        decoration: InputDecoration(
+                          labelText: 'New Password',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          counterText: '',
+                          errorText: newPasswordError.value,
+                          errorMaxLines: 3,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              newPasswordVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              newPasswordVisible.value =
+                                  !newPasswordVisible.value;
+                            },
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (newPasswordError.value != null) {
+                            newPasswordError.value = null;
+                          }
+                        },
+                      )),
+                  const SizedBox(height: 16),
 
-                // New Password Field
-                Obx(() => TextField(
-                  controller: newPasswordController,
-                  obscureText: !newPasswordVisible.value,
-                  maxLength: 50,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: InputDecoration(
-                    labelText: 'New Password',
-                    labelStyle: TextStyle(color: Colors.grey[600]),
-                    counterText: '',
-                    errorText: newPasswordError.value,
-                    errorMaxLines: 3,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        newPasswordVisible.value
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        newPasswordVisible.value = !newPasswordVisible.value;
-                      },
-                    ),
-                  ),
-                  onChanged: (value) {
-                    if (newPasswordError.value != null) {
-                      newPasswordError.value = null;
-                    }
-                  },
-                )),
-                const SizedBox(height: 16),
-
-                // Confirm New Password Field
-                Obx(() => TextField(
-                  controller: confirmPasswordController,
-                  obscureText: !confirmPasswordVisible.value,
-                  maxLength: 50,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    labelStyle: TextStyle(color: Colors.grey[600]),
-                    counterText: '',
-                    errorText: confirmPasswordError.value,
-                    errorMaxLines: 2,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        confirmPasswordVisible.value
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        confirmPasswordVisible.value = !confirmPasswordVisible.value;
-                      },
-                    ),
-                  ),
-                  onChanged: (value) {
-                    if (confirmPasswordError.value != null) {
-                      confirmPasswordError.value = null;
-                    }
-                  },
-                )),
-              ],
+                  // Confirm New Password Field
+                  Obx(() => TextField(
+                        controller: confirmPasswordController,
+                        obscureText: !confirmPasswordVisible.value,
+                        maxLength: 50,
+                        style: const TextStyle(color: Colors.black87),
+                        decoration: InputDecoration(
+                          labelText: 'Confirm New Password',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          counterText: '',
+                          errorText: confirmPasswordError.value,
+                          errorMaxLines: 2,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              confirmPasswordVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              confirmPasswordVisible.value =
+                                  !confirmPasswordVisible.value;
+                            },
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (confirmPasswordError.value != null) {
+                            confirmPasswordError.value = null;
+                          }
+                        },
+                      )),
+                ],
+              ),
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              currentPasswordController.dispose();
-              newPasswordController.dispose();
-              confirmPasswordController.dispose();
-            },
-            child: const Text('Cancel'),
-          ),
-          Obx(() => ElevatedButton(
-            onPressed: isLoading.value ? null : changePassword,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                currentPasswordController.dispose();
+                newPasswordController.dispose();
+                confirmPasswordController.dispose();
+              },
+              child: const Text('Cancel'),
             ),
-            child: isLoading.value
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('Change Password'),
-          )),
-        ],
-      );
-    },
-  );
-}
-
+            Obx(() => ElevatedButton(
+                  onPressed: isLoading.value ? null : changePassword,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey,
+                  ),
+                  child: isLoading.value
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Change Password'),
+                )),
+          ],
+        );
+      },
+    );
+  }
 
   void _showDeactivateAccountDialog() {
     showDialog(
@@ -2899,144 +3108,153 @@ void _showChangePasswordDialog() {
       },
     );
   }
-  
-   Widget _buildWebFileItemWithPreview(PlatformFile file) {
-  final extension = file.extension?.toLowerCase() ?? '';
-  final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
-  final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.grey[300]!),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.03),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        // Preview thumbnail
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isVideo 
-                ? [Colors.purple[100]!, Colors.purple[50]!]
-                : [Colors.blue[100]!, Colors.blue[50]!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+  Widget _buildWebFileItemWithPreview(PlatformFile file) {
+    final extension = file.extension?.toLowerCase() ?? '';
+    final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
+    final isImage =
+        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Preview thumbnail
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isVideo
+                    ? [Colors.purple[100]!, Colors.purple[50]!]
+                    : [Colors.blue[100]!, Colors.blue[50]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(8),
             ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Icon(
-              isVideo ? Icons.videocam_rounded : Icons.photo_rounded,
-              color: isVideo ? Colors.purple[700] : Colors.blue[700],
-              size: 28,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                file.name,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isVideo ? Colors.purple.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isVideo ? Icons.play_circle_outline : Icons.image_outlined,
-                          size: 12,
-                          color: isVideo ? Colors.purple[700] : Colors.blue[700],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isVideo ? 'Video' : 'Image',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isVideo ? Colors.purple[700] : Colors.blue[700],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    feedbackController.getFileSize(file.size),
-                    style: TextStyle(
-                      color: Colors.grey[600], 
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '.${extension.toUpperCase()}',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              feedbackController.removeFile(file);
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.05),
-                shape: BoxShape.circle,
-              ),
+            child: Center(
               child: Icon(
-                Icons.close_rounded, 
-                size: 18, 
-                color: Colors.red[600],
+                isVideo ? Icons.videocam_rounded : Icons.photo_rounded,
+                color: isVideo ? Colors.purple[700] : Colors.blue[700],
+                size: 28,
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  file.name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isVideo
+                            ? Colors.purple.withOpacity(0.15)
+                            : Colors.blue.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isVideo
+                                ? Icons.play_circle_outline
+                                : Icons.image_outlined,
+                            size: 12,
+                            color:
+                                isVideo ? Colors.purple[700] : Colors.blue[700],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isVideo ? 'Video' : 'Image',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isVideo
+                                  ? Colors.purple[700]
+                                  : Colors.blue[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      feedbackController.getFileSize(file.size),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '.${extension.toUpperCase()}',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                feedbackController.removeFile(file);
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: Colors.red[600],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showCompactNotification(String message,
       {required Color bgColor,
