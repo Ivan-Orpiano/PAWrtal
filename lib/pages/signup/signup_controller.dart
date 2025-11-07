@@ -176,7 +176,7 @@ class SignUpController extends GetxController {
                       ),
                       _buildTermsSection(
                         "15. Contact Information",
-                        "For inquiries, technical concerns, or questions about these Terms and Conditions, please contact: support@pawrtal.ph. The PAWrtal Developers aim to respond to inquiries within 48 hours.",
+                        "For inquiries, technical concerns, or questions about these Terms and Conditions, please contact: pawrtal.app@gmail.com. The PAWrtal Developers aim to respond to inquiries within 48 hours.",
                       ),
                       const SizedBox(height: 16),
                       const Text(
