@@ -6319,7 +6319,7 @@ class AppWriteProvider {
           subject: status == 'accepted'
               ? 'Appointment Confirmed - PAWrtal'
               : 'Appointment Update - PAWrtal',
-          htmlContent: _buildEmailTemplate(
+          htmlContent: buildEmailTemplate(
             userName: userName,
             petName: petName,
             clinicName: clinicName,
@@ -6369,7 +6369,7 @@ class AppWriteProvider {
     }
   }
 
-  String _buildEmailTemplate({
+  String buildEmailTemplate({
     required String userName,
     required String petName,
     required String clinicName,
