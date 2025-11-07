@@ -158,34 +158,34 @@ class DashboardController extends GetxController {
         }).toList();
         break;
 
-      case 'Popular':
-        // FIXED: Sort by average rating FIRST, then by review count
-        filtered.sort((a, b) {
-          final aStats = ratingStatsCache[a.documentId ?? ''];
-          final bStats = ratingStatsCache[b.documentId ?? ''];
+        case 'Popular':
+          // FIXED: Sort by review count FIRST, then by rating
+          filtered.sort((a, b) {
+            final aStats = ratingStatsCache[a.documentId ?? ''];
+            final bStats = ratingStatsCache[b.documentId ?? ''];
 
-          final aRating = aStats?.averageRating ?? 0.0;
-          final bRating = bStats?.averageRating ?? 0.0;
+            final aReviews = aStats?.totalReviews ?? 0;
+            final bReviews = bStats?.totalReviews ?? 0;
 
-          final aReviews = aStats?.totalReviews ?? 0;
-          final bReviews = bStats?.totalReviews ?? 0;
+            final aRating = aStats?.averageRating ?? 0.0;
+            final bRating = bStats?.averageRating ?? 0.0;
 
-          // Primary sort: Higher rating first
-          if ((bRating - aRating).abs() > 0.01) {
+            // Primary sort: More reviews first
+            if (aReviews != bReviews) {
+              return bReviews.compareTo(aReviews);
+            }
+
+            // Secondary sort: Higher rating if review counts are equal
             return bRating.compareTo(aRating);
-          }
+          });
 
-          // Secondary sort: More reviews if ratings are equal
-          return bReviews.compareTo(aReviews);
-        });
-
-        // Only show clinics with at least 1 review and rating > 0
-        filtered = filtered.where((clinic) {
-          final stats = ratingStatsCache[clinic.documentId ?? ''];
-          return (stats?.totalReviews ?? 0) > 0 &&
-              (stats?.averageRating ?? 0.0) > 0.0;
-        }).toList();
-        break;
+          // Only show clinics with at least 1 review and rating > 0
+          filtered = filtered.where((clinic) {
+            final stats = ratingStatsCache[clinic.documentId ?? ''];
+            return (stats?.totalReviews ?? 0) > 0 &&
+                (stats?.averageRating ?? 0.0) > 0.0;
+          }).toList();
+          break;
 
       case 'All':
       default:

@@ -11,11 +11,13 @@ import 'package:get/get.dart';
 class MyDashboardTile extends StatefulWidget {
   final Clinic clinic;
   final ClinicSettings? clinicSettings;
+  final ClinicRatingStats? ratingStats; // ADD THIS
 
   const MyDashboardTile({
     super.key,
     required this.clinic,
     this.clinicSettings,
+    this.ratingStats, // ADD THIS
   });
 
   @override
@@ -23,35 +25,13 @@ class MyDashboardTile extends StatefulWidget {
 }
 
 class _MyDashboardTileState extends State<MyDashboardTile> {
-  ClinicRatingStats? _ratingStats;
-  bool _isLoadingRating = true;
+  // REMOVE these lines:
+  // ClinicRatingStats? _ratingStats;
+  // bool _isLoadingRating = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadRatingStats();
-  }
+  // REMOVE the entire initState() method
 
-  Future<void> _loadRatingStats() async {
-    try {
-      final authRepository = Get.find<AuthRepository>();
-      final stats = await authRepository
-          .getClinicRatingStats(widget.clinic.documentId ?? '');
-      if (mounted) {
-        setState(() {
-          _ratingStats = stats;
-          _isLoadingRating = false;
-        });
-      }
-    } catch (e) {
-      print("Error loading rating stats for tile: $e");
-      if (mounted) {
-        setState(() {
-          _isLoadingRating = false;
-        });
-      }
-    }
-  }
+  // REMOVE the entire _loadRatingStats() method
 
   Widget _buildStatusBadge() {
     // CRITICAL: Check if today is a closed date FIRST
@@ -105,22 +85,9 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
   }
 
   Widget _buildRatingDisplay() {
-    if (_isLoadingRating) {
-      return const Row(
-        children: [
-          Icon(Icons.star, color: Colors.amber, size: 16),
-          SizedBox(width: 3),
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(strokeWidth: 1.5),
-          ),
-        ],
-      );
-    }
-
-    final rating = _ratingStats?.averageRating ?? 0.0;
-    final reviewCount = _ratingStats?.totalReviews ?? 0;
+    // CHANGED: Use widget.ratingStats directly (passed from parent)
+    final rating = widget.ratingStats?.averageRating ?? 0.0;
+    final reviewCount = widget.ratingStats?.totalReviews ?? 0;
 
     if (reviewCount == 0) {
       return const Row(
@@ -421,6 +388,7 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
       ),
     );
   }
+
 
   String _formatTimeRange(String openTime, String closeTime) {
     // Convert 24-hour times to 12-hour format

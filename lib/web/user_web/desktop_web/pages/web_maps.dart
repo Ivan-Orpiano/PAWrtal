@@ -206,34 +206,6 @@ class _WebMapsState extends State<WebMaps> {
         }).toList();
         break;
 
-      case 'Available Today':
-        print('>>> Filtering for AVAILABLE TODAY clinics...');
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) {
-            print('>>>   ${clinic.clinicName}: No settings - excluded');
-            return false;
-          }
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          final isOpen = settings.isOpen;
-          final isOpenToday = settings.isOpenToday();
-
-          print('>>>   ${clinic.clinicName}:');
-          print('>>>     - isOpen flag: $isOpen');
-          print('>>>     - isOpenToday: $isOpenToday');
-          print('>>>     - isTodayClosedDate: $isTodayClosedDate');
-          print(
-              '>>>     - Result: ${isOpen && isOpenToday && !isTodayClosedDate}');
-
-          return isOpen && isOpenToday && !isTodayClosedDate;
-        }).toList();
-        break;
-
       case 'Closed':
         print('>>> Filtering for CLOSED clinics...');
         filtered = filtered.where((clinic) {

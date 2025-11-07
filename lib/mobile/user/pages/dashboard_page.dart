@@ -146,6 +146,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     MyDashboardTile(
                       clinic: clinic,
                       clinicSettings: controller.clinicSettingsMap[clinic.documentId ?? ''],
+                      ratingStats: controller.ratingStatsCache[clinic.documentId ?? ''], // CRITICAL: Pass cached stats
                     )
                   ),
                   Container(
@@ -157,7 +158,6 @@ class _DashboardPageState extends State<DashboardPage> {
           });
         }),
       ),
-      // FAB removed - now handled in user_home_page.dart
     );
   }
 }
