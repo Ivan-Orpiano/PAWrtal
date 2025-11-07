@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/services/attachment_viewer_widget.dart';
@@ -21,6 +23,8 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
   late WebFeedbackController controller;
   final TextEditingController searchController = TextEditingController();
 
+  StreamSubscription<RealtimeMessage>? _feedbackSubscription;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggingOut = false;
 
@@ -28,13 +32,34 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
   void initState() {
     super.initState();
     controller = Get.find<WebFeedbackController>();
+    _setupRealtimeUpdates();
   }
 
   @override
   void dispose() {
     searchController.dispose();
+    _feedbackSubscription?.cancel();
     super.dispose();
   }
+
+  /// Setup real-time updates for pinned feedback page
+void _setupRealtimeUpdates() {
+  try {
+    _feedbackSubscription = controller.authRepository.appWriteProvider
+        .subscribeToFeedbackChanges()
+        .listen((event) {
+      if (!mounted) return;
+      // Trigger UI refresh when any feedback changes
+      if (mounted) {
+        setState(() {
+          // This will cause pinnedFeedback getter to recalculate
+        });
+      }  
+    }, onError: (error) {
+      });
+      } catch (e) {
+   }
+}
 
   // Get only pinned feedback
   List<FeedbackAndReport> get pinnedFeedback {

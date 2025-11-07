@@ -143,83 +143,82 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-    Widget _buildMobileStatsCards() {
-      return Obx(() {
-        // 🎯 CRITICAL FIX: Calculate stats from VISIBLE feedback only
-        final visibleFeedback = controller.filteredFeedback
-            .where((f) => !f.isPinned && !f.isArchived)
-            .toList();
+  Widget _buildMobileStatsCards() {
+  return Obx(() {
+    final visibleFeedback = controller.allFeedback
+        .where((f) => !f.isArchived) // Only exclude archived
+        .toList();
 
-        final stats = {
-          'total': visibleFeedback.length,
-          'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
-          'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
-          'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
-          'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
-        };
+    final stats = {
+      'total': visibleFeedback.length,
+      'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+      'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+      'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+      'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
+    };
 
-        return Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(12),
-          child: Column(
+    return Container(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Total',
-                      stats['total']?.toString() ?? '0',
-                      Colors.blue,
-                      Icons.feedback,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Pending',
-                      stats['pending']?.toString() ?? '0',
-                      Colors.orange,
-                      Icons.schedule,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Progress',
-                      stats['inProgress']?.toString() ?? '0',
-                      Colors.blue,
-                      Icons.autorenew,
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Total',
+                  stats['total']?.toString() ?? '0',
+                  Colors.blue,
+                  Icons.feedback,
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Completed',
-                      stats['completed']?.toString() ?? '0',
-                      Colors.green,
-                      Icons.check_circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCompactStatCard(
-                      'Critical',
-                      stats['critical']?.toString() ?? '0',
-                      Colors.red,
-                      Icons.warning,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Pending',
+                  stats['pending']?.toString() ?? '0',
+                  Colors.orange,
+                  Icons.schedule,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Progress',
+                  stats['inProgress']?.toString() ?? '0',
+                  Colors.blue,
+                  Icons.autorenew,
+                ),
               ),
             ],
           ),
-        );
-      });
-    }
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Completed',
+                  stats['completed']?.toString() ?? '0',
+                  Colors.green,
+                  Icons.check_circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactStatCard(
+                  'Critical',
+                  stats['critical']?.toString() ?? '0',
+                  Colors.red,
+                  Icons.warning,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  });
+}
 
   Widget _buildCompactStatCard(
       String title, String value, Color color, IconData icon) {
@@ -473,86 +472,86 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
     Widget _buildTabletStatsCards() {
-      return Obx(() {
-    
-        final visibleFeedback = controller.filteredFeedback
-            .where((f) => !f.isPinned && !f.isArchived)
-            .toList();
+  return Obx(() {
+   
+    final visibleFeedback = controller.allFeedback
+        .where((f) => !f.isArchived)
+        .toList();
 
-        final stats = {
-          'total': visibleFeedback.length,
-          'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
-          'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
-          'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
-          'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
-        };
+    final stats = {
+      'total': visibleFeedback.length,
+      'pending': visibleFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+      'inProgress': visibleFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+      'completed': visibleFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+      'critical': visibleFeedback.where((f) => f.priority == Priority.critical).length,
+    };
 
-        return Container(
-          color: const Color.fromRGBO(248, 253, 255, 1),
-          padding: const EdgeInsets.all(14),
-          child: Column(
+    return Container(
+      color: const Color.fromRGBO(248, 253, 255, 1),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  _buildStatCard(
-                    'Total',
-                    stats['total']?.toString() ?? '0',
-                    Colors.blue,
-                    Icons.feedback,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildStatCard(
-                    'Pending',
-                    stats['pending']?.toString() ?? '0',
-                    Colors.orange,
-                    Icons.schedule,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildStatCard(
-                    'In Progress',
-                    stats['inProgress']?.toString() ?? '0',
-                    Colors.blue,
-                    Icons.autorenew,
-                  ),
-                ],
+              _buildStatCard(
+                'Total',
+                stats['total']?.toString() ?? '0',
+                Colors.blue,
+                Icons.feedback,
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Completed',
-                      stats['completed']?.toString() ?? '0',
-                      Colors.green,
-                      Icons.check_circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Critical',
-                      stats['critical']?.toString() ?? '0',
-                      Colors.red,
-                      Icons.warning,
-                    ),
-                  ),
-                  const Expanded(child: SizedBox()),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Spam Blocked',
-                      controller.autoArchivedCount.value.toString(),
-                      Colors.orange,
-                      Icons.block,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Pending',
+                stats['pending']?.toString() ?? '0',
+                Colors.orange,
+                Icons.schedule,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'In Progress',
+                stats['inProgress']?.toString() ?? '0',
+                Colors.blue,
+                Icons.autorenew,
               ),
             ],
           ),
-        );
-      });
-    }
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Completed',
+                  stats['completed']?.toString() ?? '0',
+                  Colors.green,
+                  Icons.check_circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildStatCard(
+                  'Critical',
+                  stats['critical']?.toString() ?? '0',
+                  Colors.red,
+                  Icons.warning,
+                ),
+              ),
+              const Expanded(child: SizedBox()),
+              Expanded(
+                child: _buildStatCard(
+                  'Spam Blocked',
+                  controller.autoArchivedCount.value.toString(),
+                  Colors.orange,
+                  Icons.block,
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+          ),
+        ],
+      ),
+    );
+  });
+}
 
   Widget _buildTabletFiltersSection() {
     return Container(
@@ -717,65 +716,64 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
     );
   }
 
-  Widget _buildStatsCards() {
-    return Obx(() {
-     
-      final activeUnpinnedFeedback = controller.allFeedback
-          .where((f) => !f.isPinned && !f.isArchived) 
-          .toList();
+    Widget _buildStatsCards() {
+      return Obx(() {
+        final activeUnpinnedFeedback = controller.allFeedback
+            .where((f) => !f.isArchived) 
+            .toList();
 
-      final stats = {
-        'total': activeUnpinnedFeedback.length,
-        'pending': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length,
-        'inProgress': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
-        'completed': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.completed).length,
-        'critical': activeUnpinnedFeedback.where((f) => f.priority == Priority.critical).length,
-      };
+        final stats = {
+          'total': activeUnpinnedFeedback.length,
+          'pending': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.pending).length,
+          'inProgress': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.inProgress).length,
+          'completed': activeUnpinnedFeedback.where((f) => f.status == FeedbackStatus.completed).length,
+          'critical': activeUnpinnedFeedback.where((f) => f.priority == Priority.critical).length,
+        };
 
-      return Container(
-        color: const Color.fromRGBO(248, 253, 255, 1),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _buildStatCard(
-              'Total',
-              stats['total']?.toString() ?? '0',
-              Colors.blue,
-              Icons.feedback,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Pending',
-              stats['pending']?.toString() ?? '0',
-              Colors.orange,
-              Icons.schedule,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'In Progress',
-              stats['inProgress']?.toString() ?? '0',
-              Colors.blue,
-              Icons.autorenew,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Completed',
-              stats['completed']?.toString() ?? '0',
-              Colors.green,
-              Icons.check_circle,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'Critical',
-              stats['critical']?.toString() ?? '0',
-              Colors.red,
-              Icons.warning,
-            ),
-          ],
-        ),
-      );
-    });
-  }
+        return Container(
+          color: const Color.fromRGBO(248, 253, 255, 1),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _buildStatCard(
+                'Total',
+                stats['total']?.toString() ?? '0',
+                Colors.blue,
+                Icons.feedback,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Pending',
+                stats['pending']?.toString() ?? '0',
+                Colors.orange,
+                Icons.schedule,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'In Progress',
+                stats['inProgress']?.toString() ?? '0',
+                Colors.blue,
+                Icons.autorenew,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Completed',
+                stats['completed']?.toString() ?? '0',
+                Colors.green,
+                Icons.check_circle,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Critical',
+                stats['critical']?.toString() ?? '0',
+                Colors.red,
+                Icons.warning,
+              ),
+            ],
+          ),
+        );
+      });
+    }
 
   Widget _buildStatCard(
       String title, String value, Color color, IconData icon) {
