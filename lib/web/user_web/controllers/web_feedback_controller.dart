@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/daily_report_tracker_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,8 @@ class WebFeedbackController extends GetxController {
   final RxInt spamDetectedCount = 0.obs;
   final RxInt autoArchivedCount = 0.obs;
   final RxBool isCleaningSpam = false.obs;
+
+  StreamSubscription<RealtimeMessage>? _feedbackSubscription;
 
   Timer? _autoRefreshTimer;
 
@@ -130,6 +133,8 @@ class WebFeedbackController extends GetxController {
         autoCleanSpamFeedback();
       });
 
+      _setupRealtimeFeedbackSubscription();
+
       _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
         filterFeedback(); // Re-sort with updated time calculations
       });
@@ -139,8 +144,138 @@ class WebFeedbackController extends GetxController {
   @override
   void onClose() {
     _autoRefreshTimer?.cancel();
+     _feedbackSubscription?.cancel(); 
     super.onClose();
   }
+
+
+  /// Setup real-time subscription for feedback changes
+void _setupRealtimeFeedbackSubscription() {
+  try {
+    print('>>> Setting up real-time feedback subscription...');
+    
+    _feedbackSubscription = authRepository.appWriteProvider
+        .subscribeToFeedbackChanges()
+        .listen((event) {
+      print('>>> ============================================');
+      print('>>> REAL-TIME FEEDBACK EVENT RECEIVED');
+      print('>>> Event type: ${event.events}');
+      print('>>> ============================================');
+
+      // Handle different event types
+      if (event.events.contains('databases.*.collections.*.documents.*.create')) {
+        print('>>> New feedback created');
+        _handleFeedbackCreated(event);
+      } else if (event.events.contains('databases.*.collections.*.documents.*.update')) {
+        print('>>> Feedback updated');
+        _handleFeedbackUpdated(event);
+      } else if (event.events.contains('databases.*.collections.*.documents.*.delete')) {
+        print('>>> Feedback deleted');
+        _handleFeedbackDeleted(event);
+      }
+    }, onError: (error) {
+      print('>>> Real-time subscription error: $error');
+    });
+
+    print('>>> Real-time subscription active');
+  } catch (e) {
+    print('>>> Error setting up real-time subscription: $e');
+  }
+}
+
+/// Handle feedback created event
+void _handleFeedbackCreated(RealtimeMessage event) {
+  try {
+    final feedbackData = event.payload;
+    final feedback = FeedbackAndReport.fromMap(feedbackData);
+    
+    // Add to list if not already present
+    if (!allFeedback.any((f) => f.documentId == feedback.documentId)) {
+      allFeedback.insert(0, feedback);
+      
+      // Update pinned IDs if it's pinned
+      if (feedback.isPinned) {
+        pinnedFeedbackIds.add(feedback.documentId!);
+        print('>>> ✅ New pinned feedback added: ${feedback.documentId}');
+      }
+      
+      // Re-apply filters and update stats
+      filterFeedback();
+      updateStatistics();
+      
+      print('>>> ✅ New feedback added to local list');
+    }
+  } catch (e) {
+    print('>>> Error handling feedback created: $e');
+  }
+}
+
+/// Handle feedback updated event
+void _handleFeedbackUpdated(RealtimeMessage event) {
+  try {
+    final feedbackData = event.payload;
+    final updatedFeedback = FeedbackAndReport.fromMap(feedbackData);
+    
+    // Find and update existing feedback
+    final index = allFeedback.indexWhere(
+      (f) => f.documentId == updatedFeedback.documentId,
+    );
+    
+    if (index != -1) {
+      final oldFeedback = allFeedback[index];
+      allFeedback[index] = updatedFeedback;
+      
+      // CRITICAL: Handle pin status change
+      if (oldFeedback.isPinned != updatedFeedback.isPinned) {
+        if (updatedFeedback.isPinned) {
+          // Feedback was just pinned
+          pinnedFeedbackIds.add(updatedFeedback.documentId!);
+          print('>>> 📌 Feedback pinned: ${updatedFeedback.documentId}');
+        } else {
+          // Feedback was just unpinned
+          pinnedFeedbackIds.remove(updatedFeedback.documentId!);
+          print('>>> 📍 Feedback unpinned: ${updatedFeedback.documentId}');
+        }
+      }
+      
+      // Handle archive status change
+      if (!oldFeedback.isArchived && updatedFeedback.isArchived) {
+        // Feedback was archived - remove from both lists
+        allFeedback.removeAt(index);
+        filteredFeedback.removeWhere((f) => f.documentId == updatedFeedback.documentId);
+        pinnedFeedbackIds.remove(updatedFeedback.documentId);
+        print('>>> 🗄️ Feedback archived and removed: ${updatedFeedback.documentId}');
+      }
+      // Force refresh
+      allFeedback.refresh();
+      // Re-apply filters and update stats
+      filterFeedback();
+      updateStatistics();
+    }
+  } catch (e) {
+  }
+}
+
+/// Handle feedback deleted event
+void _handleFeedbackDeleted(RealtimeMessage event) {
+  try {
+    final documentId = event.payload['\$id'];
+    
+    // Remove from all lists
+    allFeedback.removeWhere((f) => f.documentId == documentId);
+    filteredFeedback.removeWhere((f) => f.documentId == documentId);
+    pinnedFeedbackIds.remove(documentId);
+    
+    // Force refresh
+    allFeedback.refresh();
+    filteredFeedback.refresh();
+    
+    // Re-apply filters and update stats
+    filterFeedback();
+    updateStatistics();
+  } catch (e) {
+  }
+}
 
   Future<void> _loadDailyReportTracker() async {
     try {
@@ -148,7 +283,7 @@ class WebFeedbackController extends GetxController {
 
       final userId = session.userId;
       if (userId.isEmpty) {
-        print('>>> No user ID, skipping tracker load');
+
         return;
       }
 

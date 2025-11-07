@@ -38,6 +38,7 @@ class _SuperAdminVetClinicDashboardState
   
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
+  late DashboardResponsive _responsive;
 
   @override
   void initState() {
@@ -142,36 +143,36 @@ class _SuperAdminVetClinicDashboardState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.symmetric(vertical: _responsive.scale(8)),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(_responsive.scale(10)),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: color, size: _responsive.scale(22)),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: _responsive.scale(16)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       'Status Update',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: _responsive.scale(13),
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: _responsive.scale(2)),
                     Text(
                       message,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: _responsive.scale(12),
                         color: Colors.white.withOpacity(0.9),
                         fontWeight: FontWeight.w500,
                       ),
@@ -180,15 +181,15 @@ class _SuperAdminVetClinicDashboardState
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(_responsive.scale(6)),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.wifi_tethering_rounded,
                   color: Colors.white,
-                  size: 16,
+                  size: _responsive.scale(16),
                 ),
               ),
             ],
@@ -197,9 +198,9 @@ class _SuperAdminVetClinicDashboardState
         backgroundColor: const Color.fromRGBO(81, 115, 153, 0.95),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(_responsive.scale(16)),
         ),
-        margin: const EdgeInsets.all(16),
+        margin: EdgeInsets.all(_responsive.scale(16)),
         duration: const Duration(seconds: 3),
         elevation: 8,
       ),
@@ -208,107 +209,66 @@ class _SuperAdminVetClinicDashboardState
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    // Use proper breakpoints from dimensions.dart
-    final isMobile = screenWidth < mobileWidth;
-    final isTablet = screenWidth >= mobileWidth && screenWidth < tabletWidth;
-    final isDesktop = screenWidth >= tabletWidth;
-
-    // Responsive padding with smoother scaling
-    double horizontalPadding = isMobile
-        ? 12.0
-        : isTablet
-            ? 20.0
-            : (screenWidth * 0.05).clamp(32.0, 80.0);
-
-    double gridHorizontalPadding = isMobile
-        ? 12.0
-        : isTablet
-            ? 20.0
-            : (screenWidth * 0.08).clamp(40.0, 80.0);
+    _responsive = DashboardResponsive(context);
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: _buildAppBar(context, screenHeight, horizontalPadding, isMobile, isTablet),
-      drawer: _buildDrawer(context, isMobile, isTablet),
+      appBar: _buildAppBar(context),
+      drawer: _buildDrawer(context),
       backgroundColor: const Color(0xFFF8FAFC),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return _buildLoadingState(isMobile, isTablet);
+          return _buildLoadingState();
         }
 
         if (controller.errorMessage.value.isNotEmpty) {
-          return _buildErrorState(isMobile, isTablet);
+          return _buildErrorState();
         }
 
         final filteredClinics = controller.filteredClinics;
 
         return Column(
           children: [
-            _buildHeader(context, filteredClinics.length, horizontalPadding,
-                isMobile, isTablet),
-            _buildSearchBar(horizontalPadding, isMobile, isTablet),
-            SizedBox(height: isMobile ? 10 : isTablet ? 12 : 16),
+            _buildHeader(context, filteredClinics.length),
+            _buildSearchBar(),
+            SizedBox(height: _responsive.verticalSpacing),
             if (filteredClinics.isEmpty)
-              _buildEmptyState(isMobile, isTablet)
+              _buildEmptyState()
             else
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchAllClinics,
                   color: const Color.fromRGBO(81, 115, 153, 1),
-                  child: _buildClinicGrid(
-                    filteredClinics,
-                    gridHorizontalPadding,
-                    isMobile,
-                    isTablet,
-                    isDesktop,
-                    screenWidth,
-                  ),
+                  child: _buildClinicGrid(filteredClinics),
                 ),
               ),
           ],
         );
       }),
-      floatingActionButton: _buildFAB(isMobile, isTablet),
+      floatingActionButton: _buildFAB(),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    double screenHeight,
-    double horizontalPadding,
-    bool isMobile,
-    bool isTablet,
-  ) {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         icon: Icon(
           Icons.menu_rounded,
           color: const Color.fromRGBO(81, 115, 153, 1),
-          size: isMobile ? 22 : isTablet ? 24 : 28,
+          size: _responsive.iconSize,
         ),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         tooltip: 'Menu',
       ),
       backgroundColor: const Color(0xFFF8FAFC),
       centerTitle: true,
-      toolbarHeight: isMobile 
-          ? screenHeight * 0.07 
-          : isTablet 
-              ? screenHeight * 0.08 
-              : screenHeight * 0.1,
+      toolbarHeight: _responsive.appBarHeight,
       flexibleSpace: Container(
         margin: EdgeInsets.only(
-          top: isMobile 
-              ? screenHeight * 0.012 
-              : isTablet 
-                  ? screenHeight * 0.015 
-                  : screenHeight * 0.02,
-          left: horizontalPadding * 0.5,
-          right: horizontalPadding * 0.5,
+          top: _responsive.appBarLogoMarginTop,
+          left: _responsive.horizontalPadding * 0.5,
+          right: _responsive.horizontalPadding * 0.5,
         ),
         child: Center(
           child: Image.asset(
@@ -322,25 +282,21 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildDrawer(BuildContext context, bool isMobile, bool isTablet) {
+  Widget _buildDrawer(BuildContext context) {
     return Drawer(
       backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
       child: Column(
         children: [
-          _buildDrawerHeader(isMobile, isTablet),
+          _buildDrawerHeader(),
           Expanded(
             child: ListView(
-              padding: EdgeInsets.symmetric(
-                vertical: isMobile ? 6 : isTablet ? 8 : 10,
-              ),
+              padding: EdgeInsets.symmetric(vertical: _responsive.scale(8)),
               children: [
                 _buildDrawerItem(
                   context,
                   icon: Icons.people_rounded,
                   title: 'Pet Owner Management',
                   subtitle: 'Manage user accounts',
-                  isMobile: isMobile,
-                  isTablet: isTablet,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -356,8 +312,6 @@ class _SuperAdminVetClinicDashboardState
                   icon: Icons.feedback_rounded,
                   title: 'System Reports',
                   subtitle: 'User feedback & reports',
-                  isMobile: isMobile,
-                  isTablet: isTablet,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -373,8 +327,6 @@ class _SuperAdminVetClinicDashboardState
                   icon: Icons.delete_forever_rounded,
                   title: 'Vet Reports',
                   subtitle: 'Deletion requests',
-                  isMobile: isMobile,
-                  isTablet: isTablet,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -387,8 +339,8 @@ class _SuperAdminVetClinicDashboardState
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 12 : isTablet ? 14 : 16,
-                    vertical: isMobile ? 6 : isTablet ? 7 : 8,
+                    horizontal: _responsive.scale(14),
+                    vertical: _responsive.scale(7),
                   ),
                   child: const Divider(),
                 ),
@@ -397,8 +349,6 @@ class _SuperAdminVetClinicDashboardState
                   icon: Icons.archive_rounded,
                   title: 'Archived Clinics',
                   subtitle: 'View & manage archives',
-                  isMobile: isMobile,
-                  isTablet: isTablet,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -412,20 +362,20 @@ class _SuperAdminVetClinicDashboardState
               ],
             ),
           ),
-          _buildLogoutButton(isMobile, isTablet),
+          _buildLogoutButton(),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerHeader(bool isMobile, bool isTablet) {
+  Widget _buildDrawerHeader() {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        isMobile ? 18 : isTablet ? 20 : 24,
-        isMobile ? 50 : isTablet ? 55 : 60,
-        isMobile ? 18 : isTablet ? 20 : 24,
-        isMobile ? 18 : isTablet ? 20 : 24,
+        _responsive.drawerHeaderPadding,
+        _responsive.drawerHeaderPaddingTop,
+        _responsive.drawerHeaderPadding,
+        _responsive.drawerHeaderPadding,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -441,32 +391,32 @@ class _SuperAdminVetClinicDashboardState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: EdgeInsets.all(isMobile ? 10 : isTablet ? 11 : 12),
+            padding: EdgeInsets.all(_responsive.scale(11)),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(isMobile ? 10 : isTablet ? 11 : 12),
+              borderRadius: BorderRadius.circular(_responsive.scale(11)),
             ),
             child: Icon(
               Icons.admin_panel_settings_rounded,
               color: Colors.white,
-              size: isMobile ? 28 : isTablet ? 30 : 32,
+              size: _responsive.scale(30),
             ),
           ),
-          SizedBox(height: isMobile ? 12 : isTablet ? 14 : 16),
+          SizedBox(height: _responsive.scale(14)),
           Text(
             'Developer',
             style: TextStyle(
               color: Colors.white,
-              fontSize: isMobile ? 20 : isTablet ? 22 : 24,
+              fontSize: _responsive.scale(22),
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: _responsive.scale(4)),
           Text(
             'Management Panel',
             style: TextStyle(
               color: Colors.white.withOpacity(0.9),
-              fontSize: isMobile ? 12 : isTablet ? 13 : 14,
+              fontSize: _responsive.scale(13),
             ),
           ),
         ],
@@ -479,23 +429,21 @@ class _SuperAdminVetClinicDashboardState
     required IconData icon,
     required String title,
     required String subtitle,
-    required bool isMobile,
-    required bool isTablet,
     required VoidCallback onTap,
   }) {
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 6 : isTablet ? 7 : 8,
-        vertical: isMobile ? 3 : isTablet ? 3.5 : 4,
+        horizontal: _responsive.scale(7),
+        vertical: _responsive.scale(3.5),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(isMobile ? 10 : isTablet ? 11 : 12),
+        borderRadius: BorderRadius.circular(_responsive.scale(11)),
         child: Container(
-          padding: EdgeInsets.all(isMobile ? 12 : isTablet ? 14 : 16),
+          padding: EdgeInsets.all(_responsive.scale(14)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(isMobile ? 10 : isTablet ? 11 : 12),
+            borderRadius: BorderRadius.circular(_responsive.scale(11)),
             border: Border.all(
               color: const Color.fromRGBO(81, 115, 153, 0.2),
             ),
@@ -503,7 +451,7 @@ class _SuperAdminVetClinicDashboardState
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(isMobile ? 8 : isTablet ? 9 : 10),
+                padding: EdgeInsets.all(_responsive.scale(9)),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
@@ -511,15 +459,15 @@ class _SuperAdminVetClinicDashboardState
                       Color.fromRGBO(81, 115, 153, 0.1),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(isMobile ? 8 : isTablet ? 9 : 10),
+                  borderRadius: BorderRadius.circular(_responsive.scale(9)),
                 ),
                 child: Icon(
                   icon,
                   color: const Color.fromRGBO(81, 115, 153, 1),
-                  size: isMobile ? 20 : isTablet ? 22 : 24,
+                  size: _responsive.scale(22),
                 ),
               ),
-              SizedBox(width: isMobile ? 12 : isTablet ? 14 : 16),
+              SizedBox(width: _responsive.scale(14)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,16 +475,16 @@ class _SuperAdminVetClinicDashboardState
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: isMobile ? 13 : isTablet ? 14 : 15,
+                        fontSize: _responsive.scale(14),
                         fontWeight: FontWeight.w600,
                         color: const Color.fromRGBO(81, 115, 153, 1),
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: _responsive.scale(2)),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: isMobile ? 10 : isTablet ? 11 : 12,
+                        fontSize: _responsive.scale(11),
                         color: Colors.grey[600],
                       ),
                     ),
@@ -545,7 +493,7 @@ class _SuperAdminVetClinicDashboardState
               ),
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                size: isMobile ? 14 : isTablet ? 15 : 16,
+                size: _responsive.scale(15),
                 color: const Color.fromRGBO(81, 115, 153, 0.5),
               ),
             ],
@@ -555,9 +503,9 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildLogoutButton(bool isMobile, bool isTablet) {
+  Widget _buildLogoutButton() {
     return Container(
-      padding: EdgeInsets.all(isMobile ? 12 : isTablet ? 14 : 16),
+      padding: EdgeInsets.all(_responsive.scale(14)),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -572,9 +520,7 @@ class _SuperAdminVetClinicDashboardState
         top: false,
         child: _isLoggingOut
             ? Container(
-                padding: EdgeInsets.symmetric(
-                  vertical: isMobile ? 14 : isTablet ? 15 : 16,
-                ),
+                padding: EdgeInsets.symmetric(vertical: _responsive.scale(15)),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
@@ -582,25 +528,25 @@ class _SuperAdminVetClinicDashboardState
                       Color.fromRGBO(81, 115, 153, 0.5),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(isMobile ? 10 : isTablet ? 11 : 12),
+                  borderRadius: BorderRadius.circular(_responsive.scale(11)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
-                      width: isMobile ? 18 : isTablet ? 19 : 20,
-                      height: isMobile ? 18 : isTablet ? 19 : 20,
+                      width: _responsive.scale(19),
+                      height: _responsive.scale(19),
                       child: const CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     ),
-                    SizedBox(width: isMobile ? 10 : isTablet ? 11 : 12),
+                    SizedBox(width: _responsive.scale(11)),
                     Text(
                       'Logging Out...',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 14 : isTablet ? 15 : 16,
+                        fontSize: _responsive.scale(15),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -624,11 +570,9 @@ class _SuperAdminVetClinicDashboardState
                     }
                   }
                 },
-                borderRadius: BorderRadius.circular(isMobile ? 10 : isTablet ? 11 : 12),
+                borderRadius: BorderRadius.circular(_responsive.scale(11)),
                 child: Container(
-                  padding: EdgeInsets.symmetric(
-                    vertical: isMobile ? 14 : isTablet ? 15 : 16,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: _responsive.scale(15)),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
@@ -636,7 +580,7 @@ class _SuperAdminVetClinicDashboardState
                         Color.fromRGBO(200, 35, 51, 1),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(isMobile ? 10 : isTablet ? 11 : 12),
+                    borderRadius: BorderRadius.circular(_responsive.scale(11)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.red.withOpacity(0.3),
@@ -651,14 +595,14 @@ class _SuperAdminVetClinicDashboardState
                       Icon(
                         Icons.logout_rounded,
                         color: Colors.white,
-                        size: isMobile ? 18 : isTablet ? 19 : 20,
+                        size: _responsive.scale(19),
                       ),
-                      SizedBox(width: isMobile ? 10 : isTablet ? 11 : 12),
+                      SizedBox(width: _responsive.scale(11)),
                       Text(
                         'Log Out',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: isMobile ? 14 : isTablet ? 15 : 16,
+                          fontSize: _responsive.scale(15),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -670,27 +614,27 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildLoadingState(bool isMobile, bool isTablet) {
+  Widget _buildLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: EdgeInsets.all(isMobile ? 20 : isTablet ? 24 : 28),
+            padding: EdgeInsets.all(_responsive.scale(24)),
             decoration: BoxDecoration(
               color: const Color.fromRGBO(81, 115, 153, 0.1),
               shape: BoxShape.circle,
             ),
             child: CircularProgressIndicator(
               color: const Color.fromRGBO(81, 115, 153, 1),
-              strokeWidth: isMobile ? 3 : isTablet ? 3.5 : 4,
+              strokeWidth: _responsive.scale(3.5),
             ),
           ),
-          SizedBox(height: isMobile ? 16 : isTablet ? 20 : 24),
+          SizedBox(height: _responsive.scale(20)),
           Text(
             'Loading clinics...',
             style: TextStyle(
-              fontSize: isMobile ? 14 : isTablet ? 15 : 16,
+              fontSize: _responsive.scale(15),
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
@@ -700,13 +644,7 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    int clinicCount,
-    double horizontalPadding,
-    bool isMobile,
-    bool isTablet,
-  ) {
+  Widget _buildHeader(BuildContext context, int clinicCount) {
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 600),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -718,12 +656,12 @@ class _SuperAdminVetClinicDashboardState
             offset: Offset(0, 20 * (1 - value)),
             child: Container(
               margin: EdgeInsets.only(
-                top: isMobile ? 10 : isTablet ? 12 : 16,
-                left: horizontalPadding,
-                right: horizontalPadding,
-                bottom: isMobile ? 10 : isTablet ? 12 : 16,
+                top: _responsive.headerMarginTop,
+                left: _responsive.horizontalPadding,
+                right: _responsive.horizontalPadding,
+                bottom: _responsive.headerMarginBottom,
               ),
-              padding: EdgeInsets.all(isMobile ? 14 : isTablet ? 16 : 20),
+              padding: EdgeInsets.all(_responsive.headerPadding),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -733,11 +671,11 @@ class _SuperAdminVetClinicDashboardState
                     const Color.fromRGBO(81, 115, 153, 0.03),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(isMobile ? 14 : isTablet ? 16 : 20),
+                borderRadius: BorderRadius.circular(_responsive.headerRadius),
                 boxShadow: [
                   BoxShadow(
                     color: const Color.fromRGBO(81, 115, 153, 0.1),
-                    blurRadius: isMobile ? 10 : isTablet ? 12 : 15,
+                    blurRadius: _responsive.headerShadow,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -746,198 +684,9 @@ class _SuperAdminVetClinicDashboardState
                   width: 1,
                 ),
               ),
-              child: isMobile
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color.fromRGBO(81, 115, 153, 0.2),
-                                    Color.fromRGBO(81, 115, 153, 0.1),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.dashboard_rounded,
-                                color: Color.fromRGBO(81, 115, 153, 1),
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Veterinary Clinics',
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color.fromRGBO(81, 115, 153, 1),
-                                    ),
-                                  ),
-                                  Text(
-                                    'Management Dashboard',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color.fromRGBO(81, 115, 153, 0.15),
-                                Color.fromRGBO(81, 115, 153, 0.05),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color.fromRGBO(81, 115, 153, 0.2),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.store_rounded,
-                                color: Color.fromRGBO(81, 115, 153, 1),
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$clinicCount',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: Color.fromRGBO(81, 115, 153, 1),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                clinicCount == 1 ? 'Clinic' : 'Clinics',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color.fromRGBO(81, 115, 153, 1).withOpacity(0.8),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(isTablet ? 10 : 12),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color.fromRGBO(81, 115, 153, 0.2),
-                                Color.fromRGBO(81, 115, 153, 0.1),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(isTablet ? 12 : 14),
-                          ),
-                          child: Icon(
-                            Icons.dashboard_rounded,
-                            color: const Color.fromRGBO(81, 115, 153, 1),
-                            size: isTablet ? 24 : 28,
-                          ),
-                        ),
-                        SizedBox(width: isTablet ? 14 : 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Veterinary Clinics Management',
-                                style: TextStyle(
-                                  fontSize: isTablet ? 18 : 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color.fromRGBO(81, 115, 153, 1),
-                                ),
-                              ),
-                              SizedBox(height: isTablet ? 3 : 4),
-                              Text(
-                                'Registered Veterinary Clinics Dashboard',
-                                style: TextStyle(
-                                  fontSize: isTablet ? 12 : 13,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isTablet ? 16 : 18,
-                            vertical: isTablet ? 10 : 11,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color.fromRGBO(81, 115, 153, 0.15),
-                                Color.fromRGBO(81, 115, 153, 0.05),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: const Color.fromRGBO(81, 115, 153, 0.2),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.store_rounded,
-                                color: const Color.fromRGBO(81, 115, 153, 1),
-                                size: isTablet ? 20 : 22,
-                              ),
-                              SizedBox(width: isTablet ? 8 : 10),
-                              Text(
-                                '$clinicCount',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color.fromRGBO(81, 115, 153, 1),
-                                  fontSize: isTablet ? 16 : 17,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                clinicCount == 1 ? 'Clinic' : 'Clinics',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color.fromRGBO(81, 115, 153, 1).withOpacity(0.8),
-                                  fontSize: isTablet ? 14 : 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+              child: _responsive.isMobile
+                  ? _buildMobileHeader(clinicCount)
+                  : _buildDesktopHeader(clinicCount),
             ),
           ),
         );
@@ -945,17 +694,171 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildSearchBar(
-      double horizontalPadding, bool isMobile, bool isTablet) {
+  Widget _buildMobileHeader(int clinicCount) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(_responsive.scale(8)),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromRGBO(81, 115, 153, 0.2),
+                    Color.fromRGBO(81, 115, 153, 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(_responsive.scale(10)),
+              ),
+              child: Icon(
+                Icons.dashboard_rounded,
+                color: const Color.fromRGBO(81, 115, 153, 1),
+                size: _responsive.scale(20),
+              ),
+            ),
+            SizedBox(width: _responsive.scale(12)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Veterinary Clinics',
+                    style: TextStyle(
+                      fontSize: _responsive.scale(17),
+                      fontWeight: FontWeight.bold,
+                      color: const Color.fromRGBO(81, 115, 153, 1),
+                    ),
+                  ),
+                  Text(
+                    'Management Dashboard',
+                    style: TextStyle(
+                      fontSize: _responsive.scale(11),
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: _responsive.scale(12)),
+        _buildClinicCountBadge(clinicCount),
+      ],
+    );
+  }
+
+  Widget _buildDesktopHeader(int clinicCount) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(_responsive.scale(11)),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color.fromRGBO(81, 115, 153, 0.2),
+                Color.fromRGBO(81, 115, 153, 0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(_responsive.scale(13)),
+          ),
+          child: Icon(
+            Icons.dashboard_rounded,
+            color: const Color.fromRGBO(81, 115, 153, 1),
+            size: _responsive.scale(26),
+          ),
+        ),
+        SizedBox(width: _responsive.scale(15)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Veterinary Clinics Management',
+                style: TextStyle(
+                  fontSize: _responsive.scale(20),
+                  fontWeight: FontWeight.bold,
+                  color: const Color.fromRGBO(81, 115, 153, 1),
+                ),
+              ),
+              SizedBox(height: _responsive.scale(3.5)),
+              Text(
+                'Registered Veterinary Clinics Dashboard',
+                style: TextStyle(
+                  fontSize: _responsive.scale(12.5),
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildClinicCountBadge(clinicCount),
+      ],
+    );
+  }
+
+  Widget _buildClinicCountBadge(int clinicCount) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: isMobile
+      padding: EdgeInsets.symmetric(
+        horizontal: _responsive.scale(17),
+        vertical: _responsive.scale(10),
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color.fromRGBO(81, 115, 153, 0.15),
+            Color.fromRGBO(81, 115, 153, 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(_responsive.scale(14)),
+        border: Border.all(
+          color: const Color.fromRGBO(81, 115, 153, 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.store_rounded,
+            color: const Color.fromRGBO(81, 115, 153, 1),
+            size: _responsive.scale(21),
+          ),
+          SizedBox(width: _responsive.scale(9)),
+          Text(
+            '$clinicCount',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              color: const Color.fromRGBO(81, 115, 153, 1),
+              fontSize: _responsive.scale(16.5),
+            ),
+          ),
+          SizedBox(width: _responsive.scale(4)),
+          Text(
+            clinicCount == 1 ? 'Clinic' : 'Clinics',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: const Color.fromRGBO(81, 115, 153, 1).withOpacity(0.8),
+              fontSize: _responsive.scale(14.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: _responsive.horizontalPadding),
+      child: _responsive.isMobile
           ? Column(
               children: [
                 SuperAdminSearchBar(
                   onChanged: controller.updateSearchQuery,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: _responsive.scale(8)),
                 SuperAdminSortButton(
                   onSortChanged: controller.updateSortBy,
                 ),
@@ -968,7 +871,7 @@ class _SuperAdminVetClinicDashboardState
                     onChanged: controller.updateSearchQuery,
                   ),
                 ),
-                SizedBox(width: isTablet ? 10 : 12),
+                SizedBox(width: _responsive.scale(11)),
                 SuperAdminSortButton(
                   onSortChanged: controller.updateSortBy,
                 ),
@@ -977,55 +880,13 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildClinicGrid(
-    List<Map<String, dynamic>> filteredClinics,
-    double gridHorizontalPadding,
-    bool isMobile,
-    bool isTablet,
-    bool isDesktop,
-    double screenWidth,
-  ) {
+  Widget _buildClinicGrid(List<Map<String, dynamic>> filteredClinics) {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          int itemCount = filteredClinics.length;
-          int crossAxisCount;
-          double childAspectRatio;
-          double crossAxisSpacing;
-          double mainAxisSpacing;
-
-          if (isMobile) {
-            // Mobile: 1 column, optimized card height
-            crossAxisCount = 1;
-            childAspectRatio = 0.88;
-            crossAxisSpacing = 0;
-            mainAxisSpacing = 14;
-          } else if (isTablet) {
-            // Tablet: 2 columns
-            crossAxisCount = 2;
-            childAspectRatio = 0.95;
-            crossAxisSpacing = 14;
-            mainAxisSpacing = 14;
-          } else {
-            // Desktop: Dynamic columns based on count
-            if (itemCount == 1) {
-              crossAxisCount = 1;
-              childAspectRatio = 2.5;
-            } else if (itemCount == 2) {
-              crossAxisCount = 2;
-              childAspectRatio = 1.4;
-            } else if (itemCount == 3) {
-              crossAxisCount = 3;
-              childAspectRatio = 1.2;
-            } else {
-              crossAxisCount = screenWidth > 1400 ? 4 : 3;
-              childAspectRatio = 1.15;
-            }
-            crossAxisSpacing = (screenWidth * 0.02).clamp(16.0, 24.0);
-            mainAxisSpacing = (screenWidth * 0.02).clamp(16.0, 24.0);
-          }
-
+          final gridConfig = _responsive.getGridConfig(filteredClinics.length);
+          
           return Container(
             constraints: BoxConstraints(
               minHeight: MediaQuery.of(context).size.height * 0.6,
@@ -1034,18 +895,18 @@ class _SuperAdminVetClinicDashboardState
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.only(
-                top: isMobile ? 6 : isTablet ? 8 : 16,
-                left: gridHorizontalPadding,
-                right: gridHorizontalPadding,
-                bottom: isMobile ? 80 : isTablet ? 90 : 24,
+                top: gridConfig.paddingTop,
+                left: _responsive.gridHorizontalPadding,
+                right: _responsive.gridHorizontalPadding,
+                bottom: gridConfig.paddingBottom,
               ),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: crossAxisSpacing,
-                mainAxisSpacing: mainAxisSpacing,
-                childAspectRatio: childAspectRatio,
+                crossAxisCount: gridConfig.crossAxisCount,
+                crossAxisSpacing: gridConfig.crossAxisSpacing,
+                mainAxisSpacing: gridConfig.mainAxisSpacing,
+                childAspectRatio: gridConfig.childAspectRatio,
               ),
-              itemCount: itemCount,
+              itemCount: filteredClinics.length,
               itemBuilder: (context, index) {
                 final clinicData = filteredClinics[index];
                 final clinic = clinicData['clinic'] as Clinic;
@@ -1079,8 +940,8 @@ class _SuperAdminVetClinicDashboardState
                           child: SuperAdminVetClinicTile(
                             clinic: clinic,
                             settings: settings,
-                            isMobile: isMobile,
-                            isTablet: isTablet,
+                            isMobile: _responsive.isMobile,
+                            isTablet: _responsive.isTablet,
                           ),
                         ),
                       ),
@@ -1095,7 +956,7 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildEmptyState(bool isMobile, bool isTablet) {
+  Widget _buildEmptyState() {
     return Expanded(
       child: Center(
         child: TweenAnimationBuilder<double>(
@@ -1108,12 +969,12 @@ class _SuperAdminVetClinicDashboardState
               child: Transform.scale(
                 scale: 0.8 + (0.2 * value),
                 child: Padding(
-                  padding: EdgeInsets.all(isMobile ? 20 : isTablet ? 24 : 32),
+                  padding: EdgeInsets.all(_responsive.scale(28)),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: EdgeInsets.all(isMobile ? 20 : isTablet ? 24 : 28),
+                        padding: EdgeInsets.all(_responsive.scale(26)),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -1134,35 +995,35 @@ class _SuperAdminVetClinicDashboardState
                           controller.searchQuery.value.isEmpty
                               ? Icons.medical_services_outlined
                               : Icons.search_off_rounded,
-                          size: isMobile ? 56 : isTablet ? 64 : 72,
+                          size: _responsive.scale(66),
                           color: const Color.fromRGBO(81, 115, 153, 0.6),
                         ),
                       ),
-                      SizedBox(height: isMobile ? 18 : isTablet ? 20 : 24),
+                      SizedBox(height: _responsive.scale(21)),
                       Text(
                         controller.searchQuery.value.isEmpty
                             ? 'No clinics registered yet'
                             : 'No clinics found',
                         style: TextStyle(
-                          fontSize: isMobile ? 17 : isTablet ? 19 : 22,
+                          fontSize: _responsive.scale(20),
                           color: Colors.grey[700],
                           fontWeight: FontWeight.w700,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: isMobile ? 7 : isTablet ? 9 : 12),
+                      SizedBox(height: _responsive.scale(10)),
                       Text(
                         controller.searchQuery.value.isEmpty
                             ? 'Start by adding your first veterinary clinic'
                             : 'Try adjusting your search terms',
                         style: TextStyle(
-                          fontSize: isMobile ? 13 : isTablet ? 14 : 16,
+                          fontSize: _responsive.scale(14.5),
                           color: Colors.grey[600],
                         ),
                         textAlign: TextAlign.center,
                       ),
                       if (controller.searchQuery.value.isEmpty) ...[
-                        SizedBox(height: isMobile ? 20 : isTablet ? 24 : 32),
+                        SizedBox(height: _responsive.scale(28)),
                         ElevatedButton.icon(
                           onPressed: () {
                             Navigator.push(
@@ -1174,12 +1035,12 @@ class _SuperAdminVetClinicDashboardState
                           },
                           icon: Icon(
                             Icons.add_rounded,
-                            size: isMobile ? 19 : isTablet ? 21 : 24,
+                            size: _responsive.scale(22),
                           ),
                           label: Text(
                             'Add First Clinic',
                             style: TextStyle(
-                              fontSize: isMobile ? 14 : isTablet ? 15 : 16,
+                              fontSize: _responsive.scale(15),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1187,13 +1048,13 @@ class _SuperAdminVetClinicDashboardState
                             backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
                             foregroundColor: Colors.white,
                             padding: EdgeInsets.symmetric(
-                              horizontal: isMobile ? 20 : isTablet ? 24 : 32,
-                              vertical: isMobile ? 12 : isTablet ? 14 : 16,
+                              horizontal: _responsive.scale(28),
+                              vertical: _responsive.scale(14),
                             ),
                             elevation: 4,
                             shadowColor: const Color.fromRGBO(81, 115, 153, 0.3),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(_responsive.scale(12)),
                             ),
                           ),
                         ),
@@ -1209,15 +1070,15 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildErrorState(bool isMobile, bool isTablet) {
+  Widget _buildErrorState() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(isMobile ? 20 : isTablet ? 24 : 32),
+        padding: EdgeInsets.all(_responsive.scale(28)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(isMobile ? 20 : isTablet ? 24 : 28),
+              padding: EdgeInsets.all(_responsive.scale(26)),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
                 shape: BoxShape.circle,
@@ -1231,58 +1092,56 @@ class _SuperAdminVetClinicDashboardState
               ),
               child: Icon(
                 Icons.error_outline_rounded,
-                size: isMobile ? 56 : isTablet ? 64 : 72,
+                size: _responsive.scale(66),
                 color: Colors.red[700],
               ),
             ),
-            SizedBox(height: isMobile ? 18 : isTablet ? 20 : 24),
+            SizedBox(height: _responsive.scale(21)),
             Text(
               'Oops! Something went wrong',
               style: TextStyle(
-                fontSize: isMobile ? 17 : isTablet ? 19 : 22,
+                fontSize: _responsive.scale(20),
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: isMobile ? 7 : isTablet ? 9 : 12),
+            SizedBox(height: _responsive.scale(10)),
             Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 12 : isTablet ? 20 : 32,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: _responsive.scale(24)),
               child: Text(
                 controller.errorMessage.value,
                 style: TextStyle(
-                  fontSize: isMobile ? 13 : isTablet ? 14 : 16,
+                  fontSize: _responsive.scale(14.5),
                   color: Colors.grey[600],
                 ),
                 textAlign: TextAlign.center,
               ),
             ),
-            SizedBox(height: isMobile ? 20 : isTablet ? 24 : 32),
+            SizedBox(height: _responsive.scale(28)),
             ElevatedButton.icon(
               onPressed: controller.fetchAllClinics,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 20 : isTablet ? 24 : 32,
-                  vertical: isMobile ? 12 : isTablet ? 14 : 16,
+                  horizontal: _responsive.scale(28),
+                  vertical: _responsive.scale(14),
                 ),
                 elevation: 4,
                 shadowColor: const Color.fromRGBO(81, 115, 153, 0.3),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(_responsive.scale(12)),
                 ),
               ),
               icon: Icon(
                 Icons.refresh_rounded,
-                size: isMobile ? 19 : isTablet ? 21 : 24,
+                size: _responsive.scale(22),
               ),
               label: Text(
                 'Try Again',
                 style: TextStyle(
-                  fontSize: isMobile ? 14 : isTablet ? 15 : 16,
+                  fontSize: _responsive.scale(15),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1293,10 +1152,10 @@ class _SuperAdminVetClinicDashboardState
     );
   }
 
-  Widget _buildFAB(bool isMobile, bool isTablet) {
+  Widget _buildFAB() {
     return ScaleTransition(
       scale: _fabScaleAnimation,
-      child: isMobile
+      child: _responsive.isMobile
           ? FloatingActionButton(
               backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
               onPressed: () {
@@ -1308,10 +1167,10 @@ class _SuperAdminVetClinicDashboardState
                 );
               },
               elevation: 6,
-              child: const Icon(
+              child: Icon(
                 Icons.add_rounded,
                 color: Colors.white,
-                size: 26,
+                size: _responsive.scale(26),
               ),
             )
           : FloatingActionButton.extended(
@@ -1328,17 +1187,229 @@ class _SuperAdminVetClinicDashboardState
               icon: Icon(
                 Icons.add_rounded,
                 color: Colors.white,
-                size: isTablet ? 20 : 22,
+                size: _responsive.scale(21),
               ),
               label: Text(
                 'Add Clinic',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: isTablet ? 14 : 16,
+                  fontSize: _responsive.scale(15),
                 ),
               ),
             ),
     );
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD RESPONSIVE CONFIGURATION
+// Centralized responsive configuration for the entire dashboard
+// ═══════════════════════════════════════════════════════════════
+
+class DashboardResponsive {
+  final BuildContext context;
+  final double screenWidth;
+  final double screenHeight;
+  final bool isMobile;
+  final bool isTablet;
+  final bool isDesktop;
+
+  // Core dimensions
+  final double horizontalPadding;
+  final double gridHorizontalPadding;
+  final double verticalSpacing;
+
+  // AppBar
+  final double appBarHeight;
+  final double appBarLogoMarginTop;
+  final double iconSize;
+
+  // Drawer
+  final double drawerHeaderPadding;
+  final double drawerHeaderPaddingTop;
+
+  // Header section
+  final double headerMarginTop;
+  final double headerMarginBottom;
+  final double headerPadding;
+  final double headerRadius;
+  final double headerShadow;
+
+  DashboardResponsive._(
+    this.context, {
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.isMobile,
+    required this.isTablet,
+    required this.isDesktop,
+    required this.horizontalPadding,
+    required this.gridHorizontalPadding,
+    required this.verticalSpacing,
+    required this.appBarHeight,
+    required this.appBarLogoMarginTop,
+    required this.iconSize,
+    required this.drawerHeaderPadding,
+    required this.drawerHeaderPaddingTop,
+    required this.headerMarginTop,
+    required this.headerMarginBottom,
+    required this.headerPadding,
+    required this.headerRadius,
+    required this.headerShadow,
+  });
+
+  factory DashboardResponsive(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isMobile = screenWidth < mobileWidth;
+    final isTablet = screenWidth >= mobileWidth && screenWidth < tabletWidth;
+    final isDesktop = !isMobile && !isTablet;
+
+    if (isMobile) {
+      return DashboardResponsive._(
+        context,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
+        isMobile: true,
+        isTablet: false,
+        isDesktop: false,
+        horizontalPadding: 12.0,
+        gridHorizontalPadding: 12.0,
+        verticalSpacing: 10.0,
+        appBarHeight: screenHeight * 0.07,
+        appBarLogoMarginTop: screenHeight * 0.012,
+        iconSize: 22.0,
+        drawerHeaderPadding: 18.0,
+        drawerHeaderPaddingTop: 50.0,
+        headerMarginTop: 10.0,
+        headerMarginBottom: 10.0,
+        headerPadding: 14.0,
+        headerRadius: 14.0,
+        headerShadow: 10.0,
+      );
+    } else if (isTablet) {
+      return DashboardResponsive._(
+        context,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
+        isMobile: false,
+        isTablet: true,
+        isDesktop: false,
+        horizontalPadding: 20.0,
+        gridHorizontalPadding: 20.0,
+        verticalSpacing: 12.0,
+        appBarHeight: screenHeight * 0.08,
+        appBarLogoMarginTop: screenHeight * 0.015,
+        iconSize: 24.0,
+        drawerHeaderPadding: 20.0,
+        drawerHeaderPaddingTop: 55.0,
+        headerMarginTop: 12.0,
+        headerMarginBottom: 12.0,
+        headerPadding: 16.0,
+        headerRadius: 16.0,
+        headerShadow: 12.0,
+      );
+    } else {
+      // Desktop
+      return DashboardResponsive._(
+        context,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
+        isMobile: false,
+        isTablet: false,
+        isDesktop: true,
+        horizontalPadding: (screenWidth * 0.05).clamp(32.0, 80.0),
+        gridHorizontalPadding: (screenWidth * 0.08).clamp(40.0, 80.0),
+        verticalSpacing: 16.0,
+        appBarHeight: screenHeight * 0.1,
+        appBarLogoMarginTop: screenHeight * 0.02,
+        iconSize: 28.0,
+        drawerHeaderPadding: 24.0,
+        drawerHeaderPaddingTop: 60.0,
+        headerMarginTop: 16.0,
+        headerMarginBottom: 16.0,
+        headerPadding: 20.0,
+        headerRadius: 20.0,
+        headerShadow: 15.0,
+      );
+    }
+  }
+
+  // Universal scaling helper
+  double scale(double value) {
+    if (isMobile) return value * 0.95;
+    if (isTablet) return value;
+    return value * 1.05;
+  }
+
+  // Grid configuration based on item count and screen type
+  GridConfig getGridConfig(int itemCount) {
+    if (isMobile) {
+      return GridConfig(
+        crossAxisCount: 1,
+        childAspectRatio: 0.88,
+        crossAxisSpacing: 0,
+        mainAxisSpacing: 14,
+        paddingTop: 6,
+        paddingBottom: 80,
+      );
+    } else if (isTablet) {
+      return GridConfig(
+        crossAxisCount: 2,
+        childAspectRatio: 0.95,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        paddingTop: 8,
+        paddingBottom: 90,
+      );
+    } else {
+      // Desktop - dynamic columns
+      int crossAxisCount;
+      double aspectRatio;
+
+      if (itemCount == 1) {
+        crossAxisCount = 1;
+        aspectRatio = 2.5;
+      } else if (itemCount == 2) {
+        crossAxisCount = 2;
+        aspectRatio = 1.4;
+      } else if (itemCount == 3) {
+        crossAxisCount = 3;
+        aspectRatio = 1.2;
+      } else {
+        crossAxisCount = screenWidth > 1400 ? 4 : 3;
+        aspectRatio = 1.15;
+      }
+
+      final spacing = (screenWidth * 0.02).clamp(16.0, 24.0);
+
+      return GridConfig(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: aspectRatio,
+        crossAxisSpacing: spacing,
+        mainAxisSpacing: spacing,
+        paddingTop: 16,
+        paddingBottom: 24,
+      );
+    }
+  }
+}
+
+// Grid configuration data class
+class GridConfig {
+  final int crossAxisCount;
+  final double childAspectRatio;
+  final double crossAxisSpacing;
+  final double mainAxisSpacing;
+  final double paddingTop;
+  final double paddingBottom;
+
+  GridConfig({
+    required this.crossAxisCount,
+    required this.childAspectRatio,
+    required this.crossAxisSpacing,
+    required this.mainAxisSpacing,
+    required this.paddingTop,
+    required this.paddingBottom,
+  });
 }
