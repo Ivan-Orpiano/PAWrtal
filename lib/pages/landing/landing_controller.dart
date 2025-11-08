@@ -116,18 +116,18 @@ class LandingController extends GetxController {
         }).toList();
         break;
 
-      case 'Available Today':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return true;
+      // case 'Available Today':
+      //   filtered = filtered.where((clinic) {
+      //     final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      //     if (settings == null) return true;
 
-          final today = DateTime.now();
-          final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      //     final today = DateTime.now();
+      //     final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      //     final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
-          return settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
-        }).toList();
-        break;
+      //     return settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
+      //   }).toList();
+      //   break;
 
       case 'Closed':
         filtered = filtered.where((clinic) {
@@ -202,17 +202,17 @@ class LandingController extends GetxController {
           return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
         }).length;
 
-      case 'Available Today':
-        return allClinics.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return true;
+      // case 'Available Today':
+      //   return allClinics.where((clinic) {
+      //     final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      //     if (settings == null) return true;
 
-          final today = DateTime.now();
-          final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      //     final today = DateTime.now();
+      //     final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      //     final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
-          return settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
-        }).length;
+      //     return settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
+      //   }).length;
 
       case 'Closed':
         return allClinics.where((clinic) {

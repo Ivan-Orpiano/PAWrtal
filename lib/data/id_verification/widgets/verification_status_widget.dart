@@ -35,6 +35,7 @@ class _VerificationStatusWidgetState extends State<VerificationStatusWidget> {
   void initState() {
     super.initState();
     _loadVerificationStatus();
+    _authRepository.cleanupStuckVerifications(widget.userId);
   }
 
   Future<void> _loadVerificationStatus() async {
