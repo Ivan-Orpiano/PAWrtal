@@ -11,13 +11,14 @@ class SignUpPage extends GetView<SignUpController> {
     // Get screen dimensions
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     // Determine if mobile or tablet/desktop
     final isMobile = screenWidth < 600;
-    
+
     // Responsive dimensions
     final containerWidth = isMobile ? screenWidth * 0.9 : 500.0;
-    final containerHeight = isMobile ? null : 700.0; // Let it auto-size on mobile
+    final containerHeight =
+        isMobile ? null : 700.0; // Let it auto-size on mobile
     final fieldWidth = isMobile ? screenWidth * 0.85 : 400.0;
     final horizontalPadding = isMobile ? 16.0 : 20.0;
 
@@ -43,9 +44,8 @@ class SignUpPage extends GetView<SignUpController> {
             child: Container(
               width: containerWidth,
               height: containerHeight,
-              margin: isMobile 
-                  ? const EdgeInsets.symmetric(vertical: 20)
-                  : null,
+              margin:
+                  isMobile ? const EdgeInsets.symmetric(vertical: 20) : null,
               decoration: BoxDecoration(
                 color: const Color.fromARGB(223, 255, 255, 255),
                 borderRadius: isMobile ? BorderRadius.circular(10) : null,
@@ -78,7 +78,7 @@ class SignUpPage extends GetView<SignUpController> {
                         ],
                       ),
                     ),
-                    
+
                     // Logo
                     Image.asset(
                       'lib/images/PAWrtal_logo.png',
@@ -355,16 +355,18 @@ class SignUpPage extends GetView<SignUpController> {
                         () => TextFormField(
                           controller: controller.confirmPasswordController,
                           maxLength: 50,
-                          obscureText: !controller.isConfirmPasswordVisible.value,
+                          obscureText:
+                              !controller.isConfirmPasswordVisible.value,
                           style: TextStyle(fontSize: isMobile ? 14 : 16),
                           decoration: InputDecoration(
                             counterText: "",
                             prefixIcon: Icon(
                               Icons.lock_outline_rounded,
                               size: isMobile ? 20 : 24,
-                              color: controller.confirmPasswordError.value != null
-                                  ? Colors.red
-                                  : null,
+                              color:
+                                  controller.confirmPasswordError.value != null
+                                      ? Colors.red
+                                      : null,
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -388,28 +390,28 @@ class SignUpPage extends GetView<SignUpController> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
                               borderSide: BorderSide(
-                                color:
-                                    controller.confirmPasswordError.value != null
-                                        ? Colors.red
-                                        : Colors.grey,
+                                color: controller.confirmPasswordError.value !=
+                                        null
+                                    ? Colors.red
+                                    : Colors.grey,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
                               borderSide: BorderSide(
-                                color:
-                                    controller.confirmPasswordError.value != null
-                                        ? Colors.red
-                                        : Colors.grey,
+                                color: controller.confirmPasswordError.value !=
+                                        null
+                                    ? Colors.red
+                                    : Colors.grey,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
                               borderSide: BorderSide(
-                                color:
-                                    controller.confirmPasswordError.value != null
-                                        ? Colors.red
-                                        : const Color.fromARGB(255, 81, 115, 153),
+                                color: controller.confirmPasswordError.value !=
+                                        null
+                                    ? Colors.red
+                                    : const Color.fromARGB(255, 81, 115, 153),
                                 width: 2,
                               ),
                             ),
@@ -459,14 +461,15 @@ class SignUpPage extends GetView<SignUpController> {
                                     child: RichText(
                                       text: TextSpan(
                                         style: TextStyle(
-                                          color:
-                                              controller.termsError.value != null
-                                                  ? Colors.red
-                                                  : Colors.black87,
+                                          color: controller.termsError.value !=
+                                                  null
+                                              ? Colors.red
+                                              : Colors.black87,
                                           fontSize: isMobile ? 12 : 13,
                                         ),
                                         children: [
-                                          const TextSpan(text: "I agree to the "),
+                                          const TextSpan(
+                                              text: "I agree to the "),
                                           TextSpan(
                                             text: "Terms and Conditions",
                                             style: const TextStyle(
@@ -482,6 +485,21 @@ class SignUpPage extends GetView<SignUpController> {
                                                     .showTermsAndConditions();
                                               },
                                           ),
+                                          const TextSpan(text: " and "),
+                                          TextSpan(
+                                            text: "Privacy Policy",
+                                            style: const TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 81, 115, 153),
+                                              fontWeight: FontWeight.bold,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
+                                            recognizer: TapGestureRecognizer()
+                                              ..onTap = () {
+                                                controller.showPrivacyPolicy();
+                                              },
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -491,7 +509,8 @@ class SignUpPage extends GetView<SignUpController> {
                           Obx(() {
                             if (controller.termsError.value != null) {
                               return Padding(
-                                padding: const EdgeInsets.only(left: 12, top: 4),
+                                padding:
+                                    const EdgeInsets.only(left: 12, top: 4),
                                 child: Text(
                                   controller.termsError.value!,
                                   style: TextStyle(
@@ -568,7 +587,8 @@ class SignUpPage extends GetView<SignUpController> {
 
                     // Divider
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: horizontalPadding),
                       child: Row(
                         children: [
                           Expanded(child: Divider(indent: isMobile ? 4 : 8)),
@@ -581,7 +601,7 @@ class SignUpPage extends GetView<SignUpController> {
                       ),
                     ),
                     SizedBox(height: isMobile ? 12 : 16),
-                    
+
                     Text(
                       "Sign up with",
                       style: TextStyle(fontSize: isMobile ? 13 : 14),
@@ -600,9 +620,8 @@ class SignUpPage extends GetView<SignUpController> {
                           height: isMobile ? 45 : 50,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: isMobile 
-                                ? BorderRadius.circular(8)
-                                : null,
+                            borderRadius:
+                                isMobile ? BorderRadius.circular(8) : null,
                             boxShadow: [
                               BoxShadow(
                                 spreadRadius: 1,

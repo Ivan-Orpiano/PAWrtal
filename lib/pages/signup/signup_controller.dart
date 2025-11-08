@@ -92,6 +92,164 @@ class SignUpController extends GetxController {
     generalError.value = null;
   }
 
+  void showPrivacyPolicy() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Privacy Policy",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 81, 115, 153),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPrivacySection(
+                        "1. Introduction",
+                        "PAWrtal respects your privacy and is committed to protecting your personal data. This Privacy Policy explains how we collect, use, store, and safeguard information when you use the PAWrtal application—our cross-platform system for veterinary clinic appointments, pet record management, and communication between clinics and pet owners.\n\n"
+                            "This Privacy Policy follows the Data Privacy Act of 2012 (Republic Act No. 10173) of the Philippines.",
+                      ),
+                      _buildPrivacySection(
+                        "2. Information We Collect",
+                        "We collect different types of data to deliver our services effectively:\n\n"
+                            "a. Personal Information: Full name, email address, contact number, account credentials (username and password).\n\n"
+                            "b. Pet Information: Pet name, species, breed, age, and gender, vaccination history and medical records, appointment history with veterinary clinics.\n\n"
+                            "c. Location Information: Real-time geolocation to help you find nearby veterinary clinics. Location data is only used for the Nearest Clinic Locator feature.\n\n"
+                            "d. Usage Data: Device type, operating system, and app version, login activities, bug reports to improve app functionality.\n\n"
+                            "e. Communication Data: Messages exchanged with veterinary clinics through the app, appointment notifications.",
+                      ),
+                      _buildPrivacySection(
+                        "3. How We Use Your Information",
+                        "Your data is used only for the following purposes: To create and manage your account, to enable appointment scheduling with veterinary clinics, to maintain your pet's virtual health card, to help you find nearby veterinary clinics, to facilitate communication between you and clinics, to send you appointment reminders and notifications, to improve app features and performance.\n\n"
+                            "We do not sell, rent, or share your data with third parties for marketing purposes.",
+                      ),
+                      _buildPrivacySection(
+                        "4. Data Storage and Security",
+                        "Your information is securely stored in the PAWrtal database with the following protections: Password protection and secure authentication, access limited to authorized personnel only, regular data backups, security measures compliant with Philippine Data Privacy Laws.",
+                      ),
+                      _buildPrivacySection(
+                        "5. Who Can Access Your Data",
+                        "• You (Pet Owner) can view and manage your own profile, pets, and appointment history.\n"
+                            "• Veterinary Clinics you book with can view relevant pet information and appointment details.\n"
+                            "• PAWrtal Developers maintain system security and functionality.\n"
+                            "• Data Protection Officer oversees privacy compliance.\n\n"
+                            "All parties are required to keep your information confidential.",
+                      ),
+                      _buildPrivacySection(
+                        "6. Data Sharing",
+                        "PAWrtal may share limited data with: Veterinary clinics you choose to book appointments with, service providers for app hosting, notifications, and analytics only.\n\n"
+                            "All partners must comply with Philippine Data Privacy Laws (RA 10173).",
+                      ),
+                      _buildPrivacySection(
+                        "7. Your Rights",
+                        "As a PAWrtal user, you have the right to: Access your personal data, correct any inaccurate information, delete your account and data, download your pet's information, object to how your data is used.\n\n"
+                            "To exercise these rights, email us at: pawrtal.app@gmail.com",
+                      ),
+                      _buildPrivacySection(
+                        "8. Data Retention",
+                        "Your information is kept as long as your account is active. You can request account deletion at any time. After deletion, your data will be removed within 30 days. Some information may be retained if required by law.",
+                      ),
+                      _buildPrivacySection(
+                        "9. Contact Information",
+                        "For privacy concerns or questions:\n\n"
+                            "Email: pawrtal.app@gmail.com\n"
+                            "Response Time: Within 48 hours",
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Last Updated: November 2025",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "By using PAWrtal, you acknowledge that you have read and agree to this Privacy Policy.",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Get.back();
+                  },
+                  child: const Text(
+                    "Close",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrivacySection(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+              height: 1.6,
+            ),
+            textAlign: TextAlign.justify,
+          ),
+        ],
+      ),
+    );
+  }
+
   void showTermsAndConditions() {
     Get.dialog(
       Dialog(
@@ -132,7 +290,7 @@ class SignUpController extends GetxController {
                       ),
                       _buildTermsSection(
                         "4. User Data and Information Handling",
-                        "PAWrtal collects data you provide when registering, scheduling appointments, or updating your pet’s information. This may include personal details, pet records, geolocation data, and chat communication. Your information is used exclusively for scheduling, clinic management, and improving veterinary services. Data is never sold or shared without your consent, except as required by law.",
+                        "PAWrtal collects data you provide when registering, scheduling appointments, or updating your pet's information. This may include personal details, pet records, geolocation data, and chat communication. Your information is used exclusively for scheduling, clinic management, and improving veterinary services. Data is never sold or shared without your consent, except as required by law.",
                       ),
                       _buildTermsSection(
                         "5. Service Usage",
@@ -140,11 +298,11 @@ class SignUpController extends GetxController {
                       ),
                       _buildTermsSection(
                         "6. Prohibited Activities",
-                        "You may not upload or distribute viruses, attempt unauthorized access, use PAWrtal for illegal or fraudulent activity, post misleading information, or disrupt the system’s functionality. Violations may result in immediate account termination, data removal, or legal action.",
+                        "You may not upload or distribute viruses, attempt unauthorized access, use PAWrtal for illegal or fraudulent activity, post misleading information, or disrupt the system's functionality. Violations may result in immediate account termination, data removal, or legal action.",
                       ),
                       _buildTermsSection(
                         "7. Roles and Responsibilities",
-                        "Developers maintain the system’s performance, security, and integrity. Admins (veterinary clinics) manage their clinic profiles, services, and schedules. Staff handle appointments, vaccinations, and client communication. Veterinary Professionals (Doctors) provide legitimate medical advice, perform vaccinations, and maintain records. Users (Pet Owners) schedule appointments, manage their pet data, and communicate responsibly. All users must act ethically and protect confidential information.",
+                        "Developers maintain the system's performance, security, and integrity. Admins (veterinary clinics) manage their clinic profiles, services, and schedules. Staff handle appointments, vaccinations, and client communication. Veterinary Professionals (Doctors) provide legitimate medical advice, perform vaccinations, and maintain records. Users (Pet Owners) schedule appointments, manage their pet data, and communicate responsibly. All users must act ethically and protect confidential information.",
                       ),
                       _buildTermsSection(
                         "8. Intellectual Property",
@@ -160,7 +318,7 @@ class SignUpController extends GetxController {
                       ),
                       _buildTermsSection(
                         "11. Limitation of Liability",
-                        "While the Developers strive to provide a reliable system, they are not liable for technical issues, inaccurate clinic data, delayed appointments, or indirect damages arising from the use of PAWrtal. The Developers’ total liability shall not exceed any amount paid (if applicable) for the use of the platform.",
+                        "While the Developers strive to provide a reliable system, they are not liable for technical issues, inaccurate clinic data, delayed appointments, or indirect damages arising from the use of PAWrtal. The Developers' total liability shall not exceed any amount paid (if applicable) for the use of the platform.",
                       ),
                       _buildTermsSection(
                         "12. Connectivity and Availability",

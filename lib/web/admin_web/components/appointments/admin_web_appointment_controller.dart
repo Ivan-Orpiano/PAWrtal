@@ -61,6 +61,10 @@ class WebAppointmentController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    print('>>> WebAppointmentController onInit called');
+
+    // Initialize fresh
     fetchClinicData();
 
     // Listen to changes
@@ -71,47 +75,97 @@ class WebAppointmentController extends GetxController {
 
   @override
   void onClose() {
-    _appointmentSubscription?.close();
-    _fallbackTimer?.cancel();
+    print('>>> WebAppointmentController onClose called');
+    cleanupOnLogout();
     super.onClose();
   }
 
   Future<void> fetchClinicData() async {
     try {
+      print('>>> ============================================');
+      print('>>> FETCHING CLINIC DATA (FRESH)');
+      print('>>> ============================================');
+
       isLoading.value = true;
 
+      // CRITICAL: Clear ALL old data first
+      appointments.clear();
+      filteredAppointments.clear();
+      petsCache.clear();
+      ownersCache.clear();
+      petProfilePictures.clear();
+      petImagesCache.clear();
+      pendingVitals.clear();
+
+      print('>>> Old data cleared');
+
       final user = await authRepository.getUser();
-      if (user == null) return;
+      if (user == null) {
+        print('>>> ERROR: No user found');
+        return;
+      }
 
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
+      final storedClinicId = storage.read('clinicId') as String?;
+
+      print('>>> User: ${user.$id}');
+      print('>>> Role: $userRole');
+      print('>>> Stored Clinic ID: $storedClinicId');
 
       String? clinicId;
 
       if (userRole == 'staff') {
-        clinicId = storage.read('clinicId') as String?;
-        print(
-            '>>> APPOINTMENTS: Staff mode - using stored clinicId: $clinicId');
-      } else {
-        print('>>> APPOINTMENTS: Admin mode - looking up clinic');
+        clinicId = storedClinicId;
+        print('>>> STAFF MODE - using stored clinicId: $clinicId');
+      } else if (userRole == 'admin') {
+        print('>>> ADMIN MODE - looking up clinic by adminId');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
+          print('>>> Admin clinic found: $clinicId');
+        } else {
+          print('>>> ERROR: No clinic found for admin');
         }
+      } else {
+        print('>>> ERROR: Unknown role: $userRole');
       }
 
-      if (clinicId != null) {
+      if (clinicId != null && clinicId.isNotEmpty) {
+        print('>>> Fetching clinic document for: $clinicId');
+
         final clinicDoc = await authRepository.getClinicById(clinicId);
         if (clinicDoc != null) {
           clinicData.value = Clinic.fromMap(clinicDoc.data);
           clinicData.value!.documentId = clinicDoc.$id;
+
+          print('>>> ✅ Clinic loaded: ${clinicData.value!.clinicName}');
+          print('>>> Clinic Document ID: ${clinicData.value!.documentId}');
+
+          // Close old subscriptions before creating new ones
+          await _appointmentSubscription?.close();
+          _fallbackTimer?.cancel();
+
+          // Fetch fresh appointments
           await fetchClinicAppointments();
+
+          // Initialize new real-time updates
           await _initializeRealTimeUpdates();
-          print(
-              '>>> APPOINTMENTS: Clinic loaded: ${clinicData.value!.clinicName}');
+
+          print('>>> ============================================');
+          print('>>> CLINIC DATA LOADED SUCCESSFULLY');
+          print('>>> ============================================');
+        } else {
+          print('>>> ERROR: Clinic document not found for ID: $clinicId');
         }
+      } else {
+        print('>>> ERROR: No valid clinic ID available');
       }
     } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR in fetchClinicData: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+      print('>>> ============================================');
       Get.snackbar("Error", "Failed to load clinic data: $e");
     } finally {
       isLoading.value = false;
@@ -120,22 +174,49 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _initializeRealTimeUpdates() async {
     try {
-      if (clinicData.value?.documentId == null) return;
+      if (clinicData.value?.documentId == null) {
+        print('>>> Cannot initialize real-time - no clinic ID');
+        return;
+      }
 
+      print('>>> ============================================');
+      print('>>> INITIALIZING REAL-TIME UPDATES');
+      print('>>> Clinic ID: ${clinicData.value!.documentId}');
+      print('>>> ============================================');
+
+      // CRITICAL: Close old subscription first
+      await _appointmentSubscription?.close();
+      _appointmentSubscription = null;
+
+      _fallbackTimer?.cancel();
+      _fallbackTimer = null;
+
+      // Create new subscription
       await _subscribeToAppointmentUpdates();
+
+      // Setup fallback polling
       _setupFallbackPolling();
 
       isRealTimeConnected.value = true;
-      print("Real-time updates initialized for appointments");
+
+      print('>>> ✅ Real-time updates initialized');
+      print('>>> ============================================');
     } catch (e) {
-      print("Failed to initialize real-time updates: $e");
+      print('>>> ============================================');
+      print('>>> ERROR initializing real-time: $e');
+      print('>>> ============================================');
       _setupFallbackPolling(interval: 15);
     }
   }
 
   Future<void> _subscribeToAppointmentUpdates() async {
     try {
+      // Close old subscription
       await _appointmentSubscription?.close();
+      _appointmentSubscription = null;
+
+      print('>>> Creating new real-time subscription');
+      print('>>> Monitoring clinic: ${clinicData.value!.documentId}');
 
       final realtime = Realtime(authRepository.client);
 
@@ -145,6 +226,16 @@ class WebAppointmentController extends GetxController {
 
       _appointmentSubscription!.stream.listen(
         (response) {
+          // CRITICAL: Verify this update is for OUR clinic
+          final updateClinicId = response.payload['clinicId'];
+          final ourClinicId = clinicData.value?.documentId;
+
+          if (updateClinicId != ourClinicId) {
+            print('>>> Ignoring update for different clinic: $updateClinicId');
+            return;
+          }
+
+          print('>>> Processing update for OUR clinic: $ourClinicId');
           _handleAppointmentRealTimeUpdate(response);
         },
         onError: (error) {
@@ -153,6 +244,8 @@ class WebAppointmentController extends GetxController {
           _setupFallbackPolling(interval: 10);
         },
       );
+
+      print('>>> ✅ Real-time subscription active');
     } catch (e) {
       print("Error setting up appointment subscription: $e");
       rethrow;
@@ -247,15 +340,45 @@ class WebAppointmentController extends GetxController {
   }
 
   Future<void> fetchClinicAppointments() async {
-    if (clinicData.value?.documentId == null) return;
+    if (clinicData.value?.documentId == null) {
+      print('>>> Cannot fetch appointments - no clinic ID');
+      return;
+    }
 
     try {
+      print('>>> ============================================');
+      print('>>> FETCHING CLINIC APPOINTMENTS (FRESH)');
+      print('>>> Clinic ID: ${clinicData.value!.documentId}');
+      print('>>> ============================================');
+
+      // CRITICAL: Clear old appointments first
+      appointments.clear();
+      filteredAppointments.clear();
+      petsCache.clear();
+      ownersCache.clear();
+      petProfilePictures.clear();
+      petImagesCache.clear();
+
+      // Fetch fresh appointments
       final result = await authRepository
           .getClinicAppointments(clinicData.value!.documentId!);
+
+      print('>>> Fetched ${result.length} appointments');
+
       appointments.assignAll(result);
+
+      // Fetch related data for these appointments
       await _fetchRelatedData();
+
+      // Update filtered view
       updateFilteredAppointments();
+
+      print('>>> ✅ Appointments loaded and filtered');
+      print('>>> ============================================');
     } catch (e) {
+      print('>>> ============================================');
+      print('>>> ERROR fetching appointments: $e');
+      print('>>> ============================================');
       Get.snackbar("Error", "Failed to load appointments: $e");
     }
   }
@@ -2547,5 +2670,43 @@ For more details, please check your appointments.
   /// Clear pet images cache
   void clearPetImagesCache() {
     petImagesCache.clear();
+  }
+
+  void cleanupOnLogout() {
+    print('>>> ============================================');
+    print('>>> CLEANING UP APPOINTMENT CONTROLLER');
+    print('>>> ============================================');
+
+    // Cancel all subscriptions
+    _appointmentSubscription?.close();
+    _appointmentSubscription = null;
+
+    _fallbackTimer?.cancel();
+    _fallbackTimer = null;
+
+    // Clear all cached data
+    appointments.clear();
+    filteredAppointments.clear();
+    petsCache.clear();
+    ownersCache.clear();
+    petProfilePictures.clear();
+    petImagesCache.clear();
+    pendingVitals.clear();
+
+    // Reset clinic data
+    clinicData.value = null;
+
+    // Reset filters
+    searchQuery.value = '';
+    selectedTab.value = 'today';
+    selectedDateFilter.value = DateTime.now();
+    selectedCalendarDate.value = null;
+    viewMode.value = AppointmentViewMode.today;
+
+    // Reset connection status
+    isRealTimeConnected.value = false;
+
+    print('>>> All appointment data cleared');
+    print('>>> ============================================');
   }
 }

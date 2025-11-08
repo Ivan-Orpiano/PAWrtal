@@ -448,6 +448,21 @@ class WebSignUpPage extends GetView<WebSignUpController> {
                                                   .showTermsAndConditions();
                                             },
                                         ),
+                                        const TextSpan(text: " and "),
+                                        TextSpan(
+                                          text: "Privacy Policy",
+                                          style: const TextStyle(
+                                            color: Color.fromARGB(
+                                                255, 81, 115, 153),
+                                            fontWeight: FontWeight.bold,
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                          recognizer: TapGestureRecognizer()
+                                            ..onTap = () {
+                                              controller.showPrivacyPolicy();
+                                            },
+                                        ),
                                       ],
                                     ),
                                   ),
