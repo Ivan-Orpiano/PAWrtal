@@ -1173,42 +1173,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _openDirections,
-                      icon: const Icon(Icons.directions, size: 18),
-                      label: const Text("Get Directions"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _callClinic,
-                      icon: const Icon(Icons.phone, size: 18),
-                      label: const Text("Call"),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.blue.shade600,
-                        side: BorderSide(color: Colors.blue.shade600),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

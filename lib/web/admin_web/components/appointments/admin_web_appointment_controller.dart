@@ -1164,15 +1164,16 @@ class WebAppointmentController extends GetxController {
   }
 
   Future<void> markNoShow(Appointment appointment) async {
-    // Check if appointment is in the past
-    if (appointment.dateTime.isBefore(DateTime.now())) {
-      Get.snackbar("Error", "Cannot mark as no-show for future appointments");
-      return;
-    }
-
-    await _updateAppointmentStatus(appointment, 'no_show');
-    Get.snackbar("Info", "Appointment marked as No Show");
+  // Check if appointment is in the future
+  if (appointment.dateTime.isAfter(DateTime.now())) {
+    Get.snackbar("Error", "Cannot mark as no-show for future appointments");
+    return;
   }
+
+  // Otherwise, mark it as no-show if the appointment is in the past
+  await _updateAppointmentStatus(appointment, 'no_show');
+  Get.snackbar("Info", "Appointment marked as No Show");
+}
 
   // Check if a time slot is available
   Future<bool> checkTimeSlotAvailability(

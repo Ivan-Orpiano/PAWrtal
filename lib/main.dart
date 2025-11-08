@@ -39,10 +39,10 @@ Future<void> _initializeSecurity() async {
   print('>>> Loaded ${violations.length} previous security violations');
 
   // Check for expired sessions
-  await _checkExpiredSessions();
+  // await _checkExpiredSessions();
 
   // Clean up old security data (older than 30 days)
-  await SessionManager.cleanupOldData();
+  // await SessionManager.cleanupOldData();
 
   print('>>> Security initialization complete');
   print('>>> ============================================');

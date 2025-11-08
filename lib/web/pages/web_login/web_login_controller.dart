@@ -363,7 +363,7 @@ class WebLoginController extends GetxController {
     _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
 
     // Start session monitoring
-    SessionManager.startSessionMonitoring();
+    // SessionManager.startSessionMonitoring();
 
     // Log successful login event
     SecurityMonitor.logSecurityEvent(
@@ -373,7 +373,7 @@ class WebLoginController extends GetxController {
     );
 
     // Clean up old security data
-    SessionManager.cleanupOldData();
+    // SessionManager.cleanupOldData();
 
     print('>>> Secure session initialized');
     print('>>> ============================================');

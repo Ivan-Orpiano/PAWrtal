@@ -65,7 +65,6 @@ class _MyDrawerState extends State<MyDrawer>
         // Check ID verification status
         final verificationStatus =
             await appWriteProvider.getUserVerificationStatus(user.$id);
-
         // Load profile picture
         final userDoc = await appWriteProvider.getUserById(user.$id);
         String? pfpId;
@@ -450,6 +449,8 @@ class _MyDrawerState extends State<MyDrawer>
                                           initialIndex: 0),
                                 ),
                               );
+
+                              authRepository.cleanupStuckVerifications(currentUser.$id);
                               
                               // Refresh data if verification was completed
                               if (result == true) {

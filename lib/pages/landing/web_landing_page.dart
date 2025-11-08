@@ -254,7 +254,6 @@ class _LandingDashboardContent extends StatelessWidget {
     final filters = [
       'All',
       'Open',
-      'Available Today',
       'Closed',
       'Popular',
     ];

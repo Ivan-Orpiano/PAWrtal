@@ -3441,7 +3441,7 @@ class AppWriteProvider {
 
         // If stuck in 'in_progress' or 'pending' for more than 30 minutes, reset
         if ((status == 'in_progress' || status == 'pending') &&
-            now.difference(createdAt).inMinutes > 10) {
+            now.difference(createdAt).inMinutes > 1) {
           print('>>> Cleaning up stuck verification record');
           await databases!.deleteDocument(
             databaseId: AppwriteConstants.dbID,

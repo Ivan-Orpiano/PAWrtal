@@ -439,6 +439,7 @@ class _WebProfileIconState extends State<WebProfileIcon> {
                                     if (!isIdVerified)
                                       GestureDetector(
                                         onTap: () {
+                                          authRepository.cleanupStuckVerifications(currentUser!.$id);
                                           _closePopup();
                                           _navigateToSettings(
                                               0); // Navigate to Profile tab
