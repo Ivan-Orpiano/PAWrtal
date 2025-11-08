@@ -27,6 +27,9 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   String _cachedProfilePictureId = '';
   bool _isInitialized = false;
 
+  // NEW: Flag to prevent operations during logout
+  bool _isLoggingOut = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +89,12 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   Future<void> _initializeProfileData() async {
+    // CRITICAL: Check if we're logging out
+    if (_isLoggingOut) {
+      print('>>> Skipping profile initialization - logout in progress');
+      return;
+    }
+
     try {
       final userRole = storage.read("role") as String? ?? "admin";
       final isStaff = userRole == 'staff';
@@ -117,20 +126,21 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             print('>>>   Image ID: $staffProfilePictureId');
             print('>>>   Image ID Length: ${staffProfilePictureId.length}');
 
-            if (mounted) {
+            // CRITICAL: Check if still mounted and not logging out
+            if (mounted && !_isLoggingOut) {
               setState(() {
                 _cachedProfilePictureId = staffProfilePictureId;
                 _isInitialized = true;
               });
+
+              // CRITICAL: Update storage with fresh data
+              storage.write('staffProfilePictureId', staffProfilePictureId);
+              storage.write('email', staffEmail);
+              storage.write('name', staffName);
+
+              print('>>> Staff profile initialized successfully');
+              print('>>> Updated storage with fresh data');
             }
-
-            // CRITICAL: Update storage with fresh data
-            storage.write('staffProfilePictureId', staffProfilePictureId);
-            storage.write('email', staffEmail);
-            storage.write('name', staffName);
-
-            print('>>> Staff profile initialized successfully');
-            print('>>> Updated storage with fresh data');
           } else {
             print('>>> ERROR: Staff document not found');
             _isInitialized = true;
@@ -158,16 +168,17 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           print('>>>   Name: $newClinicName');
           print('>>>   Profile Picture ID: $newProfilePictureId');
 
-          if (mounted) {
+          // CRITICAL: Check if still mounted and not logging out
+          if (mounted && !_isLoggingOut) {
             setState(() {
               _cachedClinicName = newClinicName;
               _cachedProfilePictureId = newProfilePictureId;
               _isInitialized = true;
             });
-          }
 
-          storage.write('clinicName', newClinicName);
-          storage.write('clinicProfilePictureId', newProfilePictureId);
+            storage.write('clinicName', newClinicName);
+            storage.write('clinicProfilePictureId', newProfilePictureId);
+          }
         } else {
           _isInitialized = true;
         }
@@ -182,11 +193,19 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       print('>>> ERROR INITIALIZING PROFILE DATA: $e');
       print('>>> Stack trace: $stackTrace');
       print('>>> ============================================');
-      _isInitialized = true;
+      if (mounted && !_isLoggingOut) {
+        _isInitialized = true;
+      }
     }
   }
 
   Future<void> _refreshClinicDataInBackground() async {
+    // CRITICAL: Don't refresh if logging out
+    if (_isLoggingOut) {
+      print('>>> Skipping profile refresh - logout in progress');
+      return;
+    }
+
     try {
       final userRole = storage.read("role") as String? ?? "admin";
       final isStaff = userRole == 'staff';
@@ -203,7 +222,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           print('>>> Refreshing staff data for: $staffId');
 
           final staff = await _authRepository.getStaffByDocumentId(staffId);
-          if (staff != null) {
+          if (staff != null && !_isLoggingOut) {
             final staffProfilePictureId = staff.image;
             final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
 
@@ -211,16 +230,16 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             print('>>>   Image ID: $staffProfilePictureId');
             print('>>>   Email: $staffEmail');
 
-            if (mounted) {
+            if (mounted && !_isLoggingOut) {
               setState(() {
                 _cachedProfilePictureId = staffProfilePictureId;
               });
+
+              storage.write('staffProfilePictureId', staffProfilePictureId);
+              storage.write('email', staffEmail);
+
+              print('>>> Staff data refreshed successfully');
             }
-
-            storage.write('staffProfilePictureId', staffProfilePictureId);
-            storage.write('email', staffEmail);
-
-            print('>>> Staff data refreshed successfully');
           }
         }
       } else {
@@ -229,18 +248,18 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         if (clinicId == null || clinicId.isEmpty) return;
 
         final clinicDoc = await _authRepository.getClinicById(clinicId);
-        if (clinicDoc != null) {
+        if (clinicDoc != null && !_isLoggingOut) {
           final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
           final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
 
-          if (mounted) {
+          if (mounted && !_isLoggingOut) {
             setState(() {
               _cachedClinicName = newClinicName;
               _cachedProfilePictureId = newProfilePictureId;
             });
+            storage.write('clinicName', newClinicName);
+            storage.write('clinicProfilePictureId', newProfilePictureId);
           }
-          storage.write('clinicName', newClinicName);
-          storage.write('clinicProfilePictureId', newProfilePictureId);
         }
       }
 
@@ -251,6 +270,11 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   void _togglePopup(BuildContext context) {
+    // CRITICAL: Don't toggle popup if logging out
+    if (_isLoggingOut) {
+      return;
+    }
+
     if (_overlayEntry == null) {
       _refreshClinicDataInBackground();
       _overlayEntry = _createOverlayEntry(context);
@@ -266,6 +290,11 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   void _navigateToAdminSettings(int index) {
+    // CRITICAL: Don't navigate if logging out
+    if (_isLoggingOut) {
+      return;
+    }
+
     _closePopup();
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -275,8 +304,14 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    // CRITICAL: Don't show dialog if already logging out
+    if (_isLoggingOut) {
+      return;
+    }
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Logout'),
@@ -290,8 +325,64 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             ),
             TextButton(
               onPressed: () async {
+                // Close dialog first
                 Navigator.of(context).pop();
-                await LogoutHelper.logout();
+
+                print('>>> ============================================');
+                print('>>> LOGOUT INITIATED FROM ADMIN PROFILE');
+                print('>>> ============================================');
+
+                // CRITICAL: Set logout flag IMMEDIATELY
+                setState(() {
+                  _isLoggingOut = true;
+                });
+
+                // CRITICAL: Close any open overlay/popup
+                _closePopup();
+
+                // CRITICAL: Show loading before logout
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return WillPopScope(
+                      onWillPop: () async => false,
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  },
+                );
+
+                try {
+                  // Call the logout helper
+                  await LogoutHelper.logout();
+                } catch (e) {
+                  print('>>> ERROR during logout: $e');
+
+                  // Close loading dialog
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+
+                  // Show error message
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Logout error. You have been signed out locally.'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                } finally {
+                  // Reset flag if still mounted (shouldn't happen, but safety)
+                  if (mounted) {
+                    setState(() {
+                      _isLoggingOut = false;
+                    });
+                  }
+                }
               },
               child: const Text(
                 'Logout',
@@ -593,6 +684,11 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
 
   @override
   Widget build(BuildContext context) {
+    // CRITICAL: Don't build profile if logging out
+    if (_isLoggingOut) {
+      return const SizedBox.shrink();
+    }
+
     final userName = storage.read("name") as String? ?? "User";
     final userRole = storage.read("role") as String? ?? "user";
     final isStaff = userRole == 'staff';
@@ -604,6 +700,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     print('>>> Is Staff: $isStaff');
     print('>>> Cached Profile Picture ID: $_cachedProfilePictureId');
     print('>>> Is Initialized: $_isInitialized');
+    print('>>> Is Logging Out: $_isLoggingOut');
     print('>>> ============================================');
 
     // Use the cached profile picture ID that was loaded/initialized
@@ -628,7 +725,9 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
 
   @override
   void dispose() {
+    // CRITICAL: Close overlay before disposing
     _overlayEntry?.remove();
+    _overlayEntry = null;
     super.dispose();
   }
 }

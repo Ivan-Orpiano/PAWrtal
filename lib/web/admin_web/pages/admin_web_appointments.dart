@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/appointment_view_mode.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
@@ -23,8 +24,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   late TextEditingController _searchController;
   late ScrollController _statsScrollController;
 
-  bool _controllersInitialized = false;
+  WebAppointmentController? _controller;
   bool _isDisposed = false;
+  String? _initError;
 
   final List<Tab> _tabs = const [
     Tab(text: 'Today'),
@@ -49,53 +51,178 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   @override
   void initState() {
     super.initState();
-    _initializeControllers();
-  }
 
-  void _initializeControllers() {
-    if (_isDisposed) return;
-
+    // Initialize UI controllers
     _tabController = TabController(length: _tabs.length, vsync: this);
     _mobileTabController = TabController(length: _tabs.length, vsync: this);
     _searchController = TextEditingController();
     _statsScrollController = ScrollController();
 
-    if (!Get.isRegistered<WebAppointmentController>()) {
-      Get.put(WebAppointmentController(
-        authRepository: Get.find<AuthRepository>(),
-        session: Get.find<UserSessionService>(),
-      ));
-    }
-
+    // Add listeners
     _tabController.addListener(_onTabControllerChanged);
     _mobileTabController.addListener(_onMobileTabControllerChanged);
 
-    _controllersInitialized = true;
+    // CRITICAL: Initialize controller SYNCHRONOUSLY
+    _initializeControllerSync();
+  }
+
+// NEW METHOD: Synchronous initialization
+  void _initializeControllerSync() {
+    if (_isDisposed) return;
+
+    print('>>> ============================================');
+    print('>>> SYNCHRONOUS CONTROLLER INITIALIZATION');
+    print('>>> ============================================');
+
+    try {
+      // CRITICAL FIX: Check if controller exists AND is still valid
+      if (Get.isRegistered<WebAppointmentController>()) {
+        print('>>> Controller already registered, checking if valid...');
+
+        try {
+          _controller = Get.find<WebAppointmentController>();
+
+          // CRITICAL: Verify the controller is actually functional
+          // by checking if it has clinic data initialized
+          if (_controller!.clinicData.value != null) {
+            print('>>> âœ… Controller is valid and has data, reusing it');
+            _initError = null;
+            return;
+          } else {
+            print('>>> âš ï¸ Controller exists but has no clinic data');
+            print('>>> This might be a stale controller, will recreate');
+
+            // Delete the stale controller
+            Get.delete<WebAppointmentController>(force: true);
+            _controller = null;
+          }
+        } catch (e) {
+          print('>>> âŒ Error accessing existing controller: $e');
+          print('>>> Will create a new one');
+
+          // Try to delete the broken controller
+          try {
+            Get.delete<WebAppointmentController>(force: true);
+          } catch (deleteError) {
+            print('>>> Could not delete broken controller: $deleteError');
+          }
+          _controller = null;
+        }
+      } else {
+        print('>>> No controller registered, will create new one');
+      }
+
+      // Verify dependencies exist
+      if (!Get.isRegistered<AuthRepository>()) {
+        throw Exception('AuthRepository not found in GetX');
+      }
+
+      if (!Get.isRegistered<UserSessionService>()) {
+        throw Exception('UserSessionService not found in GetX');
+      }
+
+      print('>>> Creating new controller...');
+
+      // Get dependencies
+      final authRepository = Get.find<AuthRepository>();
+      final session = Get.find<UserSessionService>();
+
+      // Create controller instance
+      _controller = WebAppointmentController(
+        authRepository: authRepository,
+        session: session,
+      );
+
+      // Register with GetX IMMEDIATELY (synchronously)
+      Get.put<WebAppointmentController>(_controller!, permanent: true);
+
+      print('>>> âœ… Controller registered synchronously');
+      print(
+          '>>> Controller registered: ${Get.isRegistered<WebAppointmentController>()}');
+
+      _initError = null;
+
+      // NOW fetch data asynchronously (after registration)
+      Future.microtask(() async {
+        try {
+          print('>>> Starting async data fetch...');
+          await _controller!.fetchClinicData();
+          print('>>> âœ… Data fetch complete');
+        } catch (e) {
+          print('>>> âŒ Error fetching data: $e');
+          if (mounted) {
+            setState(() {
+              _initError = 'Failed to load data: $e';
+            });
+          }
+        }
+      });
+
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> âŒ CRITICAL ERROR IN SYNC INITIALIZATION');
+      print('>>> Error: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+
+      _initError = e.toString();
+      _controller = null;
+
+      // Show error to user
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Get.snackbar(
+            'Initialization Error',
+            'Failed to initialize appointments: $e',
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 5),
+          );
+        }
+      });
+    }
   }
 
   void _onTabControllerChanged() {
-  if (_isDisposed || _tabController.indexIsChanging) return;
-  
-  // CRITICAL FIX: Check if controller still exists
-  if (!Get.isRegistered<WebAppointmentController>()) {
-    print('>>> Controller no longer registered, skipping tab change');
-    return;
-  }
+    if (_isDisposed || _tabController.indexIsChanging) return;
 
-  try {
-    final controller = Get.find<WebAppointmentController>();
-    controller.setSelectedTab(_tabValues[_tabController.index]);
-  } catch (e) {
-    print('>>> Error in tab controller changed: $e');
+    // CRITICAL: Add safety checks
+    if (_controller == null) {
+      print('>>> Tab change skipped - controller is null');
+      return;
+    }
+
+    if (!Get.isRegistered<WebAppointmentController>()) {
+      print('>>> Tab change skipped - controller not registered');
+      return;
+    }
+
+    try {
+      _controller!.setSelectedTab(_tabValues[_tabController.index]);
+    } catch (e) {
+      print('>>> Error in tab controller changed: $e');
+    }
   }
-}
 
   void _onMobileTabControllerChanged() {
     if (_isDisposed || _mobileTabController.indexIsChanging) return;
 
-    if (Get.isRegistered<WebAppointmentController>()) {
-      final controller = Get.find<WebAppointmentController>();
-      controller.setSelectedTab(_tabValues[_mobileTabController.index]);
+    // CRITICAL: Add safety checks
+    if (_controller == null) {
+      print('>>> Mobile tab change skipped - controller is null');
+      return;
+    }
+
+    if (!Get.isRegistered<WebAppointmentController>()) {
+      print('>>> Mobile tab change skipped - controller not registered');
+      return;
+    }
+
+    try {
+      _controller!.setSelectedTab(_tabValues[_mobileTabController.index]);
+    } catch (e) {
+      print('>>> Error in mobile tab controller changed: $e');
     }
   }
 
@@ -108,27 +235,91 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     _mobileTabController.dispose();
     _searchController.dispose();
     _statsScrollController.dispose();
+
+    // DON'T call Get.delete() - controller stays alive
+    print('>>> AdminWebAppointments disposed (controller kept alive)');
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // ADD THIS CHECK
-    if (!_controllersInitialized) {
-      return const Scaffold(
-        backgroundColor: Color.fromARGB(255, 245, 245, 245),
-        body: Center(child: CircularProgressIndicator()),
+    print('>>> Building AdminWebAppointments');
+    print('>>> Controller: $_controller');
+    print('>>> Registered: ${Get.isRegistered<WebAppointmentController>()}');
+    print('>>> Error: $_initError');
+
+    // Show error screen if initialization failed
+    if (_initError != null) {
+      return Scaffold(
+        backgroundColor: const Color.fromARGB(255, 245, 245, 245),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: Colors.red[400],
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Failed to Load Appointments',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _initError!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await LogoutHelper.logout();
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout and Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _initError = null;
+                    });
+                    _initializeControllerSync();
+                  },
+                  child: const Text('Try Again'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
-    // Check if controller exists and is ready
-    if (!Get.isRegistered<WebAppointmentController>()) {
-      return const Scaffold(
-        backgroundColor: Color.fromARGB(255, 245, 245, 245),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    // REMOVED: Don't check for controller existence here
+    // The controller should ALWAYS exist by this point (registered synchronously)
 
+    // Build normally
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 768;
     final isTablet = screenWidth < 1200 && screenWidth >= 768;
@@ -150,7 +341,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   }
 
   Widget _buildMobileStats() {
-    final controller = Get.find<WebAppointmentController>();
+    if (_controller == null) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -207,9 +398,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                controller.selectedCalendarDate.value != null
-                                    ? "Showing: ${DateFormat('MMM dd, yyyy').format(controller.selectedCalendarDate.value!)}"
-                                    : "${controller.appointmentStats['today']} today",
+                                _controller!.selectedCalendarDate.value != null
+                                    ? "Showing: ${DateFormat('MMM dd, yyyy').format(_controller!.selectedCalendarDate.value!)}"
+                                    : "${_controller!.appointmentStats['today']} today",
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.9),
                                   fontSize: 12,
@@ -234,7 +425,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${controller.appointmentStats['total']}',
+                                '${_controller!.appointmentStats['total']}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
@@ -242,7 +433,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                                 ),
                               ),
                               Text(
-                                controller.viewMode.value.label,
+                                _controller!.viewMode.value.label,
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 8,
@@ -263,11 +454,12 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: AppointmentViewMode.values.map((mode) {
-                          final isSelected = controller.viewMode.value == mode;
+                          final isSelected =
+                              _controller!.viewMode.value == mode;
                           return Padding(
                             padding: const EdgeInsets.only(right: 2),
                             child: InkWell(
-                              onTap: () => controller.setViewMode(mode),
+                              onTap: () => _controller!.setViewMode(mode),
                               borderRadius: BorderRadius.circular(4),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -297,10 +489,10 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                         }).toList(),
                       ),
                     ),
-                    if (controller.selectedCalendarDate.value != null) ...[
+                    if (_controller!.selectedCalendarDate.value != null) ...[
                       const SizedBox(height: 6),
                       TextButton.icon(
-                        onPressed: () => controller.setCalendarDate(null),
+                        onPressed: () => _controller!.setCalendarDate(null),
                         icon: const Icon(Icons.clear,
                             color: Colors.white, size: 12),
                         label: const Text(
@@ -316,7 +508,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           SizedBox(
             height: 80,
             child: Obx(() {
-              final stats = controller.appointmentStats;
+              final stats = _controller!.appointmentStats;
               return ScrollConfiguration(
                 behavior: ScrollConfiguration.of(context).copyWith(
                   dragDevices: {
@@ -418,7 +610,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   }
 
   Widget _buildSearchAndFilterBar(bool isMobile, bool isTablet) {
-    final controller = Get.find<WebAppointmentController>();
+    if (_controller == null) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -435,13 +627,11 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           ),
         ],
       ),
-      child: isMobile
-          ? _buildMobileSearchBar(controller)
-          : _buildDesktopSearchBar(controller),
+      child: isMobile ? _buildMobileSearchBar() : _buildDesktopSearchBar(),
     );
   }
 
-  Widget _buildMobileSearchBar(WebAppointmentController controller) {
+  Widget _buildMobileSearchBar() {
     return Row(
       children: [
         Expanded(
@@ -456,7 +646,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                       icon: const Icon(Icons.clear, size: 18),
                       onPressed: () {
                         _searchController.clear();
-                        controller.setSearchQuery('');
+                        _controller?.setSearchQuery('');
                       },
                       iconSize: 18,
                     )
@@ -473,12 +663,12 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
               isDense: true,
             ),
             style: const TextStyle(fontSize: 12),
-            onChanged: (value) => controller.setSearchQuery(value),
+            onChanged: (value) => _controller?.setSearchQuery(value),
           ),
         ),
         const SizedBox(width: 6),
         InkWell(
-          onTap: () => _showDatePicker(controller),
+          onTap: () => _showDatePicker(),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
@@ -490,7 +680,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         ),
         const SizedBox(width: 6),
         InkWell(
-          onTap: () => controller.refreshAppointments(),
+          onTap: () => _controller?.refreshAppointments(),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
@@ -504,7 +694,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     );
   }
 
-  Widget _buildDesktopSearchBar(WebAppointmentController controller) {
+  Widget _buildDesktopSearchBar() {
     return Row(
       children: [
         Expanded(
@@ -519,7 +709,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                       icon: const Icon(Icons.clear, size: 20),
                       onPressed: () {
                         _searchController.clear();
-                        controller.setSearchQuery('');
+                        _controller?.setSearchQuery('');
                       },
                     )
                   : null,
@@ -533,17 +723,17 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                   const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
               isDense: true,
             ),
-            onChanged: (value) => controller.setSearchQuery(value),
+            onChanged: (value) => _controller?.setSearchQuery(value),
           ),
         ),
         const SizedBox(width: 10),
         OutlinedButton.icon(
-          onPressed: () => _showCalendarPicker(controller),
+          onPressed: () => _showCalendarPicker(),
           icon: const Icon(Icons.calendar_today, size: 14),
           label: Obx(() => Text(
-                controller.selectedCalendarDate.value != null
+                _controller!.selectedCalendarDate.value != null
                     ? DateFormat('MMM dd, yyyy')
-                        .format(controller.selectedCalendarDate.value!)
+                        .format(_controller!.selectedCalendarDate.value!)
                     : 'Select Date',
                 style: const TextStyle(fontSize: 10),
               )),
@@ -554,7 +744,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         ),
         const SizedBox(width: 10),
         OutlinedButton.icon(
-          onPressed: () => controller.refreshAppointments(),
+          onPressed: () => _controller?.refreshAppointments(),
           icon: const Icon(Icons.refresh, size: 14),
           label: const Text('Refresh', style: TextStyle(fontSize: 10)),
           style: OutlinedButton.styleFrom(
@@ -570,7 +760,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '${controller.filteredAppointments.length} results',
+                '${_controller!.filteredAppointments.length} results',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 10,
@@ -583,7 +773,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   }
 
   Widget _buildTabBar(bool isMobile, bool isTablet) {
-    final controller = Get.find<WebAppointmentController>();
+    if (_controller == null) return const SizedBox.shrink();
 
     if (isMobile) {
       return Container(
@@ -601,7 +791,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           ],
         ),
         child: Obx(() {
-          final stats = controller.appointmentStats;
+          final stats = _controller!.appointmentStats;
           return ScrollConfiguration(
             behavior: ScrollConfiguration.of(context).copyWith(
               dragDevices: {
@@ -657,10 +847,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         ],
       ),
       child: Obx(() {
-        final stats = controller.appointmentStats;
+        final stats = _controller!.appointmentStats;
         return LayoutBuilder(
           builder: (context, constraints) {
-            // Determine if we need scrollable tabs based on available width
             final needsScroll = constraints.maxWidth < 1100;
 
             return ScrollConfiguration(
@@ -774,32 +963,32 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   }
 
   Widget _buildTabContent(bool isMobile) {
-    final controller = Get.find<WebAppointmentController>();
+    if (_controller == null) return const SizedBox.shrink();
+
     final tabCtrl = isMobile ? _mobileTabController : _tabController;
 
     return TabBarView(
       controller: tabCtrl,
       children: _tabValues.map((tabValue) {
-        return _buildAppointmentsList(controller, tabValue, isMobile);
+        return _buildAppointmentsList(tabValue, isMobile);
       }).toList(),
     );
   }
 
-  Widget _buildAppointmentsList(
-      WebAppointmentController controller, String tabValue, bool isMobile) {
+  Widget _buildAppointmentsList(String tabValue, bool isMobile) {
     return Obx(() {
-      if (controller.isLoading.value) {
+      if (_controller!.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
       }
 
-      final appointments = controller.filteredAppointments;
+      final appointments = _controller!.filteredAppointments;
 
       if (appointments.isEmpty) {
         return _buildEmptyState(tabValue);
       }
 
       return RefreshIndicator(
-        onRefresh: () => controller.refreshAppointments(),
+        onRefresh: () => _controller!.refreshAppointments(),
         child: ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: appointments.length,
@@ -897,29 +1086,33 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     );
   }
 
-  void _showDatePicker(WebAppointmentController controller) async {
+  void _showDatePicker() async {
+    if (_controller == null) return;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: controller.selectedDateFilter.value,
+      initialDate: _controller!.selectedDateFilter.value,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
     if (picked != null) {
-      controller.setDateFilter(picked);
+      _controller!.setDateFilter(picked);
     }
   }
 
-  void _showCalendarPicker(WebAppointmentController controller) async {
+  void _showCalendarPicker() async {
+    if (_controller == null) return;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: controller.selectedCalendarDate.value ?? DateTime.now(),
+      initialDate: _controller!.selectedCalendarDate.value ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
     if (picked != null) {
-      controller.setCalendarDate(picked);
+      _controller!.setCalendarDate(picked);
     }
   }
 

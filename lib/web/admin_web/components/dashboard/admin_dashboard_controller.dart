@@ -132,14 +132,13 @@ class AdminDashboardController extends GetxController {
       isLoading.value = true;
 
       print('>>> ============================================');
-      print('>>> INITIALIZING DASHBOARD');
+      print('>>> INITIALIZING DASHBOARD (OPTIMIZED)');
       print('>>> ============================================');
 
-      // Step 1: Fetch clinic data FIRST (required for all other operations)
+      // Step 1: Fetch clinic data FIRST
       print('>>> Step 1: Fetching clinic data...');
       await fetchClinicData();
 
-      // Verify clinic data is available
       if (clinicData.value == null || clinicData.value?.documentId == null) {
         print('>>> ERROR: No clinic data loaded!');
         isLoading.value = false;
@@ -150,59 +149,49 @@ class AdminDashboardController extends GetxController {
           colorText: Colors.white,
           duration: const Duration(seconds: 5),
         );
-        return; // Exit early instead of throwing
+        return;
       }
 
       print('>>> ✓ Clinic loaded: ${clinicData.value!.clinicName}');
       print('>>> ✓ Clinic ID: ${clinicData.value!.documentId}');
 
-      // Step 2: Fetch appointments data (with null check)
-      print('>>> Step 2: Fetching appointments...');
+      // Step 2: Fetch MINIMAL data in parallel (OPTIMIZED)
+      print('>>> Step 2: Fetching minimal dashboard data...');
       try {
         await Future.wait([
-          fetchAllAppointments(),
-          fetchAppointmentStats(),
+          fetchTodaysAppointments(), // Limit 10
+          fetchUpcomingAppointments(), // Limit 5
+          fetchRecentMessages(), // Limit 3
+          fetchAppointmentStats(), // Counts only
         ]);
-        print('>>> ✓ Appointments loaded: ${appointments.length}');
+        print('>>> ✓ Dashboard data loaded');
       } catch (e) {
-        print('>>> WARNING: Error fetching appointments: $e');
-        // Continue even if appointments fail
+        print('>>> WARNING: Error fetching dashboard data: $e');
       }
 
-      // Step 3: Fetch recent messages (with null check)
-      print('>>> Step 3: Fetching recent messages...');
-      try {
-        await fetchRecentMessages();
-        print('>>> ✓ Messages loaded: ${recentMessages.length}');
-      } catch (e) {
-        print('>>> WARNING: Error fetching messages: $e');
-        // Continue even if messages fail
-      }
-
-      // Step 4: Generate calendar data (with null check)
-      print('>>> Step 4: Generating calendar data...');
+      // Step 3: Generate calendar data (using already fetched today's appointments)
+      print('>>> Step 3: Generating calendar data...');
       try {
         await generateCalendarData();
         print('>>> ✓ Calendar generated');
       } catch (e) {
         print('>>> WARNING: Error generating calendar: $e');
-        // Continue even if calendar fails
       }
 
-      // Step 5: Initialize real-time updates LAST
-      print('>>> Step 5: Initializing real-time updates...');
+      // Step 4: Initialize real-time updates LAST
+      print('>>> Step 4: Initializing real-time updates...');
       try {
         await _initializeRealTimeUpdates();
         print('>>> ✓ Real-time subscriptions active');
       } catch (e) {
         print('>>> WARNING: Error initializing real-time: $e');
-        // Continue even if real-time fails
       }
 
       print('>>> ============================================');
-      print('>>> DASHBOARD INITIALIZATION COMPLETE');
+      print('>>> DASHBOARD INITIALIZATION COMPLETE (OPTIMIZED)');
       print('>>> - Clinic: ${clinicData.value?.clinicName ?? "Unknown"}');
-      print('>>> - Appointments: ${appointments.length}');
+      print('>>> - Today\'s Appointments: ${todayAppointments.length}');
+      print('>>> - Upcoming Appointments: ${upcomingAppointments.length}');
       print('>>> - Recent Messages: ${recentMessages.length}');
       print('>>> - Real-time Connected: ${isRealTimeConnected.value}');
       print('>>> ============================================');
@@ -432,13 +421,29 @@ class AdminDashboardController extends GetxController {
 
   @override
   Future<void> refreshDashboard() async {
-    await refreshDashboardData();
+    print('>>> Refreshing dashboard (optimized)...');
 
+    try {
+      // Refresh only the minimal data needed
+      await Future.wait([
+        fetchTodaysAppointments(),
+        fetchUpcomingAppointments(),
+        fetchRecentMessages(),
+        fetchAppointmentStats(),
+      ]);
+
+      lastUpdateTime.value = DateTime.now();
+      print('>>> Dashboard refreshed successfully');
+    } catch (e) {
+      print('>>> Error refreshing dashboard: $e');
+    }
+
+    // Try to reconnect real-time if disconnected
     if (!isRealTimeConnected.value) {
       try {
         await _initializeRealTimeUpdates();
       } catch (e) {
-        print("Failed to reconnect real-time updates: $e");
+        print('>>> Failed to reconnect real-time updates: $e');
       }
     }
   }
@@ -1050,30 +1055,99 @@ class AdminDashboardController extends GetxController {
     }
 
     try {
-      final stats = await authRepository
-          .getClinicAppointmentStats(clinicData.value!.documentId!);
+      print('>>> ============================================');
+      print('>>> FETCHING APPOINTMENT STATS (OPTIMIZED - COUNTS ONLY)');
+      print('>>> Clinic: ${clinicData.value!.documentId}');
+      print('>>> ============================================');
+
+      // OPTIMIZATION: Use Appwrite's count functionality instead of fetching all documents
+      // Fetch counts for each status in parallel
+      final futures = await Future.wait([
+        // Pending count
+        authRepository.appWriteProvider.databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal('clinicId', clinicData.value!.documentId!),
+            Query.equal('status', 'pending'),
+            Query.limit(1), // We only need the total count
+          ],
+        ),
+        // Accepted count
+        authRepository.appWriteProvider.databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal('clinicId', clinicData.value!.documentId!),
+            Query.equal('status', 'accepted'),
+            Query.limit(1),
+          ],
+        ),
+        // Completed count
+        authRepository.appWriteProvider.databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal('clinicId', clinicData.value!.documentId!),
+            Query.equal('status', 'completed'),
+            Query.limit(1),
+          ],
+        ),
+        // Cancelled count
+        authRepository.appWriteProvider.databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal('clinicId', clinicData.value!.documentId!),
+            Query.equal('status', 'cancelled'),
+            Query.limit(1),
+          ],
+        ),
+        // Declined count
+        authRepository.appWriteProvider.databases!.listDocuments(
+          databaseId: AppwriteConstants.dbID,
+          collectionId: AppwriteConstants.appointmentCollectionID,
+          queries: [
+            Query.equal('clinicId', clinicData.value!.documentId!),
+            Query.equal('status', 'declined'),
+            Query.limit(1),
+          ],
+        ),
+      ]);
+
+      final pendingCount = futures[0].total;
+      final acceptedCount = futures[1].total;
+      final completedCount = futures[2].total;
+      final cancelledCount = futures[3].total;
+      final declinedCount = futures[4].total;
+
+      final totalCount = pendingCount +
+          acceptedCount +
+          completedCount +
+          cancelledCount +
+          declinedCount;
+
+      final stats = <String, int>{
+        'total': totalCount,
+        'pending': pendingCount,
+        'accepted': acceptedCount,
+        'completed': completedCount,
+        'cancelled': cancelledCount,
+        'declined': declinedCount,
+        'today': todayAppointments.length, // Use already fetched today's count
+      };
+
       appointmentStats.assignAll(stats);
 
-      final now = DateTime.now();
-      final thisMonth = DateTime(now.year, now.month, 1);
-      final nextMonth = DateTime(now.year, now.month + 1, 1);
-
-      final monthlyAppointments = appointments.where((appointment) {
-        return appointment.dateTime.isAfter(thisMonth) &&
-            appointment.dateTime.isBefore(nextMonth);
-      }).toList();
-
-      monthlyStats.assignAll({
-        'thisMonth': monthlyAppointments.length,
-        'completed':
-            monthlyAppointments.where((a) => a.status == 'completed').length,
-        'pending':
-            monthlyAppointments.where((a) => a.status == 'pending').length,
-      });
+      print('>>> Stats fetched:');
+      print('>>>   - Total: $totalCount');
+      print('>>>   - Pending: $pendingCount');
+      print('>>>   - Accepted: $acceptedCount');
+      print('>>>   - Completed: $completedCount');
+      print('>>> ============================================');
     } catch (e) {
-      print(">>> ERROR fetching appointment stats: $e");
+      print('>>> ERROR fetching appointment stats: $e');
       appointmentStats.clear();
-      monthlyStats.clear();
     }
   }
 
@@ -1242,44 +1316,18 @@ class AdminDashboardController extends GetxController {
   }
 
   void _processTodayAppointments() {
-    final today = DateTime.now();
-    final todayAppts = appointments.where((appointment) {
-      final appointmentDate = appointment.dateTime;
-      return appointmentDate.year == today.year &&
-          appointmentDate.month == today.month &&
-          appointmentDate.day == today.day;
-    }).toList();
-
-    todayAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
-    todayAppointments.assignAll(todayAppts);
-
-    // FIXED: Pre-load images for today's appointments
-    if (todayAppts.isNotEmpty) {
-      preloadPetImagesForAppointments(todayAppts.take(5).toList());
+    // Already fetched in fetchTodaysAppointments()
+    // Just ensure pet images are loaded
+    if (todayAppointments.isNotEmpty) {
+      preloadPetImagesForAppointments(todayAppointments.take(5).toList());
     }
   }
 
   void _processUpcomingAppointments() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    final upcoming = appointments.where((appointment) {
-      final appointmentDate = DateTime(
-        appointment.dateTime.year,
-        appointment.dateTime.month,
-        appointment.dateTime.day,
-      );
-
-      // exclude today's appointments and only show accepted ones
-      return appointmentDate.isAfter(today) && appointment.status == 'accepted';
-    }).toList();
-
-    upcoming.sort((a, b) => a.dateTime.compareTo(b.dateTime));
-    upcomingAppointments.assignAll(upcoming.take(5).toList());
-
-    // FIXED: Pre-load images for upcoming appointments
-    if (upcoming.isNotEmpty) {
-      preloadPetImagesForAppointments(upcoming.take(5).toList());
+    // Already fetched in fetchUpcomingAppointments()
+    // Just ensure pet images are loaded
+    if (upcomingAppointments.isNotEmpty) {
+      preloadPetImagesForAppointments(upcomingAppointments.take(5).toList());
     }
   }
 
@@ -1315,59 +1363,54 @@ class AdminDashboardController extends GetxController {
 
     try {
       print('>>> ============================================');
-      print('>>> FETCHING RECENT MESSAGES WITH PROFILE PICTURES');
+      print('>>> FETCHING RECENT MESSAGES (OPTIMIZED - MAX 3)');
       print('>>> Clinic: ${clinicData.value!.documentId}');
       print('>>> ============================================');
 
-      // Get all conversations for this clinic
-      final conversations = await authRepository
-          .getClinicConversations(clinicData.value!.documentId!);
+      // OPTIMIZATION: Fetch ONLY 3 most recent conversations with messages
+      final conversations =
+          await authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.conversationsCollectionID,
+        queries: [
+          Query.equal('clinicId', clinicData.value!.documentId!),
+          Query.equal('isActive', true),
+          Query.notEqual('lastMessageText',
+              ''), // CRITICAL: Only conversations with messages
+          Query.isNotNull(
+              'lastMessageTime'), // CRITICAL: Must have lastMessageTime
+          Query.orderDesc('lastMessageTime'),
+          Query.limit(3), // OPTIMIZATION: Fetch ONLY 3 conversations
+        ],
+      );
 
-      print('>>> Found ${conversations.length} total conversations');
+      print('>>> Found ${conversations.documents.length} recent conversations');
 
-      if (conversations.isEmpty) {
-        print('>>> No conversations found');
+      if (conversations.documents.isEmpty) {
+        print('>>> No recent conversations with messages');
         recentMessages.clear();
         recentMessages.refresh();
-        print('>>> ============================================');
         return;
       }
 
-      // Filter out conversations with null or invalid data
-      final validConversations = conversations.where((conversation) {
-        return conversation.documentId != null &&
-            conversation.lastMessageText != null &&
-            conversation.lastMessageText!.isNotEmpty &&
-            conversation.lastMessageTime != null &&
-            conversation.userId.isNotEmpty;
-      }).toList();
-
-      print('>>> Valid conversations: ${validConversations.length}');
-
-      if (validConversations.isEmpty) {
-        print('>>> No valid conversations with messages');
-        recentMessages.clear();
-        recentMessages.refresh();
-        print('>>> ============================================');
-        return;
-      }
-
-      // Sort conversations by lastMessageTime (most recent first)
-      validConversations.sort((a, b) {
-        return b.lastMessageTime!.compareTo(a.lastMessageTime!);
-      });
-
-      // Take only the 3 most recent conversations
-      final recentConversations = validConversations.take(3).toList();
-      print(
-          '>>> Taking ${recentConversations.length} most recent conversations');
-
-      // Build the recent messages list
       final List<Map<String, dynamic>> messages = [];
 
-      // Process each conversation and WAIT for profile pictures
-      for (var conversation in recentConversations) {
-        print('>>> Processing conversation ${conversation.documentId}...');
+      // Process each conversation
+      for (var doc in conversations.documents) {
+        print('>>> Processing conversation ${doc.$id}...');
+
+        final userId = doc.data['userId'] as String;
+        final lastMessageText = doc.data['lastMessageText'] as String?;
+        final lastMessageTime = doc.data['lastMessageTime'] as String?;
+        final clinicUnreadCount = doc.data['clinicUnreadCount'] as int? ?? 0;
+
+        // Skip if no message data
+        if (lastMessageText == null ||
+            lastMessageText.isEmpty ||
+            lastMessageTime == null) {
+          print('>>>   - Skipping: incomplete message data');
+          continue;
+        }
 
         // Fetch user data
         String senderName = 'Unknown User';
@@ -1375,89 +1418,59 @@ class AdminDashboardController extends GetxController {
         bool hasProfilePicture = false;
 
         try {
-          print('>>>   Fetching user data for: ${conversation.userId}');
-          final userDoc = await authRepository.getUserById(conversation.userId);
+          final userDoc = await authRepository.getUserById(userId);
 
           if (userDoc != null) {
             final user = User.fromMap(userDoc.data);
             senderName = user.name.isNotEmpty ? user.name : 'Unknown User';
-            print('>>>   ✓ Got user name: $senderName');
 
-            // IMPORTANT: Check and fetch profile picture
             if (user.hasProfilePicture && user.profilePictureId != null) {
-              print('>>>   ✓ User has profile picture, generating URL...');
               try {
                 profilePictureUrl = authRepository
                     .getUserProfilePictureUrl(user.profilePictureId!);
                 hasProfilePicture = true;
-                print(
-                    '>>>   ✓ Generated profile picture URL: ${profilePictureUrl.substring(0, 50)}...');
+                print('>>>   ✓ Got profile picture for: $senderName');
               } catch (e) {
-                print('>>>   ✗ Error generating profile picture URL: $e');
-                hasProfilePicture = false;
+                print('>>>   ✗ Error getting profile picture: $e');
               }
-            } else {
-              print('>>>   - User has no profile picture');
-              hasProfilePicture = false;
             }
-          } else {
-            print('>>>   ✗ User document not found');
-            senderName = conversation.userId.length > 6
-                ? 'User #${conversation.userId.substring(0, 6)}'
-                : 'Unknown User';
           }
         } catch (e) {
-          print('>>> Error fetching user ${conversation.userId}: $e');
-          senderName = conversation.userId.length > 6
-              ? 'User #${conversation.userId.substring(0, 6)}'
+          print('>>> Error fetching user $userId: $e');
+          senderName = userId.length > 6
+              ? 'User #${userId.substring(0, 6)}'
               : 'Unknown User';
-          hasProfilePicture = false;
         }
 
         final messageData = {
-          'id': conversation.documentId ?? '',
+          'id': doc.$id,
           'senderName': senderName,
-          'senderId': conversation.userId,
-          'message': conversation.lastMessageText ?? '',
-          'time': conversation.lastMessageTime!,
-          'isRead': (conversation.clinicUnreadCount ?? 0) == 0,
-          'unreadCount': conversation.clinicUnreadCount ?? 0,
-          'conversationId': conversation.documentId ?? '',
+          'senderId': userId,
+          'message': lastMessageText,
+          'time': DateTime.parse(lastMessageTime),
+          'isRead': clinicUnreadCount == 0,
+          'unreadCount': clinicUnreadCount,
+          'conversationId': doc.$id,
           'profilePictureUrl': profilePictureUrl,
           'hasProfilePicture': hasProfilePicture,
         };
 
         messages.add(messageData);
-
         print('>>> ✓ Added message from $senderName');
-        print('>>>   - Conversation ID: ${conversation.documentId}');
-        print('>>>   - Has Profile Picture: $hasProfilePicture');
-        print('>>>   - Profile URL available: ${profilePictureUrl.isNotEmpty}');
-        print('>>>   - Unread: ${conversation.clinicUnreadCount ?? 0}');
       }
 
-      print('>>> Total messages processed: ${messages.length}');
-
-      // Update the observable
+      // Update observable (should be exactly 3 or less)
       recentMessages.assignAll(messages);
       recentMessages.refresh();
 
       print('>>> ============================================');
-      print('>>> RECENT MESSAGES FETCHED SUCCESSFULLY');
-      print('>>> Total messages: ${recentMessages.length}');
-      for (int i = 0; i < recentMessages.length; i++) {
-        final msg = recentMessages[i];
-        print(
-            '>>> Message $i: ${msg['senderName']} - HasPic: ${msg['hasProfilePicture']}');
-      }
+      print('>>> ✓ FETCHED ${recentMessages.length} RECENT MESSAGES');
       print('>>> ============================================');
     } catch (e, stackTrace) {
       print('>>> ERROR fetching recent messages: $e');
       print('>>> Stack trace: $stackTrace');
-      // Clear messages on error
       recentMessages.clear();
       recentMessages.refresh();
-      print('>>> ============================================');
     }
   }
 
@@ -2197,5 +2210,145 @@ class AdminDashboardController extends GetxController {
     petImageLoadingStates.clear();
     await _fetchRelatedData();
     print('>>> Dashboard: Pet images cache refreshed');
+  }
+
+  // new shits
+
+  Future<void> fetchTodaysAppointments() async {
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
+      print('>>> ERROR: Cannot fetch appointments - no clinic ID');
+      todayAppointments.clear();
+      return;
+    }
+
+    try {
+      print('>>> ============================================');
+      print('>>> FETCHING TODAY\'S APPOINTMENTS (OPTIMIZED - MAX 5)');
+      print('>>> Clinic: ${clinicData.value!.documentId}');
+      print('>>> ============================================');
+
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day, 0, 0, 0);
+      final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+      // OPTIMIZATION: Fetch ONLY today's appointments with LIMIT 5
+      final result =
+          await authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [
+          Query.equal('clinicId', clinicData.value!.documentId!),
+          Query.greaterThanEqual('dateTime', startOfDay.toIso8601String()),
+          Query.lessThanEqual('dateTime', endOfDay.toIso8601String()),
+          Query.orderAsc('dateTime'), // Ordered by time
+          Query.limit(
+              10), // OPTIMIZATION: Fetch only 10 for today (reasonable for a day)
+        ],
+      );
+
+      print('>>> Found ${result.documents.length} appointments today');
+
+      if (result.documents.isEmpty) {
+        todayAppointments.clear();
+        todayAppointments.refresh();
+        return;
+      }
+
+      final List<Appointment> todayAppts = [];
+
+      for (var doc in result.documents) {
+        try {
+          final appointment = Appointment.fromMap(doc.data);
+          todayAppts.add(appointment);
+        } catch (e) {
+          print('>>> Error parsing appointment: $e');
+        }
+      }
+
+      todayAppointments.assignAll(todayAppts);
+      todayAppointments.refresh();
+
+      // OPTIMIZATION: Pre-load images only for the first 5
+      if (todayAppts.isNotEmpty) {
+        preloadPetImagesForAppointments(todayAppts.take(5).toList());
+      }
+
+      print('>>> ============================================');
+      print('>>> ✓ FETCHED ${todayAppointments.length} TODAY\'S APPOINTMENTS');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR fetching today\'s appointments: $e');
+      todayAppointments.clear();
+      todayAppointments.refresh();
+    }
+  }
+
+  Future<void> fetchUpcomingAppointments() async {
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
+      print('>>> ERROR: Cannot fetch appointments - no clinic ID');
+      upcomingAppointments.clear();
+      return;
+    }
+
+    try {
+      print('>>> ============================================');
+      print('>>> FETCHING UPCOMING APPOINTMENTS (OPTIMIZED - MAX 5)');
+      print('>>> Clinic: ${clinicData.value!.documentId}');
+      print('>>> ============================================');
+
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1, 0, 0, 0);
+
+      // OPTIMIZATION: Fetch ONLY 5 upcoming accepted appointments
+      final result =
+          await authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [
+          Query.equal('clinicId', clinicData.value!.documentId!),
+          Query.equal(
+              'status', 'accepted'), // CRITICAL: Only accepted appointments
+          Query.greaterThanEqual('dateTime', tomorrow.toIso8601String()),
+          Query.orderAsc('dateTime'), // Nearest first
+          Query.limit(5), // OPTIMIZATION: Fetch ONLY 5
+        ],
+      );
+
+      print('>>> Found ${result.documents.length} upcoming appointments');
+
+      if (result.documents.isEmpty) {
+        upcomingAppointments.clear();
+        upcomingAppointments.refresh();
+        return;
+      }
+
+      final List<Appointment> upcomingAppts = [];
+
+      for (var doc in result.documents) {
+        try {
+          final appointment = Appointment.fromMap(doc.data);
+          upcomingAppts.add(appointment);
+        } catch (e) {
+          print('>>> Error parsing appointment: $e');
+        }
+      }
+
+      upcomingAppointments.assignAll(upcomingAppts);
+      upcomingAppointments.refresh();
+
+      // OPTIMIZATION: Pre-load images for upcoming appointments
+      if (upcomingAppts.isNotEmpty) {
+        preloadPetImagesForAppointments(upcomingAppts);
+      }
+
+      print('>>> ============================================');
+      print(
+          '>>> ✓ FETCHED ${upcomingAppointments.length} UPCOMING APPOINTMENTS');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR fetching upcoming appointments: $e');
+      upcomingAppointments.clear();
+      upcomingAppointments.refresh();
+    }
   }
 }

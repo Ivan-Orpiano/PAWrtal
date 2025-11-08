@@ -11,8 +11,11 @@ import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_staff_management_page.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import '../models/appointment_model.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
@@ -2793,5 +2796,21 @@ class AuthRepository {
 
   Future<Map<String, dynamic>?> getPetWithImage(String petId) {
     return appWriteProvider.getPetWithImage(petId);
+  }
+
+  Future<void> cleanupAppointmentController() async {
+    try {
+      if (Get.isRegistered<WebAppointmentController>()) {
+        final controller = Get.find<WebAppointmentController>();
+        controller.cleanupOnLogout();
+
+        // Delete the controller instance
+        Get.delete<WebAppointmentController>(force: true);
+
+        print('>>> WebAppointmentController cleaned up and deleted');
+      }
+    } catch (e) {
+      print('>>> Error cleaning up appointment controller: $e');
+    }
   }
 }
