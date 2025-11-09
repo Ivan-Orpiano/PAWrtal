@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.d
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
+import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart'; // NEW: Import dashboard controller
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -71,6 +72,25 @@ class LogoutHelper {
         print('>>> No WebAppointmentController registered');
       }
 
+      // Step 2.5: CRITICAL - Clear AdminDashboardController with cache cleanup
+      print('>>> Step 2.5: Clearing AdminDashboardController...');
+      if (Get.isRegistered<AdminDashboardController>()) {
+        try {
+          final dashboardController = Get.find<AdminDashboardController>();
+
+          // CRITICAL: Call cleanup method (clears cache too)
+          dashboardController.cleanupOnLogout();
+          print('>>> AdminDashboardController cleanup called (cache cleared)');
+
+          // Delete the controller instance
+          Get.delete<AdminDashboardController>(force: true);
+          print('>>> AdminDashboardController deleted from GetX');
+        } catch (e) {
+          print('>>> Warning: Error cleaning up dashboard controller: $e');
+        }
+      } else {
+        print('>>> No AdminDashboardController registered');
+      }
       // Step 3: Clear UserSessionService
       print('>>> Step 3: Clearing user session...');
       if (Get.isRegistered<UserSessionService>()) {
@@ -225,6 +245,26 @@ class LogoutHelper {
         }
       } else {
         print('>>> No WebAppointmentController registered');
+      }
+
+      // Step 2.5: CRITICAL - Clear AdminDashboardController with cache cleanup
+      print('>>> Step 2.5: Clearing AdminDashboardController...');
+      if (Get.isRegistered<AdminDashboardController>()) {
+        try {
+          final dashboardController = Get.find<AdminDashboardController>();
+
+          // Call cleanup method (clears cache too)
+          dashboardController.cleanupOnLogout();
+          print('>>> AdminDashboardController cleanup called (cache cleared)');
+
+          // Delete the controller instance
+          Get.delete<AdminDashboardController>(force: true);
+          print('>>> AdminDashboardController deleted from GetX');
+        } catch (e) {
+          print('>>> Warning: Error cleaning up dashboard controller: $e');
+        }
+      } else {
+        print('>>> No AdminDashboardController registered');
       }
 
       // Step 3: Get session ID before clearing

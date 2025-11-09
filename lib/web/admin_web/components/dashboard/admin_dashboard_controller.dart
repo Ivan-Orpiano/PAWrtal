@@ -58,27 +58,66 @@ class AdminDashboardController extends GetxController {
   var petProfilePictures = <String, String?>{}.obs;
   var petImageLoadingStates = <String, bool>{}.obs;
 
-  /// Enhanced onInit to ensure real-time setup
+  var isDashboardCached = false.obs;
+  var lastCacheTime = Rxn<DateTime>();
+  final int cacheValidityMinutes = 30;
+
+  // ============================================
+// CRITICAL FIX: Dashboard should NOT reload when cached
+// Replace these methods in admin_dashboard_controller.dart
+// ============================================
+
+// ============================================
+// 1. FIXED onInit() - Instant display with cache
+// ============================================
   @override
   void onInit() {
     super.onInit();
     print('>>> ============================================');
     print('>>> DASHBOARD CONTROLLER: onInit()');
     print('>>> ============================================');
-    initializeDashboard();
 
+    // CRITICAL: Check cache FIRST
+    if (_isCacheValid()) {
+      print('>>> ✓ Valid cache found - displaying immediately');
+      print(
+          '>>> Cache age: ${DateTime.now().difference(lastCacheTime.value!).inMinutes} minutes');
+
+      // CRITICAL: Don't set loading - data is already there!
+      isLoading.value = false;
+
+      // Reconnect real-time in background (non-blocking)
+      Future.microtask(() {
+        print('>>> Reconnecting real-time in background...');
+        _initializeRealTimeUpdates().then((_) {
+          print('>>> ✓ Real-time reconnected');
+        }).catchError((e) {
+          print('>>> ⚠️ Real-time reconnection failed: $e');
+        });
+      });
+
+      print('>>> ✓ Dashboard ready with cached data');
+    } else {
+      print('>>> ⚠️ No valid cache - performing full initialization');
+      isLoading.value = true;
+      initializeDashboard();
+    }
+
+    // Setup date change listener
     ever(selectedDate, (_) => fetchAppointmentsForDate(selectedDate.value));
+
+    print('>>> ============================================');
   }
 
-  /// Enhanced onClose to properly clean up subscriptions
   @override
   void onClose() {
     print('>>> ============================================');
     print('>>> DASHBOARD CONTROLLER: onClose()');
-    print('>>> Cleaning up resources...');
+    print(
+        '>>> Cache status: ${isDashboardCached.value ? "PRESERVED" : "None"}');
     print('>>> ============================================');
 
-    // Cancel all subscriptions
+    // CRITICAL: Only close real-time connections, DON'T clear data
     try {
       _appointmentSubscription?.close();
       print('>>> Appointment subscription closed');
@@ -107,32 +146,78 @@ class AdminDashboardController extends GetxController {
       print('>>> Error cancelling fallback timer: $e');
     }
 
-    // Clear all data to prevent memory leaks
-    clinicData.value = null;
-    appointments.clear();
-    appointmentStats.clear();
-    todayAppointments.clear();
-    upcomingAppointments.clear();
-    recentMessages.clear();
-    monthlyStats.clear();
-    petsCache.clear();
-    ownersCache.clear();
-    calendarAppointments.clear();
-    _userNamesCache.clear();
+    // CRITICAL: DON'T clear cached data - it will be reused on next init
+    // DON'T call cleanupOnLogout() here - only call it from LogoutHelper
 
-    print('>>> All resources cleaned up');
+    print('>>> ℹ️ Cache preserved for fast re-initialization');
+    print(
+        '>>> Cache age: ${lastCacheTime.value != null ? DateTime.now().difference(lastCacheTime.value!).inMinutes : 0} minutes');
+    print('>>> Cached items:');
+    print('>>>   - Clinic: ${clinicData.value?.clinicName ?? "None"}');
+    print('>>>   - Today appointments: ${todayAppointments.length}');
+    print('>>>   - Upcoming appointments: ${upcomingAppointments.length}');
+    print('>>>   - Recent messages: ${recentMessages.length}');
+    print('>>>   - Appointment stats: ${appointmentStats.length}');
     print('>>> ============================================');
 
     super.onClose();
   }
 
+  bool _isCacheValid() {
+    // Check if cache flag is set
+    if (!isDashboardCached.value) {
+      print('>>> Cache check: No cache exists');
+      return false;
+    }
+
+    // Check if cache timestamp exists
+    if (lastCacheTime.value == null) {
+      print('>>> Cache check: No cache timestamp');
+      return false;
+    }
+
+    // Check cache age
+    final cacheAge = DateTime.now().difference(lastCacheTime.value!);
+    final isValid = cacheAge.inMinutes < cacheValidityMinutes;
+
+    print(
+        '>>> Cache check: ${isValid ? "VALID" : "EXPIRED"} (${cacheAge.inMinutes}m old, max ${cacheValidityMinutes}m)');
+
+    // If valid by time, check if we have essential data
+    if (isValid) {
+      final hasClinic = clinicData.value != null;
+      final hasStats = appointmentStats.isNotEmpty;
+
+      print('>>> Cache data check:');
+      print('>>>   - Clinic: $hasClinic');
+      print('>>>   - Today appointments: ${todayAppointments.length}');
+      print('>>>   - Upcoming appointments: ${upcomingAppointments.length}');
+      print('>>>   - Recent messages: ${recentMessages.length}');
+      print('>>>   - Stats: $hasStats');
+
+      // Must have clinic data at minimum
+      if (!hasClinic) {
+        print('>>> Cache check: Missing essential clinic data');
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  void invalidateCache() {
+    print('>>> 🗑️ Invalidating dashboard cache');
+    isDashboardCached.value = false;
+    lastCacheTime.value = null;
+  }
+
   @override
   Future<void> initializeDashboard() async {
     try {
-      isLoading.value = true;
-
       print('>>> ============================================');
-      print('>>> INITIALIZING DASHBOARD (OPTIMIZED)');
+      print('>>> INITIALIZING DASHBOARD (NO CACHE)');
       print('>>> ============================================');
 
       // Step 1: Fetch clinic data FIRST
@@ -155,21 +240,26 @@ class AdminDashboardController extends GetxController {
       print('>>> ✓ Clinic loaded: ${clinicData.value!.clinicName}');
       print('>>> ✓ Clinic ID: ${clinicData.value!.documentId}');
 
-      // Step 2: Fetch MINIMAL data in parallel (OPTIMIZED)
+      // Step 2: Fetch MINIMAL data in parallel
       print('>>> Step 2: Fetching minimal dashboard data...');
       try {
         await Future.wait([
-          fetchTodaysAppointments(), // Limit 10
-          fetchUpcomingAppointments(), // Limit 5
-          fetchRecentMessages(), // Limit 3
+          fetchTodaysAppointments(force: true), // Force fetch
+          fetchUpcomingAppointments(force: true), // Force fetch
+          fetchRecentMessages(), // Already optimized
           fetchAppointmentStats(), // Counts only
         ]);
         print('>>> ✓ Dashboard data loaded');
+
+        // CRITICAL: Mark cache as valid AFTER data is loaded
+        isDashboardCached.value = true;
+        lastCacheTime.value = DateTime.now();
+        print('>>> ✓ Cache created at: ${lastCacheTime.value}');
       } catch (e) {
         print('>>> WARNING: Error fetching dashboard data: $e');
       }
 
-      // Step 3: Generate calendar data (using already fetched today's appointments)
+      // Step 3: Generate calendar data
       print('>>> Step 3: Generating calendar data...');
       try {
         await generateCalendarData();
@@ -188,12 +278,13 @@ class AdminDashboardController extends GetxController {
       }
 
       print('>>> ============================================');
-      print('>>> DASHBOARD INITIALIZATION COMPLETE (OPTIMIZED)');
+      print('>>> DASHBOARD INITIALIZATION COMPLETE');
       print('>>> - Clinic: ${clinicData.value?.clinicName ?? "Unknown"}');
       print('>>> - Today\'s Appointments: ${todayAppointments.length}');
       print('>>> - Upcoming Appointments: ${upcomingAppointments.length}');
       print('>>> - Recent Messages: ${recentMessages.length}');
-      print('>>> - Real-time Connected: ${isRealTimeConnected.value}');
+      print(
+          '>>> - Cache Valid Until: ${lastCacheTime.value?.add(Duration(minutes: cacheValidityMinutes))}');
       print('>>> ============================================');
     } catch (e) {
       print('>>> ERROR: Failed to load dashboard data: $e');
@@ -222,7 +313,12 @@ class AdminDashboardController extends GetxController {
 
   Future<void> _subscribeToAppointmentUpdates() async {
     try {
+      // Ensure old subscription is closed
       await _appointmentSubscription?.close();
+      _appointmentSubscription = null;
+
+      print('>>> Creating new appointment subscription...');
+      print('>>> Monitoring clinic: ${clinicData.value!.documentId}');
 
       final realtime = Realtime(authRepository.client);
 
@@ -232,103 +328,550 @@ class AdminDashboardController extends GetxController {
 
       _appointmentSubscription!.stream.listen(
         (response) {
-          _handleAppointmentRealTimeUpdate(response);
+          try {
+            print('>>> ============================================');
+            print('>>> REAL-TIME APPOINTMENT UPDATE RECEIVED');
+            print('>>> Events: ${response.events}');
+            print('>>> ============================================');
+
+            // CRITICAL: Verify this update is for OUR clinic
+            final updateClinicId = response.payload['clinicId'];
+            final ourClinicId = clinicData.value?.documentId;
+
+            print('>>> Update clinic: $updateClinicId');
+            print('>>> Our clinic: $ourClinicId');
+
+            if (updateClinicId != ourClinicId) {
+              print('>>> ⚠️ Ignoring update for different clinic');
+              return;
+            }
+
+            print('>>> ✓ Processing update for our clinic');
+            _handleAppointmentRealTimeUpdate(response);
+
+            // Update connection status
+            isRealTimeConnected.value = true;
+            lastUpdateTime.value = DateTime.now();
+
+            print('>>> ============================================');
+          } catch (e) {
+            print('>>> ERROR processing real-time update: $e');
+          }
         },
         onError: (error) {
-          print("Real-time subscription error: $error");
+          print('>>> ============================================');
+          print('>>> REAL-TIME SUBSCRIPTION ERROR: $error');
+          print('>>> ============================================');
+
           isRealTimeConnected.value = false;
+
+          // Try to reconnect after delay
+          Future.delayed(const Duration(seconds: 5), () {
+            print('>>> Attempting to reconnect real-time subscription...');
+            _subscribeToAppointmentUpdates().catchError((e) {
+              print('>>> Reconnection failed: $e');
+            });
+          });
+
+          // Increase fallback polling frequency
           _setupFallbackPolling(interval: 10);
         },
+        onDone: () {
+          print('>>> ============================================');
+          print('>>> REAL-TIME SUBSCRIPTION CLOSED');
+          print('>>> ============================================');
+
+          isRealTimeConnected.value = false;
+
+          // Try to reconnect
+          Future.delayed(const Duration(seconds: 3), () {
+            if (clinicData.value?.documentId != null) {
+              print('>>> Attempting to reconnect...');
+              _subscribeToAppointmentUpdates().catchError((e) {
+                print('>>> Reconnection failed: $e');
+              });
+            }
+          });
+        },
       );
-    } catch (e) {
-      print("Error setting up appointment subscription: $e");
+
+      print('>>> ✓ Appointment subscription stream listening');
+    } catch (e, stackTrace) {
+      print('>>> ERROR setting up appointment subscription: $e');
+      print('>>> Stack trace: $stackTrace');
       rethrow;
     }
   }
 
   void _handleAppointmentRealTimeUpdate(RealtimeMessage response) {
     try {
-      print("Real-time update received: ${response.events}");
+      print('>>> ============================================');
+      print('>>> PROCESSING APPOINTMENT UPDATE');
+      print('>>> Events: ${response.events}');
+      print('>>> ============================================');
 
       final payload = response.payload;
+      final appointmentId = payload['\$id'];
 
-      final appointmentClinicId = payload['clinicId'];
-      if (appointmentClinicId != clinicData.value?.documentId) return;
+      print('>>> Appointment ID: $appointmentId');
+      print('>>> Status: ${payload['status']}');
+      print('>>> Service: ${payload['service']}');
 
       final appointment = Appointment.fromMap(payload);
 
+      // Determine event type
+      bool isCreate = false;
+      bool isUpdate = false;
+      bool isDelete = false;
+
       for (String event in response.events) {
         if (event.contains('.create')) {
-          _handleNewAppointment(appointment);
+          isCreate = true;
         } else if (event.contains('.update')) {
-          _handleUpdatedAppointment(appointment);
+          isUpdate = true;
         } else if (event.contains('.delete')) {
-          _handleDeletedAppointment(appointment);
+          isDelete = true;
         }
       }
 
+      print(
+          '>>> Event type - Create: $isCreate, Update: $isUpdate, Delete: $isDelete');
+
+      // Handle the update
+      if (isDelete) {
+        print('>>> Handling DELETE event');
+        _handleDeletedAppointment(appointment);
+      } else if (isCreate) {
+        print('>>> Handling CREATE event');
+        _handleNewAppointment(appointment);
+      } else if (isUpdate) {
+        print('>>> Handling UPDATE event');
+        _handleUpdatedAppointment(appointment);
+      }
+
+      // Update timestamp
       lastUpdateTime.value = DateTime.now();
 
-      if (response.events.any((event) => event.contains('.create'))) {
+      // Show notification for new appointments
+      if (isCreate && appointment.status == 'pending') {
+        print('>>> Showing new appointment notification');
         _showNewAppointmentNotification(appointment);
       }
-    } catch (e) {
-      print("Error handling real-time update: $e");
+
+      print('>>> ✓ Update processed successfully');
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ERROR handling real-time update: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
     }
   }
 
   void _handleNewAppointment(Appointment appointment) {
-    final existingIndex =
-        appointments.indexWhere((a) => a.documentId == appointment.documentId);
+    try {
+      print('>>> ============================================');
+      print('>>> HANDLING NEW APPOINTMENT');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> Status: ${appointment.status}');
+      print(
+          '>>> Date: ${DateFormat('yyyy-MM-dd HH:mm').format(appointment.dateTime)}');
+      print('>>> Current today count: ${todayAppointments.length}');
+      print('>>> ============================================');
 
-    if (existingIndex == -1) {
-      appointments.add(appointment);
-      print("New appointment added: ${appointment.documentId}");
-    } else {
-      appointments[existingIndex] = appointment;
-      appointments.refresh();
-      print("Appointment already exists, updated: ${appointment.documentId}");
+      // Check if appointment already exists in main list
+      final existingIndex = appointments.indexWhere(
+        (a) => a.documentId == appointment.documentId,
+      );
+
+      if (existingIndex == -1) {
+        // Add to main list
+        appointments.add(appointment);
+        appointments.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+        print('>>> ✓ Added to main appointments list');
+      } else {
+        // Update existing
+        appointments[existingIndex] = appointment;
+        print('>>> ✓ Updated existing appointment in main list');
+      }
+
+      // Check if this appointment is for today
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final appointmentDate = DateTime(
+        appointment.dateTime.year,
+        appointment.dateTime.month,
+        appointment.dateTime.day,
+      );
+
+      if (appointmentDate.isAtSameMomentAs(todayDate)) {
+        print('>>> ✓ Appointment is for today - adding to today\'s list');
+
+        // FIXED: Work with current list, don't rebuild from scratch
+        final currentList = List<Appointment>.from(todayAppointments);
+
+        // Check if appointment already exists in today's list
+        final existingTodayIndex = currentList.indexWhere(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (existingTodayIndex != -1) {
+          // Remove old version
+          currentList.removeAt(existingTodayIndex);
+          print('>>> Removed old version from position $existingTodayIndex');
+        }
+
+        // Insert at the correct position based on priority
+        int insertIndex = 0;
+
+        // Find correct position: pending appointments first, then by time
+        for (int i = 0; i < currentList.length; i++) {
+          final current = currentList[i];
+
+          // If new appointment is pending and current is not, insert here
+          if (appointment.status == 'pending' && current.status != 'pending') {
+            insertIndex = i;
+            break;
+          }
+
+          // If both same priority, sort by time
+          if ((appointment.status == 'pending' &&
+                  current.status == 'pending') ||
+              (appointment.status != 'pending' &&
+                  current.status != 'pending')) {
+            if (appointment.dateTime.isBefore(current.dateTime)) {
+              insertIndex = i;
+              break;
+            }
+          }
+
+          insertIndex = i + 1;
+        }
+
+        // Insert at calculated position
+        currentList.insert(insertIndex, appointment);
+        print('>>> Inserted at position $insertIndex');
+
+        // Keep only top 3
+        final top3 = currentList.take(3).toList();
+
+        print('>>> Current list after insertion (showing ${top3.length}):');
+        for (var i = 0; i < top3.length; i++) {
+          print(
+              '>>>   [$i] ${top3[i].documentId}: ${top3[i].status} at ${DateFormat('HH:mm').format(top3[i].dateTime)}');
+        }
+
+        // Update with smooth transition
+        todayAppointments.value = List.from(top3);
+        print(
+            '>>> ✓ Today\'s appointments smoothly updated: ${todayAppointments.length}');
+      } else {
+        print(
+            '>>> ⚠️ Appointment is NOT for today - skipping today\'s list update');
+      }
+
+      // Update other lists
+      _processUpcomingAppointments();
+      _updateAppointmentStats();
+      _updateCalendarData(appointment, isNew: true);
+
+      // Fetch related data if not cached
+      if (!petsCache.containsKey(appointment.petId)) {
+        _fetchOwnerData(appointment.userId);
+        preloadPetImagesForAppointments([appointment]);
+      }
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+
+      print('>>> ✓ New appointment fully processed');
+      print('>>> Final today count: ${todayAppointments.length}');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR handling new appointment: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
     }
-
-    _processTodayAppointments();
-    _processUpcomingAppointments();
-    _updateAppointmentStats();
-    _updateCalendarData(appointment, isNew: true);
   }
 
   void _handleUpdatedAppointment(Appointment appointment) {
-    final index =
-        appointments.indexWhere((a) => a.documentId == appointment.documentId);
-    if (index != -1) {
-      appointments[index] = appointment;
-      appointments.refresh();
+    try {
+      print('>>> ============================================');
+      print('>>> HANDLING UPDATED APPOINTMENT');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> New status: ${appointment.status}');
+      print('>>> Current today count: ${todayAppointments.length}');
+      print('>>> ============================================');
 
-      _processTodayAppointments();
+      // Update in main list
+      final index = appointments.indexWhere(
+        (a) => a.documentId == appointment.documentId,
+      );
+
+      if (index != -1) {
+        final oldStatus = appointments[index].status;
+        appointments[index] = appointment;
+        print(
+            '>>> ✓ Updated in main list (status: $oldStatus → ${appointment.status})');
+      } else {
+        appointments.add(appointment);
+        print('>>> ⚠️ Not found in main list, added as new');
+      }
+
+      // Check if this appointment is for today
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final appointmentDate = DateTime(
+        appointment.dateTime.year,
+        appointment.dateTime.month,
+        appointment.dateTime.day,
+      );
+
+      if (appointmentDate.isAtSameMomentAs(todayDate)) {
+        print('>>> ✓ Appointment is for today - updating today\'s list');
+
+        // FIXED: Work with current list, update in place
+        final currentList = List<Appointment>.from(todayAppointments);
+
+        // Find if appointment exists in current list
+        final existingIndex = currentList.indexWhere(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (existingIndex != -1) {
+          print('>>> Found in today\'s list at position $existingIndex');
+
+          // Remove from current position
+          currentList.removeAt(existingIndex);
+
+          // Find new correct position based on updated status/time
+          int insertIndex = 0;
+
+          for (int i = 0; i < currentList.length; i++) {
+            final current = currentList[i];
+
+            // If updated appointment is pending and current is not, insert here
+            if (appointment.status == 'pending' &&
+                current.status != 'pending') {
+              insertIndex = i;
+              break;
+            }
+
+            // If both same priority, sort by time
+            if ((appointment.status == 'pending' &&
+                    current.status == 'pending') ||
+                (appointment.status != 'pending' &&
+                    current.status != 'pending')) {
+              if (appointment.dateTime.isBefore(current.dateTime)) {
+                insertIndex = i;
+                break;
+              }
+            }
+
+            insertIndex = i + 1;
+          }
+
+          // Reinsert at new position
+          currentList.insert(insertIndex, appointment);
+          print('>>> Moved from position $existingIndex to $insertIndex');
+        } else {
+          print('>>> Not in today\'s list - checking if should be added');
+
+          // Not in today's list - check if it should be in top 3
+          // Get all today's appointments to determine if this should be shown
+          final allTodayAppts = appointments.where((appt) {
+            final apptDate = DateTime(
+              appt.dateTime.year,
+              appt.dateTime.month,
+              appt.dateTime.day,
+            );
+            return apptDate.isAtSameMomentAs(todayDate);
+          }).toList();
+
+          // Sort by priority
+          allTodayAppts.sort((a, b) {
+            if (a.status == 'pending' && b.status != 'pending') return -1;
+            if (b.status == 'pending' && a.status != 'pending') return 1;
+            return a.dateTime.compareTo(b.dateTime);
+          });
+
+          // Take top 3
+          final top3 = allTodayAppts.take(3).toList();
+
+          // Check if updated appointment made it to top 3
+          final isInTop3 =
+              top3.any((a) => a.documentId == appointment.documentId);
+
+          if (isInTop3) {
+            print('>>> Updated appointment is now in top 3 - rebuilding list');
+            todayAppointments.value = List.from(top3);
+            print(
+                '>>> ✓ Today\'s appointments rebuilt: ${todayAppointments.length}');
+          } else {
+            print(
+                '>>> Updated appointment is not in top 3 - keeping current list');
+          }
+
+          // Early return since we already updated
+          _processUpcomingAppointments();
+          _updateAppointmentStats();
+          _updateCalendarData(appointment, isUpdate: true);
+          lastCacheTime.value = DateTime.now();
+          return;
+        }
+
+        // Keep only top 3
+        final top3 = currentList.take(3).toList();
+
+        print('>>> Current list after update (showing ${top3.length}):');
+        for (var i = 0; i < top3.length; i++) {
+          print(
+              '>>>   [$i] ${top3[i].documentId}: ${top3[i].status} at ${DateFormat('HH:mm').format(top3[i].dateTime)}');
+        }
+
+        // Update smoothly
+        todayAppointments.value = List.from(top3);
+        print(
+            '>>> ✓ Today\'s appointments smoothly updated: ${todayAppointments.length}');
+      } else {
+        print('>>> ⚠️ Appointment is NOT for today');
+
+        // Remove from today's list if it was moved to a different day
+        final wasInToday = todayAppointments.any(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (wasInToday) {
+          print('>>> Removing from today\'s list (moved to different day)');
+          final currentList = List<Appointment>.from(todayAppointments);
+          currentList
+              .removeWhere((a) => a.documentId == appointment.documentId);
+
+          // If we now have less than 3, try to fill from main list
+          if (currentList.length < 3) {
+            final today = DateTime.now();
+            final todayDate = DateTime(today.year, today.month, today.day);
+
+            final allTodayAppts = appointments.where((appt) {
+              final apptDate = DateTime(
+                appt.dateTime.year,
+                appt.dateTime.month,
+                appt.dateTime.day,
+              );
+              return apptDate.isAtSameMomentAs(todayDate);
+            }).toList();
+
+            allTodayAppts.sort((a, b) {
+              if (a.status == 'pending' && b.status != 'pending') return -1;
+              if (b.status == 'pending' && a.status != 'pending') return 1;
+              return a.dateTime.compareTo(b.dateTime);
+            });
+
+            final top3 = allTodayAppts.take(3).toList();
+            todayAppointments.value = List.from(top3);
+            print('>>> Refilled today\'s list: ${todayAppointments.length}');
+          } else {
+            todayAppointments.value = List.from(currentList);
+            print('>>> Updated today\'s list: ${todayAppointments.length}');
+          }
+        }
+      }
+
+      // Update other lists
       _processUpcomingAppointments();
       _updateAppointmentStats();
       _updateCalendarData(appointment, isUpdate: true);
 
-      print("Appointment updated: ${appointment.documentId}");
-    } else {
-      appointments.add(appointment);
-      _processTodayAppointments();
-      _processUpcomingAppointments();
-      _updateAppointmentStats();
-      _updateCalendarData(appointment, isNew: true);
-      print(
-          "Appointment not found for update, added as new: ${appointment.documentId}");
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+
+      print('>>> ✓ Updated appointment fully processed');
+      print('>>> Final today count: ${todayAppointments.length}');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR handling updated appointment: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
     }
   }
 
   void _handleDeletedAppointment(Appointment appointment) {
-    appointments.removeWhere((a) => a.documentId == appointment.documentId);
+    try {
+      print('>>> ============================================');
+      print('>>> HANDLING DELETED APPOINTMENT');
+      print('>>> Appointment ID: ${appointment.documentId}');
+      print('>>> Current today count: ${todayAppointments.length}');
+      print('>>> ============================================');
 
-    _processTodayAppointments();
-    _processUpcomingAppointments();
-    _updateAppointmentStats();
-    _removeFromCalendarData(appointment);
+      // Remove from main list
+      final removedCount = appointments.length;
+      appointments.removeWhere((a) => a.documentId == appointment.documentId);
+      final actuallyRemoved = removedCount - appointments.length;
 
-    print("Appointment deleted: ${appointment.documentId}");
+      if (actuallyRemoved > 0) {
+        print('>>> ✓ Removed from main appointments list');
+
+        // Check if it was in today's list
+        final wasInToday = todayAppointments.any(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (wasInToday) {
+          print('>>> ✓ Was in today\'s list - reprocessing');
+
+          // Reprocess today's appointments to get new top 3
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+
+          final allTodayAppts = appointments.where((appt) {
+            final apptDate = DateTime(
+              appt.dateTime.year,
+              appt.dateTime.month,
+              appt.dateTime.day,
+            );
+            return apptDate.isAtSameMomentAs(todayDate);
+          }).toList();
+
+          print(
+              '>>> Found ${allTodayAppts.length} remaining today appointments');
+
+          // Sort by priority
+          allTodayAppts.sort((a, b) {
+            if (a.status == 'pending' && b.status != 'pending') return -1;
+            if (b.status == 'pending' && a.status != 'pending') return 1;
+            return a.dateTime.compareTo(b.dateTime);
+          });
+
+          // Take top 3
+          final top3 = allTodayAppts.take(3).toList();
+
+          print('>>> Selected top ${top3.length} for display');
+
+          // Create new list
+          final newList = <Appointment>[];
+          for (var appt in top3) {
+            newList.add(appt);
+          }
+
+          todayAppointments.value = newList;
+          print(
+              '>>> ✓ Today\'s appointments updated: ${todayAppointments.length}');
+        }
+      }
+
+      // Update other lists
+      _processUpcomingAppointments();
+      _updateAppointmentStats();
+      _removeFromCalendarData(appointment);
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+
+      print('>>> ✓ Deleted appointment fully processed');
+      print('>>> Final today count: ${todayAppointments.length}');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR handling deleted appointment: $e');
+      print('>>> Stack trace: ${StackTrace.current}');
+    }
   }
 
   void _updateCalendarData(Appointment appointment,
@@ -371,17 +914,25 @@ class AdminDashboardController extends GetxController {
   }
 
   void _updateAppointmentStats() {
-    final stats = <String, int>{
-      'total': appointments.length,
-      'pending': appointments.where((a) => a.status == 'pending').length,
-      'accepted': appointments.where((a) => a.status == 'accepted').length,
-      'completed': appointments.where((a) => a.status == 'completed').length,
-      'cancelled': appointments.where((a) => a.status == 'cancelled').length,
-      'declined': appointments.where((a) => a.status == 'declined').length,
-      'today': todayAppointments.length,
-    };
+    try {
+      final stats = <String, int>{
+        'total': appointments.length,
+        'pending': appointments.where((a) => a.status == 'pending').length,
+        'accepted': appointments.where((a) => a.status == 'accepted').length,
+        'completed': appointments.where((a) => a.status == 'completed').length,
+        'cancelled': appointments.where((a) => a.status == 'cancelled').length,
+        'declined': appointments.where((a) => a.status == 'declined').length,
+        'today': todayAppointments.length,
+      };
 
-    appointmentStats.assignAll(stats);
+      appointmentStats.assignAll(stats);
+      appointmentStats.refresh();
+
+      print(
+          '>>> ✓ Stats updated: ${stats['total']} total, ${stats['pending']} pending, ${stats['today']} today');
+    } catch (e) {
+      print('>>> ERROR updating stats: $e');
+    }
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
@@ -421,82 +972,80 @@ class AdminDashboardController extends GetxController {
 
   @override
   Future<void> refreshDashboard() async {
-    print('>>> Refreshing dashboard (optimized)...');
+    print('>>> ============================================');
+    print('>>> MANUAL DASHBOARD REFRESH (SMART)');
+    print('>>> ============================================');
 
     try {
-      // Refresh only the minimal data needed
+      // Check if cache is still valid and real-time is connected
+      if (_isCacheValid() && isRealTimeConnected.value) {
+        print('>>> ℹ️ Cache is valid and real-time is connected');
+        print('>>> Just updating timestamp, no need to refetch');
+
+        lastUpdateTime.value = DateTime.now();
+
+        Get.snackbar(
+          "Already Up-to-Date",
+          "Dashboard is showing live data",
+          backgroundColor: Colors.blue,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(8),
+        );
+
+        return;
+      }
+
+      print('>>> 🔄 Performing smart refresh');
+
+      // Silently refresh in background (no loading spinner)
       await Future.wait([
-        fetchTodaysAppointments(),
-        fetchUpcomingAppointments(),
+        fetchTodaysAppointments(force: true),
+        fetchUpcomingAppointments(force: true),
         fetchRecentMessages(),
         fetchAppointmentStats(),
       ]);
 
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
       lastUpdateTime.value = DateTime.now();
-      print('>>> Dashboard refreshed successfully');
+      isDashboardCached.value = true;
+
+      print('>>> ✓ Dashboard refreshed and cache updated');
+
+      Get.snackbar(
+        "Refreshed",
+        "Dashboard data updated",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(8),
+      );
     } catch (e) {
-      print('>>> Error refreshing dashboard: $e');
+      print('>>> ERROR refreshing dashboard: $e');
+
+      Get.snackbar(
+        "Refresh Failed",
+        "Could not update dashboard data",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
     }
 
     // Try to reconnect real-time if disconnected
     if (!isRealTimeConnected.value) {
+      print('>>> Attempting to reconnect real-time...');
       try {
         await _initializeRealTimeUpdates();
       } catch (e) {
-        print('>>> Failed to reconnect real-time updates: $e');
+        print('>>> Failed to reconnect real-time: $e');
       }
     }
-  }
 
-  Future<void> refreshDashboardData() async {
-    try {
-      await Future.wait([
-        fetchAllAppointments(),
-        fetchAppointmentStats(),
-        fetchRecentMessages(), // Add this
-      ]);
-
-      await generateCalendarData();
-      lastUpdateTime.value = DateTime.now();
-
-      _removeDuplicateAppointments();
-
-      print('>>> Dashboard data refreshed successfully');
-      print('>>> - Recent messages: ${recentMessages.length}');
-    } catch (e) {
-      print("Error refreshing dashboard data: $e");
-    }
-  }
-
-  Future<void> _initializeRealTimeUpdates() async {
-    if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> WARNING: Cannot initialize real-time - no clinic ID');
-      return;
-    }
-
-    try {
-      print('>>> ============================================');
-      print('>>> INITIALIZING REAL-TIME UPDATES');
-      print('>>> Clinic ID: ${clinicData.value!.documentId}');
-      print('>>> ============================================');
-
-      // Subscribe to appointments
-      await _subscribeToAppointmentUpdates();
-
-      // Subscribe to conversations (for message updates)
-      await _subscribeToConversationUpdates();
-
-      // Setup fallback polling
-      _setupFallbackPolling();
-
-      isRealTimeConnected.value = true;
-      print(">>> Real-time updates initialized successfully");
-      print('>>> ============================================');
-    } catch (e) {
-      print(">>> Failed to initialize real-time updates: $e");
-      print('>>> ============================================');
-      _setupFallbackPolling(interval: 15);
-    }
+    print('>>> ============================================');
   }
 
   /// Send a message in the current conversation
@@ -721,6 +1270,64 @@ class AdminDashboardController extends GetxController {
           ">>> Subscribed to conversation updates for clinic: ${clinicData.value!.documentId}");
     } catch (e) {
       print(">>> Error setting up conversation subscription: $e");
+    }
+  }
+
+  Future<void> _initializeRealTimeUpdates() async {
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
+      print('>>> WARNING: Cannot initialize real-time - no clinic ID');
+      return;
+    }
+
+    try {
+      print('>>> ============================================');
+      print('>>> INITIALIZING REAL-TIME UPDATES (ENHANCED)');
+      print('>>> Clinic ID: ${clinicData.value!.documentId}');
+      print('>>> ============================================');
+
+      // Close old subscriptions first
+      await _appointmentSubscription?.close();
+      _appointmentSubscription = null;
+
+      await _conversationSubscription?.close();
+      _conversationSubscription = null;
+
+      await _messageSubscription?.close();
+      _messageSubscription = null;
+
+      _fallbackTimer?.cancel();
+      _fallbackTimer = null;
+
+      print('>>> Old subscriptions closed');
+
+      // Subscribe to appointments
+      await _subscribeToAppointmentUpdates();
+      print('>>> ✓ Appointment subscription active');
+
+      // Subscribe to conversations (for message updates)
+      await _subscribeToConversationUpdates();
+      print('>>> ✓ Conversation subscription active');
+
+      // Setup fallback polling (safety net)
+      _setupFallbackPolling(interval: 30); // 30 seconds as backup
+      print('>>> ✓ Fallback polling setup (30s interval)');
+
+      isRealTimeConnected.value = true;
+      lastUpdateTime.value = DateTime.now();
+
+      print('>>> ============================================');
+      print('>>> REAL-TIME UPDATES INITIALIZED SUCCESSFULLY');
+      print('>>> ============================================');
+    } catch (e, stackTrace) {
+      print('>>> ============================================');
+      print('>>> ERROR initializing real-time updates: $e');
+      print('>>> Stack trace: $stackTrace');
+      print('>>> ============================================');
+
+      isRealTimeConnected.value = false;
+
+      // Setup more frequent fallback polling on error
+      _setupFallbackPolling(interval: 15);
     }
   }
 
@@ -1026,24 +1633,30 @@ class AdminDashboardController extends GetxController {
   Future<void> fetchAllAppointments() async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
       print('>>> ERROR: Cannot fetch appointments - no clinic ID');
-      appointments.clear(); // Clear instead of throwing
-      return;
+      return; // DON'T clear appointments
     }
 
     try {
       print(
-          '>>> Fetching appointments for clinic: ${clinicData.value!.documentId}');
-      final result = await authRepository
-          .getClinicAppointments(clinicData.value!.documentId!);
+          '>>> Fetching all appointments for clinic: ${clinicData.value!.documentId}');
+      final result = await authRepository.getClinicAppointments(
+        clinicData.value!.documentId!,
+      );
       print('>>> Found ${result.length} appointments');
 
       appointments.assignAll(result);
-      await _fetchRelatedData();
+
+      // DON'T call _fetchRelatedData() here - it's expensive
+      // Only fetch when needed
+
       _processTodayAppointments();
       _processUpcomingAppointments();
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
     } catch (e) {
       print(">>> ERROR fetching appointments: $e");
-      appointments.clear(); // Clear on error
+      // DON'T clear on error
     }
   }
 
@@ -1316,18 +1929,94 @@ class AdminDashboardController extends GetxController {
   }
 
   void _processTodayAppointments() {
-    // Already fetched in fetchTodaysAppointments()
-    // Just ensure pet images are loaded
-    if (todayAppointments.isNotEmpty) {
-      preloadPetImagesForAppointments(todayAppointments.take(5).toList());
+    try {
+      print('>>> ============================================');
+      print('>>> PROCESSING TODAY\'S APPOINTMENTS');
+      print('>>> Current today count: ${todayAppointments.length}');
+      print('>>> Total appointments: ${appointments.length}');
+      print('>>> ============================================');
+
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+
+      // Filter today's appointments from main list
+      final allTodayAppts = appointments.where((appointment) {
+        final appointmentDate = DateTime(
+          appointment.dateTime.year,
+          appointment.dateTime.month,
+          appointment.dateTime.day,
+        );
+        return appointmentDate.isAtSameMomentAs(todayDate);
+      }).toList();
+
+      print(
+          '>>> Found ${allTodayAppts.length} today appointments from main list');
+
+      // Sort by priority
+      allTodayAppts.sort((a, b) {
+        // Pending appointments first
+        if (a.status == 'pending' && b.status != 'pending') return -1;
+        if (b.status == 'pending' && a.status != 'pending') return 1;
+
+        // Then by time
+        return a.dateTime.compareTo(b.dateTime);
+      });
+
+      // Take top 3
+      final top3 = allTodayAppts.take(3).toList();
+
+      print('>>> Selected top ${top3.length} appointments');
+      for (var appt in top3) {
+        print('>>>   - ${appt.documentId}: ${appt.status}');
+      }
+
+      // FIXED: Create new list instance
+      todayAppointments.value = List.from(top3);
+
+      print(
+          '>>> ✓ Today\'s appointments processed: ${todayAppointments.length}');
+      print('>>> ============================================');
+
+      // Pre-load images if needed
+      if (top3.isNotEmpty) {
+        preloadPetImagesForAppointments(top3);
+      }
+    } catch (e) {
+      print('>>> ERROR processing today\'s appointments: $e');
     }
   }
 
   void _processUpcomingAppointments() {
-    // Already fetched in fetchUpcomingAppointments()
-    // Just ensure pet images are loaded
-    if (upcomingAppointments.isNotEmpty) {
-      preloadPetImagesForAppointments(upcomingAppointments.take(5).toList());
+    try {
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+      final upcomingAppts = appointments.where((appointment) {
+        // Only accepted appointments
+        if (appointment.status != 'accepted') return false;
+
+        // Only future dates (not today)
+        final appointmentDate = DateTime(
+          appointment.dateTime.year,
+          appointment.dateTime.month,
+          appointment.dateTime.day,
+        );
+
+        return appointmentDate.isAfter(DateTime(now.year, now.month, now.day));
+      }).toList();
+
+      // Sort by date/time (nearest first)
+      upcomingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      // Take only first 5
+      final limitedUpcoming = upcomingAppts.take(3).toList();
+
+      upcomingAppointments.assignAll(limitedUpcoming);
+      upcomingAppointments.refresh();
+
+      print('>>> ✓ Upcoming appointments updated: ${limitedUpcoming.length}');
+    } catch (e) {
+      print('>>> ERROR processing upcoming appointments: $e');
     }
   }
 
@@ -2052,9 +2741,6 @@ class AdminDashboardController extends GetxController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
-
-      // Refresh dashboard data
-      await refreshDashboardData();
     } catch (e) {
       Get.snackbar(
         "Error",
@@ -2214,24 +2900,31 @@ class AdminDashboardController extends GetxController {
 
   // new shits
 
-  Future<void> fetchTodaysAppointments() async {
+  Future<void> fetchTodaysAppointments({bool force = false}) async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
       print('>>> ERROR: Cannot fetch appointments - no clinic ID');
-      todayAppointments.clear();
+      return; // DON'T clear - keep existing data
+    }
+
+    // CRITICAL: Skip fetch if cache is valid and not forced
+    if (!force && _isCacheValid() && todayAppointments.isNotEmpty) {
+      print('>>> Skipping today\'s appointments fetch - using cache');
+      print('>>> Cached count: ${todayAppointments.length}');
       return;
     }
 
     try {
       print('>>> ============================================');
-      print('>>> FETCHING TODAY\'S APPOINTMENTS (OPTIMIZED - MAX 5)');
-      print('>>> Clinic: ${clinicData.value!.documentId}');
+      print('>>> FETCHING TODAY\'S APPOINTMENTS');
+      print('>>> Force: $force');
+      print('>>> Current count: ${todayAppointments.length}');
       print('>>> ============================================');
 
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day, 0, 0, 0);
       final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
-      // OPTIMIZATION: Fetch ONLY today's appointments with LIMIT 5
+      // Fetch ALL today's appointments
       final result =
           await authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -2240,90 +2933,102 @@ class AdminDashboardController extends GetxController {
           Query.equal('clinicId', clinicData.value!.documentId!),
           Query.greaterThanEqual('dateTime', startOfDay.toIso8601String()),
           Query.lessThanEqual('dateTime', endOfDay.toIso8601String()),
-          Query.orderAsc('dateTime'), // Ordered by time
-          Query.limit(
-              10), // OPTIMIZATION: Fetch only 10 for today (reasonable for a day)
+          Query.limit(100), // Get all today's appointments
         ],
       );
 
-      print('>>> Found ${result.documents.length} appointments today');
+      print('>>> Found ${result.documents.length} total appointments today');
 
-      if (result.documents.isEmpty) {
-        todayAppointments.clear();
-        todayAppointments.refresh();
-        return;
-      }
-
-      final List<Appointment> todayAppts = [];
-
+      // Parse all appointments
+      final List<Appointment> allTodayAppts = [];
       for (var doc in result.documents) {
         try {
           final appointment = Appointment.fromMap(doc.data);
-          todayAppts.add(appointment);
+          allTodayAppts.add(appointment);
         } catch (e) {
           print('>>> Error parsing appointment: $e');
         }
       }
 
-      todayAppointments.assignAll(todayAppts);
-      todayAppointments.refresh();
+      // Sort by priority: pending first, then by time
+      allTodayAppts.sort((a, b) {
+        // Pending appointments first
+        if (a.status == 'pending' && b.status != 'pending') return -1;
+        if (b.status == 'pending' && a.status != 'pending') return 1;
 
-      // OPTIMIZATION: Pre-load images only for the first 5
-      if (todayAppts.isNotEmpty) {
-        preloadPetImagesForAppointments(todayAppts.take(5).toList());
+        // Then by time (upcoming first for same status)
+        return a.dateTime.compareTo(b.dateTime);
+      });
+
+      // Take exactly 3 (or less if not enough)
+      final top3 = allTodayAppts.take(3).toList();
+
+      print('>>> Selected top ${top3.length} appointments');
+      for (var appt in top3) {
+        print(
+            '>>>   - ${appt.documentId}: ${appt.status} at ${DateFormat('HH:mm').format(appt.dateTime)}');
       }
 
+      // Update with new list instance
+      todayAppointments.value = List.from(top3);
+
+      print('>>> ✓ Today\'s appointments updated: ${todayAppointments.length}');
       print('>>> ============================================');
-      print('>>> ✓ FETCHED ${todayAppointments.length} TODAY\'S APPOINTMENTS');
-      print('>>> ============================================');
+
+      // Pre-load images
+      if (top3.isNotEmpty) {
+        preloadPetImagesForAppointments(top3);
+      }
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+      isDashboardCached.value = true;
     } catch (e) {
       print('>>> ERROR fetching today\'s appointments: $e');
-      todayAppointments.clear();
-      todayAppointments.refresh();
+      // DON'T clear on error - keep existing data
     }
   }
 
-  Future<void> fetchUpcomingAppointments() async {
+  Future<void> fetchUpcomingAppointments({bool force = false}) async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
       print('>>> ERROR: Cannot fetch appointments - no clinic ID');
-      upcomingAppointments.clear();
+      return; // DON'T clear
+    }
+
+    // CRITICAL: Skip fetch if cache is valid and not forced
+    if (!force && _isCacheValid() && upcomingAppointments.isNotEmpty) {
+      print('>>> Skipping upcoming appointments fetch - using cache');
+      print('>>> Cached count: ${upcomingAppointments.length}');
       return;
     }
 
     try {
       print('>>> ============================================');
-      print('>>> FETCHING UPCOMING APPOINTMENTS (OPTIMIZED - MAX 5)');
+      print('>>> FETCHING UPCOMING APPOINTMENTS');
+      print('>>> Force: $force');
       print('>>> Clinic: ${clinicData.value!.documentId}');
       print('>>> ============================================');
 
       final now = DateTime.now();
       final tomorrow = DateTime(now.year, now.month, now.day + 1, 0, 0, 0);
 
-      // OPTIMIZATION: Fetch ONLY 5 upcoming accepted appointments
+      // Fetch ONLY 5 upcoming accepted appointments
       final result =
           await authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.appointmentCollectionID,
         queries: [
           Query.equal('clinicId', clinicData.value!.documentId!),
-          Query.equal(
-              'status', 'accepted'), // CRITICAL: Only accepted appointments
+          Query.equal('status', 'accepted'),
           Query.greaterThanEqual('dateTime', tomorrow.toIso8601String()),
-          Query.orderAsc('dateTime'), // Nearest first
-          Query.limit(5), // OPTIMIZATION: Fetch ONLY 5
+          Query.orderAsc('dateTime'),
+          Query.limit(5),
         ],
       );
 
       print('>>> Found ${result.documents.length} upcoming appointments');
 
-      if (result.documents.isEmpty) {
-        upcomingAppointments.clear();
-        upcomingAppointments.refresh();
-        return;
-      }
-
       final List<Appointment> upcomingAppts = [];
-
       for (var doc in result.documents) {
         try {
           final appointment = Appointment.fromMap(doc.data);
@@ -2336,19 +3041,136 @@ class AdminDashboardController extends GetxController {
       upcomingAppointments.assignAll(upcomingAppts);
       upcomingAppointments.refresh();
 
-      // OPTIMIZATION: Pre-load images for upcoming appointments
+      // Pre-load images
       if (upcomingAppts.isNotEmpty) {
         preloadPetImagesForAppointments(upcomingAppts);
       }
 
-      print('>>> ============================================');
       print(
           '>>> ✓ FETCHED ${upcomingAppointments.length} UPCOMING APPOINTMENTS');
       print('>>> ============================================');
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+      isDashboardCached.value = true;
     } catch (e) {
       print('>>> ERROR fetching upcoming appointments: $e');
-      upcomingAppointments.clear();
-      upcomingAppointments.refresh();
+      // DON'T clear on error
     }
+  }
+
+  Future<void> forceRefreshAppointments() async {
+    if (clinicData.value?.documentId == null) {
+      print('>>> Cannot force refresh - no clinic ID');
+      return;
+    }
+
+    // Check if we really need a force refresh
+    if (_isCacheValid() && isRealTimeConnected.value) {
+      print('>>> Force refresh skipped - cache valid and real-time connected');
+      return;
+    }
+
+    try {
+      print('>>> ============================================');
+      print('>>> FORCE REFRESHING ALL APPOINTMENTS');
+      print('>>> ============================================');
+
+      // Fetch fresh from database
+      final freshAppointments = await authRepository.getClinicAppointments(
+        clinicData.value!.documentId!,
+      );
+
+      print(
+          '>>> Fetched ${freshAppointments.length} appointments from database');
+
+      // Replace all data
+      appointments.assignAll(freshAppointments);
+
+      // Update all filtered views
+      _processTodayAppointments();
+      _processUpcomingAppointments();
+      _updateAppointmentStats();
+      await generateCalendarData();
+
+      // Update cache
+      lastCacheTime.value = DateTime.now();
+      isDashboardCached.value = true;
+
+      print('>>> ✓ Force refresh complete');
+      print('>>> ============================================');
+    } catch (e) {
+      print('>>> ERROR in force refresh: $e');
+    }
+  }
+
+  void cleanupOnLogout() {
+    print('>>> ============================================');
+    print('>>> CLEANING UP DASHBOARD ON LOGOUT');
+    print('>>> ============================================');
+
+    // Cancel all subscriptions
+    try {
+      _appointmentSubscription?.close();
+      _conversationSubscription?.close();
+      _messageSubscription?.close();
+      _fallbackTimer?.cancel();
+    } catch (e) {
+      print('>>> Error closing subscriptions: $e');
+    }
+
+    // Clear ALL cached data
+    clinicData.value = null;
+    appointments.clear();
+    appointmentStats.clear();
+    todayAppointments.clear();
+    upcomingAppointments.clear();
+    recentMessages.clear();
+    monthlyStats.clear();
+    petsCache.clear();
+    ownersCache.clear();
+    calendarAppointments.clear();
+    _userNamesCache.clear();
+    petProfilePictures.clear();
+    petImageLoadingStates.clear();
+
+    // Invalidate cache
+    isDashboardCached.value = false;
+    lastCacheTime.value = null;
+    isRealTimeConnected.value = false;
+
+    print('>>> ✓ All resources cleaned up');
+    print('>>> ============================================');
+  }
+
+  String get cacheStatus {
+    if (!isDashboardCached.value) {
+      return 'No cache';
+    }
+
+    if (lastCacheTime.value == null) {
+      return 'Invalid cache';
+    }
+
+    final age = DateTime.now().difference(lastCacheTime.value!);
+    final remainingMinutes = cacheValidityMinutes - age.inMinutes;
+
+    if (remainingMinutes <= 0) {
+      return 'Cache expired';
+    }
+
+    return 'Cache valid (${remainingMinutes}m left)';
+  }
+
+  /// Check if cache needs refresh soon
+  bool get shouldRefreshSoon {
+    if (!isDashboardCached.value || lastCacheTime.value == null) {
+      return true;
+    }
+
+    final age = DateTime.now().difference(lastCacheTime.value!);
+    final remainingMinutes = cacheValidityMinutes - age.inMinutes;
+
+    return remainingMinutes <= 1; // Refresh if less than 1 minute left
   }
 }

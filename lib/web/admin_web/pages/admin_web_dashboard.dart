@@ -42,30 +42,30 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   @override
   void dispose() {
-    if (Get.isRegistered<AdminDashboardController>()) {
-      Get.delete<AdminDashboardController>(force: true);
-      print('>>> Dashboard disposed - controller deleted');
-    }
+    // CRITICAL: DON'T delete controller on dispose - only on logout
+    // The controller should persist for caching to work
+    print('>>> Dashboard widget disposing - controller preserved');
     super.dispose();
   }
 
   void _initializeController() {
     permissionController = Get.find<WebAdminHomeController>();
 
-    if (Get.isRegistered<AdminDashboardController>()) {
-      Get.delete<AdminDashboardController>(force: true);
-      print('>>> Deleted existing AdminDashboardController');
+    // CRITICAL: Only create controller if it doesn't exist
+    if (!Get.isRegistered<AdminDashboardController>()) {
+      print('>>> Creating new AdminDashboardController');
+
+      controller = Get.put(
+        AdminDashboardController(
+          authRepository: Get.find<AuthRepository>(),
+          session: Get.find<UserSessionService>(),
+        ),
+        permanent: true, // CHANGED: Make it permanent for caching
+      );
+    } else {
+      print('>>> Reusing existing AdminDashboardController (cached)');
+      controller = Get.find<AdminDashboardController>();
     }
-
-    controller = Get.put(
-      AdminDashboardController(
-        authRepository: Get.find<AuthRepository>(),
-        session: Get.find<UserSessionService>(),
-      ),
-      permanent: false,
-    );
-
-    print('>>> Created new AdminDashboardController');
 
     _runMigrationOnce();
 
