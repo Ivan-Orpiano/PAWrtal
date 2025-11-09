@@ -215,13 +215,13 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
       if (mounted) {
         // Add mounted check
-        Get.snackbar(
-          'Success',
-          'Permissions updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: vetGreen,
-          colorText: Colors.white,
-        );
+        // Get.snackbar(
+        //   'Success',
+        //   'Permissions updated successfully',
+        //   snackPosition: SnackPosition.BOTTOM,
+        //   backgroundColor: vetGreen,
+        //   colorText: Colors.white,
+        // );
       }
     } catch (e) {
       if (mounted) {
@@ -250,13 +250,13 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
       if (mounted) {
         // Add mounted check
-        Get.snackbar(
-          'Success',
-          'Staff account deactivated',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: vetOrange,
-          colorText: Colors.white,
-        );
+        // Get.snackbar(
+        //   'Success',
+        //   'Staff account deactivated',
+        //   snackPosition: SnackPosition.BOTTOM,
+        //   backgroundColor: vetOrange,
+        //   colorText: Colors.white,
+        // );
       }
     } catch (e) {
       if (mounted) {

@@ -375,7 +375,7 @@ class ClinicSettingsController extends GetxController {
       selectedClosedDates.sort((a, b) => a.compareTo(b));
       closedDates.sort();
 
-      _showSnackBar("Closed date added: ${_formatDateForDisplay(date)}");
+      // _showSnackBar("Closed date added: ${_formatDateForDisplay(date)}");
     } else {
       _showSnackBar("This date is already marked as closed", isError: true);
     }
@@ -388,7 +388,7 @@ class ClinicSettingsController extends GetxController {
     closedDates.remove(dateStr);
     selectedClosedDates.removeWhere((d) => _formatDateToString(d) == dateStr);
 
-    _showSnackBar("Closed date removed: ${_formatDateForDisplay(date)}");
+    // _showSnackBar("Closed date removed: ${_formatDateForDisplay(date)}");
   }
 
   // NEW: Clear all closed dates

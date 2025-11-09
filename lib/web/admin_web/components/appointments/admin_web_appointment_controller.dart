@@ -270,14 +270,14 @@ class WebAppointmentController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: const Color.fromARGB(255, 81, 115, 153),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
-    );
+    // Get.snackbar(
+    //   "New Appointment",
+    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
+    //   backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 5),
+    //   snackPosition: SnackPosition.TOP,
+    // );
   }
 
   void _setupFallbackPolling({int interval = 30}) {
