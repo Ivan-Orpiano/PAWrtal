@@ -1636,20 +1636,20 @@ class _WebSettingsAndEverythingPageState
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                        const SizedBox(height: 12),
                           Text(
-                            'At least one image or video is required. Max 5 files.',
+                            'Images only. Max 5 images, 5MB each.',
                             style: TextStyle(
                                 color: Colors.grey[600], fontSize: 12),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '📷 Images: Max 5MB (JPG, PNG, GIF)',
+                            '📷 Supported formats: JPG, PNG, GIF, WEBP, BMP',
                             style: TextStyle(
                                 color: Colors.grey[600], fontSize: 12),
                           ),
                           Text(
-                            '🎥 Videos: Max 25MB (MP4, MOV, AVI)',
+                            '📏 Max file size: 5MB per image',
                             style: TextStyle(
                                 color: Colors.grey[600], fontSize: 12),
                           ),
@@ -1674,16 +1674,16 @@ class _WebSettingsAndEverythingPageState
                                         color: Colors.grey[400], size: 40),
                                     const SizedBox(height: 12),
                                     Text(
-                                      'Click to upload files',
+                                      'Click to upload images',
                                       style: TextStyle(
-                                        color: Colors.grey[700],
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+                                      color: Colors.grey[700],
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Images (JPG, PNG, GIF) or Videos (MP4, MOV, AVI)',
+                                      'Images only: JPG, PNG, GIF, WEBP, BMP (Max 5MB each)',
                                       style: TextStyle(
                                           color: Colors.grey[500],
                                           fontSize: 12),
@@ -1756,11 +1756,11 @@ class _WebSettingsAndEverythingPageState
                                   ),
                                 )),
                             const SizedBox(height: 8),
-                            if (feedbackController.selectedFiles.length < 5)
+                         if (feedbackController.selectedFiles.length < 5)
                               OutlinedButton.icon(
                                 onPressed: () => feedbackController.pickFiles(),
                                 icon: const Icon(Icons.add, size: 16),
-                                label: const Text('Add more files'),
+                                label: const Text('Add more images'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.blue[700],
                                   side: BorderSide(
@@ -3053,51 +3053,48 @@ class _WebSettingsAndEverythingPageState
     );
   }
 
-  Widget _buildWebFileItemWithPreview(PlatformFile file) {
-    final extension = file.extension?.toLowerCase() ?? '';
-    final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
-    final isImage =
-        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
+         Widget _buildWebFileItemWithPreview(PlatformFile file) {
+            final extension = file.extension?.toLowerCase() ?? '';
+            final isImage =
+                ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Preview thumbnail
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isVideo
-                    ? [Colors.purple[100]!, Colors.purple[50]!]
-                    : [Colors.blue[100]!, Colors.blue[50]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey[300]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Icon(
-                isVideo ? Icons.videocam_rounded : Icons.photo_rounded,
-                color: isVideo ? Colors.purple[700] : Colors.blue[700],
-                size: 28,
-              ),
-            ),
-          ),
+              child: Row(
+                children: [
+                  // Preview thumbnail
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.blue[100]!, Colors.blue[50]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.photo_rounded,
+                        color: Colors.blue[700],
+                        size: 28,
+                      ),
+                    ),
+                  ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -3116,34 +3113,27 @@ class _WebSettingsAndEverythingPageState
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Container(
+                   Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                       horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isVideo
-                            ? Colors.purple.withOpacity(0.15)
-                            : Colors.blue.withOpacity(0.15),
+                        color: Colors.blue.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isVideo
-                                ? Icons.play_circle_outline
-                                : Icons.image_outlined,
+                            Icons.image_outlined,
                             size: 12,
-                            color:
-                                isVideo ? Colors.purple[700] : Colors.blue[700],
+                            color: Colors.blue[700],
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isVideo ? 'Video' : 'Image',
+                            'Image',
                             style: TextStyle(
                               fontSize: 11,
-                              color: isVideo
-                                  ? Colors.purple[700]
-                                  : Colors.blue[700],
+                              color: Colors.blue[700],
                               fontWeight: FontWeight.w600,
                             ),
                           ),

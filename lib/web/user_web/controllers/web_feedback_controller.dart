@@ -468,41 +468,33 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
   // ============= USER-SIDE METHODS =============
 
-  /// Validate file before adding
-  bool _validateFile(PlatformFile file) {
-    final extension = file.extension?.toLowerCase() ?? '';
+ /// Validate file before adding (IMAGES ONLY - NO VIDEOS)
+bool _validateFile(PlatformFile file) {
+  final extension = file.extension?.toLowerCase() ?? '';
 
-    // Check if it's an image or video
-    final isImage =
-        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
-    final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
+  // ✅ ONLY ALLOW IMAGES (VIDEOS REMOVED)
+  final isImage =
+      ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
 
-    if (!isImage && !isVideo) {
-      _showError(
-          "Only images (JPG, PNG, GIF) and videos (MP4, MOV, AVI) allowed");
-      return false;
-    }
-
-    // Check file size limits
-    if (isImage && file.size > 5 * 1024 * 1024) {
-      _showError(
-          "Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
-      return false;
-    }
-
-    if (isVideo && file.size > 25 * 1024 * 1024) {
-      _showError(
-          "Video files must be under 25MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
-      return false;
-    }
-
-    return true;
+  if (!isImage) {
+    _showError(
+        "Only image files are allowed (JPG, PNG, GIF, WEBP, BMP)");
+    return false;
   }
 
+  // Check file size limit (5MB for images)
+  if (file.size > 5 * 1024 * 1024) {
+    _showError(
+        "Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
+    return false;
+  }
+
+  return true;
+}
   /// Pick files (images/videos)
   Future<void> pickFiles() async {
-    if (selectedFiles.length >= 5) {
-      _showError("You can only attach up to 5 files");
+     if (selectedFiles.length >= 5) {
+      _showError("You can only attach up to 5 images");
       return;
     }
 
@@ -515,12 +507,7 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
           'png',
           'gif',
           'webp',
-          'bmp',
-          'mp4',
-          'mov',
-          'avi',
-          'mkv',
-          'webm'
+          'bmp'
         ],
         allowMultiple: true,
       );
@@ -553,15 +540,13 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
   }
 
   /// Get file icon based on extension
-  String getFileIcon(String? extension) {
-    final ext = extension?.toLowerCase() ?? '';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) {
-      return '🖼️';
-    } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext)) {
-      return '🎥';
-    }
-    return '📄';
+ String getFileIcon(String? extension) {
+  final ext = extension?.toLowerCase() ?? '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) {
+    return '🖼️';
   }
+  return '📄'; // Fallback (shouldn't happen with image-only validation)
+}
 
   /// Get file size in readable format
   String getFileSize(int bytes) {
