@@ -171,7 +171,8 @@ class _EnhancedAppointmentDetailsPageState
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            controller.getUserFriendlyStatus(widget.appointment),
+                            controller
+                                .getUserFriendlyStatus(widget.appointment),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -212,7 +213,7 @@ class _EnhancedAppointmentDetailsPageState
                         DateFormat('EEEE, MMMM dd, yyyy')
                             .format(widget.appointment.dateTime)),
                     _buildDetailRow(Icons.access_time, "Time",
-                        DateFormat('h:mm a').format(widget.appointment.dateTime)),
+                        widget.appointment.formattedTime),
                   ]),
 
                   const SizedBox(height: 20),
@@ -223,13 +224,14 @@ class _EnhancedAppointmentDetailsPageState
                         Icons.event,
                         "Booked on",
                         DateFormat('MMM dd, yyyy • h:mm a')
-                            .format(widget.appointment.createdAt)),
-                    if (widget.appointment.updatedAt != widget.appointment.createdAt)
+                            .format(widget.appointment.createdAt.toLocal())),
+                    if (widget.appointment.updatedAt !=
+                        widget.appointment.createdAt)
                       _buildDetailRow(
                           Icons.update,
                           "Last updated",
                           DateFormat('MMM dd, yyyy • h:mm a')
-                              .format(widget.appointment.updatedAt)),
+                              .format(widget.appointment.updatedAt.toLocal())),
                   ]),
 
                   // Service Progress
@@ -254,8 +256,8 @@ class _EnhancedAppointmentDetailsPageState
                         _buildDetailRow(
                             Icons.check_circle,
                             "Service Completed",
-                            DateFormat('MMM dd, yyyy • h:mm a')
-                                .format(widget.appointment.serviceCompletedAt!)),
+                            DateFormat('MMM dd, yyyy • h:mm a').format(
+                                widget.appointment.serviceCompletedAt!)),
                       if (widget.appointment.serviceDuration != null)
                         _buildDetailRow(Icons.timer, "Service Duration",
                             '${widget.appointment.serviceDuration!.inMinutes} minutes'),
@@ -268,9 +270,7 @@ class _EnhancedAppointmentDetailsPageState
                     const SizedBox(height: 20),
                     _buildSection("Payment Information", [
                       if (widget.appointment.totalCost != null)
-                        _buildDetailRow(
-                            Icons.attach_money,
-                            "Total Cost",
+                        _buildDetailRow(Icons.attach_money, "Total Cost",
                             '₱${widget.appointment.totalCost!.toStringAsFixed(2)}'),
                       _buildDetailRow(Icons.payment, "Payment Status",
                           widget.appointment.isPaid ? 'Paid' : 'Unpaid'),
@@ -292,8 +292,8 @@ class _EnhancedAppointmentDetailsPageState
                         _buildDetailRow(
                             Icons.event_note,
                             "Next Appointment",
-                            DateFormat('MMM dd, yyyy • h:mm a')
-                                .format(widget.appointment.nextAppointmentDate!)),
+                            DateFormat('MMM dd, yyyy • h:mm a').format(
+                                widget.appointment.nextAppointmentDate!)),
                     ]),
                   ],
 
@@ -319,11 +319,16 @@ class _EnhancedAppointmentDetailsPageState
                   ],
 
                   // Cancellation Details
-                  if (widget.appointment.isCancelled || widget.appointment.isDeclined) ...[
+                  if (widget.appointment.isCancelled ||
+                      widget.appointment.isDeclined) ...[
                     const SizedBox(height: 20),
                     _buildSection("Cancellation Details", [
-                      _buildDetailRow(Icons.cancel, "Cancelled By",
-                          widget.appointment.isCancelledByUser ? 'You' : 'Clinic'),
+                      _buildDetailRow(
+                          Icons.cancel,
+                          "Cancelled By",
+                          widget.appointment.isCancelledByUser
+                              ? 'You'
+                              : 'Clinic'),
                       if (widget.appointment.cancelledAt != null)
                         _buildDetailRow(
                             Icons.event,
@@ -480,7 +485,8 @@ class _EnhancedAppointmentDetailsPageState
                   ),
           ),
 
-        if (widget.appointment.status == 'completed') const SizedBox(height: 12),
+        if (widget.appointment.status == 'completed')
+          const SizedBox(height: 12),
 
         // Cancel button
         if (controller.canCancelAppointment(widget.appointment))
@@ -617,7 +623,8 @@ class _EnhancedAppointmentDetailsPageState
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
-              controller.cancelPendingAppointment(widget.appointment.documentId!);
+              controller
+                  .cancelPendingAppointment(widget.appointment.documentId!);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,

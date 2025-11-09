@@ -1475,10 +1475,36 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             color: Colors.blue.shade600,
             shape: BoxShape.circle,
           ),
-          markerDecoration: BoxDecoration(
-            color: Colors.green.shade400,
-            shape: BoxShape.circle,
-          ),
+          // Remove markerDecoration since we're using custom markerBuilder
+          // markerDecoration: BoxDecoration(
+          //   color: Colors.green.shade400,
+          //   shape: BoxShape.circle,
+          // ),
+        ),
+        // Add custom marker builder
+        calendarBuilders: CalendarBuilders(
+          markerBuilder: (context, date, events) {
+            if (events.isEmpty) return const SizedBox.shrink();
+
+            return Positioned(
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade400,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${events.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         headerStyle: const HeaderStyle(
           formatButtonVisible: false,
