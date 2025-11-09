@@ -28,6 +28,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   bool _isDisposed = false;
   String? _initError;
 
+  // ✅ NEW: Add logout flag
+  bool _isLoggingOut = false;
+
   final List<Tab> _tabs = const [
     Tab(text: 'Today'),
     Tab(text: 'Pending'),
@@ -61,6 +64,15 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     // Add listeners
     _tabController.addListener(_onTabControllerChanged);
     _mobileTabController.addListener(_onMobileTabControllerChanged);
+
+    // ✅ NEW: Listen to global logout flag
+    ever(LogoutHelper.isLoggingOut, (isLoggingOut) {
+      if (mounted && isLoggingOut) {
+        setState(() {
+          _isLoggingOut = true;
+        });
+      }
+    });
 
     // CRITICAL: Initialize controller SYNCHRONOUSLY
     _initializeControllerSync();
@@ -245,9 +257,35 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   @override
   Widget build(BuildContext context) {
     print('>>> Building AdminWebAppointments');
+    print('>>> Is Logging Out: $_isLoggingOut');
     print('>>> Controller: $_controller');
     print('>>> Registered: ${Get.isRegistered<WebAppointmentController>()}');
     print('>>> Error: $_initError');
+
+    // ✅ CRITICAL: If logging out, show loading screen immediately
+    if (_isLoggingOut) {
+      return Scaffold(
+        backgroundColor: const Color.fromARGB(255, 245, 245, 245),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Logging out...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     // Show error screen if initialization failed
     if (_initError != null) {
@@ -316,28 +354,174 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       );
     }
 
-    // REMOVED: Don't check for controller existence here
-    // The controller should ALWAYS exist by this point (registered synchronously)
-
-    // Build normally
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 768;
-    final isTablet = screenWidth < 1200 && screenWidth >= 768;
-
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 245, 245, 245),
-      body: Column(
-        children: [
-          if (!isMobile) const WebAppointmentStats(),
-          if (isMobile) _buildMobileStats(),
-          _buildSearchAndFilterBar(isMobile, isTablet),
-          _buildTabBar(isMobile, isTablet),
-          Expanded(
-            child: _buildTabContent(isMobile),
+    // Try-catch wrapper to prevent red screen
+    try {
+      if (_controller == null ||
+          !Get.isRegistered<WebAppointmentController>()) {
+        return Scaffold(
+          backgroundColor: const Color.fromARGB(255, 245, 245, 245),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  color: const Color.fromARGB(255, 81, 115, 153),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Initializing appointments...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-    );
+        );
+      }
+
+      // Build normally
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth < 768;
+      final isTablet = screenWidth < 1200 && screenWidth >= 768;
+
+      return Scaffold(
+        backgroundColor: const Color.fromARGB(255, 245, 245, 245),
+        body: Column(
+          children: [
+            if (!isMobile) _buildStatsWithErrorHandling(),
+            if (isMobile) _buildMobileStatsWithErrorHandling(),
+            _buildSearchAndFilterBarWithErrorHandling(isMobile, isTablet),
+            _buildTabBarWithErrorHandling(isMobile, isTablet),
+            Expanded(
+              child: _buildTabContentWithErrorHandling(isMobile),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('>>> Build error caught: $e');
+      return Scaffold(
+        backgroundColor: const Color.fromARGB(255, 245, 245, 245),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Loading appointments...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildStatsWithErrorHandling() {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (_controller == null) return const SizedBox.shrink();
+      return const WebAppointmentStats();
+    } catch (e) {
+      print('>>> Error building stats: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildMobileStatsWithErrorHandling() {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (_controller == null) return const SizedBox.shrink();
+      return _buildMobileStats();
+    } catch (e) {
+      print('>>> Error building mobile stats: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildSearchAndFilterBarWithErrorHandling(
+      bool isMobile, bool isTablet) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (_controller == null) return const SizedBox.shrink();
+      return _buildSearchAndFilterBar(isMobile, isTablet);
+    } catch (e) {
+      print('>>> Error building search bar: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildTabBarWithErrorHandling(bool isMobile, bool isTablet) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (_controller == null) return const SizedBox.shrink();
+      return _buildTabBar(isMobile, isTablet);
+    } catch (e) {
+      print('>>> Error building tab bar: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildTabContentWithErrorHandling(bool isMobile) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (_controller == null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Loading appointments...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return _buildTabContent(isMobile);
+    } catch (e) {
+      print('>>> Error building tab content: $e');
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.refresh, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'Loading...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _setLoggingOut(bool value) {
+    if (mounted) {
+      setState(() {
+        _isLoggingOut = value;
+      });
+    }
   }
 
   Widget _buildMobileStats() {

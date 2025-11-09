@@ -1,7 +1,9 @@
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_settings_page.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -304,7 +306,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   void _showLogoutDialog(BuildContext context) {
-    // CRITICAL: Don't show dialog if already logging out
     if (_isLoggingOut) {
       return;
     }
@@ -325,17 +326,19 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             ),
             TextButton(
               onPressed: () async {
-                // Close dialog first
                 Navigator.of(context).pop();
 
                 print('>>> ============================================');
                 print('>>> LOGOUT INITIATED FROM ADMIN PROFILE');
                 print('>>> ============================================');
 
-                // CRITICAL: Set logout flag IMMEDIATELY
+                // ✅ CRITICAL: Set logout flag IMMEDIATELY
                 setState(() {
                   _isLoggingOut = true;
                 });
+
+                // ✅ CRITICAL: Notify AdminWebAppointments page to set its logout flag
+                _notifyAppointmentsPageLogout();
 
                 // CRITICAL: Close any open overlay/popup
                 _closePopup();
@@ -360,12 +363,10 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                 } catch (e) {
                   print('>>> ERROR during logout: $e');
 
-                  // Close loading dialog
                   if (context.mounted) {
                     Navigator.of(context).pop();
                   }
 
-                  // Show error message
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -376,7 +377,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                     );
                   }
                 } finally {
-                  // Reset flag if still mounted (shouldn't happen, but safety)
                   if (mounted) {
                     setState(() {
                       _isLoggingOut = false;
@@ -393,6 +393,37 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         );
       },
     );
+  }
+
+  void _notifyAppointmentsPageLogout() {
+    try {
+      // ✅ Use Get.context to find the current BuildContext in scope
+      final currentContext = Get.context;
+
+      if (currentContext == null) {
+        print(
+            '>>> ⚠️ No active BuildContext found — cannot notify appointments page');
+        return;
+      }
+
+      // ✅ Use the generic form of findAncestorStateOfType (no explicit type argument)
+      final dynamic ancestorState = currentContext.findAncestorStateOfType();
+
+      // ✅ Safely call _setLoggingOut if that method exists
+      if (ancestorState != null &&
+          ancestorState.mounted &&
+          ancestorState is State &&
+          ancestorState.widget is AdminWebAppointments &&
+          (ancestorState as dynamic)._setLoggingOut != null) {
+        (ancestorState as dynamic)._setLoggingOut(true);
+        print('>>> ✅ AdminWebAppointments page notified of logout');
+      } else {
+        print('>>> ⚠️ AdminWebAppointments state not found in the widget tree');
+      }
+    } catch (e, stackTrace) {
+      print('>>> ❌ Error notifying AdminWebAppointments page: $e');
+      print('>>> Stack trace: $stackTrace');
+    }
   }
 
   OverlayEntry _createOverlayEntry(BuildContext context) {

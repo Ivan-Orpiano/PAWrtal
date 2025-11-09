@@ -11,12 +11,18 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 class LogoutHelper {
   static final GetStorage _getStorage = GetStorage();
 
+  // ✅ NEW: Global logout flag
+  static final RxBool isLoggingOut = false.obs;
+
   static Future<void> logout() async {
     try {
       print('>>> ============================================');
       print('>>> LOGOUT PROCESS STARTED');
       print('>>> Platform: ${kIsWeb ? "Web" : "Mobile"}');
       print('>>> ============================================');
+
+      // ✅ CRITICAL: Set global logout flag FIRST
+      isLoggingOut.value = true;
 
       // Show loading indicator
       Get.dialog(
@@ -178,6 +184,9 @@ class LogoutHelper {
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
       );
+    } finally {
+      // ✅ CRITICAL: Reset global logout flag
+      isLoggingOut.value = false;
     }
   }
 
