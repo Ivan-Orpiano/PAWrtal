@@ -206,66 +206,60 @@ class MobileFeedbackController extends GetxController {
 
   // ============= USER-SIDE METHODS =============
 
-  /// Validate file before adding
-  bool _validateFile(PlatformFile file) {
-    final extension = file.extension?.toLowerCase() ?? '';
+ /// Validate file before adding (IMAGES ONLY)
+bool _validateFile(PlatformFile file) {
+  final extension = file.extension?.toLowerCase() ?? '';
 
-    // Check if it's an image or video
-    final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
-    final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
+  // Check if it's an image (NO VIDEOS ALLOWED)
+  final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
 
-    if (!isImage && !isVideo) {
-      _showError("Only images (JPG, PNG, GIF) and videos (MP4, MOV, AVI) allowed");
-      return false;
-    }
-
-    // Check file size limits
-    if (isImage && file.size > 5 * 1024 * 1024) {
-      _showError("Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
-      return false;
-    }
-
-    if (isVideo && file.size > 25 * 1024 * 1024) {
-      _showError("Video files must be under 25MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
-      return false;
-    }
-
-    return true;
+  if (!isImage) {
+    _showError("Only image files are allowed (JPG, PNG, GIF, WEBP, BMP)");
+    return false;
   }
 
-  /// Pick files (images/videos)
-  Future<void> pickFiles() async {
-    if (selectedFiles.length >= 5) {
-      _showError("You can only attach up to 5 files");
-      return;
-    }
+  // Check image file size limit (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    _showError("Image files must be under 5MB (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB)");
+    return false;
+  }
 
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: [
-          'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
-          'mp4', 'mov', 'avi', 'mkv', 'webm'
-        ],
-        allowMultiple: true,
-      );
+  return true;
+}
 
-      if (result != null) {
-        for (var file in result.files) {
-          if (selectedFiles.length >= 5) {
-            _showWarning("Maximum 5 files allowed. Remaining files not added.");
-            break;
-          }
+    /// Pick files (IMAGES ONLY - No videos allowed)
+    Future<void> pickFiles() async {
+      if (selectedFiles.length >= 5) {
+        _showError("You can only attach up to 5 files");
+        return;
+      }
 
-          if (_validateFile(file)) {
-            selectedFiles.add(file);
+      try {
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: [
+            // IMAGES ONLY
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
+          ],
+          allowMultiple: true,
+        );
+
+        if (result != null) {
+          for (var file in result.files) {
+            if (selectedFiles.length >= 5) {
+              _showWarning("Maximum 5 files allowed. Remaining files not added.");
+              break;
+            }
+
+            if (_validateFile(file)) {
+              selectedFiles.add(file);
+            }
           }
         }
+      } catch (e) {
+        _showError("Failed to pick files: $e");
       }
-    } catch (e) {
-      _showError("Failed to pick files: $e");
     }
-  }
 
   /// Remove a file from selection
   void removeFile(PlatformFile file) {
@@ -278,16 +272,18 @@ class MobileFeedbackController extends GetxController {
     selectedFiles.clear();
   }
 
-  /// Get file icon based on extension
-  String getFileIcon(String? extension) {
-    final ext = extension?.toLowerCase() ?? '';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) {
-      return '🖼️';
-    } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext)) {
-      return '🎥';
+    /// Get file icon based on extension (IMAGES ONLY)
+    String getFileIcon(String? extension) {
+      final ext = extension?.toLowerCase() ?? '';
+      
+      // All allowed files are images
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) {
+        return '🖼️';
+      }
+      
+      // Fallback (should never happen with our validation)
+      return '📄';
     }
-    return '📄';
-  }
 
   /// Get file size in readable format
   String getFileSize(int bytes) {

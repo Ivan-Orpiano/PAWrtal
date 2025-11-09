@@ -130,7 +130,12 @@ class FeedbackSpamDetector {
     totalScore += _checkWordScrambling(text);
     checks++;
 
-    return totalScore / checks;
+      totalScore += _checkRepeatedPhrases(text);
+      checks++;
+
+      return totalScore / checks;
+
+  
   }
 
   /// Check 1: Too many special characters
@@ -396,6 +401,32 @@ class FeedbackSpamDetector {
 
     return matrix[len1][len2];
   }
+
+  static double _checkRepeatedPhrases(String text) {
+  final words = text.toLowerCase()
+      .replaceAll(RegExp(r'[^a-z\s]'), '')
+      .split(RegExp(r'\s+'))
+      .where((w) => w.length >= 3)
+      .toList();
+
+  if (words.length < 5) return 0.0;
+
+  // Check for same word repeated 3+ times in a row
+  int repeatedSequences = 0;
+  for (int i = 0; i < words.length - 2; i++) {
+    if (words[i] == words[i + 1] && words[i] == words[i + 2]) {
+      repeatedSequences++;
+    }
+  }
+
+  final repeatedRatio = repeatedSequences / (words.length / 3);
+
+  if (repeatedRatio > 0.3) return 1.0;  // High repetition
+  if (repeatedRatio > 0.15) return 0.7;
+  return 0.0;
+}
+
+
 
   // ============= DETAILED ANALYSIS =============
 
