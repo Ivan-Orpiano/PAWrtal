@@ -936,20 +936,20 @@ class AdminDashboardController extends GetxController {
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
-      mainButton: TextButton(
-        onPressed: () {
-          navigateToAppointments('pending');
-        },
-        child: const Text("View", style: TextStyle(color: Colors.white)),
-      ),
-    );
+    // Get.snackbar(
+    //   "New Appointment",
+    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
+    //   backgroundColor: Colors.green,
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 5),
+    //   snackPosition: SnackPosition.TOP,
+    //   mainButton: TextButton(
+    //     onPressed: () {
+    //       navigateToAppointments('pending');
+    //     },
+    //     child: const Text("View", style: TextStyle(color: Colors.white)),
+    //   ),
+    // );
   }
 
   /// Setup more aggressive fallback polling for messages
@@ -2297,7 +2297,7 @@ class AdminDashboardController extends GetxController {
   Future<void> quickAcceptAppointment(Appointment appointment) async {
     try {
       await appointmentController.acceptAppointment(appointment);
-      Get.snackbar("Success", "Appointment accepted!");
+      // Get.snackbar("Success", "Appointment accepted!");
     } catch (e) {
       Get.snackbar("Error", "Failed to accept appointment: $e");
     }
@@ -2735,12 +2735,12 @@ class AdminDashboardController extends GetxController {
         appointments.refresh();
       }
 
-      Get.snackbar(
-        "Success",
-        "Appointment declined. Patient will be notified.",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      // Get.snackbar(
+      //   "Success",
+      //   "Appointment declined. Patient will be notified.",
+      //   backgroundColor: Colors.red,
+      //   colorText: Colors.white,
+      // );
     } catch (e) {
       Get.snackbar(
         "Error",
