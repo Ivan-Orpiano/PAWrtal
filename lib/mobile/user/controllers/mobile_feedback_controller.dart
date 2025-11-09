@@ -40,11 +40,9 @@ class MobileFeedbackController extends GetxController {
       
       final userId = session.userId;
       if (userId.isEmpty) {
-        print('>>> No user ID, skipping tracker load');
         return;
       }
       
-      print('>>> Loading daily report tracker for user: $userId');
       
       // Get user's feedback submissions from last 24 hours
       final allFeedback = await authRepository.getUserFeedback(userId);
@@ -57,7 +55,6 @@ class MobileFeedbackController extends GetxController {
         return feedback.submittedAt.isAfter(last24Hours);
       }).toList();
       
-      print('>>> Found ${recentReports.length} reports in last 24 hours');
       
       // Find the oldest report timestamp to use as reset time
       DateTime lastResetAt = now.subtract(const Duration(hours: 24));
@@ -80,19 +77,13 @@ class MobileFeedbackController extends GetxController {
       
       // Check if needs reset
       if (tracker.needsReset) {
-        print('>>> Tracker needs reset (>24 hours old)');
         dailyTracker.value = tracker.reset();
       } else {
         dailyTracker.value = tracker;
       }
       
-      print('>>> Daily tracker loaded:');
-      print('>>>   Reports today: ${dailyTracker.value!.reportCount}/3');
-      print('>>>   Remaining: ${dailyTracker.value!.remainingReports}');
-      print('>>>   Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
       
     } catch (e) {
-      print('>>> Error loading daily tracker: $e');
     } finally {
       isCheckingLimit.value = false;
     }
@@ -100,13 +91,11 @@ class MobileFeedbackController extends GetxController {
 
   bool canSubmitFeedback() {
     if (dailyTracker.value == null) {
-      print('>>> No tracker loaded, allowing submission');
       return true;
     }
     
     // Check if needs reset first
     if (dailyTracker.value!.needsReset) {
-      print('>>> Tracker needs reset, resetting now...');
       dailyTracker.value = dailyTracker.value!.reset();
       return true;
     }
@@ -114,8 +103,6 @@ class MobileFeedbackController extends GetxController {
     final canSubmit = !dailyTracker.value!.hasExceededLimit;
     
     if (!canSubmit) {
-      print('>>> Daily limit exceeded: ${dailyTracker.value!.reportCount}/3');
-      print('>>> Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
     }
     
     return canSubmit;
@@ -350,10 +337,6 @@ bool _validateFile(PlatformFile file) {
       final userName = session.userName;
       final userEmail = session.userEmail;
 
-      print('=== SUBMITTING FEEDBACK ===');
-      print('User ID: $userId');
-      print('User Name: $userName');
-      print('User Email: $userEmail');
 
       if (userId.isEmpty) {
         _showError("User session data is missing. Please log in again.");
@@ -370,9 +353,7 @@ bool _validateFile(PlatformFile file) {
         final uploadedFiles = await authRepository.uploadFeedbackAttachments(selectedFiles);
         attachmentIds = uploadedFiles.map((f) => f.$id).toList();
 
-        print('Uploaded ${attachmentIds.length} attachments');
       } else {
-        print('No attachments provided (optional)');
       }
 
       // Get device/platform info
@@ -399,16 +380,13 @@ bool _validateFile(PlatformFile file) {
         submittedAt: now,
       );
 
-      print('Submitting feedback to database...');
 
       // Submit to database
       await authRepository.createFeedbackAndReport(feedback);
 
-      print('Feedback submitted successfully');
 
  if (dailyTracker.value != null) {
         dailyTracker.value = dailyTracker.value!.incrementCount();
-        print('>>> Updated tracker: ${dailyTracker.value!.reportCount}/3 reports');
       } else {
         // Create new tracker if doesn't exist
         dailyTracker.value = UserDailyReportTracker(
@@ -428,9 +406,6 @@ bool _validateFile(PlatformFile file) {
 
       return true;
     } catch (e, stackTrace) {
-      print('=== ERROR SUBMITTING FEEDBACK ===');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
 
       _showError("Failed to submit feedback. Please try again.");
       return false;
@@ -441,7 +416,6 @@ bool _validateFile(PlatformFile file) {
 
   /// Clear the feedback form completely
   void clearForm() {
-    print('=== CLEARING FORM ===');
     
     // Clear text values
     subject.value = '';
@@ -461,9 +435,5 @@ bool _validateFile(PlatformFile file) {
     selectedType.refresh();
     selectedCategory.refresh();
     
-    print('Form cleared successfully');
-    print('Type: ${selectedType.value.displayName}');
-    print('Category: ${selectedCategory.value.displayName}');
-    print('====================');
   }
 }

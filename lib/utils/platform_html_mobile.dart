@@ -10,7 +10,6 @@ class PlatformHtmlMobile implements PlatformHtmlInterface {
   @override
   void redirectToUrl(String url) {
     // Not used on mobile
-    print('>>> Mobile: Redirect not supported');
   }
 }
 

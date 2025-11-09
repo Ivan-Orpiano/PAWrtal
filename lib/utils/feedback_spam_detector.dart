@@ -53,14 +53,6 @@ class FeedbackSpamDetector {
     // Weighted average (subject is more important)
     final finalScore = (subjectScore * 0.4) + (descriptionScore * 0.6);
 
-    print('>>> ============================================');
-    print('>>> SPAM ANALYSIS');
-    print('>>> Subject: "${subject.substring(0, subject.length > 40 ? 40 : subject.length)}..."');
-    print('>>> Subject Spam Score: ${(subjectScore * 100).toStringAsFixed(1)}%');
-    print('>>> Description Spam Score: ${(descriptionScore * 100).toStringAsFixed(1)}%');
-    print('>>> Final Score: ${(finalScore * 100).toStringAsFixed(1)}%');
-    print('>>> Is Spam: ${finalScore >= SPAM_THRESHOLD}');
-    print('>>> ============================================');
 
     return finalScore >= SPAM_THRESHOLD;
   }
@@ -74,9 +66,6 @@ class FeedbackSpamDetector {
   }) {
     if (userPreviousFeedbacks.isEmpty) return false;
 
-    print('>>> ============================================');
-    print('>>> REDUNDANCY CHECK FOR USER: $userId');
-    print('>>> Checking against ${userPreviousFeedbacks.length} previous feedbacks');
 
     int redundantCount = 0;
     final currentContent = '$currentSubject $currentDescription'.toLowerCase();
@@ -89,19 +78,13 @@ class FeedbackSpamDetector {
       // Calculate similarity
       final similarity = _calculateSimilarity(currentContent, previousContent);
 
-      print('>>> Comparing with: "${previousSubject.substring(0, previousSubject.length > 30 ? 30 : previousSubject.length)}..."');
-      print('>>>   Similarity: ${(similarity * 100).toStringAsFixed(1)}%');
 
       if (similarity >= REDUNDANCY_THRESHOLD) {
         redundantCount++;
-        print('>>>   🚫 REDUNDANT MATCH FOUND!');
       }
     }
 
     final isRedundant = redundantCount > 0;
-    print('>>> Total Redundant Matches: $redundantCount');
-    print('>>> Is Redundant: $isRedundant');
-    print('>>> ============================================');
 
     return isRedundant;
   }

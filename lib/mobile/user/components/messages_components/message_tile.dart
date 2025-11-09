@@ -212,7 +212,6 @@ class MyMessageTile extends StatelessWidget {
         };
       }
     } catch (e) {
-      print('Error loading clinic data: $e');
     }
 
     return {

@@ -33,7 +33,6 @@ class WebImagePickerService {
         }
       }
     } catch (e) {
-      print("Error picking image: $e");
     }
     return null;
   }

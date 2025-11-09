@@ -25,11 +25,6 @@ class UserSessionService {
 
   // Add debugging method
   void debugSession() {
-    print('=== USER SESSION DEBUG ===');
-    print('User ID: $userId');
-    print('Session Keys: ${_storage.getKeys()}');
-    print('Session Values: ${_storage.getValues()}');
-    print('==========================');
   }
 
   // Check if user is logged in

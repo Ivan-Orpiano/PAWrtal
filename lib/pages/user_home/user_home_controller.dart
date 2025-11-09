@@ -19,7 +19,6 @@ class UserHomeController extends GetxController {
       // Use the centralized logout helper
       await LogoutHelper.logout();
     } catch (e) {
-      print('>>> LOGOUT ERROR in UserHomeController: $e');
       
       // Fallback: Force local logout
       try {
@@ -33,7 +32,6 @@ class UserHomeController extends GetxController {
           message: "You have been signed out locally"
         );
       } catch (fallbackError) {
-        print('>>> Fallback logout error: $fallbackError');
       }
     }
   }

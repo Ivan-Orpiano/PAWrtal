@@ -128,9 +128,6 @@ class ClinicSettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    print('>>> ============================================');
-    print('>>> CLINIC SETTINGS CONTROLLER: onInit called');
-    print('>>> ============================================');
 
     _ensureControllersInitialized();
 
@@ -161,9 +158,6 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> initializeData() async {
     try {
-      print('>>> ============================================');
-      print('>>> CLINIC SETTINGS: Initializing data');
-      print('>>> ============================================');
 
       isLoading.value = true;
 
@@ -180,10 +174,7 @@ class ClinicSettingsController extends GetxController {
       await fetchClinicData();
       await fetchClinicSettings();
 
-      print('>>> CLINIC SETTINGS: Data initialization complete');
-      print('>>> ============================================');
     } catch (e) {
-      print(">>> Error initializing data: $e");
       _showSnackBar("Failed to load clinic data: $e", isError: true);
     } finally {
       isLoading.value = false;
@@ -192,49 +183,34 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> fetchClinicData() async {
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING CLINIC DATA');
-      print('>>> ============================================');
 
       final user = await authRepository.getUser();
       if (user == null) {
-        print(">>> No user found");
         return;
       }
 
-      print('>>> Current user: ${user.$id}');
-      print('>>> User email: ${user.email}');
 
       final storage = GetStorage();
 
       // CRITICAL FIX: Always get fresh role from storage
       final userRole = storage.read('role') as String?;
-      print('>>> User role from storage: $userRole');
 
       String? clinicId;
 
       if (userRole == 'staff') {
         // CRITICAL FIX: Get fresh clinicId from storage
         clinicId = storage.read('clinicId') as String?;
-        print(
-            '>>> CLINIC SETTINGS: Staff mode - using stored clinicId: $clinicId');
       } else if (userRole == 'admin') {
         // CRITICAL FIX: Always lookup fresh clinic data for admin
-        print('>>> CLINIC SETTINGS: Admin mode - looking up clinic');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-          print('>>> CLINIC SETTINGS: Admin clinic found: $clinicId');
-          print('>>> Clinic name: ${clinicDoc.data['clinicName']}');
         } else {
-          print('>>> CLINIC SETTINGS: No clinic found for admin');
         }
       } else {
-        print('>>> CLINIC SETTINGS: Unknown role: $userRole');
       }
 
       if (clinicId != null && clinicId.isNotEmpty) {
-        print('>>> CLINIC SETTINGS: Fetching clinic with ID: $clinicId');
 
         // CRITICAL FIX: Clear old data before fetching new
         clinic.value = null;
@@ -244,44 +220,27 @@ class ClinicSettingsController extends GetxController {
           clinic.value = Clinic.fromMap(clinicDoc.data);
           clinic.value!.documentId = clinicDoc.$id;
 
-          print('>>> CLINIC SETTINGS: Clinic loaded successfully');
-          print('>>> Clinic name: ${clinic.value!.clinicName}');
-          print('>>> Clinic ID: ${clinic.value!.documentId}');
-          print('>>> Clinic address: ${clinic.value!.address}');
 
           _populateClinicFields();
         } else {
-          print('>>> CLINIC SETTINGS: Clinic document not found');
         }
       } else {
-        print('>>> CLINIC SETTINGS: No clinic ID available');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> Error fetching clinic data: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
       rethrow;
     }
   }
 
   Future<void> fetchClinicSettings() async {
     try {
-      print('>>> ============================================');
-      print('>>> CLINIC SETTINGS: Fetching settings');
-      print('>>> ============================================');
 
       if (clinic.value?.documentId == null) {
-        print('>>> ❌ No clinic document ID available');
         clinicSettings.value = null;
         return;
       }
 
       final currentClinicId = clinic.value!.documentId!;
-      print('>>> Fetching settings for clinic: $currentClinicId');
-      print('>>> Clinic name: ${clinic.value!.clinicName}');
 
       final settings =
           await authRepository.getClinicSettingsByClinicId(currentClinicId);
@@ -290,23 +249,14 @@ class ClinicSettingsController extends GetxController {
         // CRITICAL: Create fresh settings object
         clinicSettings.value = settings;
 
-        print('>>> ✅ Settings loaded successfully');
-        print('>>> Settings document ID: ${settings.documentId}');
-        print('>>> Services count: ${settings.services.length}');
-        print('>>> Gallery images count: ${settings.gallery.length}');
 
         // Populate form fields
         _populateSettingsFields();
       } else {
-        print('>>> ⚠️ No settings found, creating default');
         await createDefaultSettings();
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error fetching clinic settings: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
       clinicSettings.value = null;
       _showSnackBar("Failed to load clinic settings: $e", isError: true);
     }
@@ -315,18 +265,14 @@ class ClinicSettingsController extends GetxController {
   Future<void> createDefaultSettings() async {
     try {
       if (clinic.value?.documentId == null) {
-        print('>>> CLINIC SETTINGS: Cannot create - no clinic ID');
         return;
       }
 
-      print('>>> CLINIC SETTINGS: Creating default settings');
       final createdSettings = await authRepository
           .initializeClinicSettings(clinic.value!.documentId!);
       clinicSettings.value = createdSettings;
       _populateSettingsFields();
-      print('>>> CLINIC SETTINGS: Default settings created');
     } catch (e) {
-      print('>>> Error creating default settings: $e');
       _showSnackBar("Failed to create default settings: $e", isError: true);
     }
   }
@@ -339,26 +285,21 @@ class ClinicSettingsController extends GetxController {
             .getClinicProfilePictureUrl(clinic.value!.profilePictureId!);
 
         clinicProfilePictureUrl.value = profilePicUrl;
-        print('>>> Clinic profile picture URL loaded: $profilePicUrl');
       } else {
         // Fallback to clinic.image if no profile picture
         clinicProfilePictureUrl.value = clinic.value?.image ?? '';
-        print('>>> Using fallback clinic image');
       }
     } catch (e) {
-      print('>>> Error loading clinic profile picture: $e');
       clinicProfilePictureUrl.value = clinic.value?.image ?? '';
     }
   }
 
   void _populateClinicFields() {
     if (clinic.value == null) {
-      print('>>> Cannot populate clinic fields - clinic is null');
       return;
     }
 
     try {
-      print('>>> Populating clinic fields for: ${clinic.value!.clinicName}');
 
       _ensureControllersInitialized();
 
@@ -371,20 +312,16 @@ class ClinicSettingsController extends GetxController {
       // NEW: Load clinic profile picture URL
       _loadClinicProfilePictureUrl();
 
-      print('>>> ✅ Clinic fields populated');
     } catch (e) {
-      print('>>> ❌ Error populating clinic fields: $e');
     }
   }
 
   void _populateSettingsFields() {
     if (clinicSettings.value == null) {
-      print('>>> Cannot populate settings fields - settings is null');
       return;
     }
 
     try {
-      print('>>> Populating settings fields');
 
       _ensureControllersInitialized();
 
@@ -422,14 +359,7 @@ class ClinicSettingsController extends GetxController {
       tempDashboardPic.value = settings.dashboardPic;
       dashboardPicChanged.value = false;
 
-      print('>>> ✅ Settings fields populated');
-      print('>>> Services: ${selectedServices.length}');
-      print('>>> Medical services: ${medicalServices.length}');
-      print('>>> Gallery images: ${galleryImages.length}');
-      print('>>> Closed dates: ${closedDates.length}');
     } catch (e) {
-      print('>>> ❌ Error populating settings fields: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -445,7 +375,7 @@ class ClinicSettingsController extends GetxController {
       selectedClosedDates.sort((a, b) => a.compareTo(b));
       closedDates.sort();
 
-      _showSnackBar("Closed date added: ${_formatDateForDisplay(date)}");
+      // _showSnackBar("Closed date added: ${_formatDateForDisplay(date)}");
     } else {
       _showSnackBar("This date is already marked as closed", isError: true);
     }
@@ -458,7 +388,7 @@ class ClinicSettingsController extends GetxController {
     closedDates.remove(dateStr);
     selectedClosedDates.removeWhere((d) => _formatDateToString(d) == dateStr);
 
-    _showSnackBar("Closed date removed: ${_formatDateForDisplay(date)}");
+    // _showSnackBar("Closed date removed: ${_formatDateForDisplay(date)}");
   }
 
   // NEW: Clear all closed dates
@@ -587,7 +517,6 @@ class ClinicSettingsController extends GetxController {
       if (controller == null) return '';
       return controller.text;
     } catch (e) {
-      print('Error getting text from controller: $e');
       return '';
     }
   }
@@ -653,9 +582,6 @@ class ClinicSettingsController extends GetxController {
         }
       }
 
-      print('>>> SAVING CLINIC SETTINGS');
-      print('>>> Selected services: ${selectedServices.toList()}');
-      print('>>> Medical services map: $sanitizedMedicalServices');
 
       final updatedSettings = clinicSettings.value!.copyWith(
         isOpen: isClinicOpen.value,
@@ -679,7 +605,6 @@ class ClinicSettingsController extends GetxController {
 
       _showSnackBar("Clinic settings updated successfully!");
     } catch (e) {
-      print('>>> Error saving clinic settings: $e');
       _showSnackBar("Failed to update clinic settings: $e", isError: true);
     } finally {
       isSaving.value = false;
@@ -759,12 +684,10 @@ class ClinicSettingsController extends GetxController {
             _showSnackBar("Failed to upload image", isError: true);
           }
         } catch (e) {
-          print("Error uploading dashboard picture: $e");
           _showSnackBar("Failed to upload image: $e", isError: true);
         }
       }
     } catch (e) {
-      print("Error in setDashboardPicture: $e");
       _showSnackBar("Failed to select image: $e", isError: true);
     } finally {
       isSaving.value = false;
@@ -867,7 +790,6 @@ class ClinicSettingsController extends GetxController {
                 final imageUrl =
                     '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
                 newImageUrls.add(imageUrl);
-                print("Added image URL: $imageUrl");
               }
             } else if (file.path != null) {
               final imageResponse =
@@ -876,10 +798,8 @@ class ClinicSettingsController extends GetxController {
               final imageUrl =
                   '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
               newImageUrls.add(imageUrl);
-              print("Added image URL: $imageUrl");
             }
           } catch (e) {
-            print("Error uploading image ${file.name}: $e");
           }
         }
 
@@ -893,7 +813,6 @@ class ClinicSettingsController extends GetxController {
         }
       }
     } catch (e) {
-      print("Error in addGalleryImages: $e");
       _showSnackBar("Failed to upload images: $e", isError: true);
     } finally {
       isSaving.value = false;
@@ -973,9 +892,6 @@ class ClinicSettingsController extends GetxController {
   }
 
   Future<void> refreshData() async {
-    print('>>> ============================================');
-    print('>>> FORCING DATA REFRESH');
-    print('>>> ============================================');
 
     // Clear all cached data
     clinic.value = null;

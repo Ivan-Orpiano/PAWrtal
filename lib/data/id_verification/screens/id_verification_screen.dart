@@ -47,22 +47,17 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _requestCameraPermission() async {
     try {
-      print('>>> Requesting camera permission...');
 
       final status = await Permission.camera.request();
 
       if (status.isGranted) {
-        print('>>> Camera permission granted');
         _initializeVerification();
       } else if (status.isDenied) {
-        print('>>> Camera permission denied');
         _showPermissionDeniedDialog();
       } else if (status.isPermanentlyDenied) {
-        print('>>> Camera permission permanently denied');
         _showPermissionPermanentlyDeniedDialog();
       }
     } catch (e) {
-      print('>>> Error requesting camera permission: $e');
       _initializeVerification();
     }
   }
@@ -125,19 +120,12 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _handleWebPlatform() async {
     try {
-      print('>>> ============================================');
-      print('>>> WEB PLATFORM VERIFICATION INITIALIZATION');
-      print('>>> User ID: ${widget.userId}');
-      print('>>> Email: ${widget.email}');
-      print('>>> ============================================');
 
       // Check for existing verification
       final existingVerification =
           await widget.authRepository.getIdVerificationByUserId(widget.userId);
 
       if (existingVerification != null) {
-        print(
-            '>>> Found existing verification: ${existingVerification.status}');
         setState(() {
           _currentVerification = existingVerification;
           _isLoading = false;
@@ -160,7 +148,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       }
 
       // CRITICAL FIX: Create verification record BEFORE opening browser
-      print('>>> Creating new verification record...');
       final newVerification = IdVerification(
         userId: widget.userId,
         email: widget.email,
@@ -173,7 +160,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           await widget.authRepository.createIdVerification(newVerification);
       newVerification.documentId = doc.$id;
 
-      print('>>> Verification record created: ${doc.$id}');
 
       setState(() {
         _currentVerification = newVerification;
@@ -186,7 +172,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         email: widget.email,
       );
 
-      print('>>> Opening verification in browser: $url');
       _openInBrowser(url);
 
       // Show pending screen with instructions
@@ -194,13 +179,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         _showBrowserOpenedScreen();
       });
 
-      print('>>> ============================================');
-      print('>>> WEB VERIFICATION INITIALIZED SUCCESSFULLY');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR INITIALIZING WEB VERIFICATION: $e');
-      print('>>> ============================================');
       _showErrorScreen(e.toString());
     }
   }
@@ -214,7 +193,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _initializeVerification() async {
     try {
-      print('>>> Initializing ID verification...');
 
       await widget.authRepository.cleanupStuckVerifications(widget.userId);
 
@@ -258,7 +236,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       );
 
       // SIMPLER SOLUTION: Just open in system browser
-      print('>>> Opening verification in system browser');
       final uri = Uri.parse(url);
 
       final launched = await launchUrl(
@@ -267,7 +244,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       );
 
       if (launched) {
-        print('>>> System browser opened successfully');
 
         setState(() {
           _currentVerification = newVerification;
@@ -277,11 +253,9 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         // Show instructions screen
         _showBrowserOpenedScreen();
       } else {
-        print('>>> Failed to open system browser');
         _showErrorScreen('Could not open browser for verification');
       }
     } catch (e) {
-      print('>>> Error initializing verification: $e');
       _showErrorScreen(e.toString());
     }
   }
@@ -380,14 +354,11 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       ''';
 
       await _webViewController.runJavaScript(script);
-      print('>>> Camera mode script executed');
 
       // Run again after a delay to ensure it takes effect
       await Future.delayed(const Duration(milliseconds: 2000));
       await _webViewController.runJavaScript(script);
-      print('>>> Camera mode script executed (second attempt)');
     } catch (e) {
-      print('>>> Error forcing camera mode: $e');
     }
   }
 

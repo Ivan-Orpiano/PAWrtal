@@ -318,8 +318,6 @@ class _WebSettingsAndEverythingPageState
     // Set current profile picture if exists
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
       profilePictureController.setCurrentProfilePicture(profilePictureId);
-      print(
-          '>>> Profile picture controller initialized with: $profilePictureId');
     }
 
     return SingleChildScrollView(
@@ -640,8 +638,6 @@ class _WebSettingsAndEverythingPageState
                                           await storage.write(
                                               'userProfilePictureId',
                                               newFileId);
-                                          print(
-                                              '>>> Stored profile picture ID in GetStorage: $newFileId');
                                           setState(() {});
                                           _showSuccess(
                                               'Profile picture updated successfully');
@@ -2355,10 +2351,6 @@ class _WebSettingsAndEverythingPageState
           throw Exception('User document ID not found. Please log in again.');
         }
 
-        print('>>> Updating user profile...');
-        print('>>> Document ID: $userDocId');
-        print('>>> New Name: $name');
-        print('>>> New Phone: $phone');
 
         // Update in Appwrite
         final authRepository = Get.find<AuthRepository>();
@@ -2370,13 +2362,11 @@ class _WebSettingsAndEverythingPageState
           },
         );
 
-        print('>>> ✅ Profile updated successfully in Appwrite');
 
         // Update GetStorage
         await storage.write("userName", name);
         await storage.write("phone", phone);
 
-        print('>>> ✅ Local storage updated');
 
         isLoading.value = false;
 
@@ -2393,7 +2383,6 @@ class _WebSettingsAndEverythingPageState
         nameController.dispose();
         phoneController.dispose();
       } catch (e) {
-        print('>>> ERROR updating profile: $e');
         isLoading.value = false;
 
         String errorMessage = 'Failed to update profile. Please try again.';
@@ -2690,7 +2679,6 @@ class _WebSettingsAndEverythingPageState
       try {
         isLoading.value = true;
 
-        print('>>> Attempting to change password...');
 
         // Appwrite's updatePassword automatically verifies old password
         final authRepository = Get.find<AuthRepository>();
@@ -2699,7 +2687,6 @@ class _WebSettingsAndEverythingPageState
           oldPassword: currentPassword,
         );
 
-        print('>>> ✅ Password updated successfully');
 
         isLoading.value = false;
 
@@ -2714,7 +2701,6 @@ class _WebSettingsAndEverythingPageState
         newPasswordController.dispose();
         confirmPasswordController.dispose();
       } catch (e) {
-        print('>>> ERROR changing password: $e');
         isLoading.value = false;
 
         String errorMessage = 'Failed to change password. Please try again.';

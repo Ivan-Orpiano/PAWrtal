@@ -197,6 +197,11 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   bool hasChanges = false;
   bool isDoctorChecked = false;
 
+  String? firstNameError;
+  String? surnameError;
+  String? emailError;
+  String? phoneError;
+
   static const Color primaryBlue = Color(0xFF4A6FA5);
   static const Color primaryTeal = Color(0xFF5B9BD5);
   static const Color lightTeal = Color(0xFF9FC5E8);
@@ -484,7 +489,8 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: _handleCreateStaff,
+                      onPressed:
+                          _validateAndProceed, // CHANGED: Now calls validation method
                       icon:
                           const Icon(Icons.arrow_forward, color: Colors.white),
                       label: Text('Continue',
@@ -579,61 +585,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   }
 
   void _handleCreateStaff() {
-    if (widget.firstNameController.text.isEmpty ||
-        widget.surnameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please fill in all required fields'),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
-    if (selectedImageBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Profile photo is required'),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
-    final phoneDigits = widget.phoneController.text.trim();
-    if (phoneDigits.isNotEmpty && phoneDigits.length != 9) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Phone number must be exactly 9 digits after 09'),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
-    final email = widget.emailController.text.trim();
-    if (email.isNotEmpty && !_isValidEmail(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter a valid email address'),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
     final fullName =
         '${widget.firstNameController.text.trim()} ${widget.surnameController.text.trim()}';
     final phone = _getFullPhoneNumber();
@@ -642,6 +593,8 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     if (clinicAuth) authorities.add('Clinic');
     if (appointmentAuth) authorities.add('Appointments');
     if (messagesAuth) authorities.add('Messages');
+
+    final email = widget.emailController.text.trim();
 
     _showCredentialsDialog(fullName, email, phone, authorities);
   }
@@ -1910,10 +1863,17 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   color: selectedImageBytes != null
                       ? null
                       : lightVetGreen.withOpacity(0.3),
-                  border: Border.all(color: primaryTeal, width: 3),
+                  border: Border.all(
+                    color:
+                        selectedImageBytes == null ? Colors.red : primaryTeal,
+                    width: 3,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryTeal.withOpacity(0.2),
+                      color: (selectedImageBytes == null
+                              ? Colors.red
+                              : primaryTeal)
+                          .withOpacity(0.2),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
@@ -1926,7 +1886,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                 ),
                 child: selectedImageBytes == null
                     ? const Icon(Icons.camera_alt_rounded,
-                        size: 36, color: primaryTeal)
+                        size: 36, color: Colors.red)
                     : null,
               ),
             ),
@@ -1963,9 +1923,13 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: primaryTeal.withOpacity(0.1),
+            color: (selectedImageBytes == null ? Colors.red : primaryTeal)
+                .withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: primaryTeal.withOpacity(0.3)),
+            border: Border.all(
+              color: (selectedImageBytes == null ? Colors.red : primaryTeal)
+                  .withOpacity(0.3),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1975,21 +1939,48 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     ? Icons.edit_rounded
                     : Icons.add_photo_alternate_rounded,
                 size: 14,
-                color: primaryTeal,
+                color: selectedImageBytes == null ? Colors.red : primaryTeal,
               ),
               const SizedBox(width: 6),
               Text(
                 selectedImageBytes != null
                     ? 'Click to change photo'
-                    : 'Click to upload photo',
-                style: const TextStyle(
-                    color: primaryTeal,
+                    : 'Click to upload',
+                style: TextStyle(
+                    color:
+                        selectedImageBytes == null ? Colors.red : primaryTeal,
                     fontSize: 13,
                     fontWeight: FontWeight.w600),
               ),
             ],
           ),
         ),
+        if (selectedImageBytes == null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'Profile photo is required',
+                  style: TextStyle(
+                    color: Colors.red[700],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -2048,6 +2039,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   controller: widget.firstNameController,
                   label: 'First Name',
                   icon: Icons.badge_outlined,
+                  errorText: firstNameError,
                 ),
               ),
               const SizedBox(width: 16),
@@ -2056,6 +2048,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   controller: widget.surnameController,
                   label: 'Surname',
                   icon: Icons.badge_outlined,
+                  errorText: surnameError,
                 ),
               ),
             ],
@@ -2067,22 +2060,22 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                 controller: widget.firstNameController,
                 label: 'First Name',
                 icon: Icons.badge_outlined,
+                errorText: firstNameError,
               ),
               const SizedBox(height: 18),
               _buildTextField(
                 controller: widget.surnameController,
                 label: 'Surname',
                 icon: Icons.badge_outlined,
+                errorText: surnameError,
               ),
             ],
           ),
         const SizedBox(height: 18),
-        _buildEmailTextField(), // NEW
+        _buildEmailTextField(errorText: emailError),
         const SizedBox(height: 18),
-        _buildPhoneTextField(),
-
+        _buildPhoneTextField(errorText: phoneError),
         const SizedBox(height: 24),
-
         _buildSectionHeader(
           'Medical Credentials',
           Icons.medical_services,
@@ -2090,7 +2083,6 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           subtitle: 'Specify if this staff member is a licensed veterinarian',
         ),
         const SizedBox(height: 16),
-
         _buildDoctorToggle(),
       ],
     );
@@ -2101,6 +2093,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    String? errorText,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -2113,49 +2106,84 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           ),
         ],
       ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLength: 50,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-        ],
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle:
-              const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
-          hintText: 'Enter $label',
-          hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)), // MORE GREY
-          counterText: '',
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: primaryTeal.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            maxLength: 50,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+            ],
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: const TextStyle(
+                  color: mediumGray, fontWeight: FontWeight.w500),
+              hintText: 'Enter $label',
+              hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)),
+              counterText: '',
+              prefixIcon: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryTeal.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: primaryTeal, size: 20),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null
+                        ? Colors.red
+                        : primaryTeal.withOpacity(0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null
+                        ? Colors.red
+                        : primaryTeal.withOpacity(0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null ? Colors.red : primaryTeal,
+                    width: 2.5),
+              ),
             ),
-            child: Icon(icon, color: primaryTeal, size: 20),
           ),
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryTeal.withOpacity(0.3)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryTeal.withOpacity(0.3)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: primaryTeal, width: 2.5),
-          ),
-        ),
+          if (errorText != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      errorText,
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
   // NEW: Email field
-  Widget _buildEmailTextField() {
+  Widget _buildEmailTextField({String? errorText}) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -2167,45 +2195,81 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           ),
         ],
       ),
-      child: TextFormField(
-        controller: widget.emailController,
-        keyboardType: TextInputType.emailAddress,
-        maxLength: 50,
-        decoration: InputDecoration(
-          labelText: 'Email (Optional)',
-          labelStyle:
-              const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
-          hintText: 'example@email.com',
-          hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)), // MORE GREY
-          counterText: '',
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: vetPurple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            controller: widget.emailController,
+            keyboardType: TextInputType.emailAddress,
+            maxLength: 50,
+            decoration: InputDecoration(
+              labelText: 'Email (Optional)',
+              labelStyle: const TextStyle(
+                  color: mediumGray, fontWeight: FontWeight.w500),
+              hintText: 'example@email.com',
+              hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)),
+              counterText: '',
+              prefixIcon: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: vetPurple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.email_outlined,
+                    color: vetPurple, size: 20),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null
+                        ? Colors.red
+                        : vetPurple.withOpacity(0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null
+                        ? Colors.red
+                        : vetPurple.withOpacity(0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null ? Colors.red : vetPurple,
+                    width: 2.5),
+              ),
             ),
-            child: const Icon(Icons.email_outlined, color: vetPurple, size: 20),
           ),
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: vetPurple.withOpacity(0.3)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: vetPurple.withOpacity(0.3)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: vetPurple, width: 2.5),
-          ),
-        ),
+          if (errorText != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      errorText,
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildPhoneTextField() {
+  Widget _buildPhoneTextField({String? errorText}) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -2217,54 +2281,89 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
           ),
         ],
       ),
-      child: TextFormField(
-        controller: widget.phoneController,
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(9),
-        ],
-        decoration: InputDecoration(
-          labelText: 'Phone Number (Optional)',
-          labelStyle:
-              const TextStyle(color: mediumGray, fontWeight: FontWeight.w500),
-          hintText: '696934651',
-          hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)), // MORE GREY
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: primaryTeal.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child:
-                const Icon(Icons.phone_outlined, color: primaryTeal, size: 20),
-          ),
-          prefix: Container(
-            padding: const EdgeInsets.only(right: 4),
-            child: const Text(
-              '09',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: primaryBlue,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            controller: widget.phoneController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(9),
+            ],
+            decoration: InputDecoration(
+              labelText: 'Phone Number (Optional)',
+              labelStyle: const TextStyle(
+                  color: mediumGray, fontWeight: FontWeight.w500),
+              hintText: '696934651',
+              hintStyle: TextStyle(color: mediumGray.withOpacity(0.5)),
+              prefixIcon: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryTeal.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.phone_outlined,
+                    color: primaryTeal, size: 20),
+              ),
+              prefix: Container(
+                padding: const EdgeInsets.only(right: 4),
+                child: const Text(
+                  '09',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryBlue,
+                  ),
+                ),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null
+                        ? Colors.red
+                        : primaryTeal.withOpacity(0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null
+                        ? Colors.red
+                        : primaryTeal.withOpacity(0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: errorText != null ? Colors.red : primaryTeal,
+                    width: 2.5),
               ),
             ),
           ),
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryTeal.withOpacity(0.3)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryTeal.withOpacity(0.3)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: primaryTeal, width: 2.5),
-          ),
-        ),
+          if (errorText != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      errorText,
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -2410,5 +2509,49 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
         ],
       ),
     );
+  }
+
+  void _validateAndProceed() {
+    setState(() {
+      // Clear previous errors
+      firstNameError = null;
+      surnameError = null;
+      emailError = null;
+      phoneError = null;
+
+      // Validate first name
+      if (widget.firstNameController.text.trim().isEmpty) {
+        firstNameError = 'First name is required';
+      }
+
+      // Validate surname
+      if (widget.surnameController.text.trim().isEmpty) {
+        surnameError = 'Surname is required';
+      }
+
+      // Validate email
+      final email = widget.emailController.text.trim();
+      if (email.isNotEmpty && !_isValidEmail(email)) {
+        emailError = 'Please enter a valid email address';
+      }
+
+      // Validate phone
+      final phoneDigits = widget.phoneController.text.trim();
+      if (phoneDigits.isNotEmpty && phoneDigits.length != 9) {
+        phoneError = 'Phone number must be exactly 9 digits';
+      }
+
+      // Check if any errors exist
+      if (firstNameError != null ||
+          surnameError != null ||
+          emailError != null ||
+          phoneError != null ||
+          selectedImageBytes == null) {
+        return; // Stop here if there are errors
+      }
+
+      // If all validations pass, proceed
+      _handleCreateStaff();
+    });
   }
 }

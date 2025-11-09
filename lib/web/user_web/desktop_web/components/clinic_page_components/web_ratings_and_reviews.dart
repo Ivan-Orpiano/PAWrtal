@@ -86,7 +86,6 @@ class _WebRatingsAndReviewsState extends State<WebRatingsAndReviews> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading reviews: $e');
       setState(() => isLoading = false);
     }
   }

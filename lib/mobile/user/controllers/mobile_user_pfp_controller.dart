@@ -231,7 +231,6 @@ class MobileUserPfpController extends GetxController {
         try {
           await authRepository.deleteUserProfilePicture(currentProfilePictureId.value);
         } catch (e) {
-          print('Warning: Failed to delete old profile picture: $e');
         }
       }
 

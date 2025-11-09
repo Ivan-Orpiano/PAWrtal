@@ -77,7 +77,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
 
         if (!_isWithinBounds(fetchedLocation)) {
-          print("User location outside San Jose Del Monte");
           setState(() {
             userOutOfBounds = true;
           });
@@ -90,7 +89,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         });
       }
     } catch (e) {
-      print("Error fetching user location: $e");
     }
   }
 
@@ -128,7 +126,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         });
       }
     } catch (e) {
-      print("Error fetching clinic settings: $e");
       setState(() {
         error = "Failed to load clinic location";
       });
@@ -151,7 +148,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print("Error getting current location: $e");
       return null;
     }
   }
@@ -181,7 +177,6 @@ class _WebClinicLocationUpdatedState extends State<WebClinicLocationUpdated> {
         }
       }
     } catch (e) {
-      print("Error fetching route: $e");
     }
   }
 

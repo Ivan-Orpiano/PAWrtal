@@ -296,27 +296,18 @@ class _FeedbackDeletionRequestDialogState
     try {
       final authRepo = Get.find<AuthRepository>();
 
-      print('>>> ============================================');
-      print('>>> SUBMITTING DELETION REQUEST');
-      print('>>> Reason: $_selectedReason');
-      print('>>> Files: ${_selectedFiles.length}');
-      print('>>> ============================================');
 
       List<String> uploadedFileIds = [];
       if (_selectedFiles.isNotEmpty) {
-        print('>>> Step 1: Uploading ${_selectedFiles.length} files...');
         try {
           final uploadedFiles =
               await authRepo.uploadFeedbackDeletionAttachments(_selectedFiles);
           uploadedFileIds = uploadedFiles.map((f) => f.$id).toList();
-          print('>>> Files uploaded: $uploadedFileIds');
         } catch (e) {
-          print('>>> Error uploading files: $e');
           throw Exception('Failed to upload files: $e');
         }
       }
 
-      print('>>> Step 2: Creating deletion request document...');
       final requestDoc = await authRepo.createFeedbackDeletionRequest(
         reviewId: widget.reviewId,
         clinicId: widget.clinicId,
@@ -330,8 +321,6 @@ class _FeedbackDeletionRequestDialogState
         attachmentIds: uploadedFileIds,
       );
 
-      print('>>> Deletion request created: ${requestDoc.$id}');
-      print('>>> ============================================');
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -350,9 +339,6 @@ class _FeedbackDeletionRequestDialogState
         );
       }
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR SUBMITTING DELETION REQUEST: $e');
-      print('>>> ============================================');
 
       if (mounted) {
         setState(() {

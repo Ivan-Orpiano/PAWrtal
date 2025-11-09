@@ -153,7 +153,6 @@ class AdminPfpController extends GetxController {
         try {
           await authRepository.deleteImage(currentProfilePictureId.value);
         } catch (e) {
-          print('Warning: Failed to delete old profile picture: $e');
         }
       }
 
@@ -244,20 +243,12 @@ class AdminPfpController extends GetxController {
     try {
       isUploading.value = true;
 
-      print('>>> ============================================');
-      print('>>> SAVING STAFF PROFILE PICTURE');
-      print('>>> Staff Document ID: $staffDocumentId');
-      print('>>> ============================================');
 
       // Delete old profile picture if it exists
       if (currentProfilePictureId.isNotEmpty) {
         try {
-          print(
-              '>>> Deleting old profile picture: ${currentProfilePictureId.value}');
           await authRepository.deleteImage(currentProfilePictureId.value);
-          print('>>> Old profile picture deleted');
         } catch (e) {
-          print('>>> Warning: Failed to delete old profile picture: $e');
         }
       }
 
@@ -280,22 +271,17 @@ class AdminPfpController extends GetxController {
         throw Exception('File has neither bytes nor path');
       }
 
-      print('>>> Uploading new profile picture...');
 
       // Upload new profile picture
       final uploadedFile = await authRepository.uploadImage(inputFile);
 
-      print('>>> Profile picture uploaded: ${uploadedFile.$id}');
-      print('>>> âœ… CRITICAL: File ID is: ${uploadedFile.$id}');
 
       // âœ… CRITICAL FIX: Save ONLY the file ID, NOT a URL
-      print('>>> Updating staff record with FILE ID ONLY...');
       await authRepository.updateStaffInfo(
         staffDocumentId: staffDocumentId,
         image: uploadedFile.$id, // âœ… SAVE FILE ID ONLY
       );
 
-      print('>>> Staff record updated successfully');
 
       // Update local state with FILE ID
       currentProfilePictureId.value = uploadedFile.$id;
@@ -308,17 +294,10 @@ class AdminPfpController extends GetxController {
         backgroundColor: Colors.green,
       );
 
-      print('>>> ============================================');
-      print('>>> STAFF PROFILE PICTURE SAVE COMPLETE');
-      print('>>> New File ID: ${uploadedFile.$id}');
-      print('>>> ============================================');
 
       isUploading.value = false;
       return uploadedFile.$id; // âœ… RETURN FILE ID ONLY
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR SAVING STAFF PROFILE PICTURE: $e');
-      print('>>> ============================================');
 
       isUploading.value = false;
       Get.snackbar(

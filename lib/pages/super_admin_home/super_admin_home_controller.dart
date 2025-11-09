@@ -50,7 +50,6 @@ class SuperAdminHomeController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
 
-    print('>>> Fetching all clinics with dashboard pictures...');
 
     // Use the enhanced method
     final clinicsData = await getClinicsWithDashboardPictures();
@@ -60,11 +59,9 @@ class SuperAdminHomeController extends GetxController {
     // Apply current sorting after fetching
     sortClinics();
     
-    print('>>> Successfully loaded ${clinicsData.length} clinics');
     
   } catch (e) {
     errorMessage.value = 'Error fetching clinics: ${e.toString()}';
-    print('Error in fetchAllClinics: $e');
   } finally {
     isLoading.value = false;
   }
@@ -82,18 +79,15 @@ class SuperAdminHomeController extends GetxController {
       final clinicSubscription = realtime.subscribe([clinicChannel]);
       _clinicSubscription = clinicSubscription.stream.listen(
         (response) {
-          print('Clinic realtime event: ${response.events}');
 
           // Check if it's a clinic-related event
           if (response.events.any((event) =>
               event.contains('databases') &&
               event.contains(AppwriteConstants.clinicsCollectionID))) {
-            print('Clinic update detected, refreshing...');
             fetchAllClinics();
           }
         },
         onError: (error) {
-          print('Clinic subscription error: $error');
         },
       );
 
@@ -104,37 +98,28 @@ class SuperAdminHomeController extends GetxController {
       final settingsSubscription = realtime.subscribe([settingsChannel]);
       _settingsSubscription = settingsSubscription.stream.listen(
         (response) {
-          print('Settings realtime event: ${response.events}');
 
           // Check if it's a settings-related event
           if (response.events.any((event) =>
               event.contains('databases') &&
               event.contains(AppwriteConstants.clinicSettingsCollectionID))) {
-            print('Settings update detected, refreshing...');
             fetchAllClinics();
           }
         },
         onError: (error) {
-          print('Settings subscription error: $error');
         },
       );
 
-      print('Realtime listeners setup successfully');
     } catch (e) {
-      print('Error setting up realtime listeners: $e');
     }
   }
 
   Future<List<Map<String, dynamic>>> getClinicsWithDashboardPictures() async {
   try {
-    print('>>> ============================================');
-    print('>>> FETCHING CLINICS WITH DASHBOARD PICTURES');
-    print('>>> ============================================');
 
     // Get all clinics with settings
     final clinicsData = await authRepository.getClinicsWithSettings();
     
-    print('>>> Found ${clinicsData.length} clinics');
 
     // Process each clinic to ensure dashboard picture is included
     for (var clinicData in clinicsData) {
@@ -142,53 +127,35 @@ class SuperAdminHomeController extends GetxController {
       final clinic = clinicData['clinic'] as Clinic;
 
       if (settings != null && settings.dashboardPic.isNotEmpty) {
-        print('>>> Clinic: ${clinic.clinicName}');
-        print('>>>   Has dashboard pic: ${settings.dashboardPic}');
         
         // CRITICAL: Update the clinic object with dashboard picture from settings
         clinic.dashboardPic = settings.dashboardPic;
         clinicData['clinic'] = clinic;
       } else {
-        print('>>> Clinic: ${clinic.clinicName}');
-        print('>>>   No dashboard pic - will use clinic.image');
       }
       
     }
 
-    print('>>> ============================================');
     return clinicsData;
   } catch (e) {
-    print('>>> ERROR fetching clinics with dashboard pictures: $e');
     return [];
   }
 }
 Future<void> debugDashboardPictures() async {
   try {
-    print('>>> ============================================');
-    print('>>> DEBUG: CHECKING DASHBOARD PICTURES');
-    print('>>> ============================================');
 
     for (var clinicData in clinicsWithSettings) {
       final clinic = clinicData['clinic'] as Clinic;
       final settings = clinicData['settings'] as ClinicSettings?;
 
-      print('>>> Clinic: ${clinic.clinicName}');
-      print('>>>   Clinic.dashboardPic: ${clinic.dashboardPic}');
-      print('>>>   Clinic.image: ${clinic.image}');
-      print('>>>   Settings.dashboardPic: ${settings?.dashboardPic}');
-      print('>>>   Settings exists: ${settings != null}');
       
       if (clinic.dashboardPic != null && clinic.dashboardPic!.isNotEmpty) {
         final url = getDashImageUrl(clinic.dashboardPic!);
-        print('>>>   Generated URL: $url');
       }
       
-      print('>>> ---');
     }
 
-    print('>>> ============================================');
   } catch (e) {
-    print('>>> DEBUG ERROR: $e');
   }
 }
 
@@ -266,7 +233,6 @@ Future<void> debugDashboardPictures() async {
             // Newest first (descending order)
             return dateB.compareTo(dateA);
           } catch (e) {
-            print('Error parsing dates: $e');
             return 0;
           }
         });

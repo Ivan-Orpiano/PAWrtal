@@ -51,17 +51,14 @@ class VetDeletionRequestController extends GetxController {
     try {
       await authRepository.appWriteProvider.migrateDeletionRequestPinFields();
     } catch (e) {
-      print('>>> Migration error: $e');
     }
   }
 
   /// Initialize clinic name cache
   Future<void> _initializeClinicCache() async {
     try {
-      print('>>> Initializing clinic name cache');
       
       final clinics = await authRepository.getAllClinics();
-      print('>>> Found ${clinics.length} clinics');
 
       for (var clinic in clinics) {
         final adminId = clinic.adminId;
@@ -75,12 +72,9 @@ class VetDeletionRequestController extends GetxController {
           clinicNamesCache[clinicDocId] = clinicName;
         }
 
-        print('>>> Cached: $adminId -> $clinicName');
       }
 
-      print('>>> Cache initialized with ${clinicNamesCache.length} entries');
     } catch (e) {
-      print('>>> ERROR initializing clinic cache: $e');
     }
   }
 
@@ -88,7 +82,6 @@ class VetDeletionRequestController extends GetxController {
   Future<void> loadAllDeletionRequests() async {
     try {
       isLoading.value = true;
-      print('>>> Loading all deletion requests');
 
       final allDeletionRequestDocs =
           await authRepository.appWriteProvider.databases!.listDocuments(
@@ -100,7 +93,6 @@ class VetDeletionRequestController extends GetxController {
         ],
       );
 
-      print('>>> Found ${allDeletionRequestDocs.documents.length} deletion requests');
 
       if (allDeletionRequestDocs.documents.isEmpty) {
         allRequests.value = [];
@@ -119,8 +111,6 @@ class VetDeletionRequestController extends GetxController {
 
           final adminId = requestWithId.clinicId;
 
-          print('>>> Processing deletion request ${doc.$id}');
-          print('>>>   - Pinned: ${requestWithId.isPinned}');
 
           // NEW: Track pinned requests
           if (requestWithId.isPinned) {
@@ -140,19 +130,14 @@ class VetDeletionRequestController extends GetxController {
 
           await _fetchAndCacheReview(requestWithId.reviewId);
         } catch (e) {
-          print('>>>   ✗ Error processing deletion request ${doc.$id}: $e');
         }
       }
 
       allRequests.value = allRequestsTemp;
-      print('>>> ✅ Total deletion requests loaded: ${allRequests.length}');
-      print('>>> Pinned requests: ${pinnedRequestIds.length}');
 
       filterRequests();
       calculateStatistics();
     } catch (e, stackTrace) {
-      print('>>> ✗ ERROR LOADING DELETION REQUESTS: $e');
-      print('>>> Stack trace: $stackTrace');
       _showSnackBar('Failed to load deletion requests: $e', Colors.red);
     } finally {
       isLoading.value = false;
@@ -162,12 +147,10 @@ class VetDeletionRequestController extends GetxController {
     /// Toggle pin status with database persistence
     Future<void> togglePin(String requestId) async {
       try {
-        print('>>> Toggling pin for deletion request: $requestId');
 
         final requestIndex = allRequests.indexWhere((r) => r.documentId == requestId);
 
         if (requestIndex == -1) {
-          print('>>> Error: Request not found');
           return;
         }
 
@@ -176,8 +159,6 @@ class VetDeletionRequestController extends GetxController {
 
         final pinnedBy = 'Developer';
 
-        print('>>> New pin status: $newPinStatus');
-        print('>>> Pinned by: $pinnedBy');
 
         // Update in database
         await authRepository.toggleDeletionRequestPin(
@@ -208,9 +189,7 @@ class VetDeletionRequestController extends GetxController {
           newPinStatus ? Colors.amber : Colors.grey,
         );
 
-        print('>>> Pin toggle successful');
       } catch (e) {
-        print('>>> Error toggling pin: $e');
         _showSnackBar('Failed to toggle pin: $e', Colors.red);
       }
     }
@@ -260,7 +239,6 @@ class VetDeletionRequestController extends GetxController {
         reviewsCache[reviewId] = review.copyWith(documentId: reviewDoc.$id);
       }
     } catch (e) {
-      print('>>> Warning: Could not fetch review $reviewId: $e');
     }
   }
 
@@ -306,8 +284,6 @@ void filterRequests() {
     return b.requestedAt.compareTo(a.requestedAt);
   });
 
-  print('>>> Filtered: ${filteredRequests.length} requests');
-  print('>>> Pinned: ${filteredRequests.where((r) => r.isPinned).length}');
 }
   /// Calculate statistics
   void calculateStatistics() {
@@ -343,11 +319,6 @@ Future<void> approveDeletionRequest(
   try {
     isProcessing.value = true;
 
-    print('>>> ============================================');
-    print('>>> CONTROLLER: Approving deletion request');
-    print('>>> Request ID: ${request.documentId}');
-    print('>>> Review ID: ${request.reviewId}');
-    print('>>> ============================================');
 
     // CRITICAL: Debug to find the correct admin ID
     await _debugClinicAdminId(request);
@@ -357,13 +328,11 @@ Future<void> approveDeletionRequest(
     String clinicName = 'Unknown Clinic';
     
     try {
-      print('>>> Step 1: Finding actual admin ID...');
       
       // Get the review to find which clinic it belongs to
       final review = await getReview(request.reviewId);
       
       if (review != null) {
-        print('>>> Found review, clinic ID: ${review.clinicId}');
         
         // Get the clinic document using the review's clinicId
         final clinic = await authRepository.getClinicById(review.clinicId);
@@ -372,21 +341,15 @@ Future<void> approveDeletionRequest(
           actualAdminId = clinic.data['adminId'] as String?;
           clinicName = clinic.data['clinicName'] ?? 'Unknown Clinic';
           
-          print('>>> ✅ Found actual admin ID: $actualAdminId');
-          print('>>> ✅ Clinic name: $clinicName');
         } else {
-          print('>>> ❌ Could not find clinic by ID: ${review.clinicId}');
         }
       } else {
-        print('>>> ❌ Could not find review: ${request.reviewId}');
       }
     } catch (e) {
-      print('>>> ❌ Error finding admin ID: $e');
     }
     
     // If we couldn't find the admin ID, show error and return
     if (actualAdminId == null || actualAdminId.isEmpty) {
-      print('>>> ❌ CRITICAL ERROR: Cannot find admin ID to send notification');
       _showSnackBar(
         'Error: Cannot identify clinic admin to notify. Please check the data.',
         Colors.red,
@@ -395,7 +358,6 @@ Future<void> approveDeletionRequest(
     }
 
     // Step 2: Approve the deletion request
-    print('>>> Step 2: Approving deletion request...');
     final result = await authRepository.approveDeletionRequest(
       request.documentId!,
       request.reviewId,
@@ -404,12 +366,9 @@ Future<void> approveDeletionRequest(
     );
 
     if (result['success'] == true) {
-      print('>>> ✅ Deletion approved successfully');
       
       // Step 3: Send notification to the CORRECT admin
       try {
-        print('>>> Step 3: Sending notification...');
-        print('>>> Recipient admin ID: $actualAdminId');
         
         // Build notification message
         final notificationTitle = 'Review Deletion Request Approved ✅';
@@ -417,10 +376,6 @@ Future<void> approveDeletionRequest(
             ? 'Your review deletion request has been approved. Admin notes: $reviewNotes'
             : 'Your review deletion request for "$clinicName" has been approved.';
         
-        print('>>> Creating notification with:');
-        print('>>>   - Title: $notificationTitle');
-        print('>>>   - Recipient: $actualAdminId');
-        print('>>>   - Clinic Name: $clinicName');
         
         // Create in-app notification using the ACTUAL admin ID
         await authRepository.createDeletionRequestNotification(
@@ -440,15 +395,11 @@ Future<void> approveDeletionRequest(
           },
         );
         
-        print('>>> ✅ Notification created successfully');
         
         // Verify notification was created
         final notificationCount = await authRepository.getUnreadNotificationCount(actualAdminId);
-        print('>>> Admin now has $notificationCount unread notifications');
         
       } catch (notifError) {
-        print('>>> ❌ ERROR sending notification: $notifError');
-        print('>>> Stack trace: ${StackTrace.current}');
         // Show error but don't fail the approval
         _showSnackBar(
           'Request approved but notification failed: $notifError',
@@ -467,18 +418,13 @@ Future<void> approveDeletionRequest(
       // Reload all deletion requests to update UI
       await loadAllDeletionRequests();
       
-      print('>>> ✅ Process complete');
     } else {
       _showSnackBar('Failed to approve request: ${result['error']}', Colors.red);
-      print('>>> ❌ Approval failed: ${result['error']}');
     }
   } catch (e) {
-    print('>>> ❌ Error approving deletion request: $e');
-    print('>>> Stack trace: ${StackTrace.current}');
     _showSnackBar('Error: $e', Colors.red);
   } finally {
     isProcessing.value = false;
-    print('>>> ============================================');
   }
 }
 
@@ -492,10 +438,6 @@ Future<void> rejectDeletionRequest(
   try {
     isProcessing.value = true;
 
-    print('>>> ============================================');
-    print('>>> CONTROLLER: Rejecting deletion request');
-    print('>>> Request ID: ${request.documentId}');
-    print('>>> ============================================');
 
     // CRITICAL: Debug to find the correct admin ID
     await _debugClinicAdminId(request);
@@ -505,13 +447,11 @@ Future<void> rejectDeletionRequest(
     String clinicName = 'Unknown Clinic';
     
     try {
-      print('>>> Step 1: Finding actual admin ID...');
       
       // Get the review to find which clinic it belongs to
       final review = await getReview(request.reviewId);
       
       if (review != null) {
-        print('>>> Found review, clinic ID: ${review.clinicId}');
         
         // Get the clinic document using the review's clinicId
         final clinic = await authRepository.getClinicById(review.clinicId);
@@ -520,21 +460,15 @@ Future<void> rejectDeletionRequest(
           actualAdminId = clinic.data['adminId'] as String?;
           clinicName = clinic.data['clinicName'] ?? 'Unknown Clinic';
           
-          print('>>> ✅ Found actual admin ID: $actualAdminId');
-          print('>>> ✅ Clinic name: $clinicName');
         } else {
-          print('>>> ❌ Could not find clinic by ID: ${review.clinicId}');
         }
       } else {
-        print('>>> ❌ Could not find review: ${request.reviewId}');
       }
     } catch (e) {
-      print('>>> ❌ Error finding admin ID: $e');
     }
     
     // If we couldn't find the admin ID, show error and return
     if (actualAdminId == null || actualAdminId.isEmpty) {
-      print('>>> ❌ CRITICAL ERROR: Cannot find admin ID to send notification');
       _showSnackBar(
         'Error: Cannot identify clinic admin to notify. Please check the data.',
         Colors.red,
@@ -543,7 +477,6 @@ Future<void> rejectDeletionRequest(
     }
 
     // Step 2: Reject the deletion request
-    print('>>> Step 2: Rejecting deletion request...');
     final result = await authRepository.rejectDeletionRequest(
       request.documentId!,
       reviewedBy,
@@ -551,12 +484,9 @@ Future<void> rejectDeletionRequest(
     );
 
     if (result['success'] == true) {
-      print('>>> ✅ Deletion rejected successfully');
       
       // Step 3: Send notification to the CORRECT admin
       try {
-        print('>>> Step 3: Sending rejection notification...');
-        print('>>> Recipient admin ID: $actualAdminId');
         
         // Build notification message
         final notificationTitle = 'Review Deletion Request Rejected ❌';
@@ -564,10 +494,6 @@ Future<void> rejectDeletionRequest(
             ? 'Your review deletion request has been rejected. Reason: $reviewNotes'
             : 'Your review deletion request for "$clinicName" has been rejected.';
         
-        print('>>> Creating notification with:');
-        print('>>>   - Title: $notificationTitle');
-        print('>>>   - Recipient: $actualAdminId');
-        print('>>>   - Clinic Name: $clinicName');
         
         // Create in-app notification using the ACTUAL admin ID
         await authRepository.createDeletionRequestNotification(
@@ -587,15 +513,11 @@ Future<void> rejectDeletionRequest(
           },
         );
         
-        print('>>> ✅ Rejection notification created successfully');
         
         // Verify notification was created
         final notificationCount = await authRepository.getUnreadNotificationCount(actualAdminId);
-        print('>>> Admin now has $notificationCount unread notifications');
         
       } catch (notifError) {
-        print('>>> ❌ ERROR sending notification: $notifError');
-        print('>>> Stack trace: ${StackTrace.current}');
         _showSnackBar(
           'Request rejected but notification failed: $notifError',
           Colors.orange,
@@ -609,18 +531,13 @@ Future<void> rejectDeletionRequest(
       
       await loadAllDeletionRequests();
       
-      print('>>> ✅ Process complete');
     } else {
       _showSnackBar('Failed to reject request: ${result['error']}', Colors.red);
-      print('>>> ❌ Rejection failed: ${result['error']}');
     }
   } catch (e) {
-    print('>>> ❌ Error rejecting deletion request: $e');
-    print('>>> Stack trace: ${StackTrace.current}');
     _showSnackBar('Error: $e', Colors.red);
   } finally {
     isProcessing.value = false;
-    print('>>> ============================================');
   }
 }
   /// Delete a processed request
@@ -649,10 +566,6 @@ Future<void> rejectDeletionRequest(
 
   /// Debug method to verify clinic admin ID
 Future<void> _debugClinicAdminId(FeedbackDeletionRequest request) async {
-  print('>>> ============================================');
-  print('>>> DEBUGGING CLINIC ADMIN ID');
-  print('>>> ============================================');
-  print('>>> Request.clinicId (stored): ${request.clinicId}');
   
   // Check what's actually stored in the deletion request
   try {
@@ -662,70 +575,43 @@ Future<void> _debugClinicAdminId(FeedbackDeletionRequest request) async {
       documentId: request.documentId!,
     );
     
-    print('>>> Raw document data:');
-    print('>>>   - clinicId field: ${requestDoc.data['clinicId']}');
-    print('>>>   - userId field: ${requestDoc.data['userId']}');
-    print('>>>   - requestedBy field: ${requestDoc.data['requestedBy']}');
   } catch (e) {
-    print('>>> Error fetching request document: $e');
   }
   
   // Try to find the clinic by adminId
   try {
-    print('>>> Attempting to find clinic by adminId: ${request.clinicId}');
     final clinicByAdmin = await authRepository.getClinicByAdminId(request.clinicId);
     
     if (clinicByAdmin != null) {
-      print('>>> ✅ Found clinic by adminId:');
-      print('>>>   - Clinic Name: ${clinicByAdmin.data['clinicName']}');
-      print('>>>   - Clinic Doc ID: ${clinicByAdmin.$id}');
-      print('>>>   - Admin ID: ${clinicByAdmin.data['adminId']}');
     } else {
-      print('>>> ❌ No clinic found by adminId: ${request.clinicId}');
     }
   } catch (e) {
-    print('>>> Error finding clinic by adminId: $e');
   }
   
   // Try to find the clinic by document ID
   try {
-    print('>>> Attempting to find clinic by document ID: ${request.clinicId}');
     final clinicByDocId = await authRepository.getClinicById(request.clinicId);
     
     if (clinicByDocId != null) {
-      print('>>> ✅ Found clinic by document ID:');
-      print('>>>   - Clinic Name: ${clinicByDocId.data['clinicName']}');
-      print('>>>   - Admin ID: ${clinicByDocId.data['adminId']}');
     } else {
-      print('>>> ❌ No clinic found by document ID: ${request.clinicId}');
     }
   } catch (e) {
-    print('>>> Error finding clinic by document ID: $e');
   }
   
   // Check the review to see which clinic it belongs to
   try {
-    print('>>> Checking review for clinic information...');
     final review = await getReview(request.reviewId);
     
     if (review != null) {
-      print('>>> ✅ Found review:');
-      print('>>>   - Review Clinic ID: ${review.clinicId}');
       
       // Try to get clinic by review's clinicId
       final reviewClinic = await authRepository.getClinicById(review.clinicId);
       if (reviewClinic != null) {
-        print('>>> ✅ Found clinic from review:');
-        print('>>>   - Clinic Name: ${reviewClinic.data['clinicName']}');
-        print('>>>   - Admin ID: ${reviewClinic.data['adminId']}');
-        print('>>> ✅✅✅ THIS IS THE CORRECT ADMIN ID TO USE: ${reviewClinic.data['adminId']}');
       }
     }
   } catch (e) {
-    print('>>> Error checking review: $e');
   }
   
-  print('>>> ============================================');
 }
 
   /// Get clinic name

@@ -161,7 +161,6 @@ class ArchivedClinic {
     try {
       return Map<String, dynamic>.from(jsonDecode(originalClinicData));
     } catch (e) {
-      print('Error parsing original clinic data: $e');
       return {};
     }
   }

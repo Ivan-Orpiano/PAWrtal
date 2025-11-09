@@ -52,7 +52,6 @@ class _ClinicReviewsPageState extends State<ClinicReviewsPage> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading reviews: $e');
       setState(() => _isLoading = false);
     }
   }

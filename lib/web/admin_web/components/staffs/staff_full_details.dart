@@ -294,7 +294,6 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                   widget.currentImageUrl!.split('/').last.split('?').first;
               await authRepo.deleteImage(oldFileId);
             } catch (e) {
-              print('>>> Warning: Could not delete old image: $e');
             }
           }
         } catch (e) {

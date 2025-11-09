@@ -156,7 +156,6 @@ class Message {
       // If older than this year, show full date and time (e.g., "Jan 15, 2024, 02:30 PM")
       return DateFormat('MMM dd, yyyy, hh:mm a').format(msgTime);
     } catch (e) {
-      print('Error formatting time: $e');
       return 'Unknown';
     }
   }
@@ -209,7 +208,6 @@ class Message {
       // If older than this year, show date with year (e.g., "Jan 15, 2024")
       return DateFormat('MMM dd, yyyy').format(msgTime);
     } catch (e) {
-      print('Error formatting compact time: $e');
       return 'Unknown';
     }
   }
@@ -246,7 +244,6 @@ class Message {
         return years == 1 ? '1 year ago' : '${years} years ago';
       }
     } catch (e) {
-      print('Error calculating relative time: $e');
       return 'Unknown';
     }
   }
@@ -257,7 +254,6 @@ class Message {
       return DateFormat('EEEE, MMMM dd, yyyy \'at\' hh:mm a')
           .format(messageTimestamp);
     } catch (e) {
-      print('Error formatting full date time: $e');
       return 'Unknown';
     }
   }
@@ -267,7 +263,6 @@ class Message {
     try {
       return DateFormat('MMM dd').format(messageTimestamp);
     } catch (e) {
-      print('Error formatting short date: $e');
       return 'Unknown';
     }
   }
@@ -330,7 +325,6 @@ class Message {
 
       return DateFormat('MMMM dd, yyyy').format(msgTime); // "January 15, 2024"
     } catch (e) {
-      print('Error formatting date separator: $e');
       return '';
     }
   }
@@ -375,7 +369,6 @@ class Message {
 
       return DateFormat('M/d/yy').format(msgTime);
     } catch (e) {
-      print('Error formatting conversation list time: $e');
       return '';
     }
   }

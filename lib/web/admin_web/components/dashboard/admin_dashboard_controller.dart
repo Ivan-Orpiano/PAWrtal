@@ -58,89 +58,122 @@ class AdminDashboardController extends GetxController {
   var petProfilePictures = <String, String?>{}.obs;
   var petImageLoadingStates = <String, bool>{}.obs;
 
-  /// Enhanced onInit to ensure real-time setup
+  var isDashboardCached = false.obs;
+  var lastCacheTime = Rxn<DateTime>();
+  final int cacheValidityMinutes = 30;
+
+  // ============================================
+// CRITICAL FIX: Dashboard should NOT reload when cached
+// Replace these methods in admin_dashboard_controller.dart
+// ============================================
+
+// ============================================
+// 1. FIXED onInit() - Instant display with cache
+// ============================================
   @override
   void onInit() {
     super.onInit();
-    print('>>> ============================================');
-    print('>>> DASHBOARD CONTROLLER: onInit()');
-    print('>>> ============================================');
-    initializeDashboard();
 
+    // CRITICAL: Check cache FIRST
+    if (_isCacheValid()) {
+
+      // CRITICAL: Don't set loading - data is already there!
+      isLoading.value = false;
+
+      // Reconnect real-time in background (non-blocking)
+      Future.microtask(() {
+        _initializeRealTimeUpdates().then((_) {
+        }).catchError((e) {
+        });
+      });
+
+    } else {
+      isLoading.value = true;
+      initializeDashboard();
+    }
+
+    // Setup date change listener
     ever(selectedDate, (_) => fetchAppointmentsForDate(selectedDate.value));
+
   }
 
-  /// Enhanced onClose to properly clean up subscriptions
   @override
   void onClose() {
-    print('>>> ============================================');
-    print('>>> DASHBOARD CONTROLLER: onClose()');
-    print('>>> Cleaning up resources...');
-    print('>>> ============================================');
 
-    // Cancel all subscriptions
+    // CRITICAL: Only close real-time connections, DON'T clear data
     try {
       _appointmentSubscription?.close();
-      print('>>> Appointment subscription closed');
     } catch (e) {
-      print('>>> Error closing appointment subscription: $e');
     }
 
     try {
       _conversationSubscription?.close();
-      print('>>> Conversation subscription closed');
     } catch (e) {
-      print('>>> Error closing conversation subscription: $e');
     }
 
     try {
       _messageSubscription?.close();
-      print('>>> Message subscription closed');
     } catch (e) {
-      print('>>> Error closing message subscription: $e');
     }
 
     try {
       _fallbackTimer?.cancel();
-      print('>>> Fallback timer cancelled');
     } catch (e) {
-      print('>>> Error cancelling fallback timer: $e');
     }
 
-    // Clear all data to prevent memory leaks
-    clinicData.value = null;
-    appointments.clear();
-    appointmentStats.clear();
-    todayAppointments.clear();
-    upcomingAppointments.clear();
-    recentMessages.clear();
-    monthlyStats.clear();
-    petsCache.clear();
-    ownersCache.clear();
-    calendarAppointments.clear();
-    _userNamesCache.clear();
+    // CRITICAL: DON'T clear cached data - it will be reused on next init
+    // DON'T call cleanupOnLogout() here - only call it from LogoutHelper
 
-    print('>>> All resources cleaned up');
-    print('>>> ============================================');
 
     super.onClose();
+  }
+
+  bool _isCacheValid() {
+    // Check if cache flag is set
+    if (!isDashboardCached.value) {
+      return false;
+    }
+
+    // Check if cache timestamp exists
+    if (lastCacheTime.value == null) {
+      return false;
+    }
+
+    // Check cache age
+    final cacheAge = DateTime.now().difference(lastCacheTime.value!);
+    final isValid = cacheAge.inMinutes < cacheValidityMinutes;
+
+
+    // If valid by time, check if we have essential data
+    if (isValid) {
+      final hasClinic = clinicData.value != null;
+      final hasStats = appointmentStats.isNotEmpty;
+
+
+      // Must have clinic data at minimum
+      if (!hasClinic) {
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  void invalidateCache() {
+    isDashboardCached.value = false;
+    lastCacheTime.value = null;
   }
 
   @override
   Future<void> initializeDashboard() async {
     try {
-      isLoading.value = true;
-
-      print('>>> ============================================');
-      print('>>> INITIALIZING DASHBOARD (OPTIMIZED)');
-      print('>>> ============================================');
 
       // Step 1: Fetch clinic data FIRST
-      print('>>> Step 1: Fetching clinic data...');
       await fetchClinicData();
 
       if (clinicData.value == null || clinicData.value?.documentId == null) {
-        print('>>> ERROR: No clinic data loaded!');
         isLoading.value = false;
         Get.snackbar(
           "Error",
@@ -152,52 +185,35 @@ class AdminDashboardController extends GetxController {
         return;
       }
 
-      print('>>> ✓ Clinic loaded: ${clinicData.value!.clinicName}');
-      print('>>> ✓ Clinic ID: ${clinicData.value!.documentId}');
 
-      // Step 2: Fetch MINIMAL data in parallel (OPTIMIZED)
-      print('>>> Step 2: Fetching minimal dashboard data...');
+      // Step 2: Fetch MINIMAL data in parallel
       try {
         await Future.wait([
-          fetchTodaysAppointments(), // Limit 10
-          fetchUpcomingAppointments(), // Limit 5
-          fetchRecentMessages(), // Limit 3
+          fetchTodaysAppointments(force: true), // Force fetch
+          fetchUpcomingAppointments(force: true), // Force fetch
+          fetchRecentMessages(), // Already optimized
           fetchAppointmentStats(), // Counts only
         ]);
-        print('>>> ✓ Dashboard data loaded');
+
+        // CRITICAL: Mark cache as valid AFTER data is loaded
+        isDashboardCached.value = true;
+        lastCacheTime.value = DateTime.now();
       } catch (e) {
-        print('>>> WARNING: Error fetching dashboard data: $e');
       }
 
-      // Step 3: Generate calendar data (using already fetched today's appointments)
-      print('>>> Step 3: Generating calendar data...');
+      // Step 3: Generate calendar data
       try {
         await generateCalendarData();
-        print('>>> ✓ Calendar generated');
       } catch (e) {
-        print('>>> WARNING: Error generating calendar: $e');
       }
 
       // Step 4: Initialize real-time updates LAST
-      print('>>> Step 4: Initializing real-time updates...');
       try {
         await _initializeRealTimeUpdates();
-        print('>>> ✓ Real-time subscriptions active');
       } catch (e) {
-        print('>>> WARNING: Error initializing real-time: $e');
       }
 
-      print('>>> ============================================');
-      print('>>> DASHBOARD INITIALIZATION COMPLETE (OPTIMIZED)');
-      print('>>> - Clinic: ${clinicData.value?.clinicName ?? "Unknown"}');
-      print('>>> - Today\'s Appointments: ${todayAppointments.length}');
-      print('>>> - Upcoming Appointments: ${upcomingAppointments.length}');
-      print('>>> - Recent Messages: ${recentMessages.length}');
-      print('>>> - Real-time Connected: ${isRealTimeConnected.value}');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR: Failed to load dashboard data: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
       Get.snackbar(
         "Error",
         "Failed to load dashboard: ${e.toString()}",
@@ -214,15 +230,16 @@ class AdminDashboardController extends GetxController {
   Future<void> refreshMessages() async {
     try {
       await fetchRecentMessages();
-      print('>>> Messages refreshed: ${recentMessages.length} recent messages');
     } catch (e) {
-      print('>>> Error refreshing messages: $e');
     }
   }
 
   Future<void> _subscribeToAppointmentUpdates() async {
     try {
+      // Ensure old subscription is closed
       await _appointmentSubscription?.close();
+      _appointmentSubscription = null;
+
 
       final realtime = Realtime(authRepository.client);
 
@@ -232,103 +249,434 @@ class AdminDashboardController extends GetxController {
 
       _appointmentSubscription!.stream.listen(
         (response) {
-          _handleAppointmentRealTimeUpdate(response);
+          try {
+
+            // CRITICAL: Verify this update is for OUR clinic
+            final updateClinicId = response.payload['clinicId'];
+            final ourClinicId = clinicData.value?.documentId;
+
+
+            if (updateClinicId != ourClinicId) {
+              return;
+            }
+
+            _handleAppointmentRealTimeUpdate(response);
+
+            // Update connection status
+            isRealTimeConnected.value = true;
+            lastUpdateTime.value = DateTime.now();
+
+          } catch (e) {
+          }
         },
         onError: (error) {
-          print("Real-time subscription error: $error");
+
           isRealTimeConnected.value = false;
+
+          // Try to reconnect after delay
+          Future.delayed(const Duration(seconds: 5), () {
+            _subscribeToAppointmentUpdates().catchError((e) {
+            });
+          });
+
+          // Increase fallback polling frequency
           _setupFallbackPolling(interval: 10);
         },
+        onDone: () {
+
+          isRealTimeConnected.value = false;
+
+          // Try to reconnect
+          Future.delayed(const Duration(seconds: 3), () {
+            if (clinicData.value?.documentId != null) {
+              _subscribeToAppointmentUpdates().catchError((e) {
+              });
+            }
+          });
+        },
       );
-    } catch (e) {
-      print("Error setting up appointment subscription: $e");
+
+    } catch (e, stackTrace) {
       rethrow;
     }
   }
 
   void _handleAppointmentRealTimeUpdate(RealtimeMessage response) {
     try {
-      print("Real-time update received: ${response.events}");
 
       final payload = response.payload;
+      final appointmentId = payload['\$id'];
 
-      final appointmentClinicId = payload['clinicId'];
-      if (appointmentClinicId != clinicData.value?.documentId) return;
 
       final appointment = Appointment.fromMap(payload);
 
+      // Determine event type
+      bool isCreate = false;
+      bool isUpdate = false;
+      bool isDelete = false;
+
       for (String event in response.events) {
         if (event.contains('.create')) {
-          _handleNewAppointment(appointment);
+          isCreate = true;
         } else if (event.contains('.update')) {
-          _handleUpdatedAppointment(appointment);
+          isUpdate = true;
         } else if (event.contains('.delete')) {
-          _handleDeletedAppointment(appointment);
+          isDelete = true;
         }
       }
 
+
+      // Handle the update
+      if (isDelete) {
+        _handleDeletedAppointment(appointment);
+      } else if (isCreate) {
+        _handleNewAppointment(appointment);
+      } else if (isUpdate) {
+        _handleUpdatedAppointment(appointment);
+      }
+
+      // Update timestamp
       lastUpdateTime.value = DateTime.now();
 
-      if (response.events.any((event) => event.contains('.create'))) {
+      // Show notification for new appointments
+      if (isCreate && appointment.status == 'pending') {
         _showNewAppointmentNotification(appointment);
       }
-    } catch (e) {
-      print("Error handling real-time update: $e");
+
+    } catch (e, stackTrace) {
     }
   }
 
   void _handleNewAppointment(Appointment appointment) {
-    final existingIndex =
-        appointments.indexWhere((a) => a.documentId == appointment.documentId);
+    try {
 
-    if (existingIndex == -1) {
-      appointments.add(appointment);
-      print("New appointment added: ${appointment.documentId}");
-    } else {
-      appointments[existingIndex] = appointment;
-      appointments.refresh();
-      print("Appointment already exists, updated: ${appointment.documentId}");
+      // Check if appointment already exists in main list
+      final existingIndex = appointments.indexWhere(
+        (a) => a.documentId == appointment.documentId,
+      );
+
+      if (existingIndex == -1) {
+        // Add to main list
+        appointments.add(appointment);
+        appointments.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+      } else {
+        // Update existing
+        appointments[existingIndex] = appointment;
+      }
+
+      // Check if this appointment is for today
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final appointmentDate = DateTime(
+        appointment.dateTime.year,
+        appointment.dateTime.month,
+        appointment.dateTime.day,
+      );
+
+      if (appointmentDate.isAtSameMomentAs(todayDate)) {
+
+        // FIXED: Work with current list, don't rebuild from scratch
+        final currentList = List<Appointment>.from(todayAppointments);
+
+        // Check if appointment already exists in today's list
+        final existingTodayIndex = currentList.indexWhere(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (existingTodayIndex != -1) {
+          // Remove old version
+          currentList.removeAt(existingTodayIndex);
+        }
+
+        // Insert at the correct position based on priority
+        int insertIndex = 0;
+
+        // Find correct position: pending appointments first, then by time
+        for (int i = 0; i < currentList.length; i++) {
+          final current = currentList[i];
+
+          // If new appointment is pending and current is not, insert here
+          if (appointment.status == 'pending' && current.status != 'pending') {
+            insertIndex = i;
+            break;
+          }
+
+          // If both same priority, sort by time
+          if ((appointment.status == 'pending' &&
+                  current.status == 'pending') ||
+              (appointment.status != 'pending' &&
+                  current.status != 'pending')) {
+            if (appointment.dateTime.isBefore(current.dateTime)) {
+              insertIndex = i;
+              break;
+            }
+          }
+
+          insertIndex = i + 1;
+        }
+
+        // Insert at calculated position
+        currentList.insert(insertIndex, appointment);
+
+        // Keep only top 3
+        final top3 = currentList.take(3).toList();
+
+        for (var i = 0; i < top3.length; i++) {
+        }
+
+        // Update with smooth transition
+        todayAppointments.value = List.from(top3);
+      } else {
+      }
+
+      // Update other lists
+      _processUpcomingAppointments();
+      _updateAppointmentStats();
+      _updateCalendarData(appointment, isNew: true);
+
+      // Fetch related data if not cached
+      if (!petsCache.containsKey(appointment.petId)) {
+        _fetchOwnerData(appointment.userId);
+        preloadPetImagesForAppointments([appointment]);
+      }
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+
+    } catch (e) {
     }
-
-    _processTodayAppointments();
-    _processUpcomingAppointments();
-    _updateAppointmentStats();
-    _updateCalendarData(appointment, isNew: true);
   }
 
   void _handleUpdatedAppointment(Appointment appointment) {
-    final index =
-        appointments.indexWhere((a) => a.documentId == appointment.documentId);
-    if (index != -1) {
-      appointments[index] = appointment;
-      appointments.refresh();
+    try {
 
-      _processTodayAppointments();
+      // Update in main list
+      final index = appointments.indexWhere(
+        (a) => a.documentId == appointment.documentId,
+      );
+
+      if (index != -1) {
+        final oldStatus = appointments[index].status;
+        appointments[index] = appointment;
+      } else {
+        appointments.add(appointment);
+      }
+
+      // Check if this appointment is for today
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final appointmentDate = DateTime(
+        appointment.dateTime.year,
+        appointment.dateTime.month,
+        appointment.dateTime.day,
+      );
+
+      if (appointmentDate.isAtSameMomentAs(todayDate)) {
+
+        // FIXED: Work with current list, update in place
+        final currentList = List<Appointment>.from(todayAppointments);
+
+        // Find if appointment exists in current list
+        final existingIndex = currentList.indexWhere(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (existingIndex != -1) {
+
+          // Remove from current position
+          currentList.removeAt(existingIndex);
+
+          // Find new correct position based on updated status/time
+          int insertIndex = 0;
+
+          for (int i = 0; i < currentList.length; i++) {
+            final current = currentList[i];
+
+            // If updated appointment is pending and current is not, insert here
+            if (appointment.status == 'pending' &&
+                current.status != 'pending') {
+              insertIndex = i;
+              break;
+            }
+
+            // If both same priority, sort by time
+            if ((appointment.status == 'pending' &&
+                    current.status == 'pending') ||
+                (appointment.status != 'pending' &&
+                    current.status != 'pending')) {
+              if (appointment.dateTime.isBefore(current.dateTime)) {
+                insertIndex = i;
+                break;
+              }
+            }
+
+            insertIndex = i + 1;
+          }
+
+          // Reinsert at new position
+          currentList.insert(insertIndex, appointment);
+        } else {
+
+          // Not in today's list - check if it should be in top 3
+          // Get all today's appointments to determine if this should be shown
+          final allTodayAppts = appointments.where((appt) {
+            final apptDate = DateTime(
+              appt.dateTime.year,
+              appt.dateTime.month,
+              appt.dateTime.day,
+            );
+            return apptDate.isAtSameMomentAs(todayDate);
+          }).toList();
+
+          // Sort by priority
+          allTodayAppts.sort((a, b) {
+            if (a.status == 'pending' && b.status != 'pending') return -1;
+            if (b.status == 'pending' && a.status != 'pending') return 1;
+            return a.dateTime.compareTo(b.dateTime);
+          });
+
+          // Take top 3
+          final top3 = allTodayAppts.take(3).toList();
+
+          // Check if updated appointment made it to top 3
+          final isInTop3 =
+              top3.any((a) => a.documentId == appointment.documentId);
+
+          if (isInTop3) {
+            todayAppointments.value = List.from(top3);
+          } else {
+          }
+
+          // Early return since we already updated
+          _processUpcomingAppointments();
+          _updateAppointmentStats();
+          _updateCalendarData(appointment, isUpdate: true);
+          lastCacheTime.value = DateTime.now();
+          return;
+        }
+
+        // Keep only top 3
+        final top3 = currentList.take(3).toList();
+
+        for (var i = 0; i < top3.length; i++) {
+        }
+
+        // Update smoothly
+        todayAppointments.value = List.from(top3);
+      } else {
+
+        // Remove from today's list if it was moved to a different day
+        final wasInToday = todayAppointments.any(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (wasInToday) {
+          final currentList = List<Appointment>.from(todayAppointments);
+          currentList
+              .removeWhere((a) => a.documentId == appointment.documentId);
+
+          // If we now have less than 3, try to fill from main list
+          if (currentList.length < 3) {
+            final today = DateTime.now();
+            final todayDate = DateTime(today.year, today.month, today.day);
+
+            final allTodayAppts = appointments.where((appt) {
+              final apptDate = DateTime(
+                appt.dateTime.year,
+                appt.dateTime.month,
+                appt.dateTime.day,
+              );
+              return apptDate.isAtSameMomentAs(todayDate);
+            }).toList();
+
+            allTodayAppts.sort((a, b) {
+              if (a.status == 'pending' && b.status != 'pending') return -1;
+              if (b.status == 'pending' && a.status != 'pending') return 1;
+              return a.dateTime.compareTo(b.dateTime);
+            });
+
+            final top3 = allTodayAppts.take(3).toList();
+            todayAppointments.value = List.from(top3);
+          } else {
+            todayAppointments.value = List.from(currentList);
+          }
+        }
+      }
+
+      // Update other lists
       _processUpcomingAppointments();
       _updateAppointmentStats();
       _updateCalendarData(appointment, isUpdate: true);
 
-      print("Appointment updated: ${appointment.documentId}");
-    } else {
-      appointments.add(appointment);
-      _processTodayAppointments();
-      _processUpcomingAppointments();
-      _updateAppointmentStats();
-      _updateCalendarData(appointment, isNew: true);
-      print(
-          "Appointment not found for update, added as new: ${appointment.documentId}");
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+
+    } catch (e) {
     }
   }
 
   void _handleDeletedAppointment(Appointment appointment) {
-    appointments.removeWhere((a) => a.documentId == appointment.documentId);
+    try {
 
-    _processTodayAppointments();
-    _processUpcomingAppointments();
-    _updateAppointmentStats();
-    _removeFromCalendarData(appointment);
+      // Remove from main list
+      final removedCount = appointments.length;
+      appointments.removeWhere((a) => a.documentId == appointment.documentId);
+      final actuallyRemoved = removedCount - appointments.length;
 
-    print("Appointment deleted: ${appointment.documentId}");
+      if (actuallyRemoved > 0) {
+
+        // Check if it was in today's list
+        final wasInToday = todayAppointments.any(
+          (a) => a.documentId == appointment.documentId,
+        );
+
+        if (wasInToday) {
+
+          // Reprocess today's appointments to get new top 3
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+
+          final allTodayAppts = appointments.where((appt) {
+            final apptDate = DateTime(
+              appt.dateTime.year,
+              appt.dateTime.month,
+              appt.dateTime.day,
+            );
+            return apptDate.isAtSameMomentAs(todayDate);
+          }).toList();
+
+
+          // Sort by priority
+          allTodayAppts.sort((a, b) {
+            if (a.status == 'pending' && b.status != 'pending') return -1;
+            if (b.status == 'pending' && a.status != 'pending') return 1;
+            return a.dateTime.compareTo(b.dateTime);
+          });
+
+          // Take top 3
+          final top3 = allTodayAppts.take(3).toList();
+
+
+          // Create new list
+          final newList = <Appointment>[];
+          for (var appt in top3) {
+            newList.add(appt);
+          }
+
+          todayAppointments.value = newList;
+        }
+      }
+
+      // Update other lists
+      _processUpcomingAppointments();
+      _updateAppointmentStats();
+      _removeFromCalendarData(appointment);
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+
+    } catch (e) {
+    }
   }
 
   void _updateCalendarData(Appointment appointment,
@@ -371,45 +719,48 @@ class AdminDashboardController extends GetxController {
   }
 
   void _updateAppointmentStats() {
-    final stats = <String, int>{
-      'total': appointments.length,
-      'pending': appointments.where((a) => a.status == 'pending').length,
-      'accepted': appointments.where((a) => a.status == 'accepted').length,
-      'completed': appointments.where((a) => a.status == 'completed').length,
-      'cancelled': appointments.where((a) => a.status == 'cancelled').length,
-      'declined': appointments.where((a) => a.status == 'declined').length,
-      'today': todayAppointments.length,
-    };
+    try {
+      final stats = <String, int>{
+        'total': appointments.length,
+        'pending': appointments.where((a) => a.status == 'pending').length,
+        'accepted': appointments.where((a) => a.status == 'accepted').length,
+        'completed': appointments.where((a) => a.status == 'completed').length,
+        'cancelled': appointments.where((a) => a.status == 'cancelled').length,
+        'declined': appointments.where((a) => a.status == 'declined').length,
+        'today': todayAppointments.length,
+      };
 
-    appointmentStats.assignAll(stats);
+      appointmentStats.assignAll(stats);
+      appointmentStats.refresh();
+
+    } catch (e) {
+    }
   }
 
   void _showNewAppointmentNotification(Appointment appointment) {
-    Get.snackbar(
-      "New Appointment",
-      "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
-      snackPosition: SnackPosition.TOP,
-      mainButton: TextButton(
-        onPressed: () {
-          navigateToAppointments('pending');
-        },
-        child: const Text("View", style: TextStyle(color: Colors.white)),
-      ),
-    );
+    // Get.snackbar(
+    //   "New Appointment",
+    //   "New appointment from ${getOwnerName(appointment.userId)} for ${getPetName(appointment.petId)}",
+    //   backgroundColor: Colors.green,
+    //   colorText: Colors.white,
+    //   duration: const Duration(seconds: 5),
+    //   snackPosition: SnackPosition.TOP,
+    //   mainButton: TextButton(
+    //     onPressed: () {
+    //       navigateToAppointments('pending');
+    //     },
+    //     child: const Text("View", style: TextStyle(color: Colors.white)),
+    //   ),
+    // );
   }
 
   /// Setup more aggressive fallback polling for messages
   void _setupFallbackPolling({int interval = 30}) {
     _fallbackTimer?.cancel();
 
-    print('>>> Setting up fallback polling with ${interval}s interval');
 
     _fallbackTimer = Timer.periodic(Duration(seconds: interval), (timer) {
       if (!isRealTimeConnected.value) {
-        print(">>> Fallback polling: refreshing data...");
         // Refresh both appointments and messages
         Future.wait([
           fetchAllAppointments(),
@@ -421,21 +772,59 @@ class AdminDashboardController extends GetxController {
 
   @override
   Future<void> refreshDashboard() async {
-    print('>>> Refreshing dashboard (optimized)...');
 
     try {
-      // Refresh only the minimal data needed
+      // Check if cache is still valid and real-time is connected
+      if (_isCacheValid() && isRealTimeConnected.value) {
+
+        lastUpdateTime.value = DateTime.now();
+
+        Get.snackbar(
+          "Already Up-to-Date",
+          "Dashboard is showing live data",
+          backgroundColor: Colors.blue,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(8),
+        );
+
+        return;
+      }
+
+
+      // Silently refresh in background (no loading spinner)
       await Future.wait([
-        fetchTodaysAppointments(),
-        fetchUpcomingAppointments(),
+        fetchTodaysAppointments(force: true),
+        fetchUpcomingAppointments(force: true),
         fetchRecentMessages(),
         fetchAppointmentStats(),
       ]);
 
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
       lastUpdateTime.value = DateTime.now();
-      print('>>> Dashboard refreshed successfully');
+      isDashboardCached.value = true;
+
+
+      Get.snackbar(
+        "Refreshed",
+        "Dashboard data updated",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(8),
+      );
     } catch (e) {
-      print('>>> Error refreshing dashboard: $e');
+
+      Get.snackbar(
+        "Refresh Failed",
+        "Could not update dashboard data",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
     }
 
     // Try to reconnect real-time if disconnected
@@ -443,60 +832,9 @@ class AdminDashboardController extends GetxController {
       try {
         await _initializeRealTimeUpdates();
       } catch (e) {
-        print('>>> Failed to reconnect real-time updates: $e');
       }
     }
-  }
 
-  Future<void> refreshDashboardData() async {
-    try {
-      await Future.wait([
-        fetchAllAppointments(),
-        fetchAppointmentStats(),
-        fetchRecentMessages(), // Add this
-      ]);
-
-      await generateCalendarData();
-      lastUpdateTime.value = DateTime.now();
-
-      _removeDuplicateAppointments();
-
-      print('>>> Dashboard data refreshed successfully');
-      print('>>> - Recent messages: ${recentMessages.length}');
-    } catch (e) {
-      print("Error refreshing dashboard data: $e");
-    }
-  }
-
-  Future<void> _initializeRealTimeUpdates() async {
-    if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> WARNING: Cannot initialize real-time - no clinic ID');
-      return;
-    }
-
-    try {
-      print('>>> ============================================');
-      print('>>> INITIALIZING REAL-TIME UPDATES');
-      print('>>> Clinic ID: ${clinicData.value!.documentId}');
-      print('>>> ============================================');
-
-      // Subscribe to appointments
-      await _subscribeToAppointmentUpdates();
-
-      // Subscribe to conversations (for message updates)
-      await _subscribeToConversationUpdates();
-
-      // Setup fallback polling
-      _setupFallbackPolling();
-
-      isRealTimeConnected.value = true;
-      print(">>> Real-time updates initialized successfully");
-      print('>>> ============================================');
-    } catch (e) {
-      print(">>> Failed to initialize real-time updates: $e");
-      print('>>> ============================================');
-      _setupFallbackPolling(interval: 15);
-    }
   }
 
   /// Send a message in the current conversation
@@ -507,18 +845,11 @@ class AdminDashboardController extends GetxController {
   }) async {
     try {
       if (messageText.trim().isEmpty) {
-        print('>>> ERROR: Empty message text');
         return;
       }
 
       isSendingMessage.value = true;
 
-      print('>>> ============================================');
-      print('>>> SENDING MESSAGE');
-      print('>>> Conversation: $conversationId');
-      print('>>> Sender: ${session.userId}');
-      print('>>> Message: $messageText');
-      print('>>> ============================================');
 
       // Send the message using the updated repository method
       final message = await authRepository.sendMessage(
@@ -527,8 +858,6 @@ class AdminDashboardController extends GetxController {
         messageText: messageText,
       );
 
-      print('>>> Message sent successfully: ${message.documentId}');
-      print('>>> Sent at: ${message.detailedTimeFormatted}');
 
       // Add to current messages list
       currentMessages.add(message);
@@ -548,10 +877,7 @@ class AdminDashboardController extends GetxController {
         }
       });
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR sending message: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
       Get.snackbar(
         'Error',
         'Failed to send message: $e',
@@ -566,13 +892,10 @@ class AdminDashboardController extends GetxController {
   /// Mark all messages in a conversation as read
   Future<void> markConversationAsRead(String conversationId) async {
     try {
-      print('>>> Marking conversation as read: $conversationId');
 
       await authRepository.markMessagesAsRead(conversationId, session.userId);
 
-      print('>>> Conversation marked as read');
     } catch (e) {
-      print('>>> Error marking conversation as read: $e');
     }
   }
 
@@ -583,12 +906,6 @@ class AdminDashboardController extends GetxController {
     String userType,
   ) async {
     try {
-      print('>>> ============================================');
-      print('>>> OPENING CONVERSATION');
-      print('>>> Conversation ID: ${conversation.documentId}');
-      print('>>> User ID: $userId');
-      print('>>> User Type: $userType');
-      print('>>> ============================================');
 
       isLoadingConversation.value = true;
 
@@ -598,7 +915,6 @@ class AdminDashboardController extends GetxController {
         limit: 50,
       );
 
-      print('>>> Loaded ${messages.length} messages');
 
       currentMessages.assignAll(messages);
       currentMessages.refresh();
@@ -613,9 +929,7 @@ class AdminDashboardController extends GetxController {
         }
       });
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR opening conversation: $e');
       Get.snackbar('Error', 'Failed to open conversation');
     } finally {
       isLoadingConversation.value = false;
@@ -634,7 +948,6 @@ class AdminDashboardController extends GetxController {
       // For now, return offline status
       return UserStatus.offline(userId);
     } catch (e) {
-      print('Error getting user status: $e');
       return null;
     }
   }
@@ -642,12 +955,6 @@ class AdminDashboardController extends GetxController {
   /// Handle incoming real-time message
   void _handleIncomingMessage(Message message) {
     try {
-      print('>>> ============================================');
-      print('>>> INCOMING MESSAGE RECEIVED');
-      print('>>> Message ID: ${message.documentId}');
-      print('>>> From: ${message.senderId}');
-      print('>>> Text: ${message.messageText}');
-      print('>>> ============================================');
 
       // Check if message already exists
       final exists =
@@ -677,9 +984,7 @@ class AdminDashboardController extends GetxController {
         refreshMessages();
       });
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error handling incoming message: $e');
     }
   }
 
@@ -689,7 +994,6 @@ class AdminDashboardController extends GetxController {
       await _conversationSubscription?.close();
 
       if (clinicData.value?.documentId == null) {
-        print('>>> ERROR: Cannot subscribe - no clinic ID');
         return;
       }
 
@@ -704,8 +1008,6 @@ class AdminDashboardController extends GetxController {
           _handleConversationRealTimeUpdate(response);
         },
         onError: (error) {
-          print(">>> Conversation subscription error: $error");
-          print(">>> Attempting to resubscribe in 3 seconds...");
           Future.delayed(const Duration(seconds: 3), () {
             if (clinicData.value?.documentId != null) {
               _subscribeToConversationUpdates();
@@ -713,14 +1015,52 @@ class AdminDashboardController extends GetxController {
           });
         },
         onDone: () {
-          print(">>> Conversation subscription stream closed");
         },
       );
 
-      print(
-          ">>> Subscribed to conversation updates for clinic: ${clinicData.value!.documentId}");
     } catch (e) {
-      print(">>> Error setting up conversation subscription: $e");
+    }
+  }
+
+  Future<void> _initializeRealTimeUpdates() async {
+    if (clinicData.value == null || clinicData.value?.documentId == null) {
+      return;
+    }
+
+    try {
+
+      // Close old subscriptions first
+      await _appointmentSubscription?.close();
+      _appointmentSubscription = null;
+
+      await _conversationSubscription?.close();
+      _conversationSubscription = null;
+
+      await _messageSubscription?.close();
+      _messageSubscription = null;
+
+      _fallbackTimer?.cancel();
+      _fallbackTimer = null;
+
+
+      // Subscribe to appointments
+      await _subscribeToAppointmentUpdates();
+
+      // Subscribe to conversations (for message updates)
+      await _subscribeToConversationUpdates();
+
+      // Setup fallback polling (safety net)
+      _setupFallbackPolling(interval: 30); // 30 seconds as backup
+
+      isRealTimeConnected.value = true;
+      lastUpdateTime.value = DateTime.now();
+
+    } catch (e, stackTrace) {
+
+      isRealTimeConnected.value = false;
+
+      // Setup more frequent fallback polling on error
+      _setupFallbackPolling(interval: 15);
     }
   }
 
@@ -731,16 +1071,9 @@ class AdminDashboardController extends GetxController {
       // Only process if this is for our clinic
       final conversationClinicId = payload['clinicId'];
       if (conversationClinicId != clinicData.value?.documentId) {
-        print('>>> Conversation not for this clinic - skipping');
         return;
       }
 
-      print('>>> ============================================');
-      print('>>> CONVERSATION UPDATE RECEIVED');
-      print('>>> Events: ${response.events}');
-      print('>>> Conversation ID: ${payload['\$id']}');
-      print('>>> Last Message: ${payload['lastMessageText']}');
-      print('>>> ============================================');
 
       // Check if this is a create or update event (new or updated message)
       final isCreateEvent = response.events.any(
@@ -754,22 +1087,17 @@ class AdminDashboardController extends GetxController {
       );
 
       if (isCreateEvent || isUpdateEvent) {
-        print(
-            '>>> Message event detected - updating recent messages immediately');
 
         // Update immediately with the new conversation data
         _updateRecentMessagesFromPayload(payload);
 
         // Also refresh from database after a delay for consistency
         Future.delayed(const Duration(milliseconds: 500), () {
-          print('>>> Performing full refresh from database');
           fetchRecentMessages();
         });
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error handling conversation update: $e');
     }
   }
 
@@ -795,7 +1123,6 @@ class AdminDashboardController extends GetxController {
               'hasProfilePicture': true,
             };
           } catch (e) {
-            print('>>> Error generating profile picture URL: $e');
             return {
               'url': '',
               'hasProfilePicture': false,
@@ -808,7 +1135,6 @@ class AdminDashboardController extends GetxController {
         'hasProfilePicture': false,
       };
     } catch (e) {
-      print('>>> Error fetching profile picture for $userId: $e');
       return {
         'url': '',
         'hasProfilePicture': false,
@@ -819,14 +1145,12 @@ class AdminDashboardController extends GetxController {
   /// Update recent messages immediately from payload without waiting for database
   void _updateRecentMessagesFromPayload(Map<String, dynamic> payload) {
     try {
-      print('>>> Updating recent messages from real-time payload');
 
       // Validate payload has required fields
       if (payload['lastMessageText'] == null ||
           payload['lastMessageTime'] == null ||
           payload['\$id'] == null ||
           payload['userId'] == null) {
-        print('>>> Missing required fields in payload - skipping');
         return;
       }
 
@@ -837,7 +1161,6 @@ class AdminDashboardController extends GetxController {
           DateTime.parse(payload['lastMessageTime'] as String);
       final clinicUnreadCount = payload['clinicUnreadCount'] as int? ?? 0;
 
-      print('>>> Looking up user data for: $userId');
 
       // Fetch user data for name and profile picture
       String senderName = 'Unknown User';
@@ -846,11 +1169,9 @@ class AdminDashboardController extends GetxController {
 
       if (_userNamesCache.containsKey(userId)) {
         senderName = _userNamesCache[userId]!;
-        print('>>> Using cached user name: $senderName');
       } else {
         // Fetch user name asynchronously
         _getUserName(userId).then((name) {
-          print('>>> Fetched user name: $name');
           // Update the message with fetched name
           final index = recentMessages.indexWhere(
             (m) => m['senderId'] == userId,
@@ -860,7 +1181,6 @@ class AdminDashboardController extends GetxController {
             recentMessages.refresh();
           }
         }).catchError((e) {
-          print('>>> Error fetching user name: $e');
         });
         senderName = userId.length > 6
             ? 'User #${userId.substring(0, 6)}'
@@ -869,7 +1189,6 @@ class AdminDashboardController extends GetxController {
 
       // Fetch profile picture asynchronously
       _fetchUserProfilePicture(userId).then((profileData) {
-        print('>>> Fetched profile picture for user: $userId');
         final index = recentMessages.indexWhere(
           (m) => m['senderId'] == userId,
         );
@@ -880,7 +1199,6 @@ class AdminDashboardController extends GetxController {
           recentMessages.refresh();
         }
       }).catchError((e) {
-        print('>>> Error fetching profile picture: $e');
       });
 
       final newMessage = {
@@ -896,7 +1214,6 @@ class AdminDashboardController extends GetxController {
         'hasProfilePicture': hasProfilePicture,
       };
 
-      print('>>> New message data created');
 
       // Find if this conversation already exists in recent messages
       final existingIndex = recentMessages.indexWhere(
@@ -904,16 +1221,13 @@ class AdminDashboardController extends GetxController {
       );
 
       if (existingIndex != -1) {
-        print('>>> Updating existing message at index $existingIndex');
         recentMessages[existingIndex] = newMessage;
       } else {
-        print('>>> Adding as new message');
         recentMessages.insert(0, newMessage);
       }
 
       // Keep only the 3 most recent
       if (recentMessages.length > 3) {
-        print('>>> Trimming to 3 most recent messages');
         recentMessages.value = recentMessages.take(3).toList();
       }
 
@@ -924,11 +1238,8 @@ class AdminDashboardController extends GetxController {
         return timeB.compareTo(timeA);
       });
 
-      print('>>> Recent messages updated. Total: ${recentMessages.length}');
       recentMessages.refresh();
     } catch (e, stackTrace) {
-      print('>>> Error updating recent messages from payload: $e');
-      print('>>> Stack trace: $stackTrace');
     }
   }
 
@@ -946,78 +1257,56 @@ class AdminDashboardController extends GetxController {
 
     if (uniqueAppointments.length != appointments.length) {
       appointments.assignAll(uniqueAppointments);
-      print(
-          "Removed ${appointments.length - uniqueAppointments.length} duplicate appointments");
     }
   }
 
   Future<void> fetchClinicData() async {
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING CLINIC DATA');
-      print('>>> ============================================');
 
       final user = await authRepository.getUser();
       if (user == null) {
-        print('>>> ERROR: No user found');
         throw Exception('User not authenticated');
       }
 
-      print('>>> User ID: ${user.$id}');
 
       // Get user role from storage
       final storage = GetStorage();
       final userRole = storage.read('role') as String?;
 
-      print('>>> User Role: $userRole');
 
       String? clinicId;
 
       if (userRole == 'staff') {
         // Staff: Get clinicId from storage
         clinicId = storage.read('clinicId') as String?;
-        print('>>> DASHBOARD: Staff mode - using stored clinicId: $clinicId');
 
         if (clinicId == null || clinicId.isEmpty) {
-          print('>>> ERROR: Staff has no clinicId assigned');
           throw Exception('No clinic assigned to staff account');
         }
       } else {
         // Admin: Get clinic by admin ID
-        print('>>> DASHBOARD: Admin mode - looking up clinic');
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-          print('>>> Found clinic by admin ID: $clinicId');
         } else {
-          print('>>> ERROR: No clinic found for admin');
           throw Exception('No clinic found for this admin account');
         }
       }
 
       if (clinicId != null && clinicId.isNotEmpty) {
-        print('>>> Fetching clinic document for ID: $clinicId');
         final clinicDoc = await authRepository.getClinicById(clinicId);
 
         if (clinicDoc != null) {
           clinicData.value = Clinic.fromMap(clinicDoc.data);
           clinicData.value!.documentId = clinicDoc.$id;
-          print(
-              '>>> ✓ DASHBOARD: Clinic loaded: ${clinicData.value!.clinicName}');
-          print('>>> ✓ DASHBOARD: Clinic ID: ${clinicData.value!.documentId}');
         } else {
-          print('>>> ERROR: Clinic document not found for ID: $clinicId');
           throw Exception('Clinic document not found');
         }
       } else {
-        print('>>> ERROR: No valid clinicId available');
         throw Exception('No clinic ID available');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR fetching clinic data: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
       clinicData.value = null; // Ensure it's null on error
       rethrow; // Re-throw to be caught by initializeDashboard
     }
@@ -1025,40 +1314,36 @@ class AdminDashboardController extends GetxController {
 
   Future<void> fetchAllAppointments() async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> ERROR: Cannot fetch appointments - no clinic ID');
-      appointments.clear(); // Clear instead of throwing
-      return;
+      return; // DON'T clear appointments
     }
 
     try {
-      print(
-          '>>> Fetching appointments for clinic: ${clinicData.value!.documentId}');
-      final result = await authRepository
-          .getClinicAppointments(clinicData.value!.documentId!);
-      print('>>> Found ${result.length} appointments');
+      final result = await authRepository.getClinicAppointments(
+        clinicData.value!.documentId!,
+      );
 
       appointments.assignAll(result);
-      await _fetchRelatedData();
+
+      // DON'T call _fetchRelatedData() here - it's expensive
+      // Only fetch when needed
+
       _processTodayAppointments();
       _processUpcomingAppointments();
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
     } catch (e) {
-      print(">>> ERROR fetching appointments: $e");
-      appointments.clear(); // Clear on error
+      // DON'T clear on error
     }
   }
 
   Future<void> fetchAppointmentStats() async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> ERROR: Cannot fetch stats - no clinic ID');
       appointmentStats.clear();
       return;
     }
 
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING APPOINTMENT STATS (OPTIMIZED - COUNTS ONLY)');
-      print('>>> Clinic: ${clinicData.value!.documentId}');
-      print('>>> ============================================');
 
       // OPTIMIZATION: Use Appwrite's count functionality instead of fetching all documents
       // Fetch counts for each status in parallel
@@ -1139,14 +1424,7 @@ class AdminDashboardController extends GetxController {
 
       appointmentStats.assignAll(stats);
 
-      print('>>> Stats fetched:');
-      print('>>>   - Total: $totalCount');
-      print('>>>   - Pending: $pendingCount');
-      print('>>>   - Accepted: $acceptedCount');
-      print('>>>   - Completed: $completedCount');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR fetching appointment stats: $e');
       appointmentStats.clear();
     }
   }
@@ -1172,7 +1450,6 @@ class AdminDashboardController extends GetxController {
           };
         }
       } catch (e) {
-        print("Error fetching owner $userId: $e");
         // Add fallback data
         ownersCache[userId] = {
           'name': 'User #${userId.substring(0, 6)}',
@@ -1192,50 +1469,40 @@ class AdminDashboardController extends GetxController {
 
       // Skip empty petId
       if (appointment.petId.isEmpty) {
-        print(
-            ">>> Skipping empty petId for appointment ${appointment.documentId}");
         continue;
       }
 
       try {
-        print(">>> Fetching pet data for: ${appointment.petId}");
 
         // Try to get pet by ID if it looks like a valid document ID
         Pet? pet;
 
         if (_isValidDocumentId(appointment.petId)) {
-          print(">>>   Trying to fetch by document ID...");
           try {
             final petDoc = await authRepository.getPetById(appointment.petId);
             if (petDoc != null) {
               pet = Pet.fromMap(petDoc.data);
               pet.documentId = petDoc.$id;
-              print(">>>   ✓ Found pet by ID: ${pet.name}");
             }
           } catch (e) {
-            print(">>>   ✗ Pet not found by ID: $e");
           }
         }
 
         // If not found by ID, try by name
         if (pet == null) {
-          print(">>>   Trying to fetch by name...");
           try {
             final petByName =
                 await authRepository.getPetByName(appointment.petId);
             if (petByName != null) {
               pet = Pet.fromMap(petByName.data);
               pet.documentId = petByName.$id;
-              print(">>>   ✓ Found pet by name: ${pet.name}");
             }
           } catch (e) {
-            print(">>>   ✗ Pet not found by name: $e");
           }
         }
 
         // If still not found, create fallback
         if (pet == null) {
-          print(">>>   Creating fallback pet data");
           pet = Pet(
             petId: appointment.petId,
             userId: appointment.userId,
@@ -1247,9 +1514,7 @@ class AdminDashboardController extends GetxController {
 
         // Cache the pet
         petsCache[appointment.petId] = pet;
-        print(">>>   ✓ Pet cached successfully");
       } catch (e) {
-        print(">>> Error fetching pet ${appointment.petId}: $e");
         // Create fallback pet
         petsCache[appointment.petId] = Pet(
           petId: appointment.petId,
@@ -1316,18 +1581,79 @@ class AdminDashboardController extends GetxController {
   }
 
   void _processTodayAppointments() {
-    // Already fetched in fetchTodaysAppointments()
-    // Just ensure pet images are loaded
-    if (todayAppointments.isNotEmpty) {
-      preloadPetImagesForAppointments(todayAppointments.take(5).toList());
+    try {
+
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+
+      // Filter today's appointments from main list
+      final allTodayAppts = appointments.where((appointment) {
+        final appointmentDate = DateTime(
+          appointment.dateTime.year,
+          appointment.dateTime.month,
+          appointment.dateTime.day,
+        );
+        return appointmentDate.isAtSameMomentAs(todayDate);
+      }).toList();
+
+
+      // Sort by priority
+      allTodayAppts.sort((a, b) {
+        // Pending appointments first
+        if (a.status == 'pending' && b.status != 'pending') return -1;
+        if (b.status == 'pending' && a.status != 'pending') return 1;
+
+        // Then by time
+        return a.dateTime.compareTo(b.dateTime);
+      });
+
+      // Take top 3
+      final top3 = allTodayAppts.take(3).toList();
+
+      for (var appt in top3) {
+      }
+
+      // FIXED: Create new list instance
+      todayAppointments.value = List.from(top3);
+
+
+      // Pre-load images if needed
+      if (top3.isNotEmpty) {
+        preloadPetImagesForAppointments(top3);
+      }
+    } catch (e) {
     }
   }
 
   void _processUpcomingAppointments() {
-    // Already fetched in fetchUpcomingAppointments()
-    // Just ensure pet images are loaded
-    if (upcomingAppointments.isNotEmpty) {
-      preloadPetImagesForAppointments(upcomingAppointments.take(5).toList());
+    try {
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+      final upcomingAppts = appointments.where((appointment) {
+        // Only accepted appointments
+        if (appointment.status != 'accepted') return false;
+
+        // Only future dates (not today)
+        final appointmentDate = DateTime(
+          appointment.dateTime.year,
+          appointment.dateTime.month,
+          appointment.dateTime.day,
+        );
+
+        return appointmentDate.isAfter(DateTime(now.year, now.month, now.day));
+      }).toList();
+
+      // Sort by date/time (nearest first)
+      upcomingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      // Take only first 5
+      final limitedUpcoming = upcomingAppts.take(3).toList();
+
+      upcomingAppointments.assignAll(limitedUpcoming);
+      upcomingAppointments.refresh();
+
+    } catch (e) {
     }
   }
 
@@ -1356,16 +1682,11 @@ class AdminDashboardController extends GetxController {
 
   Future<void> fetchRecentMessages() async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> ERROR: Cannot fetch messages - no clinic ID');
       recentMessages.clear();
       return;
     }
 
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING RECENT MESSAGES (OPTIMIZED - MAX 3)');
-      print('>>> Clinic: ${clinicData.value!.documentId}');
-      print('>>> ============================================');
 
       // OPTIMIZATION: Fetch ONLY 3 most recent conversations with messages
       final conversations =
@@ -1384,10 +1705,8 @@ class AdminDashboardController extends GetxController {
         ],
       );
 
-      print('>>> Found ${conversations.documents.length} recent conversations');
 
       if (conversations.documents.isEmpty) {
-        print('>>> No recent conversations with messages');
         recentMessages.clear();
         recentMessages.refresh();
         return;
@@ -1397,7 +1716,6 @@ class AdminDashboardController extends GetxController {
 
       // Process each conversation
       for (var doc in conversations.documents) {
-        print('>>> Processing conversation ${doc.$id}...');
 
         final userId = doc.data['userId'] as String;
         final lastMessageText = doc.data['lastMessageText'] as String?;
@@ -1408,7 +1726,6 @@ class AdminDashboardController extends GetxController {
         if (lastMessageText == null ||
             lastMessageText.isEmpty ||
             lastMessageTime == null) {
-          print('>>>   - Skipping: incomplete message data');
           continue;
         }
 
@@ -1429,14 +1746,11 @@ class AdminDashboardController extends GetxController {
                 profilePictureUrl = authRepository
                     .getUserProfilePictureUrl(user.profilePictureId!);
                 hasProfilePicture = true;
-                print('>>>   ✓ Got profile picture for: $senderName');
               } catch (e) {
-                print('>>>   ✗ Error getting profile picture: $e');
               }
             }
           }
         } catch (e) {
-          print('>>> Error fetching user $userId: $e');
           senderName = userId.length > 6
               ? 'User #${userId.substring(0, 6)}'
               : 'Unknown User';
@@ -1456,19 +1770,13 @@ class AdminDashboardController extends GetxController {
         };
 
         messages.add(messageData);
-        print('>>> ✓ Added message from $senderName');
       }
 
       // Update observable (should be exactly 3 or less)
       recentMessages.assignAll(messages);
       recentMessages.refresh();
 
-      print('>>> ============================================');
-      print('>>> ✓ FETCHED ${recentMessages.length} RECENT MESSAGES');
-      print('>>> ============================================');
     } catch (e, stackTrace) {
-      print('>>> ERROR fetching recent messages: $e');
-      print('>>> Stack trace: $stackTrace');
       recentMessages.clear();
       recentMessages.refresh();
     }
@@ -1495,7 +1803,6 @@ class AdminDashboardController extends GetxController {
         return name;
       }
     } catch (e) {
-      print('Error fetching user name for $userId: $e');
     }
 
     final fallback =
@@ -1548,7 +1855,6 @@ class AdminDashboardController extends GetxController {
     if (petId.isEmpty) return;
 
     try {
-      print(">>> Force refreshing pet data for: $petId");
 
       Pet? pet;
 
@@ -1561,7 +1867,6 @@ class AdminDashboardController extends GetxController {
             pet.documentId = petDoc.$id;
           }
         } catch (e) {
-          print(">>> Pet not found by ID: $e");
         }
       }
 
@@ -1574,7 +1879,6 @@ class AdminDashboardController extends GetxController {
             pet.documentId = petByName.$id;
           }
         } catch (e) {
-          print(">>> Pet not found by name: $e");
         }
       }
 
@@ -1582,9 +1886,7 @@ class AdminDashboardController extends GetxController {
       if (pet != null) {
         petsCache[petId] = pet;
         petsCache.refresh();
-        print(">>> ✓ Pet data refreshed and cached");
       } else {
-        print(">>> Could not refresh pet data - creating fallback");
         petsCache[petId] = Pet(
           petId: petId,
           userId: '',
@@ -1594,7 +1896,6 @@ class AdminDashboardController extends GetxController {
         );
       }
     } catch (e) {
-      print(">>> Error refreshing pet data: $e");
     }
   }
 
@@ -1608,7 +1909,7 @@ class AdminDashboardController extends GetxController {
   Future<void> quickAcceptAppointment(Appointment appointment) async {
     try {
       await appointmentController.acceptAppointment(appointment);
-      Get.snackbar("Success", "Appointment accepted!");
+      // Get.snackbar("Success", "Appointment accepted!");
     } catch (e) {
       Get.snackbar("Error", "Failed to accept appointment: $e");
     }
@@ -1624,7 +1925,6 @@ class AdminDashboardController extends GetxController {
           homeController.navigationLabels.indexOf('Appointments');
 
       if (appointmentsIndex != -1) {
-        print('>>> Navigating to Appointments at index $appointmentsIndex');
         homeController.setSelectedIndex(appointmentsIndex);
 
         if (filter != null) {
@@ -1632,15 +1932,12 @@ class AdminDashboardController extends GetxController {
             try {
               appointmentController.setSelectedTab(filter);
             } catch (e) {
-              print("Appointment controller not ready for filter: $filter");
             }
           });
         }
       } else {
-        print('>>> ERROR: Appointments page not available in navigation');
       }
     } catch (e) {
-      print("Navigation error: $e");
     }
   }
 
@@ -1653,13 +1950,10 @@ class AdminDashboardController extends GetxController {
       final messagesIndex = homeController.navigationLabels.indexOf('Messages');
 
       if (messagesIndex != -1) {
-        print('>>> Navigating to Messages at index $messagesIndex');
         homeController.setSelectedIndex(messagesIndex);
       } else {
-        print('>>> ERROR: Messages page not available in navigation');
       }
     } catch (e) {
-      print("Navigation error: $e");
     }
   }
 
@@ -1672,13 +1966,10 @@ class AdminDashboardController extends GetxController {
       final clinicIndex = homeController.navigationLabels.indexOf('Clinic');
 
       if (clinicIndex != -1) {
-        print('>>> Navigating to Clinic at index $clinicIndex');
         homeController.setSelectedIndex(clinicIndex);
       } else {
-        print('>>> ERROR: Clinic page not available in navigation');
       }
     } catch (e) {
-      print("Navigation error: $e");
     }
   }
 
@@ -1697,7 +1988,6 @@ class AdminDashboardController extends GetxController {
       final homeController = Get.find<WebAdminHomeController>();
       return homeController.canAccessFeature('appointments');
     } catch (e) {
-      print('Error checking appointments permission: $e');
       return false;
     }
   }
@@ -1708,7 +1998,6 @@ class AdminDashboardController extends GetxController {
       final homeController = Get.find<WebAdminHomeController>();
       return homeController.canAccessFeature('messages');
     } catch (e) {
-      print('Error checking messages permission: $e');
       return false;
     }
   }
@@ -1719,7 +2008,6 @@ class AdminDashboardController extends GetxController {
       final homeController = Get.find<WebAdminHomeController>();
       return homeController.canAccessFeature('clinic_info');
     } catch (e) {
-      print('Error checking clinic permission: $e');
       return false;
     }
   }
@@ -1774,7 +2062,6 @@ class AdminDashboardController extends GetxController {
               homeController.canAccessFeature(stat['permission'] as String))
           .toList();
     } catch (e) {
-      print('Error filtering stats: $e');
       return allStats;
     }
   }
@@ -1789,7 +2076,6 @@ class AdminDashboardController extends GetxController {
         'clinic': homeController.canAccessFeature('clinic_info'),
       };
     } catch (e) {
-      print('Error getting visible widgets: $e');
       return {
         'appointments': true,
         'messages': true,
@@ -2046,15 +2332,12 @@ class AdminDashboardController extends GetxController {
         appointments.refresh();
       }
 
-      Get.snackbar(
-        "Success",
-        "Appointment declined. Patient will be notified.",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-
-      // Refresh dashboard data
-      await refreshDashboardData();
+      // Get.snackbar(
+      //   "Success",
+      //   "Appointment declined. Patient will be notified.",
+      //   backgroundColor: Colors.red,
+      //   colorText: Colors.white,
+      // );
     } catch (e) {
       Get.snackbar(
         "Error",
@@ -2073,7 +2356,6 @@ class AdminDashboardController extends GetxController {
     }
 
     try {
-      print('>>> Dashboard: Fetching profile picture for pet: $petId');
 
       // Fetch pet document
       final petDoc = await authRepository.getPetById(petId);
@@ -2084,8 +2366,6 @@ class AdminDashboardController extends GetxController {
         if (imageUrl != null && imageUrl.isNotEmpty) {
           // Cache the URL
           petProfilePictures[petId] = imageUrl;
-          print(
-              '>>> Dashboard: Pet profile picture cached: $petId -> $imageUrl');
           return imageUrl;
         }
       }
@@ -2094,7 +2374,6 @@ class AdminDashboardController extends GetxController {
       petProfilePictures[petId] = null;
       return null;
     } catch (e) {
-      print('>>> Dashboard: Error fetching pet profile picture: $e');
       petProfilePictures[petId] = null;
       return null;
     }
@@ -2110,20 +2389,16 @@ class AdminDashboardController extends GetxController {
 
       // Prevent duplicate fetches
       if (petImageLoadingStates[petId] == true) {
-        print('>>> Dashboard: Already loading image for pet: $petId');
         return null;
       }
 
       petImageLoadingStates[petId] = true;
 
-      print(
-          '>>> Dashboard: Fetching pet image for petId: $petId, userId: $userId');
 
       // Fetch all pets for this user
       final userPets = await authRepository.getUserPets(userId);
 
       if (userPets.isEmpty) {
-        print('>>> Dashboard: No pets found for user: $userId');
         petProfilePictures[petId] = null;
         petImageLoadingStates[petId] = false;
         return null;
@@ -2139,13 +2414,11 @@ class AdminDashboardController extends GetxController {
         // Match by petId (document ID or petId field)
         if (petDoc.$id == petId || pet.petId == petId || pet.name == petId) {
           targetPet = pet;
-          print('>>> Dashboard: ✅ Found matching pet: ${pet.name}');
           break;
         }
       }
 
       if (targetPet == null) {
-        print('>>> Dashboard: ⚠️ Pet not found for this user');
         petProfilePictures[petId] = null;
         petImageLoadingStates[petId] = false;
         return null;
@@ -2157,7 +2430,6 @@ class AdminDashboardController extends GetxController {
       // Cache the image
       if (targetPet.image != null && targetPet.image!.isNotEmpty) {
         petProfilePictures[petId] = targetPet.image;
-        print('>>> Dashboard: Pet image URL cached: ${targetPet.image}');
         petImageLoadingStates[petId] = false;
         return targetPet.image;
       }
@@ -2166,7 +2438,6 @@ class AdminDashboardController extends GetxController {
       petImageLoadingStates[petId] = false;
       return null;
     } catch (e) {
-      print('>>> Dashboard: Error fetching pet image: $e');
       petProfilePictures[petId] = null;
       petImageLoadingStates[petId] = false;
       return null;
@@ -2175,8 +2446,6 @@ class AdminDashboardController extends GetxController {
 
   Future<void> preloadPetImagesForAppointments(
       List<Appointment> appointments) async {
-    print(
-        '>>> Dashboard: Pre-loading pet images for ${appointments.length} appointments');
 
     final futures = <Future>[];
 
@@ -2189,13 +2458,11 @@ class AdminDashboardController extends GetxController {
       // Add to batch
       futures.add(getPetImageByUserId(appointment.petId, appointment.userId)
           .catchError((e) {
-        print('>>> Error pre-loading pet ${appointment.petId}: $e');
       }));
     }
 
     // Wait for all images to load
     await Future.wait(futures);
-    print('>>> Dashboard: Pet images pre-loaded');
   }
 
   void clearPetProfilePicturesCache() {
@@ -2205,33 +2472,30 @@ class AdminDashboardController extends GetxController {
 
 // Add this method to refresh pet images
   Future<void> refreshPetImages() async {
-    print('>>> Dashboard: Refreshing pet images cache...');
     petProfilePictures.clear();
     petImageLoadingStates.clear();
     await _fetchRelatedData();
-    print('>>> Dashboard: Pet images cache refreshed');
   }
 
   // new shits
 
-  Future<void> fetchTodaysAppointments() async {
+  Future<void> fetchTodaysAppointments({bool force = false}) async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> ERROR: Cannot fetch appointments - no clinic ID');
-      todayAppointments.clear();
+      return; // DON'T clear - keep existing data
+    }
+
+    // CRITICAL: Skip fetch if cache is valid and not forced
+    if (!force && _isCacheValid() && todayAppointments.isNotEmpty) {
       return;
     }
 
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING TODAY\'S APPOINTMENTS (OPTIMIZED - MAX 5)');
-      print('>>> Clinic: ${clinicData.value!.documentId}');
-      print('>>> ============================================');
 
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day, 0, 0, 0);
       final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
-      // OPTIMIZATION: Fetch ONLY today's appointments with LIMIT 5
+      // Fetch ALL today's appointments
       final result =
           await authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -2240,115 +2504,206 @@ class AdminDashboardController extends GetxController {
           Query.equal('clinicId', clinicData.value!.documentId!),
           Query.greaterThanEqual('dateTime', startOfDay.toIso8601String()),
           Query.lessThanEqual('dateTime', endOfDay.toIso8601String()),
-          Query.orderAsc('dateTime'), // Ordered by time
-          Query.limit(
-              10), // OPTIMIZATION: Fetch only 10 for today (reasonable for a day)
+          Query.limit(100), // Get all today's appointments
         ],
       );
 
-      print('>>> Found ${result.documents.length} appointments today');
 
-      if (result.documents.isEmpty) {
-        todayAppointments.clear();
-        todayAppointments.refresh();
-        return;
-      }
-
-      final List<Appointment> todayAppts = [];
-
+      // Parse all appointments
+      final List<Appointment> allTodayAppts = [];
       for (var doc in result.documents) {
         try {
           final appointment = Appointment.fromMap(doc.data);
-          todayAppts.add(appointment);
+          allTodayAppts.add(appointment);
         } catch (e) {
-          print('>>> Error parsing appointment: $e');
         }
       }
 
-      todayAppointments.assignAll(todayAppts);
-      todayAppointments.refresh();
+      // Sort by priority: pending first, then by time
+      allTodayAppts.sort((a, b) {
+        // Pending appointments first
+        if (a.status == 'pending' && b.status != 'pending') return -1;
+        if (b.status == 'pending' && a.status != 'pending') return 1;
 
-      // OPTIMIZATION: Pre-load images only for the first 5
-      if (todayAppts.isNotEmpty) {
-        preloadPetImagesForAppointments(todayAppts.take(5).toList());
+        // Then by time (upcoming first for same status)
+        return a.dateTime.compareTo(b.dateTime);
+      });
+
+      // Take exactly 3 (or less if not enough)
+      final top3 = allTodayAppts.take(3).toList();
+
+      for (var appt in top3) {
       }
 
-      print('>>> ============================================');
-      print('>>> ✓ FETCHED ${todayAppointments.length} TODAY\'S APPOINTMENTS');
-      print('>>> ============================================');
+      // Update with new list instance
+      todayAppointments.value = List.from(top3);
+
+
+      // Pre-load images
+      if (top3.isNotEmpty) {
+        preloadPetImagesForAppointments(top3);
+      }
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+      isDashboardCached.value = true;
     } catch (e) {
-      print('>>> ERROR fetching today\'s appointments: $e');
-      todayAppointments.clear();
-      todayAppointments.refresh();
+      // DON'T clear on error - keep existing data
     }
   }
 
-  Future<void> fetchUpcomingAppointments() async {
+  Future<void> fetchUpcomingAppointments({bool force = false}) async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> ERROR: Cannot fetch appointments - no clinic ID');
-      upcomingAppointments.clear();
+      return; // DON'T clear
+    }
+
+    // CRITICAL: Skip fetch if cache is valid and not forced
+    if (!force && _isCacheValid() && upcomingAppointments.isNotEmpty) {
       return;
     }
 
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING UPCOMING APPOINTMENTS (OPTIMIZED - MAX 5)');
-      print('>>> Clinic: ${clinicData.value!.documentId}');
-      print('>>> ============================================');
 
       final now = DateTime.now();
       final tomorrow = DateTime(now.year, now.month, now.day + 1, 0, 0, 0);
 
-      // OPTIMIZATION: Fetch ONLY 5 upcoming accepted appointments
+      // Fetch ONLY 5 upcoming accepted appointments
       final result =
           await authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.appointmentCollectionID,
         queries: [
           Query.equal('clinicId', clinicData.value!.documentId!),
-          Query.equal(
-              'status', 'accepted'), // CRITICAL: Only accepted appointments
+          Query.equal('status', 'accepted'),
           Query.greaterThanEqual('dateTime', tomorrow.toIso8601String()),
-          Query.orderAsc('dateTime'), // Nearest first
-          Query.limit(5), // OPTIMIZATION: Fetch ONLY 5
+          Query.orderAsc('dateTime'),
+          Query.limit(5),
         ],
       );
 
-      print('>>> Found ${result.documents.length} upcoming appointments');
-
-      if (result.documents.isEmpty) {
-        upcomingAppointments.clear();
-        upcomingAppointments.refresh();
-        return;
-      }
 
       final List<Appointment> upcomingAppts = [];
-
       for (var doc in result.documents) {
         try {
           final appointment = Appointment.fromMap(doc.data);
           upcomingAppts.add(appointment);
         } catch (e) {
-          print('>>> Error parsing appointment: $e');
         }
       }
 
       upcomingAppointments.assignAll(upcomingAppts);
       upcomingAppointments.refresh();
 
-      // OPTIMIZATION: Pre-load images for upcoming appointments
+      // Pre-load images
       if (upcomingAppts.isNotEmpty) {
         preloadPetImagesForAppointments(upcomingAppts);
       }
 
-      print('>>> ============================================');
-      print(
-          '>>> ✓ FETCHED ${upcomingAppointments.length} UPCOMING APPOINTMENTS');
-      print('>>> ============================================');
+
+      // Update cache timestamp
+      lastCacheTime.value = DateTime.now();
+      isDashboardCached.value = true;
     } catch (e) {
-      print('>>> ERROR fetching upcoming appointments: $e');
-      upcomingAppointments.clear();
-      upcomingAppointments.refresh();
+      // DON'T clear on error
     }
+  }
+
+  Future<void> forceRefreshAppointments() async {
+    if (clinicData.value?.documentId == null) {
+      return;
+    }
+
+    // Check if we really need a force refresh
+    if (_isCacheValid() && isRealTimeConnected.value) {
+      return;
+    }
+
+    try {
+
+      // Fetch fresh from database
+      final freshAppointments = await authRepository.getClinicAppointments(
+        clinicData.value!.documentId!,
+      );
+
+
+      // Replace all data
+      appointments.assignAll(freshAppointments);
+
+      // Update all filtered views
+      _processTodayAppointments();
+      _processUpcomingAppointments();
+      _updateAppointmentStats();
+      await generateCalendarData();
+
+      // Update cache
+      lastCacheTime.value = DateTime.now();
+      isDashboardCached.value = true;
+
+    } catch (e) {
+    }
+  }
+
+  void cleanupOnLogout() {
+
+    // Cancel all subscriptions
+    try {
+      _appointmentSubscription?.close();
+      _conversationSubscription?.close();
+      _messageSubscription?.close();
+      _fallbackTimer?.cancel();
+    } catch (e) {
+    }
+
+    // Clear ALL cached data
+    clinicData.value = null;
+    appointments.clear();
+    appointmentStats.clear();
+    todayAppointments.clear();
+    upcomingAppointments.clear();
+    recentMessages.clear();
+    monthlyStats.clear();
+    petsCache.clear();
+    ownersCache.clear();
+    calendarAppointments.clear();
+    _userNamesCache.clear();
+    petProfilePictures.clear();
+    petImageLoadingStates.clear();
+
+    // Invalidate cache
+    isDashboardCached.value = false;
+    lastCacheTime.value = null;
+    isRealTimeConnected.value = false;
+
+  }
+
+  String get cacheStatus {
+    if (!isDashboardCached.value) {
+      return 'No cache';
+    }
+
+    if (lastCacheTime.value == null) {
+      return 'Invalid cache';
+    }
+
+    final age = DateTime.now().difference(lastCacheTime.value!);
+    final remainingMinutes = cacheValidityMinutes - age.inMinutes;
+
+    if (remainingMinutes <= 0) {
+      return 'Cache expired';
+    }
+
+    return 'Cache valid (${remainingMinutes}m left)';
+  }
+
+  /// Check if cache needs refresh soon
+  bool get shouldRefreshSoon {
+    if (!isDashboardCached.value || lastCacheTime.value == null) {
+      return true;
+    }
+
+    final age = DateTime.now().difference(lastCacheTime.value!);
+    final remainingMinutes = cacheValidityMinutes - age.inMinutes;
+
+    return remainingMinutes <= 1; // Refresh if less than 1 minute left
   }
 }

@@ -30,18 +30,15 @@ Future<void> initializeDependencies() async {
   );
   final authRepo = Get.find<AuthRepository>();
 
-  print('>>> ✓ Archive Service initialized and running');
 
   Get.put(
     ClinicArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
-  print('>>> ✓ Clinic Archive Service initialized and running');
 
   final notificationService = NotificationService();
   await notificationService.initializeNotifications();
   Get.put(notificationService, permanent: true);
-  print('>>> ✓ Notification Service initialized');
 
   Get.put(
     InAppNotificationService(
@@ -50,8 +47,6 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-  print(
-      '>>> ✓ In-App Notification Service registered (will initialize after login)');
 
   Get.put(
     AppointmentReminderService(
@@ -61,7 +56,6 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-  print('>>> ✓ Appointment Reminder Service initialized and running');
 
   // NEW: Register Notification Preferences Service
   Get.put(
@@ -70,7 +64,6 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-  print('>>> ✓ Notification Preferences Service initialized');
 
   Get.put(DashboardController());
   Get.put(MessagingController());
@@ -78,7 +71,6 @@ Future<void> initializeDependencies() async {
 
   // ADD THIS LINE - Register WebUserHomeController globally
   Get.put(WebUserHomeController(), permanent: true);
-  print('>>> ✓ WebUserHomeController initialized');
 
   await authRepo.appWriteProvider.migrateReviewsArchiveField();
 

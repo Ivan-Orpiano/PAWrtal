@@ -59,22 +59,18 @@ class NotificationPreferencesService extends GetxService {
       
       final userId = _storage.read('userId') as String?;
       if (userId == null || userId.isEmpty) {
-        print('>>> No user logged in, using default preferences');
         return;
       }
 
-      print('>>> Loading notification preferences for user: $userId');
 
       // Get user document
       final userDocId = _storage.read('userDocumentId') as String?;
       if (userDocId == null || userDocId.isEmpty) {
-        print('>>> User document ID not found, using default preferences');
         return;
       }
 
       final userDoc = await authRepository.getUserById(userDocId);
       if (userDoc == null) {
-        print('>>> User document not found');
         return;
       }
 
@@ -87,12 +83,8 @@ class NotificationPreferencesService extends GetxService {
         emailNotificationsEnabled: emailEnabled,
       );
 
-      print('>>> Preferences loaded:');
-      print('>>>   Push: $pushEnabled');
-      print('>>>   Email: $emailEnabled');
 
     } catch (e) {
-      print('>>> Error loading notification preferences: $e');
       // Use default preferences on error
       preferences.value = NotificationPreferences();
     } finally {
@@ -104,7 +96,6 @@ class NotificationPreferencesService extends GetxService {
   Future<bool> updatePushNotificationPreference(bool enabled) async {
     try {
       isLoading.value = true;
-      print('>>> Updating push notification preference to: $enabled');
 
       final userDocId = _storage.read('userDocumentId') as String?;
       if (userDocId == null || userDocId.isEmpty) {
@@ -124,11 +115,9 @@ class NotificationPreferencesService extends GetxService {
         pushNotificationsEnabled: enabled,
       );
 
-      print('>>> ✅ Push notification preference updated');
       return true;
 
     } catch (e) {
-      print('>>> ❌ Error updating push notification preference: $e');
       return false;
     } finally {
       isLoading.value = false;
@@ -139,7 +128,6 @@ class NotificationPreferencesService extends GetxService {
   Future<bool> updateEmailNotificationPreference(bool enabled) async {
     try {
       isLoading.value = true;
-      print('>>> Updating email notification preference to: $enabled');
 
       final userDocId = _storage.read('userDocumentId') as String?;
       if (userDocId == null || userDocId.isEmpty) {
@@ -159,11 +147,9 @@ class NotificationPreferencesService extends GetxService {
         emailNotificationsEnabled: enabled,
       );
 
-      print('>>> ✅ Email notification preference updated');
       return true;
 
     } catch (e) {
-      print('>>> ❌ Error updating email notification preference: $e');
       return false;
     } finally {
       isLoading.value = false;
@@ -179,11 +165,9 @@ class NotificationPreferencesService extends GetxService {
   /// Get preferences for a specific user (used by admin when sending notifications)
   Future<NotificationPreferences> getPreferencesForUser(String userDocumentId) async {
     try {
-      print('>>> Getting notification preferences for user: $userDocumentId');
 
       final userDoc = await authRepository.getUserById(userDocumentId);
       if (userDoc == null) {
-        print('>>> User not found, using default preferences');
         return NotificationPreferences();
       }
 
@@ -196,7 +180,6 @@ class NotificationPreferencesService extends GetxService {
       );
 
     } catch (e) {
-      print('>>> Error getting user preferences: $e');
       return NotificationPreferences(); // Default to enabled on error
     }
   }
@@ -204,6 +187,5 @@ class NotificationPreferencesService extends GetxService {
   /// Clear preferences (on logout)
   void clearPreferences() {
     preferences.value = NotificationPreferences();
-    print('>>> Notification preferences cleared');
   }
 }

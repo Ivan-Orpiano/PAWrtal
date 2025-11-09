@@ -120,24 +120,19 @@ class VetPopup extends StatelessWidget {
   String getClinicImage() {
     // PRIORITY 1: Use dashboardPic from settings (THIS IS THE KEY CHANGE)
     if (clinicSettings != null && clinicSettings!.dashboardPic.isNotEmpty) {
-      print(
-          '>>> Using dashboard pic from settings: ${clinicSettings!.dashboardPic}');
       return clinicSettings!.dashboardPic;
     }
 
     // PRIORITY 2: Use first gallery image from settings
     if (clinicSettings != null && clinicSettings!.gallery.isNotEmpty) {
-      print('>>> Using first gallery image: ${clinicSettings!.gallery.first}');
       return clinicSettings!.gallery.first;
     }
 
     // PRIORITY 3: Fallback to clinic.image
     if (clinic.image.isNotEmpty) {
-      print('>>> Using clinic.image: ${clinic.image}');
       return clinic.image;
     }
 
-    print('>>> No image found - will use placeholder');
     return '';
   }
 

@@ -101,7 +101,6 @@ class WebAppointmentModal extends StatelessWidget {
                     imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      print('>>> Error loading pet image: $error');
                       return _buildDefaultPetIcon();
                     },
                     loadingBuilder: (context, child, loadingProgress) {
@@ -302,9 +301,7 @@ class WebAppointmentModal extends StatelessWidget {
       Pet? pet;
       String? clinicId;
 
-      print('>>> Attempting to load pet with ID: ${appointment.petId}');
-      print('>>> User ID: ${appointment.userId}');
-      print('>>> Clinic ID: ${appointment.clinicId}'); // NEW
+      // NEW
 
       // Get clinic ID from appointment
       clinicId = appointment.clinicId;
@@ -313,7 +310,6 @@ class WebAppointmentModal extends StatelessWidget {
       final userPets =
           await controller.authRepository.getUserPets(appointment.userId);
 
-      print('>>> Found ${userPets.length} pets for user');
 
       // Find the pet by matching petId, name, or document ID
       final petDoc = userPets.firstWhereOrNull(
@@ -322,30 +318,21 @@ class WebAppointmentModal extends StatelessWidget {
           final matchesName = doc.data['name'] == appointment.petId;
           final matchesDocId = doc.$id == appointment.petId;
 
-          print(
-              '>>> Checking pet: ${doc.data['name']} (petId: ${doc.data['petId']}, docId: ${doc.$id})');
-          print('>>>   Matches petId: $matchesPetId');
-          print('>>>   Matches name: $matchesName');
-          print('>>>   Matches docId: $matchesDocId');
 
           return matchesPetId || matchesName || matchesDocId;
         },
       );
 
       if (petDoc != null) {
-        print('>>> Pet found! Converting to Pet model...');
         pet = Pet.fromMap(petDoc.data);
         pet.documentId = petDoc.$id;
-        print('>>> Pet loaded: ${pet.name}');
       } else {
-        print('>>> No matching pet found');
       }
 
       // Close loading indicator
       Get.back();
 
       if (pet == null) {
-        print('>>> ERROR: Could not find pet');
         Get.snackbar(
           'Error',
           'Could not load pet information. Pet ID: ${appointment.petId}',
@@ -357,7 +344,6 @@ class WebAppointmentModal extends StatelessWidget {
       }
 
       if (clinicId == null || clinicId.isEmpty) {
-        print('>>> ERROR: Clinic ID not available');
         Get.snackbar(
           'Error',
           'Clinic information not available for this appointment',
@@ -390,8 +376,6 @@ class WebAppointmentModal extends StatelessWidget {
         builder: (context) => WebAppointmentModal(appointment: appointment),
       );
     } catch (e, stackTrace) {
-      print('>>> ERROR loading pet card: $e');
-      print('>>> Stack trace: $stackTrace');
 
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
@@ -760,10 +744,6 @@ class WebAppointmentModal extends StatelessWidget {
     );
 
     try {
-      print('>>> ============================================');
-      print('>>> VIEWING MEDICAL RECORD');
-      print('>>> Appointment ID: ${appointment.documentId}');
-      print('>>> ============================================');
 
       // Get the medical record for this appointment
       final medicalRecord = await controller.getMedicalRecordByAppointmentId(
@@ -774,7 +754,6 @@ class WebAppointmentModal extends StatelessWidget {
       Get.back();
 
       if (medicalRecord == null) {
-        print('>>> ❌ No medical record found');
 
         Get.snackbar(
           'No Medical Record',
@@ -787,7 +766,6 @@ class WebAppointmentModal extends StatelessWidget {
         return;
       }
 
-      print('>>> ✅ Medical record found, showing dialog...');
 
       // Get pet and owner names
       final petName = controller.getPetName(appointment.petId);
@@ -802,12 +780,7 @@ class WebAppointmentModal extends StatelessWidget {
         ),
       );
 
-      print('>>> ============================================');
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ❌ ERROR viewing medical record: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
 
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
@@ -1510,7 +1483,6 @@ class WebAppointmentModal extends StatelessWidget {
     );
 
     try {
-      print('>>> Loading owner details for user: ${appointment.userId}');
 
       // Get user document
       final userDoc =
@@ -1520,7 +1492,6 @@ class WebAppointmentModal extends StatelessWidget {
       Get.back();
 
       if (userDoc == null) {
-        print('>>> ERROR: User not found');
         Get.snackbar(
           'Error',
           'Could not load owner information',
@@ -1531,7 +1502,6 @@ class WebAppointmentModal extends StatelessWidget {
         return;
       }
 
-      print('>>> User found: ${userDoc.data['name']}');
 
       // Convert to User model
       final owner = User.fromMap(userDoc.data);
@@ -1555,8 +1525,6 @@ class WebAppointmentModal extends StatelessWidget {
         builder: (context) => WebAppointmentModal(appointment: appointment),
       );
     } catch (e, stackTrace) {
-      print('>>> ERROR loading owner details: $e');
-      print('>>> Stack trace: $stackTrace');
 
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {

@@ -525,26 +525,26 @@ Widget build(BuildContext context) {
         child: Row(
           children: [
             // Camera button
-            IconButton(
-              icon: Icon(
-                Icons.camera_alt_rounded,
-                color: Colors.grey[600],
-              ),
-              onPressed: () {
-                // Implement camera functionality
-              },
-            ),
+            // IconButton(
+            //   icon: Icon(
+            //     Icons.camera_alt_rounded,
+            //     color: Colors.grey[600],
+            //   ),
+            //   onPressed: () {
+            //     // Implement camera functionality
+            //   },
+            // ),
             
-            // Photo button
-            IconButton(
-              icon: Icon(
-                Icons.photo,
-                color: Colors.grey[600],
-              ),
-              onPressed: () {
-                // Implement photo picker functionality
-              },
-            ),
+            // // Photo button
+            // IconButton(
+            //   icon: Icon(
+            //     Icons.photo,
+            //     color: Colors.grey[600],
+            //   ),
+            //   onPressed: () {
+            //     // Implement photo picker functionality
+            //   },
+            // ),
             
             // Message input
             Expanded(

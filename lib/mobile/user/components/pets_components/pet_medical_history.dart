@@ -54,15 +54,12 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
   // ✅ NEW: Initialize controller and fetch data immediately
   Future<void> _initializeAndLoadData() async {
     try {
-      print('>>> 🔧 Initializing medical history controller...');
 
       // Try to find existing controller first
       if (Get.isRegistered<MobilePetsController>()) {
         _controller = Get.find<MobilePetsController>();
-        print('>>> ✅ Found existing MobilePetsController');
       } else {
         // Create new controller if not exists
-        print('>>> ⚠️ Creating new MobilePetsController');
         _controller = Get.put(MobilePetsController(
           authRepository: Get.find(),
           session: Get.find(),
@@ -74,8 +71,6 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
       });
 
       // ✅ CRITICAL: Fetch data immediately like admin version
-      print(
-          '>>> 📊 Fetching medical history data for pet: ${widget.pet.petId}');
 
       await Future.wait([
         _controller.fetchPetMedicalAppointmentsAllClinics(widget.pet.petId),
@@ -83,10 +78,7 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
         _controller.fetchPetVaccinationHistory(widget.pet.petId),
       ]);
 
-      print('>>> ✅ All medical history data loaded successfully');
     } catch (e, stackTrace) {
-      print('>>> ❌ ERROR initializing controller: $e');
-      print('>>> Stack trace: $stackTrace');
 
       setState(() {
         _controllerInitialized = false;

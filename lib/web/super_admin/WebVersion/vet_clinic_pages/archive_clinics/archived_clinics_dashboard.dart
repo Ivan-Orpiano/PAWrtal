@@ -65,7 +65,6 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading archived clinics: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -75,7 +74,6 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
       final stats = await _archiveService.getArchiveStats();
       setState(() => _stats = stats);
     } catch (e) {
-      print('Error loading stats: $e');
     }
   }
 
@@ -85,12 +83,10 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
       _archiveSubscription = subscription as RealtimeSubscription?;
 
       subscription.listen((event) {
-        print('>>> Clinic archive real-time event received');
         _loadArchivedClinics();
         _loadStats();
       });
     } catch (e) {
-      print('Error setting up real-time subscription: $e');
     }
   }
 

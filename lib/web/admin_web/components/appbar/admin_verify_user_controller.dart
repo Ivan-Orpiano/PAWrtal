@@ -17,11 +17,6 @@ class AdminVerifyUserController extends GetxController {
   /// Verify user manually by admin
   Future<bool> verifyUser(User user) async {
     try {
-      print('>>> ============================================');
-      print('>>> ADMIN VERIFY USER');
-      print('>>> User ID: ${user.userId}');
-      print('>>> User Name: ${user.name}');
-      print('>>> ============================================');
 
       isVerifying.value = true;
       errorMessage.value = '';
@@ -31,25 +26,18 @@ class AdminVerifyUserController extends GetxController {
       final adminName = storage.read('name') as String? ?? 'Admin';
 
       if (clinicId == null || clinicId.isEmpty) {
-        print('>>> ERROR: No clinic ID found');
         errorMessage.value = 'Admin clinic ID not found';
         return false;
       }
 
-      print('>>> Clinic ID: $clinicId');
-      print('>>> Admin: $adminName');
 
       // Step 1: Check if user already has a verification record
-      print('>>> Step 1: Checking existing verification records...');
       final existingVerification =
           await authRepository.getIdVerificationByUserId(user.userId);
 
       IdVerification? verificationRecord;
 
       if (existingVerification != null) {
-        print(
-            '>>> Found existing verification record: ${existingVerification.documentId}');
-        print('>>> Current status: ${existingVerification.status}');
 
         // Update existing record
         verificationRecord = existingVerification.copyWith(
@@ -59,11 +47,8 @@ class AdminVerifyUserController extends GetxController {
           updatedAt: DateTime.now(),
         );
 
-        print('>>> Updating existing verification record...');
         await authRepository.updateIdVerification(verificationRecord);
-        print('>>> ✓ Verification record updated');
       } else {
-        print('>>> No existing verification record, creating new one...');
 
         // Create new verification record
         verificationRecord = IdVerification(
@@ -77,16 +62,12 @@ class AdminVerifyUserController extends GetxController {
           updatedAt: DateTime.now(),
         );
 
-        print('>>> Creating new verification record...');
         await authRepository.createIdVerification(verificationRecord);
-        print('>>> ✓ Verification record created');
       }
 
       // Step 2: Update user's verification status in Users collection
-      print('>>> Step 2: Updating user verification status...');
 
       if (user.documentId == null || user.documentId!.isEmpty) {
-        print('>>> ERROR: User document ID is null');
         errorMessage.value = 'User document ID not found';
         return false;
       }
@@ -102,19 +83,10 @@ class AdminVerifyUserController extends GetxController {
         },
       );
 
-      print('>>> ✓ User verification status updated');
 
-      print('>>> ============================================');
-      print('>>> USER VERIFICATION COMPLETE');
-      print('>>> ✓ User ${user.name} verified by clinic $clinicId');
-      print('>>> ============================================');
 
       return true;
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR VERIFYING USER: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
 
       errorMessage.value = 'Failed to verify user: ${e.toString()}';
       return false;
@@ -126,7 +98,6 @@ class AdminVerifyUserController extends GetxController {
   /// Get verification details for a user
   Future<Map<String, dynamic>> getVerificationDetails(String userId) async {
     try {
-      print('>>> Getting verification details for user: $userId');
 
       final verification =
           await authRepository.getIdVerificationByUserId(userId);
@@ -151,7 +122,6 @@ class AdminVerifyUserController extends GetxController {
             clinicName = clinicDoc.data['clinicName'] ?? 'Unknown Clinic';
           }
         } catch (e) {
-          print('>>> Warning: Could not fetch clinic name: $e');
         }
       }
 
@@ -165,7 +135,6 @@ class AdminVerifyUserController extends GetxController {
         'verificationType': verification.verificationType,
       };
     } catch (e) {
-      print('>>> Error getting verification details: $e');
       return {
         'hasVerification': false,
         'status': 'error',
@@ -189,7 +158,6 @@ class AdminVerifyUserController extends GetxController {
       return verification.verifyByClinic == clinicId &&
           verification.status == 'approved';
     } catch (e) {
-      print('>>> Error checking clinic verification: $e');
       return false;
     }
   }

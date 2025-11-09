@@ -51,7 +51,6 @@ class _PetsNextPageState extends State<PetsNextPage>
       if (Get.isRegistered<MobilePetsController>()) {
         final controller = Get.find<MobilePetsController>();
 
-        print('>>> 🔄 Fetching histories for pet: ${widget.pet.petId}');
 
         // Clear previous data first
         controller.clearHistories();
@@ -63,10 +62,6 @@ class _PetsNextPageState extends State<PetsNextPage>
           controller.fetchPetVaccinationHistory(widget.pet.petId),
         ]);
 
-        print('>>> ✅ All data loaded successfully');
-        print(
-            '>>> Medical Appointments: ${controller.medicalAppointments.length}');
-        print('>>> Vaccinations: ${controller.vaccinations.length}');
       }
     } catch (e) {
       debugPrint('>>> ❌ Error fetching histories: $e');
@@ -85,7 +80,6 @@ class _PetsNextPageState extends State<PetsNextPage>
 
     // Check if pet changed
     if (oldWidget.pet.petId != widget.pet.petId) {
-      print('>>> 🔄 Pet changed, refreshing data...');
       _fetchHistories();
     }
   }

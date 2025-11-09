@@ -8,6 +8,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class EnhancedUserAppointmentController extends GetxController {
   final AuthRepository authRepository;
@@ -53,7 +54,6 @@ class EnhancedUserAppointmentController extends GetxController {
         _handleRealtimeUpdate(message);
       });
     } catch (e) {
-      print('Error setting up realtime subscription: $e');
     }
   }
 
@@ -67,7 +67,6 @@ class EnhancedUserAppointmentController extends GetxController {
         _handleReviewUpdate(message);
       });
     } catch (e) {
-      print('Error setting up review subscription: $e');
     }
   }
 
@@ -78,15 +77,11 @@ class EnhancedUserAppointmentController extends GetxController {
 
     if (appointmentId == null) return;
 
-    print('Review update received for appointment: $appointmentId');
-    print('Event type: $eventType');
 
     if (eventType.contains('create')) {
       appointmentReviews[appointmentId] = true;
-      print('Review created for appointment: $appointmentId');
     } else if (eventType.contains('delete')) {
       appointmentReviews[appointmentId] = false;
-      print('Review deleted for appointment: $appointmentId');
     }
 
     appointments.refresh();
@@ -96,18 +91,13 @@ class EnhancedUserAppointmentController extends GetxController {
     final payload = message.payload;
     final eventType = message.events.first;
 
-    print('Realtime update received: $eventType');
-    print('Payload: $payload');
 
     if (eventType.contains('create')) {
       _addOrUpdateAppointment(payload);
-      print('Added new appointment');
     } else if (eventType.contains('update')) {
       _addOrUpdateAppointment(payload);
-      print('Updated appointment');
     } else if (eventType.contains('delete')) {
       appointments.removeWhere((a) => a.documentId == payload['\$id']);
-      print('Deleted appointment');
     }
 
     appointments.refresh();
@@ -134,7 +124,6 @@ class EnhancedUserAppointmentController extends GetxController {
           await authRepository.hasUserReviewedAppointment(appointmentId);
       appointmentReviews[appointmentId] = hasReview;
     } catch (e) {
-      print('Error checking appointment review: $e');
     }
   }
 
@@ -150,6 +139,10 @@ class EnhancedUserAppointmentController extends GetxController {
 
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
+
+      // DEBUG: Print appointment times
+      for (var apt in result.take(3)) {
+      }
 
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
@@ -182,7 +175,6 @@ class EnhancedUserAppointmentController extends GetxController {
             clinics[clinicId] = clinic;
           }
         } catch (e) {
-          print('Error fetching clinic $clinicId: $e');
         }
       }
     }
@@ -197,7 +189,6 @@ class EnhancedUserAppointmentController extends GetxController {
             pets[petName] = pet;
           }
         } catch (e) {
-          print('Error fetching pet $petName: $e');
         }
       }
     }
@@ -215,7 +206,6 @@ class EnhancedUserAppointmentController extends GetxController {
           clinics[appointment.clinicId] = clinic;
         }
       } catch (e) {
-        print('Error fetching clinic: $e');
       }
     }
 
@@ -228,7 +218,6 @@ class EnhancedUserAppointmentController extends GetxController {
           pets[appointment.petId] = pet;
         }
       } catch (e) {
-        print('Error fetching pet: $e');
       }
     }
   }
@@ -288,45 +277,41 @@ class EnhancedUserAppointmentController extends GetxController {
     }).toList();
   }
 
-  // NEW: Cancel pending appointment (direct deletion, no reason needed)
-Future<void> cancelPendingAppointment(String appointmentId) async {
-  try {
-    isLoading.value = true;
+  Future<void> cancelPendingAppointment(String appointmentId) async {
+    try {
+      isLoading.value = true;
 
-    // Update with cancellation details including who cancelled
-    await authRepository.updateFullAppointment(appointmentId, {
-      'status': 'cancelled',
-      'cancelledBy': 'user',
-      'cancelledAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
+      await authRepository.updateFullAppointment(appointmentId, {
+        'status': 'cancelled',
+        'cancelledBy': 'user',
+        'cancelledAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
 
-    // Remove from local list immediately for better UX
-    appointments.removeWhere((a) => a.documentId == appointmentId);
+      appointments.removeWhere((a) => a.documentId == appointmentId);
 
-    Get.snackbar(
-      "Cancelled",
-      "Appointment request cancelled successfully",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.orange.shade50,
-      colorText: Colors.orange.shade700,
-      icon: const Icon(Icons.cancel_outlined, color: Colors.orange),
-      duration: const Duration(seconds: 2),
-    );
-  } catch (e) {
-    Get.snackbar(
-      "Error",
-      "Failed to cancel appointment: $e",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
-  } finally {
-    isLoading.value = false;
+      Get.snackbar(
+        "Cancelled",
+        "Appointment request cancelled successfully",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade50,
+        colorText: Colors.orange.shade700,
+        icon: const Icon(Icons.cancel_outlined, color: Colors.orange),
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Failed to cancel appointment: $e",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
-}
 
-  // NEW: Cancel accepted appointment (with reason)
   Future<void> cancelAcceptedAppointment(
     String appointmentId,
     String cancellationReason,
@@ -334,12 +319,10 @@ Future<void> cancelPendingAppointment(String appointmentId) async {
     try {
       isLoading.value = true;
 
-      // Get appointment details before cancelling
       final appointment = appointments.firstWhere(
         (a) => a.documentId == appointmentId,
       );
 
-      // Update appointment with cancellation details
       await authRepository.updateFullAppointment(appointmentId, {
         'status': 'cancelled',
         'cancellationReason': cancellationReason,
@@ -365,11 +348,9 @@ Future<void> cancelPendingAppointment(String appointmentId) async {
             );
 
             await authRepository.createNotification(notification);
-            print('>>> Cancellation notification sent to admin');
           }
         }
       } catch (e) {
-        print('>>> Error creating notification: $e');
       }
 
       Get.snackbar(
@@ -466,12 +447,10 @@ Future<void> cancelPendingAppointment(String appointmentId) async {
   }
 
   bool canCancelAppointment(Appointment appointment) {
-    // Can cancel pending appointments anytime
     if (appointment.status == 'pending') {
       return true;
     }
 
-    // Can cancel accepted appointments if at least 2 hours before appointment time
     if (appointment.status == 'accepted') {
       return appointment.dateTime
           .isAfter(DateTime.now().add(const Duration(hours: 2)));
@@ -480,7 +459,6 @@ Future<void> cancelPendingAppointment(String appointmentId) async {
     return false;
   }
 
-  // NEW: Check if appointment needs cancellation reason
   bool needsCancellationReason(Appointment appointment) {
     return appointment.status == 'accepted';
   }
@@ -521,12 +499,26 @@ Future<void> cancelPendingAppointment(String appointmentId) async {
     appointments.refresh();
   }
 
+  // ✅ FIXED: Use the Appointment model's helper methods consistently
   String getFormattedAppointmentTime(Appointment appointment) {
-    return appointment.formattedTime; // Uses the helper from Appointment model
+    return appointment.formattedTime;
   }
 
   String getFormattedAppointmentDateTime(Appointment appointment) {
-    return appointment
-        .formattedDateTime; // Uses the helper from Appointment model
+    return appointment.formattedDateTime;
+  }
+
+  // ✅ NEW: Additional helper for date only
+  String getFormattedAppointmentDate(Appointment appointment) {
+    return appointment.formattedDate;
+  }
+
+  // ✅ NEW: Debug method to compare times
+  void debugAppointmentTime(String appointmentId) {
+    final appointment = appointments.firstWhere(
+      (a) => a.documentId == appointmentId,
+      orElse: () => throw Exception('Appointment not found'),
+    );
+
   }
 }

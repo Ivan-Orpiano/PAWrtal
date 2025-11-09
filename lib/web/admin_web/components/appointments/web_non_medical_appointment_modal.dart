@@ -184,7 +184,6 @@ class _WebNonMedicalAppointmentModalState
                     imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      print('>>> Error loading pet image: $error');
                       return _buildDefaultIcon();
                     },
                     loadingBuilder: (context, child, loadingProgress) {
@@ -634,7 +633,6 @@ class _WebNonMedicalAppointmentModalState
     );
 
     try {
-      print('>>> Loading owner details for user: ${widget.appointment.userId}');
 
       // Get user document
       final userDoc = await controller.authRepository
@@ -644,7 +642,6 @@ class _WebNonMedicalAppointmentModalState
       Get.back();
 
       if (userDoc == null) {
-        print('>>> ERROR: User not found');
         Get.snackbar(
           'Error',
           'Could not load owner information',
@@ -655,7 +652,6 @@ class _WebNonMedicalAppointmentModalState
         return;
       }
 
-      print('>>> User found: ${userDoc.data['name']}');
 
       // Convert to User model
       final owner = User.fromMap(userDoc.data);
@@ -666,8 +662,6 @@ class _WebNonMedicalAppointmentModalState
         builder: (context) => OwnerDetailsDialog(owner: owner),
       );
     } catch (e, stackTrace) {
-      print('>>> ERROR loading owner details: $e');
-      print('>>> Stack trace: $stackTrace');
 
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {

@@ -60,13 +60,11 @@ class WebAppointmentController extends GetxController {
           .subscribeToClinicAppointments(clinicId)
           .listen((message) {
         // When an appointment is created, updated, or deleted, refresh time slots
-        print('Real-time update received: ${message.events}');
         if (selectedDateTime.value != null) {
           _fetchOccupiedSlots();
         }
       });
     } catch (e) {
-      print('Error setting up realtime subscription: $e');
     }
   }
 
@@ -80,12 +78,10 @@ class WebAppointmentController extends GetxController {
       final slots = await authRepository.getOccupiedTimeSlots(
           clinicId, selectedDateTime.value!);
 
-      print('Fetched occupied slots for ${selectedDateTime.value}: $slots');
 
       occupiedTimeSlots.value = slots;
       _updateAvailableTimeSlots();
     } catch (e) {
-      print('Error fetching occupied slots: $e');
     }
   }
 
@@ -98,10 +94,8 @@ class WebAppointmentController extends GetxController {
       // Load closed dates
       if (settings != null) {
         closedDates.value = settings.closedDates;
-        print('>>> Loaded ${closedDates.length} closed dates for clinic');
       }
     } catch (e) {
-      print("Error loading clinic settings: $e");
     }
   }
 
@@ -115,7 +109,6 @@ class WebAppointmentController extends GetxController {
         pets.assignAll(petDocs.map((doc) => Pet.fromMap(doc.data)).toList());
       }
     } catch (e) {
-      print("Error loading pets: $e");
     } finally {
       isLoading.value = false;
     }
@@ -153,7 +146,6 @@ class WebAppointmentController extends GetxController {
       // CRITICAL: Check if date is in closed dates
       final dateStr = _formatDateToString(day);
       if (closedDates.contains(dateStr)) {
-        print('>>> Date $dateStr is in closed dates list');
         return false;
       }
 
@@ -298,7 +290,6 @@ class WebAppointmentController extends GetxController {
         // Add a 30-minute buffer
         return slotDateTime.isAfter(now.add(const Duration(minutes: 30)));
       } catch (e) {
-        print('Error parsing time slot "$timeSlot": $e');
         return true; // Include if parsing fails
       }
     }).toList();
@@ -375,12 +366,6 @@ class WebAppointmentController extends GetxController {
     try {
       isBooking.value = true;
 
-      print('>>> ============================================');
-      print('>>> BOOKING APPOINTMENT');
-      print('>>> Service selected: ${selectedService.value}');
-      print('>>> Clinic ID: ${clinic.documentId}');
-      print('>>> Selected time: ${selectedTime.value}');
-      print('>>> ============================================');
 
       // ✅ FIXED: Parse time correctly handling both 12-hour and 24-hour formats
       final timeString = selectedTime.value!;
@@ -403,19 +388,14 @@ class WebAppointmentController extends GetxController {
             hour = 0;
           }
 
-          print(
-              '>>> Parsed 12-hour time: $timeString → ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
         } else {
           // 24-hour format (e.g., "14:30")
           final timeParts = timeString.split(':');
           hour = int.parse(timeParts[0]);
           minute = int.parse(timeParts[1]);
 
-          print('>>> Parsed 24-hour time: $timeString → $hour:$minute');
         }
       } catch (e) {
-        print('>>> ❌ ERROR parsing time: $e');
-        print('>>> Time string was: $timeString');
 
         _showCompactNotification(
           "Invalid time format. Please try again.",
@@ -435,25 +415,15 @@ class WebAppointmentController extends GetxController {
         minute,
       );
 
-      print('>>> Final appointment datetime: $appointmentDateTime');
 
       // CRITICAL: Check if service is medical from clinic settings
       bool isMedicalService = false;
       if (clinicSettings.value != null && selectedService.value != null) {
         isMedicalService =
             clinicSettings.value!.isServiceMedical(selectedService.value!);
-        print('>>> Clinic settings loaded');
-        print(
-            '>>> Service "${selectedService.value}" is medical: $isMedicalService');
-        print(
-            '>>> Medical services map: ${clinicSettings.value!.medicalServices}');
       } else {
-        print('>>> Warning: Clinic settings not loaded, defaulting to false');
       }
 
-      print(
-          '>>> Creating appointment with isMedicalService: $isMedicalService');
-      print('>>> ============================================');
 
       final appointment = Appointment(
         userId: userId,
@@ -467,16 +437,9 @@ class WebAppointmentController extends GetxController {
         isMedicalService: isMedicalService,
       );
 
-      print('>>> Appointment object created:');
-      print('>>>   - Service: ${appointment.service}');
-      print('>>>   - DateTime: ${appointment.dateTime}');
-      print('>>>   - isMedicalService: ${appointment.isMedicalService}');
-      print('>>> ============================================');
 
       await authRepository.createAppointment(appointment);
 
-      print('>>> Appointment created successfully');
-      print('>>> ============================================');
 
       // Create notification for admin
       try {
@@ -497,11 +460,9 @@ class WebAppointmentController extends GetxController {
             );
 
             await authRepository.createNotification(notification);
-            print('>>> Booking notification sent to admin');
           }
         }
       } catch (e) {
-        print('>>> Error creating notification: $e');
       }
 
       await _notifyAdminOfNewAppointment(appointment);
@@ -523,9 +484,6 @@ class WebAppointmentController extends GetxController {
       selectedPet.value = null;
       availableTimes.clear();
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR BOOKING APPOINTMENT: $e');
-      print('>>> ============================================');
 
       _showCompactNotification(
         "Failed to book appointment: $e",
@@ -540,19 +498,16 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _notifyAdminOfNewAppointment(Appointment appointment) async {
     try {
-      print('>>> Notifying admin of new appointment');
 
       // Get clinic admin ID
       final clinicDoc =
           await authRepository.getClinicById(clinic.documentId ?? '');
       if (clinicDoc == null) {
-        print('>>> Clinic not found, skipping admin notification');
         return;
       }
 
       final adminId = clinicDoc.data['adminId'] as String?;
       if (adminId == null || adminId.isEmpty) {
-        print('>>> Admin ID not found, skipping notification');
         return;
       }
 
@@ -572,9 +527,7 @@ class WebAppointmentController extends GetxController {
         appointmentId: appointment.documentId ?? '',
       );
 
-      print('>>> Admin notification sent successfully');
     } catch (e) {
-      print('>>> Error notifying admin: $e');
       // Don't fail booking if notification fails
     }
   }

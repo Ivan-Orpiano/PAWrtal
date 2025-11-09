@@ -304,8 +304,7 @@ class WebAppointmentTile extends StatelessWidget {
       Pet? pet;
       String? clinicId;
 
-      print('>>> Attempting to load pet with ID: ${appointment.petId}');
-      print('>>> Clinic ID: ${appointment.clinicId}'); // NEW
+      // NEW
 
       // Get clinic ID from appointment
       clinicId = appointment.clinicId;
@@ -314,7 +313,6 @@ class WebAppointmentTile extends StatelessWidget {
       final userPets =
           await controller.authRepository.getUserPets(appointment.userId);
 
-      print('>>> Found ${userPets.length} pets for user');
 
       // Find the pet by matching petId, name, or document ID
       final petDoc = userPets.firstWhereOrNull(
@@ -327,14 +325,12 @@ class WebAppointmentTile extends StatelessWidget {
       if (petDoc != null) {
         pet = Pet.fromMap(petDoc.data);
         pet.documentId = petDoc.$id;
-        print('>>> Pet loaded: ${pet.name}');
       }
 
       // Close loading indicator
       Get.back();
 
       if (pet == null) {
-        print('>>> ERROR: Could not find pet');
         Get.snackbar(
           'Error',
           'Could not load pet information. Pet ID: ${appointment.petId}',
@@ -346,7 +342,6 @@ class WebAppointmentTile extends StatelessWidget {
       }
 
       if (clinicId == null || clinicId.isEmpty) {
-        print('>>> ERROR: Clinic ID not available');
         Get.snackbar(
           'Error',
           'Clinic information not available for this appointment',
@@ -371,7 +366,6 @@ class WebAppointmentTile extends StatelessWidget {
         Get.back();
       }
 
-      print('>>> Error loading pet card: $e');
       Get.snackbar(
         'Error',
         'Failed to load pet information: ${e.toString()}',
@@ -976,7 +970,6 @@ class WebAppointmentTile extends StatelessWidget {
     // Create a local BuildContext reference
     final currentContext = Get.context;
     if (currentContext == null) {
-      print('>>> ERROR: No context available');
       return;
     }
 
@@ -1009,7 +1002,6 @@ class WebAppointmentTile extends StatelessWidget {
         }
       }
     } catch (e) {
-      print('>>> Warning: Could not load pending vitals: $e');
     }
 
     // Add listeners to track changes
@@ -1072,7 +1064,6 @@ class WebAppointmentTile extends StatelessWidget {
         if (!bpController.hasListeners) bpController.dispose();
         if (!hrController.hasListeners) hrController.dispose();
       } catch (e) {
-        print('>>> Error disposing controllers: $e');
       }
     }
 
@@ -1379,7 +1370,6 @@ class WebAppointmentTile extends StatelessWidget {
                                       );
                                     }
                                   } catch (e) {
-                                    print('>>> Error storing vitals: $e');
                                   }
                                 });
                               },

@@ -90,33 +90,6 @@ class _EnhancedWebAppointmentPanelState
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Legend for closed dates
-                if (closedDates.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.red[100],
-                            border: Border.all(color: Colors.red[300]!),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Clinic Closed',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 TableCalendar(
                   focusedDay:
                       controller.selectedDateTime.value ?? DateTime.now(),

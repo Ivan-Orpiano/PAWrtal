@@ -33,7 +33,6 @@ class OTPService {
     };
 
     _storage.write('otp_${email.toLowerCase()}', json.encode(otpData));
-    print('>>> OTP stored for $email, expires at $expiryTime');
   }
 
   /// Verify OTP
@@ -91,7 +90,6 @@ class OTPService {
         };
       }
     } catch (e) {
-      print('Error verifying OTP: $e');
       return {
         'success': false,
         'message': 'Error verifying OTP. Please try again.',
@@ -102,11 +100,6 @@ class OTPService {
   /// Send OTP via Appwrite Function (calls Resend API server-side)
   Future<Map<String, dynamic>> sendOTP(String email, String name) async {
     try {
-      print('>>> ============================================');
-      print('>>> SENDING OTP VIA APPWRITE FUNCTION');
-      print('>>> Email: $email');
-      print('>>> Name: $name');
-      print('>>> ============================================');
 
       // Initialize Appwrite client
       final client = Client()
@@ -116,7 +109,6 @@ class OTPService {
       final functions = Functions(client);
 
       // Call Appwrite function
-      print('>>> Calling Appwrite function: $sendOTPFunctionId');
       
       final execution = await functions.createExecution(
         functionId: sendOTPFunctionId,
@@ -127,8 +119,6 @@ class OTPService {
         xasync: false, // Wait for completion
       );
 
-      print('>>> Function execution status: ${execution.status}');
-      print('>>> Function response: ${execution.responseBody}');
 
       // Parse response
       if (execution.status == 'completed') {
@@ -139,40 +129,30 @@ class OTPService {
           final otp = response['otp'];
           await storeOTP(email, otp);
           
-          print('>>> ✅ OTP sent and stored successfully');
-          print('>>> ============================================');
           
           return {
             'success': true,
             'message': 'Verification code sent to your email',
           };
         } else {
-          print('>>> ❌ Function returned error: ${response['message']}');
           return {
             'success': false,
             'message': response['message'] ?? 'Failed to send verification code',
           };
         }
       } else if (execution.status == 'failed') {
-        print('>>> ❌ Function execution failed');
-        print('>>> Error: ${execution.responseBody}');
         
         return {
           'success': false,
           'message': 'Failed to send verification code. Please try again.',
         };
       } else {
-        print('>>> ⚠️ Unexpected execution status: ${execution.status}');
         return {
           'success': false,
           'message': 'Unexpected error. Please try again.',
         };
       }
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ❌ ERROR SENDING OTP: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
       
       return {
         'success': false,

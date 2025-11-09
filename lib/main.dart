@@ -27,16 +27,11 @@ void main() async {
 
 /// Initialize security features
 Future<void> _initializeSecurity() async {
-  print('>>> ============================================');
-  print('>>> INITIALIZING SECURITY FEATURES');
-  print('>>> Platform: ${kIsWeb ? "WEB" : "MOBILE"}');
-  print('>>> ============================================');
 
   final storage = GetStorage();
 
   // Initialize security monitoring
   final violations = storage.read<List>('security_violations') ?? [];
-  print('>>> Loaded ${violations.length} previous security violations');
 
   // Check for expired sessions
   // await _checkExpiredSessions();
@@ -44,8 +39,6 @@ Future<void> _initializeSecurity() async {
   // Clean up old security data (older than 30 days)
   // await SessionManager.cleanupOldData();
 
-  print('>>> Security initialization complete');
-  print('>>> ============================================');
 }
 
 /// Check and clean up expired sessions
@@ -54,7 +47,6 @@ Future<void> _checkExpiredSessions() async {
 
   final sessionId = storage.read('sessionId');
   if (sessionId == null) {
-    print('>>> No active session found');
     return;
   }
 
@@ -68,14 +60,10 @@ Future<void> _checkExpiredSessions() async {
 
       // If session older than 60 minutes, clear it
       if (difference > 360) {
-        print('>>> Session expired (${difference} minutes old)');
-        print('>>> Clearing expired session...');
         await storage.erase();
       } else {
-        print('>>> Active session found (${difference} minutes old)');
       }
     } catch (e) {
-      print('>>> Error checking session: $e');
     }
   }
 }
