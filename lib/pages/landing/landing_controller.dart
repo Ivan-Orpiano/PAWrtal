@@ -28,9 +28,6 @@ class LandingController extends GetxController {
     try {
       isLoading.value = true;
 
-      print('>>> ============================================');
-      print('>>> LANDING: Fetching clinics data');
-      print('>>> ============================================');
 
       final clinicsWithSettings = await _authRepository.getClinicsWithSettings();
 
@@ -51,7 +48,6 @@ class LandingController extends GetxController {
           final stats = await _authRepository.getClinicRatingStats(clinicDocId);
           statsCache[clinicDocId] = stats;
         } catch (e) {
-          print('>>> Error loading stats for $clinicDocId: $e');
           statsCache[clinicDocId] = ClinicRatingStats(
             averageRating: 0.0,
             totalReviews: 0,
@@ -67,10 +63,7 @@ class LandingController extends GetxController {
       ratingStatsCache.value = statsCache;
       applyFilters();
 
-      print('>>> ✅ Clinics loaded: ${clinics.length}');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error fetching clinics: $e');
     } finally {
       isLoading.value = false;
     }

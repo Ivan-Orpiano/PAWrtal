@@ -50,11 +50,6 @@ class MedicalRecord {
   // Medical records should only be created explicitly with medical data
 
   Map<String, dynamic> toMap() {
-    print('>>> MedicalRecord toMap() called');
-    print('>>>   - temperature: $temperature');
-    print('>>>   - weight: $weight');
-    print('>>>   - bloodPressure: $bloodPressure');
-    print('>>>   - heartRate: $heartRate');
 
     return {
       'petId': petId,

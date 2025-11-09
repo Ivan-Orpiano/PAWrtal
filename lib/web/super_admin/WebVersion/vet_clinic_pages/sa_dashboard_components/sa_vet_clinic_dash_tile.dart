@@ -105,7 +105,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
         oldWidget.clinic.clinicName != widget.clinic.clinicName ||
         oldWidget.clinic.services != widget.clinic.services ||
         oldWidget.settings?.gallery != widget.settings?.gallery) {
-      print('📄 Real-time update detected for: ${widget.clinic.clinicName}');
 
       setState(() {
         _imageLoaded = false;
@@ -440,7 +439,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
       _cachedImageUrl!,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-        print('❌ Image loading error: $error');
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             setState(() {
@@ -459,7 +457,6 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
                 _imageLoaded = true;
                 _imageError = false;
               });
-              print('✅ Image loaded successfully: ${widget.clinic.clinicName}');
             }
           });
           return child;

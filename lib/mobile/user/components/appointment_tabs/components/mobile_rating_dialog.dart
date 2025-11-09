@@ -99,7 +99,6 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
         });
       }
     } catch (e) {
-      print('Error picking images: $e');
       Get.snackbar(
         'Error',
         'Failed to pick images',
@@ -158,7 +157,6 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
               await Get.find<AuthRepository>().uploadReviewImages(selectedImages);
           imageIds = uploadedFiles.map((file) => file.$id).toList();
         } catch (e) {
-          print('Error uploading images: $e');
         }
       }
 
@@ -191,7 +189,6 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      print('Error submitting review: $e');
       Get.snackbar(
         'Error',
         'Failed to submit review: ${e.toString()}',

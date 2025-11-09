@@ -74,19 +74,14 @@ class _SuperAdminVetClinicDashboardState
   }
 
   void _setupRealtimeListeners() {
-    print('🔔 Setting up real-time listeners for clinic updates...');
     
     _clinicSubscription = controller.authRepository
         .subscribeToClinicChanges()
         .listen((event) {
-      print('🔔 Clinic real-time event received');
-      print('   Events: ${event.events}');
-      print('   Payload ID: ${event.payload['\$id']}');
       
       final eventType = event.events.first;
       
       if (eventType.contains('.create')) {
-        print('✅ New clinic created - refreshing list');
         _showRealTimeNotification(
           'New clinic added',
           Icons.add_business_rounded,
@@ -94,10 +89,8 @@ class _SuperAdminVetClinicDashboardState
         );
         controller.fetchAllClinics();
       } else if (eventType.contains('.update')) {
-        print('🔄 Clinic updated - refreshing list');
         controller.fetchAllClinics();
       } else if (eventType.contains('.delete')) {
-        print('🗑️ Clinic deleted - refreshing list');
         _showRealTimeNotification(
           'Clinic removed',
           Icons.delete_rounded,
@@ -106,19 +99,15 @@ class _SuperAdminVetClinicDashboardState
         controller.fetchAllClinics();
       }
     }, onError: (error) {
-      print('❌ Clinic subscription error: $error');
     });
 
     _settingsSubscription = controller.authRepository
         .subscribeToClinicSettingsChanges()
         .listen((event) {
-      print('🔔 Settings real-time event received');
-      print('   Events: ${event.events}');
       
       final eventType = event.events.first;
       
       if (eventType.contains('.update')) {
-        print('🔄 Clinic settings updated - refreshing list');
         final clinicId = event.payload['clinicId'] as String?;
         
         if (clinicId != null) {
@@ -133,7 +122,6 @@ class _SuperAdminVetClinicDashboardState
         controller.fetchAllClinics();
       }
     }, onError: (error) {
-      print('❌ Settings subscription error: $error');
     });
   }
 

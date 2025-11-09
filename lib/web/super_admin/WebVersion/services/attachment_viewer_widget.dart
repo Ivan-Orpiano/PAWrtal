@@ -45,7 +45,6 @@ class _AttachmentViewerWidgetState extends State<AttachmentViewerWidget> {
         _isLoading = false;
       });
     } catch (e) {
-      print('>>> Error initializing video player: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = 'Failed to load video';

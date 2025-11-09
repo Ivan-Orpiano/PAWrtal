@@ -43,7 +43,6 @@ class _VetPopupState extends State<VetPopup> {
         });
       }
     } catch (e) {
-      print("Error loading rating stats for popup: $e");
       if (mounted) {
         setState(() {
           _isLoadingRating = false;

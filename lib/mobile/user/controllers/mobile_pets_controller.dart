@@ -53,14 +53,11 @@ class MobilePetsController extends GetxController {
     try {
       final userId = session.userId;
       if (userId.isEmpty) {
-        print('>>> Error: User not logged in');
         return;
       }
       final petDocs = await authRepository.getUserPets(userId);
       pets.value = petDocs.map((doc) => Pet.fromMap(doc.data)).toList();
-      print('>>> Fetched ${pets.length} pets for user');
     } catch (e) {
-      print('>>> Error fetching pets: $e');
     } finally {
       isLoading.value = false;
     }
@@ -69,12 +66,9 @@ class MobilePetsController extends GetxController {
   Future<void> fetchPetMedicalHistory(String petId) async {
     isLoadingMedical.value = true;
     try {
-      print('>>> MOBILE CONTROLLER: Fetching medical records for pet: $petId');
       final records = await authRepository.getPetMedicalRecords(petId);
       medicalRecords.value = records;
-      print('>>> MOBILE CONTROLLER: Loaded ${records.length} medical records');
     } catch (e) {
-      print('>>> MOBILE CONTROLLER: Error fetching medical history: $e');
       medicalRecords.clear();
     } finally {
       isLoadingMedical.value = false;
@@ -84,21 +78,16 @@ class MobilePetsController extends GetxController {
   Future<void> fetchPetVaccinationHistory(String petId) async {
     isLoadingVaccinations.value = true;
     try {
-      print('>>> MOBILE CONTROLLER: Fetching vaccinations for pet: $petId');
 
       final vaccins = await authRepository.getPetVaccinations(petId);
 
       vaccinations.value = vaccins;
 
-      print('>>> MOBILE CONTROLLER: ✅ Loaded ${vaccins.length} vaccinations');
 
       // Debug info
       if (vaccins.isNotEmpty) {
-        print('>>> First vaccination: ${vaccins.first.vaccineName}');
-        print('>>> Date given: ${vaccins.first.dateGiven}');
       }
     } catch (e) {
-      print('>>> MOBILE CONTROLLER: ❌ Error fetching vaccinations: $e');
       vaccinations.clear();
     } finally {
       isLoadingVaccinations.value = false;
@@ -108,8 +97,6 @@ class MobilePetsController extends GetxController {
   Future<void> fetchPetMedicalAppointmentsAllClinics(String petId) async {
     try {
       isLoadingMedicalAppointments.value = true;
-      print(
-          '>>> MOBILE CONTROLLER: Fetching medical appointments for pet: $petId');
 
       // ✅ CRITICAL FIX: Call the corrected method that fetches from ALL clinics
       final appointments =
@@ -117,17 +104,11 @@ class MobilePetsController extends GetxController {
 
       medicalAppointments.value = appointments;
 
-      print(
-          '>>> MOBILE CONTROLLER: ✅ Loaded ${appointments.length} medical appointments');
 
       // ✅ Additional debug info
       if (appointments.isNotEmpty) {
-        print(
-            '>>> First appointment service: ${appointments.first['service']}');
-        print('>>> First appointment petId: ${appointments.first['petId']}');
       }
     } catch (e) {
-      print('>>> MOBILE CONTROLLER: ❌ Error fetching medical appointments: $e');
       medicalAppointments.clear();
     } finally {
       isLoadingMedicalAppointments.value = false;
@@ -137,35 +118,18 @@ class MobilePetsController extends GetxController {
   Future<void> fetchPetMedicalRecordsForAppointments(String petId) async {
     isLoadingMedical.value = true;
     try {
-      print('>>> ============================================');
-      print('>>> MOBILE CONTROLLER: Fetching medical records for pet: $petId');
-      print('>>> ============================================');
 
       final records = await authRepository.getPetMedicalRecords(petId);
 
       medicalRecords.value = records;
 
-      print(
-          '>>> MOBILE CONTROLLER: ✅ Loaded ${records.length} medical records');
 
       // Debug info - print each record
       if (records.isNotEmpty) {
         for (var record in records) {
-          print('>>> Medical Record:');
-          print('>>>   Record ID: ${record.id}');
-          print('>>>   Appointment ID: ${record.appointmentId}');
-          print('>>>   Service: ${record.service}');
-          print('>>>   Pet ID: ${record.petId}');
-          print('>>>   Visit Date: ${record.visitDate}');
-          print(
-              '>>>   Diagnosis: ${record.diagnosis.substring(0, math.min(30, record.diagnosis.length))}...');
-          print('>>> ---');
         }
       }
-      print('>>> ============================================');
     } catch (e, stackTrace) {
-      print('>>> MOBILE CONTROLLER: ❌ Error fetching medical records: $e');
-      print('>>> Stack trace: $stackTrace');
       medicalRecords.clear();
     } finally {
       isLoadingMedical.value = false;
@@ -201,28 +165,21 @@ class MobilePetsController extends GetxController {
 
         if (imageId != null) {
           try {
-            print('🗑️ Attempting to delete image: $imageId');
             await authRepository.deleteImage(imageId);
             imageDeleted = true;
-            print('✅ Image deleted successfully');
           } catch (imageError) {
             // Log the error but don't fail the entire operation
-            print('⚠️ Failed to delete image (continuing anyway): $imageError');
 
             // Only show warning if it's not a "file not found" error
             if (!imageError.toString().contains('storage_file_not_found') &&
                 !imageError.toString().contains('404')) {
-              print(
-                  '⚠️ Warning: Pet image could not be deleted, but pet record will be removed.');
             }
           }
         } else {
-          print('⚠️ Could not extract valid file ID from image URL');
         }
       }
 
       // Delete the pet document (this should always succeed)
-      print('🗑️ Deleting pet document: ${pet.documentId}');
       await authRepository.deletePet(pet.documentId!);
 
       // Remove from local list
@@ -238,9 +195,7 @@ class MobilePetsController extends GetxController {
           ? "${pet.name} has been deleted successfully"
           : "${pet.name} has been deleted (image was already removed)";
 
-      print('✅ $message');
     } catch (e) {
-      print('❌ Error deleting pet: $e');
       rethrow; // Let the UI handle the error display
     }
   }
@@ -285,10 +240,8 @@ class MobilePetsController extends GetxController {
         }
       }
 
-      print('⚠️ Could not extract file ID from: $imageUrl');
       return null;
     } catch (e) {
-      print('⚠️ Error extracting file ID from $imageUrl: $e');
       return null;
     }
   }
@@ -308,88 +261,57 @@ class MobilePetsController extends GetxController {
 
   Future<String> getVeterinarianName(String vetId) async {
     try {
-      print('>>> ============================================');
-      print('>>> MOBILE: Fetching veterinarian name for vetId: $vetId');
-      print('>>> ============================================');
 
       // STEP 1: Check if this is a clinic admin
-      print('>>> Step 1: Checking if vetId is a clinic admin...');
       final clinicDoc = await authRepository.getClinicByAdminId(vetId);
 
       if (clinicDoc != null) {
-        print('>>> ✅ User is CLINIC ADMIN - returning "Admin"');
-        print('>>> ============================================');
         return 'Admin';
       }
 
       // STEP 2: Try to get staff by USER ID
-      print('>>> Step 2: Checking if vetId is a staff user ID...');
       try {
         final staffDoc = await authRepository.getStaffByUserId(vetId);
         if (staffDoc != null) {
           final staffName = staffDoc.name;
           final isDoctor = staffDoc.isDoctor;
 
-          print('>>> ✅ Staff found by USER ID!');
-          print('>>>   Name: $staffName');
-          print('>>>   Is Doctor: $isDoctor');
 
           // Return "Dr. [Name]" if doctor, otherwise just name
           final displayName = isDoctor ? 'Dr. $staffName' : staffName;
-          print('>>> ✅ Returning staff name: $displayName');
-          print('>>> ============================================');
           return displayName;
         }
       } catch (e) {
-        print('>>> Not a staff user ID, trying staff document ID...');
       }
 
       // STEP 3: Try to get staff by DOCUMENT ID
-      print('>>> Step 3: Checking if vetId is a staff document ID...');
       try {
         final staffDoc = await authRepository.getStaffByDocumentId(vetId);
         if (staffDoc != null) {
           final staffName = staffDoc.name;
           final isDoctor = staffDoc.isDoctor;
 
-          print('>>> ✅ Staff found by DOCUMENT ID!');
-          print('>>>   Name: $staffName');
-          print('>>>   Is Doctor: $isDoctor');
 
           // Return "Dr. [Name]" if doctor, otherwise just name
           final displayName = isDoctor ? 'Dr. $staffName' : staffName;
-          print('>>> ✅ Returning staff name: $displayName');
-          print('>>> ============================================');
           return displayName;
         }
       } catch (e) {
-        print('>>> Not a staff document ID either...');
       }
 
       // STEP 4: Get the user document as fallback
-      print('>>> Step 4: Fetching user document as fallback...');
       final userDoc = await authRepository.getUserById(vetId);
 
       if (userDoc == null) {
-        print('>>> ❌ User document not found for vetId: $vetId');
-        print('>>> ============================================');
         return 'Unknown';
       }
 
       final userName = userDoc.data['name'] ?? 'Unknown';
       final userRole = userDoc.data['role'] ?? '';
 
-      print('>>> User found:');
-      print('>>>   Name: $userName');
-      print('>>>   Role: $userRole');
-      print('>>> ============================================');
 
       return userName;
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ❌ ERROR fetching veterinarian name: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
       return 'Unknown';
     }
   }

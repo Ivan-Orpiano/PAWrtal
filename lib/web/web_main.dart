@@ -77,31 +77,24 @@ class NotFoundPage extends StatelessWidget {
                   final role = storage.read('role');
                   final userId = storage.read('userId');
                   
-                  print('>>> 404 Page - Redirecting user');
-                  print('>>> User ID: ${userId ?? "NOT LOGGED IN"}');
-                  print('>>> Role: ${role ?? "NONE"}');
                   
                   if (role != null && userId != null) {
                     // User is logged in - redirect to their home
                     switch (role) {
                       case 'admin':
                       case 'staff':
-                        print('>>> Redirecting to adminHome');
                         Get.offAllNamed('/adminHome');
                         break;
                       case 'developer':
-                        print('>>> Redirecting to superAdminHome');
                         Get.offAllNamed('/superAdminHome');
                         break;
                       case 'user':
                       case 'customer':
                       default:
-                        print('>>> Redirecting to userHome');
                         Get.offAllNamed('/userHome');
                     }
                   } else {
                     // No valid session - go to login
-                    print('>>> No valid session - redirecting to login');
                     storage.erase(); // Clear any invalid data
                     Get.offAllNamed('/login');
                   }

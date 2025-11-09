@@ -82,17 +82,11 @@ class WebLoginController extends GetxController {
     try {
       isLoading.value = true;
 
-      print('>>> ============================================');
-      print('>>> WEB LOGIN CONTROLLER: Starting login...');
-      print('>>> ============================================');
 
       // CRITICAL FIX: Clear any existing dashboard controller before login
       _clearExistingControllers();
 
       final emailOrUsername = emailController.text.trim();
-      print('>>> Input: $emailOrUsername');
-      print(
-          '>>> Input Type: ${emailOrUsername.contains('@') ? 'EMAIL' : 'USERNAME'}');
 
       // Call the repository login method
       final value = await _authRepository.login({
@@ -103,13 +97,9 @@ class WebLoginController extends GetxController {
       try {
         final notificationService = Get.find<InAppNotificationService>();
         await notificationService.initialize();
-        print('>>> Notification service initialized after login');
       } catch (e) {
-        print('>>> Warning: Could not initialize notifications: $e');
       }
 
-      print('>>> Login response received');
-      print('>>> Response keys: ${value.keys}');
 
       // Validate response
       final session = value["session"];
@@ -133,12 +123,9 @@ class WebLoginController extends GetxController {
         await _getStorage.write("userName", user.name);
       }
 
-      print('>>> User ID: $userId');
-      print('>>> Email: $userEmail');
 
       // Get role from response (already determined by provider)
       String role = value["role"] ?? "";
-      print('>>> Role from response: $role');
 
       if (role.isEmpty) {
         throw Exception("Login failed: Role not determined");
@@ -146,40 +133,30 @@ class WebLoginController extends GetxController {
 
       // Store role-specific data
       if (role == "admin") {
-        print('>>> Processing ADMIN login...');
 
         final clinicId = value["clinicId"];
         if (clinicId != null && clinicId.isNotEmpty) {
           await _getStorage.write("clinicId", clinicId);
-          print('>>> Clinic ID stored: $clinicId');
         } else {
-          print('>>> WARNING: Admin has no clinic ID!');
         }
       } else if (role == "staff") {
-        print('>>> Processing STAFF login...');
 
         final clinicId = value["clinicId"];
         if (clinicId != null && clinicId.isNotEmpty) {
           await _getStorage.write("clinicId", clinicId);
-          print('>>> Clinic ID stored: $clinicId');
         } else {
-          print('>>> WARNING: Staff has no clinic ID!');
         }
 
         if (value["staffDocumentId"] != null) {
           await _getStorage.write("staffId", value["staffDocumentId"]);
-          print('>>> Staff ID stored: ${value["staffDocumentId"]}');
         }
 
         if (value["authorities"] != null) {
           await _getStorage.write("authorities", value["authorities"]);
-          print('>>> Authorities stored: ${value["authorities"]}');
         } else {
-          print('>>> WARNING: Staff has no authorities!');
           await _getStorage.write("authorities", <String>[]);
         }
       } else if (role == "user") {
-        print('>>> Processing USER login...');
         // No additional data needed for regular users
       }
 
@@ -188,24 +165,13 @@ class WebLoginController extends GetxController {
 
       _initializeSecureSession(userId, role);
 
-      print('>>> ============================================');
-      print('>>> STORAGE SUMMARY:');
-      print('>>> - userId: ${_getStorage.read("userId")}');
-      print('>>> - role: ${_getStorage.read("role")}');
-      print('>>> - clinicId: ${_getStorage.read("clinicId")}');
-      print('>>> - authorities: ${_getStorage.read("authorities")}');
-      print('>>> ============================================');
 
       // Navigate based on role
-      print('>>> Navigating to home...');
       _navigateBasedOnRole(role);
 
       // Clear controllers
       _clearControllers();
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> WEB LOGIN CONTROLLER ERROR: $e');
-      print('>>> ============================================');
 
       // UNIFIED ERROR MESSAGE: Always show this for any login error
       errorMessage.value =
@@ -221,12 +187,10 @@ class WebLoginController extends GetxController {
   // CRITICAL FIX: Clear any existing controllers to prevent data persistence
   void _clearExistingControllers() {
     try {
-      print('>>> Clearing existing controllers...');
 
       // Delete AdminDashboardController if it exists
       if (Get.isRegistered<dynamic>(tag: 'AdminDashboardController')) {
         Get.delete<dynamic>(tag: 'AdminDashboardController', force: true);
-        print('>>> AdminDashboardController deleted (tagged)');
       }
 
       // Try to delete by finding it
@@ -236,9 +200,7 @@ class WebLoginController extends GetxController {
         // Ignore if not found
       }
 
-      print('>>> Controller cleanup complete');
     } catch (e) {
-      print('>>> Error during controller cleanup: $e');
       // Continue anyway - not critical
     }
   }
@@ -250,7 +212,6 @@ class WebLoginController extends GetxController {
       isGoogleLoading.value = true;
       errorMessage.value = '';
 
-      print('>>> WEB LOGIN: Initiating Google Sign-In...');
 
       final appWriteProvider = Get.find<AppWriteProvider>();
 
@@ -259,7 +220,6 @@ class WebLoginController extends GetxController {
 
       // Code won't reach here due to redirect
     } catch (e) {
-      print('>>> WEB LOGIN: Google Sign-In error: $e');
 
       isGoogleLoading.value = false;
 
@@ -274,10 +234,6 @@ class WebLoginController extends GetxController {
     try {
       final email = emailForPasswordResetController.text.trim();
 
-      print('>>> ============================================');
-      print('>>> WEB FORGOT PASSWORD REQUEST');
-      print('>>> Email: $email');
-      print('>>> ============================================');
 
       WebLoadingHelper.showLoading(message: 'Sending password reset email...');
 
@@ -286,7 +242,6 @@ class WebLoginController extends GetxController {
       WebLoadingHelper.hideLoading();
 
       if (result['success'] == true) {
-        print('>>> ✅ Password reset email sent');
 
         emailForPasswordResetController.clear();
 
@@ -295,16 +250,13 @@ class WebLoginController extends GetxController {
               'Password reset link sent to your email. Please check your inbox.',
         );
       } else {
-        print('>>> ❌ Failed to send password reset email');
 
         WebErrorHandler.handleError(
           result['message'] ?? 'Failed to send password reset email',
         );
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error sending password reset email: $e');
 
       WebLoadingHelper.hideLoading();
       WebErrorHandler.handleError(e, context: 'Password Reset');
@@ -312,27 +264,22 @@ class WebLoginController extends GetxController {
   }
 
   void _navigateBasedOnRole(String? role) {
-    print('>>> Navigating for role: $role');
 
     switch (role) {
       case "admin":
       case "staff":
-        print('>>> -> adminHome');
         Get.offAllNamed(Routes.adminHome);
         WebErrorHandler.handleSuccess('Login successful');
         break;
       case "developer":
-        print('>>> -> superAdminHome');
         Get.offAllNamed(Routes.superAdminHome);
         WebErrorHandler.handleSuccess('Login successful');
         break;
       case "user":
-        print('>>> -> userHome');
         Get.offAllNamed(Routes.userHome);
         WebErrorHandler.handleSuccess('Login successful');
         break;
       default:
-        print('>>> ERROR: Invalid role');
         WebErrorHandler.handleError('No account detected');
         break;
     }
@@ -353,11 +300,6 @@ class WebLoginController extends GetxController {
   }
 
   void _initializeSecureSession(String userId, String role) {
-    print('>>> ============================================');
-    print('>>> WEB: INITIALIZING SECURE SESSION');
-    print('>>> User ID: $userId');
-    print('>>> Role: $role');
-    print('>>> ============================================');
 
     // Store session timestamp
     _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
@@ -375,7 +317,5 @@ class WebLoginController extends GetxController {
     // Clean up old security data
     // SessionManager.cleanupOldData();
 
-    print('>>> Secure session initialized');
-    print('>>> ============================================');
   }
 }

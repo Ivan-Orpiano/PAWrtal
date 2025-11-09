@@ -15,7 +15,6 @@ class WebErrorHandler {
     }
 
     // Log error for debugging
-    print('Error ${context != null ? "in $context" : ""}: $error');
 
     // Show user-friendly error message
     Get.snackbar(

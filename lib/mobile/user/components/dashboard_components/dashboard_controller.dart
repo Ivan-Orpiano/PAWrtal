@@ -67,7 +67,6 @@ class DashboardController extends GetxController {
             );
           }
         } catch (e) {
-          print("Error loading data for clinic ${clinic.clinicName}: $e");
           settingsMap[clinic.documentId ?? ''] = null;
         }
       }
@@ -77,7 +76,6 @@ class DashboardController extends GetxController {
       ratingStatsCache.assignAll(statsCache);
       applyFilters();
     } catch (e) {
-      print("Error fetching clinics: $e");
     } finally {
       isLoading.value = false;
     }

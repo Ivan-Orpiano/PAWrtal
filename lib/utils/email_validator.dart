@@ -85,7 +85,6 @@ class EmailValidator {
 
       return false;
     } catch (e) {
-      print('Error validating email domain: $e');
       return false;
     }
   }
@@ -103,7 +102,6 @@ class EmailValidator {
         domain == disposable || domain.endsWith('.$disposable')
       );
     } catch (e) {
-      print('Error checking disposable email: $e');
       return false;
     }
   }

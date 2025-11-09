@@ -79,9 +79,6 @@ Future<void> _loadUsers() async {
   setState(() => _isLoading = true);
 
   try {
-    print('>>> ============================================');
-    print('>>> LOADING ALL USERS WITH VERIFICATION CHECK');
-    print('>>> ============================================');
 
     // Get all users from database
     final docs = await _authRepository.appWriteProvider.databases!.listDocuments(
@@ -94,7 +91,6 @@ Future<void> _loadUsers() async {
       ],
     );
     
-    print('>>> Found ${docs.documents.length} users in Users collection');
     
     // Convert to User models
     _allUsers = docs.documents.map((doc) => User.fromMap(doc.data)).toList();
@@ -102,7 +98,6 @@ Future<void> _loadUsers() async {
     // ============================================
     // CRITICAL: Check verification status from idVerificationCollectionID
     // ============================================
-    print('>>> Checking verification status from ID Verification collection...');
     
     // Get ALL verification records at once (more efficient)
     final verificationDocs = await _authRepository.appWriteProvider.databases!.listDocuments(
@@ -114,7 +109,6 @@ Future<void> _loadUsers() async {
       ],
     );
     
-    print('>>> Found ${verificationDocs.documents.length} approved verifications');
     
     // Create a Set of verified user IDs for O(1) lookup
     final verifiedUserIds = <String>{};
@@ -125,7 +119,6 @@ Future<void> _loadUsers() async {
       }
     }
     
-    print('>>> Verified user IDs: ${verifiedUserIds.length}');
     
     // Update each user's verification status based on ID Verification collection
     int verifiedCount = 0;
@@ -141,33 +134,18 @@ Future<void> _loadUsers() async {
       
       if (isVerified) {
         verifiedCount++;
-        print('>>> âœ" User verified: ${user.name} (${user.userId})');
       } else {
         unverifiedCount++;
       }
     }
     
-    print('>>> ============================================');
-    print('>>> VERIFICATION STATUS SUMMARY');
-    print('>>> Total Users: ${_allUsers.length}');
-    print('>>> Verified Users: $verifiedCount');
-    print('>>> Unverified Users: $unverifiedCount');
-    print('>>> ============================================');
     
     // Split into verified and unverified lists
     _categorizeUsers();
     
     setState(() => _isLoading = false);
     
-    print('>>> âœ" User loading complete');
-    print('>>> Verified Tab: ${_verifiedUsers.length} users');
-    print('>>> Unverified Tab: ${_unverifiedUsers.length} users');
-    print('>>> ============================================');
   } catch (e) {
-    print('>>> ============================================');
-    print('>>> ERROR LOADING USERS: $e');
-    print('>>> Stack trace: ${StackTrace.current}');
-    print('>>> ============================================');
     
     setState(() => _isLoading = false);
 
@@ -188,9 +166,6 @@ Future<void> _loadUsers() async {
     _sortUsers(_verifiedUsers);
     _sortUsers(_unverifiedUsers);
 
-      print('>>> Verified users: ${_verifiedUsers.length}');
-      print('>>> Unverified users: ${_unverifiedUsers.length}');
-      print('>>> Sort applied: $_selectedSort');
   }
   /// Show sort options modal
 void _showSortMenu() {
@@ -385,22 +360,14 @@ Widget _buildSortOption(
     ]);
 
     _verificationSubscription!.stream.listen((response) {
-      print('>>> ============================================');
-      print('>>> REAL-TIME VERIFICATION EVENT DETECTED');
-      print('>>> Events: ${response.events}');
-      print('>>> ============================================');
 
       final payload = response.payload;
       final status = payload['status'] as String?;
       final userId = payload['userId'] as String?;
       
-      print('>>> Verification Status: $status');
-      print('>>> User ID: $userId');
       
       // Check if this is a verification approval
       if (status == 'approved' && userId != null) {
-        print('>>> âœ" VERIFICATION APPROVED!');
-        print('>>> User should move to VERIFIED tab');
         
         // Update the specific user's verification status locally
         _updateUserVerificationStatus(userId, true);
@@ -415,7 +382,6 @@ Widget _buildSortOption(
           duration: const Duration(seconds: 3),
         );
       } else if (status == 'rejected' && userId != null) {
-        print('>>> âœ— Verification rejected for user: $userId');
         _updateUserVerificationStatus(userId, false);
       }
     });
@@ -427,24 +393,13 @@ Widget _buildSortOption(
         .subscribe(['buckets.${AppwriteConstants.imageBucketID}.files']);
 
     _storageSubscription!.stream.listen((response) {
-      print('>>> Real-time storage event: ${response.events}');
 
       if (response.events.contains('buckets.*.files.*')) {
-        print('>>> Profile picture changed, reloading users...');
         _loadUsers();
       }
     });
 
-    print('>>> ============================================');
-    print('>>> âœ" REAL-TIME SUBSCRIPTIONS ACTIVE');
-    print('>>> Listening to:');
-    print('>>> 1. ID Verification Collection (PRIMARY - for status changes)');
-    print('>>> 2. Storage Bucket (for profile picture changes)');
-    print('>>> ============================================');
   } catch (e) {
-    print('>>> ============================================');
-    print('>>> ERROR SETTING UP REAL-TIME: $e');
-    print('>>> ============================================');
   }
 }
 // ADD this NEW method after _setupRealtimeSubscriptions:
@@ -454,12 +409,6 @@ void _updateUserVerificationStatus(String userId, bool isVerified) {
     final userIndex = _allUsers.indexWhere((u) => u.userId == userId);
     
     if (userIndex != -1) {
-      print('>>> ============================================');
-      print('>>> UPDATING LOCAL USER STATUS');
-      print('>>> User: ${_allUsers[userIndex].name}');
-      print('>>> Old Status: ${_allUsers[userIndex].idVerified ? "Verified" : "Unverified"}');
-      print('>>> New Status: ${isVerified ? "Verified" : "Unverified"}');
-      print('>>> ============================================');
       
       // Update the user object (local only)
       _allUsers[userIndex].idVerified = isVerified;
@@ -467,9 +416,6 @@ void _updateUserVerificationStatus(String userId, bool isVerified) {
       // Re-categorize users to move between verified/unverified lists
       _categorizeUsers();
       
-      print('>>> âœ" User moved to ${isVerified ? "VERIFIED" : "UNVERIFIED"} tab');
-      print('>>> Verified count: ${_verifiedUsers.length}');
-      print('>>> Unverified count: ${_unverifiedUsers.length}');
       
       // Show success snackbar
       Get.snackbar(
@@ -484,8 +430,6 @@ void _updateUserVerificationStatus(String userId, bool isVerified) {
         duration: const Duration(seconds: 3),
       );
     } else {
-      print('>>> âš ï¸ User not found in local list: $userId');
-      print('>>> Reloading all users...');
       _loadUsers();
     }
   });
@@ -505,7 +449,6 @@ void _updateUserVerificationStatus(String userId, bool isVerified) {
       
       return verificationDoc.documents.isNotEmpty;
     } catch (e) {
-      print('>>> Error checking verification status: $e');
       return false;
     }
   }
@@ -1570,7 +1513,6 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
     setState(() => _isDeleting = true);
 
     try {
-      print('>>> Archiving user: ${widget.user.userId}');
 
       // Get current admin info
       final currentUser = await widget.authRepository.getUser();
@@ -1600,7 +1542,6 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
         throw Exception(result['error'] ?? 'Failed to archive user');
       }
     } catch (e) {
-      print('>>> Error archiving user: $e');
 
       Get.snackbar(
         'Error',

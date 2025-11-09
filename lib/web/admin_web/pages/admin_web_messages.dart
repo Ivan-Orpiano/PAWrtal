@@ -66,10 +66,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   void _loadUserRole() {
     _userRole = _getStorage.read("role") as String?;
-    print('>>> ============================================');
-    print('>>> ADMIN_WEB_MESSAGES: Loading user role');
-    print('>>> User role: $_userRole');
-    print('>>> ============================================');
   }
 
   Future<void> _initializeMessaging() async {
@@ -80,48 +76,31 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
 
     try {
-      print('>>> ============================================');
-      print('>>> ADMIN_WEB_MESSAGES: Initializing...');
-      print('>>> ============================================');
 
       String? clinicId = _getStorage.read('clinicId') as String?;
 
-      print('>>> Step 1: Checking storage for clinicId');
-      print('>>>   - clinicId from storage: $clinicId');
-      print('>>>   - user role: $_userRole');
-      print('>>>   - user ID: ${_userSession.userId}');
 
       if (clinicId == null || clinicId.isEmpty) {
-        print('>>> Step 2: No clinicId in storage, attempting to fetch...');
 
         if (_userRole == 'admin') {
-          print('>>>   - Mode: ADMIN - Looking up by admin ID');
           final clinicDoc =
               await _authRepository.getClinicByAdminId(_userSession.userId);
 
           if (clinicDoc != null) {
             clinicId = clinicDoc.$id;
             await _getStorage.write('clinicId', clinicId);
-            print('>>>   - Found and stored clinic ID: $clinicId');
           } else {
-            print(
-                '>>>   - ERROR: No clinic found for admin ID: ${_userSession.userId}');
           }
         } else if (_userRole == 'staff') {
-          print('>>>   - Mode: STAFF - Should have clinicId in storage');
-          print('>>>   - ERROR: Staff account missing clinicId in storage!');
 
           final staff =
               await _authRepository.getStaffByUserId(_userSession.userId);
           if (staff != null) {
             clinicId = staff.clinicId;
             await _getStorage.write('clinicId', clinicId);
-            print(
-                '>>>   - Found and stored clinic ID from staff record: $clinicId');
           }
         }
       } else {
-        print('>>> Step 2: Using clinicId from storage: $clinicId');
       }
 
       if (clinicId != null && clinicId.isNotEmpty) {
@@ -130,40 +109,18 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           _isLoading = false;
         });
 
-        print('>>> Step 3: Initializing controller with clinic ID: $_clinicId');
         await _controller.initializeForClinic(_clinicId!);
 
-        print(
-            '>>> Step 4: Activating real-time subscriptions for conversation list...');
         _controller.subscribeToClinicConversationUpdates(_clinicId!);
 
-        print('>>> Step 5: Setting up real-time conversation stream...');
 
-        print('>>> Step 6: Checking for pending conversation to open...');
         await _checkForPendingConversation();
 
-        print('>>> ============================================');
-        print('>>> INITIALIZATION SUCCESSFUL');
-        print('>>> Clinic ID: $_clinicId');
-        print('>>> Real-time subscriptions ACTIVE');
-        print('>>> ============================================');
       } else {
-        print('>>> ============================================');
-        print('>>> ERROR: No clinic ID found');
-        print('>>> User role: $_userRole');
-        print('>>> User ID: ${_userSession.userId}');
-        print('>>> Storage dump:');
-        print('>>>   - role: ${_getStorage.read("role")}');
-        print('>>>   - clinicId: ${_getStorage.read("clinicId")}');
-        print('>>>   - userId: ${_getStorage.read("userId")}');
-        print('>>> ============================================');
 
         setState(() => _isLoading = false);
       }
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR initializing messaging: $e');
-      print('>>> ============================================');
       setState(() => _isLoading = false);
     }
   }
@@ -174,17 +131,9 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       final pendingData =
           Get.find<PendingConversationData>(tag: 'pending_conversation');
 
-      print('>>> ============================================');
-      print('>>> Found pending conversation to open');
-      print('>>> User ID: ${pendingData.userId}');
-      print('>>> User Name: ${pendingData.userName}');
-      print('>>> Conversation ID: ${pendingData.conversationId}');
-      print('>>> ============================================');
 
       await Future.delayed(const Duration(milliseconds: 800));
 
-      print(
-          '>>> Current conversations loaded: ${_controller.conversations.length}');
 
       Conversation? conversation;
 
@@ -193,9 +142,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           conversation = _controller.conversations.firstWhere(
             (c) => c.documentId == pendingData.conversationId,
           );
-          print('>>> Found conversation by ID: ${conversation.documentId}');
         } catch (e) {
-          print('>>> Conversation not found by ID, trying by userId...');
         }
       }
 
@@ -204,48 +151,35 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           conversation = _controller.conversations.firstWhere(
             (c) => c.userId == pendingData.userId,
           );
-          print('>>> Found conversation by userId: ${conversation.userId}');
         } catch (e) {
-          print('>>> Conversation not found by userId either');
         }
       }
 
       if (conversation != null) {
-        print(
-            '>>> Opening conversation automatically for: ${pendingData.userName}');
 
         final userData = await _getUserData(pendingData.userId);
 
         final screenWidth = MediaQuery.of(context).size.width;
         if (screenWidth < 600) {
-          print('>>> Opening in MOBILE layout');
           await _openConversationInMobile(
             conversation,
             pendingData.userId,
             userData['name'] ?? pendingData.userName,
           );
         } else {
-          print('>>> Opening in DESKTOP layout');
           _selectConversation(
             conversation,
             pendingData.userId,
             userData['name'] ?? pendingData.userName,
           );
         }
-        print('>>> Conversation opened successfully');
       } else {
-        print('>>> ERROR: Could not find conversation');
-        print('>>> Available conversations:');
         for (var conv in _controller.conversations) {
-          print('>>>   - ID: ${conv.documentId}, UserID: ${conv.userId}');
         }
       }
 
       Get.delete<PendingConversationData>(tag: 'pending_conversation');
-      print('>>> Pending conversation data cleaned up');
-      print('>>> ============================================');
     } else {
-      print('>>> No pending conversation to open');
     }
   }
 
@@ -254,10 +188,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       final userId = _userSession.userId;
       if (userId != null && userId.isNotEmpty) {
         await _authRepository.setUserOnline(userId);
-        print('>>> Current user set to ONLINE: $userId');
       }
     } catch (e) {
-      print('>>> Error setting user online: $e');
     }
   }
 
@@ -266,10 +198,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       final userId = _userSession.userId;
       if (userId != null && userId.isNotEmpty) {
         await _authRepository.setUserOffline(userId);
-        print('>>> Current user set to OFFLINE: $userId');
       }
     } catch (e) {
-      print('>>> Error setting user offline: $e');
     }
   }
 
@@ -279,7 +209,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
 
     try {
-      print('>>> Fetching user data for: $userId');
 
       final userDoc = await _authRepository.getUserById(userId);
       if (userDoc != null) {
@@ -289,10 +218,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         if (user.hasProfilePicture) {
           profilePictureUrl =
               _authRepository.getUserProfilePictureUrl(user.profilePictureId!);
-          print(
-              '>>> Profile picture URL generated: ${profilePictureUrl.substring(0, 50)}...');
         } else {
-          print('>>> No profile picture for user: $userId');
         }
 
         final userData = {
@@ -305,11 +231,9 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         };
 
         _userCache[userId] = userData;
-        print('>>> User data cached: ${user.name}');
         return userData;
       }
     } catch (e) {
-      print('Error loading user: $e');
     }
 
     return {
@@ -333,7 +257,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   Future<void> _openConversationInMobile(
       Conversation conversation, String userId, String userName) async {
-    print('>>> Opening mobile conversation for: $userName');
 
     await Navigator.push(
       context,
@@ -808,7 +731,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             radius: 24,
             backgroundImage: NetworkImage(profilePictureUrl),
             onBackgroundImageError: (exception, stackTrace) {
-              print('Error loading profile picture: $exception');
             },
           )
         else
@@ -1031,13 +953,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     final isFromClinic = message.senderId == _clinicId;
     final isCurrentUser = isFromAdmin || isFromClinic;
 
-    print('>>> Building message bubble:');
-    print('>>>   senderId: ${message.senderId}');
-    print('>>>   adminUserId: ${_userSession.userId}');
-    print('>>>   clinicId: $_clinicId');
-    print('>>>   isFromAdmin: $isFromAdmin');
-    print('>>>   isFromClinic: $isFromClinic');
-    print('>>>   isCurrentUser: $isCurrentUser');
 
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1286,7 +1201,6 @@ class _ConversationTileWidgetState extends State<_ConversationTileWidget> {
             radius: 24,
             backgroundImage: NetworkImage(profilePictureUrl),
             onBackgroundImageError: (exception, stackTrace) {
-              print('Error loading profile picture: $exception');
             },
           )
         else
@@ -1356,7 +1270,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
 
     // Wait for build to complete, then open conversation
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('>>> [MOBILE] Opening conversation...');
       widget.controller.openConversation(
         widget.conversation,
         widget.userId,
@@ -1364,14 +1277,12 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
       );
 
       // Set up real-time subscription
-      print('>>> [MOBILE] Setting up real-time message subscription...');
       widget.controller.subscribeToMessages(widget.conversation.documentId!);
     });
   }
 
   @override
   void dispose() {
-    print('>>> [MOBILE] Disposing and pausing subscriptions...');
     // Only pause subscription - no reloads
     widget.controller.pauseMessageSubscription();
     super.dispose();
@@ -1398,7 +1309,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
         }
       }
     } catch (e) {
-      print('Error loading user profile: $e');
     }
   }
 
@@ -1581,7 +1491,6 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
             radius: 20,
             backgroundImage: NetworkImage(profilePictureUrl),
             onBackgroundImageError: (exception, stackTrace) {
-              print('Error loading profile picture: $exception');
             },
           )
         else

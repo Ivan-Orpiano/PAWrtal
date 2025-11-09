@@ -14,7 +14,6 @@ class SecurityMonitor {
   /// Clear all security violations
   static void clearViolations() {
     _storage.remove('security_violations');
-    print('>>> Security violations cleared');
   }
 
   /// Get violations for a specific user
@@ -95,7 +94,6 @@ class SecurityMonitor {
 
     _storage.write('security_events', events);
     
-    print('>>> Security event logged: $eventType for user $userId');
   }
 
   /// Get security report

@@ -31,12 +31,9 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
 
       if (clinicDoc != null) {
         clinic.value = Clinic.fromMap(clinicDoc.data);
-        print("Clinic name: ${clinic.value!.clinicName}");
       } else {
-        print("No clinic found for this admin.");
       }
     } catch (e) {
-      print("Failed to fetch clinic: $e");
     }
   }
 
@@ -69,7 +66,6 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
       Get.offAllNamed(Routes.login);
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      print('Logout error: $e');
     }
   }
 

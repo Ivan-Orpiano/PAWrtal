@@ -60,7 +60,6 @@ class AdminMessagingController extends GetxController {
 
   @override
   void onClose() {
-    print('=== AdminMessagingController onClose starting ===');
 
     try {
       _cancelAllSubscriptions();
@@ -68,35 +67,28 @@ class AdminMessagingController extends GetxController {
       _clearAllData();
       _setUserOfflineWithTimeout();
     } catch (e) {
-      print('Error in AdminMessagingController onClose: $e');
     } finally {
       super.onClose();
-      print('=== AdminMessagingController onClose completed ===');
     }
   }
 
   Future<void> cleanupBeforeLogout() async {
-    print('=== AdminMessagingController manual cleanup starting ===');
 
     try {
       _cancelAllSubscriptions();
       _clearAllData();
       await _setUserOfflineWithTimeout();
-      print('AdminMessagingController manual cleanup completed successfully');
     } catch (e) {
-      print('Error during AdminMessagingController cleanup: $e');
     }
   }
 
   void _cancelAllSubscriptions() {
-    print('Cancelling all subscriptions...');
 
     try {
       _messageSubscription?.cancel();
       _messageSubscription = null;
       _activeConversationId = null;
     } catch (e) {
-      print('Error cancelling message subscription: $e');
     }
 
     try {
@@ -104,21 +96,17 @@ class AdminMessagingController extends GetxController {
       _conversationSubscription = null;
       _activeClinicId = null;
     } catch (e) {
-      print('Error cancelling conversation subscription: $e');
     }
 
     try {
       _statusSubscription?.cancel();
       _statusSubscription = null;
     } catch (e) {
-      print('Error cancelling status subscription: $e');
     }
 
-    print('Subscription cancellation completed');
   }
 
   void _disposeControllers() {
-    print('Disposing text controllers...');
 
     try {
       messageController.dispose();
@@ -127,14 +115,11 @@ class AdminMessagingController extends GetxController {
       starterTriggerController.dispose();
       starterResponseController.dispose();
     } catch (e) {
-      print('Error disposing controllers: $e');
     }
 
-    print('Controller disposal completed');
   }
 
   void _clearAllData() {
-    print('Clearing all observable data...');
 
     try {
       conversations.clear();
@@ -153,24 +138,18 @@ class AdminMessagingController extends GetxController {
       isLoadingConversation.value = false;
       isLoadingStarters.value = false;
 
-      print('Data clearing completed');
     } catch (e) {
-      print('Error clearing data: $e');
     }
   }
 
   Future<void> _setUserOfflineWithTimeout() async {
     try {
-      print('Setting user offline...');
       await setUserOffline().timeout(
         const Duration(seconds: 2),
         onTimeout: () {
-          print('Set user offline timed out');
         },
       );
-      print('User set offline successfully');
     } catch (e) {
-      print('Error setting user offline: $e');
     }
   }
 
@@ -180,7 +159,6 @@ class AdminMessagingController extends GetxController {
     try {
       currentClinicId.value = clinicId;
 
-      print('=== Initializing Admin Messaging for Clinic: $clinicId ===');
 
       if (!AppwriteConstants.messagingCollectionsConfigured) {
         Get.snackbar(
@@ -198,13 +176,9 @@ class AdminMessagingController extends GetxController {
         initializeConversationStarters(clinicId),
       ]);
 
-      print('>>> Setting up real-time subscriptions...');
       subscribeToClinicConversationUpdates(clinicId);
-      print('>>> Real-time subscriptions active');
 
-      print('Admin messaging initialized successfully');
     } catch (e) {
-      print('Error initializing admin messaging: $e');
       Get.snackbar(
         'Initialization Error',
         'Failed to initialize messaging: $e',
@@ -219,23 +193,19 @@ class AdminMessagingController extends GetxController {
     try {
       isLoadingStarters.value = true;
 
-      print('Loading conversation starters for clinic: $clinicId');
 
       // ADDED: Run migration for existing starters
       try {
         await _authRepository.migrateConversationStarters();
       } catch (e) {
-        print('Warning: Migration failed (non-critical): $e');
       }
 
       final starters =
           await _authRepository.getClinicConversationStarters(clinicId);
       conversationStarters.value = starters;
 
-      print('Found ${starters.length} existing starters');
 
       if (starters.isEmpty) {
-        print('No starters found, creating default ones...');
         await _authRepository.initializeDefaultConversationStarters(clinicId);
 
         await Future.delayed(const Duration(milliseconds: 500));
@@ -244,7 +214,6 @@ class AdminMessagingController extends GetxController {
             await _authRepository.getClinicConversationStarters(clinicId);
         conversationStarters.value = newStarters;
 
-        print('Created ${newStarters.length} default starters');
 
         if (newStarters.isNotEmpty) {
           Get.snackbar(
@@ -257,7 +226,6 @@ class AdminMessagingController extends GetxController {
         }
       }
     } catch (e) {
-      print('Error initializing conversation starters: $e');
       Get.snackbar(
         'Starters Error',
         'Could not load conversation starters: $e',
@@ -278,7 +246,6 @@ class AdminMessagingController extends GetxController {
       final clinicConversations =
           await _authRepository.getClinicConversations(clinicId);
       conversations.value = clinicConversations;
-      print('Loaded ${clinicConversations.length} clinic conversations');
     } catch (e) {
       Get.snackbar('Error', 'Failed to load conversations: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -290,13 +257,6 @@ class AdminMessagingController extends GetxController {
   Future<void> openConversation(
       Conversation conversation, String receiverId, String receiverType) async {
     try {
-      print('>>> ============================================');
-      print('>>> OPENING CONVERSATION');
-      print('>>> Conversation ID: ${conversation.documentId}');
-      print('>>> Receiver ID: $receiverId');
-      print('>>> Receiver Type: $receiverType');
-      print('>>> Admin ID: ${_userSession.userId}');
-      print('>>> ============================================');
 
       isLoadingConversation.value = true;
 
@@ -304,25 +264,15 @@ class AdminMessagingController extends GetxController {
       currentReceiverId.value = receiverId;
       currentReceiverType.value = receiverType;
 
-      print('>>> Loading messages...');
       await loadConversationMessages(conversation.documentId!);
-      print('>>> Loaded ${currentMessages.length} messages');
 
-      print('>>> Setting up real-time message subscription...');
       subscribeToMessages(conversation.documentId!);
 
-      print('>>> Marking messages as read...');
       await markConversationAsRead(conversation.documentId!);
 
-      print('>>> Loading user status...');
       await loadUserStatus(receiverId);
 
-      print('>>> ============================================');
-      print('>>> CONVERSATION OPENED SUCCESSFULLY');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR opening conversation: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
       Get.snackbar('Error', 'Failed to open conversation: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
@@ -364,13 +314,6 @@ class AdminMessagingController extends GetxController {
 
       if (text == null) messageController.clear();
 
-      print('>>> ============================================');
-      print('>>> ADMIN CONTROLLER: Sending message');
-      print('>>> Conversation: ${currentConversation.value!.documentId}');
-      print('>>> Sender: ${_userSession.userId}');
-      print('>>> Receiver: ${currentReceiverId.value}');
-      print('>>> Message: $messageText');
-      print('>>> ============================================');
 
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
@@ -379,7 +322,6 @@ class AdminMessagingController extends GetxController {
         attachment: attachmentUrl,
       );
 
-      print('>>> Message sent successfully: ${sentMessage.documentId}');
 
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
@@ -396,10 +338,7 @@ class AdminMessagingController extends GetxController {
         conversations.insert(0, updatedConversation);
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR sending message: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
       Get.snackbar('Error', 'Failed to send message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
@@ -413,12 +352,6 @@ class AdminMessagingController extends GetxController {
 
   Future<void> markConversationAsRead(String conversationId) async {
     try {
-      print('>>> ============================================');
-      print('>>> MARKING CONVERSATION AS READ');
-      print('>>> Conversation ID: $conversationId');
-      print('>>> User ID: ${_userSession.userId}');
-      print('>>> User Role: admin');
-      print('>>> ============================================');
 
       await _authRepository.markMessagesAsRead(
           conversationId, _userSession.userId);
@@ -426,7 +359,6 @@ class AdminMessagingController extends GetxController {
       if (currentConversation.value != null &&
           currentConversation.value!.documentId == conversationId &&
           currentConversation.value!.clinicUnreadCount > 0) {
-        print('>>> Resetting clinic unread count to 0');
 
         final updatedConversation = currentConversation.value!.copyWith(
           clinicUnreadCount: 0,
@@ -439,15 +371,10 @@ class AdminMessagingController extends GetxController {
           conversations[index] = updatedConversation;
         }
 
-        print('>>> Conversation marked as read successfully');
       } else {
-        print('>>> No unread messages to mark');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR marking messages as read: $e');
-      print('>>> ============================================');
     }
   }
 
@@ -467,7 +394,6 @@ class AdminMessagingController extends GetxController {
         conversationStarters.value = newStarters;
       }
     } catch (e) {
-      print('Error loading conversation starters: $e');
     } finally {
       isLoadingStarters.value = false;
     }
@@ -545,7 +471,6 @@ class AdminMessagingController extends GetxController {
   /// Set a conversation starter as the auto-reply for first messages
   Future<void> setAutoReplyStarter(String starterId) async {
     try {
-      print('>>> Setting auto-reply starter: $starterId');
 
       // First, unset any existing auto-reply starter
       final currentAutoReply = conversationStarters.firstWhereOrNull(
@@ -554,8 +479,6 @@ class AdminMessagingController extends GetxController {
 
       if (currentAutoReply != null &&
           currentAutoReply.documentId != starterId) {
-        print(
-            '>>> Unsetting previous auto-reply: ${currentAutoReply.documentId}');
         final unsetStarter = currentAutoReply.copyWith(isAutoReply: false);
         await _authRepository.updateConversationStarter(unsetStarter);
 
@@ -583,7 +506,6 @@ class AdminMessagingController extends GetxController {
         conversationStarters[starterIndex] = updatedStarter;
         // ❌ REMOVE THIS LINE: conversationStarters.refresh();
 
-        print('>>> Auto-reply starter set successfully');
         Get.snackbar(
           'Success',
           'Auto-reply message configured',
@@ -592,7 +514,6 @@ class AdminMessagingController extends GetxController {
         );
       }
     } catch (e) {
-      print('Error setting auto-reply starter: $e');
       Get.snackbar(
         'Error',
         'Failed to set auto-reply: $e',
@@ -626,21 +547,14 @@ class AdminMessagingController extends GetxController {
         );
       }
     } catch (e) {
-      print('Error unsetting auto-reply: $e');
     }
   }
 
   /// Get the current auto-reply starter
   ConversationStarter? getAutoReplyStarter() {
     try {
-      print('>>> 🔍 CHECKING AUTO-REPLY CONFIGURATION');
-      print('>>> Total starters: ${conversationStarters.length}');
 
       for (var starter in conversationStarters) {
-        print('>>> Starter: "${starter.triggerText}"');
-        print('>>>   - isActive: ${starter.isActive}');
-        print('>>>   - isAutoReply: ${starter.isAutoReply}');
-        print('>>>   - category: ${starter.category}');
       }
 
       final autoReply = conversationStarters.firstWhereOrNull(
@@ -648,15 +562,11 @@ class AdminMessagingController extends GetxController {
       );
 
       if (autoReply != null) {
-        print('>>> ✅ AUTO-REPLY FOUND: "${autoReply.triggerText}"');
-        print('>>> Response: "${autoReply.responseText}"');
       } else {
-        print('>>> ❌ NO AUTO-REPLY CONFIGURED');
       }
 
       return autoReply;
     } catch (e) {
-      print('>>> ❌ ERROR getting auto-reply starter: $e');
       return null;
     }
   }
@@ -664,17 +574,12 @@ class AdminMessagingController extends GetxController {
   /// Check if a conversation is new (first message from user)
   Future<bool> isFirstUserMessage(String conversationId) async {
     try {
-      print('>>> 🔍 Checking if first user message...');
-      print('>>> Getting messages for conversation: $conversationId');
 
       final messages = await _authRepository.getConversationMessages(
         conversationId,
         limit: 100,
       );
 
-      print('>>> Total messages in conversation: ${messages.length}');
-      print('>>>');
-      print('>>> 📋 Analyzing each message:');
 
       int userMessageCount = 0;
       int clinicMessageCount = 0;
@@ -685,13 +590,6 @@ class AdminMessagingController extends GetxController {
         final isFromAdmin = msg.senderId == _userSession.userId;
         final isFromUser = !isFromClinic && !isFromAdmin;
 
-        print('>>> Message ${i + 1}:');
-        print('>>>   - Sender ID: ${msg.senderId}');
-        print(
-            '>>>   - Text: "${msg.messageText.substring(0, msg.messageText.length > 30 ? 30 : msg.messageText.length)}..."');
-        print('>>>   - From Clinic: $isFromClinic');
-        print('>>>   - From Admin: $isFromAdmin');
-        print('>>>   - From User: $isFromUser');
 
         if (isFromClinic || isFromAdmin) {
           clinicMessageCount++;
@@ -700,27 +598,16 @@ class AdminMessagingController extends GetxController {
         }
       }
 
-      print('>>>');
-      print('>>> 📊 SUMMARY:');
-      print('>>> Total messages: ${messages.length}');
-      print('>>> User messages: $userMessageCount');
-      print('>>> Clinic/Admin messages: $clinicMessageCount');
-      print('>>>');
 
       // If clinic has NEVER replied = first user message
       final isFirst = clinicMessageCount == 0;
 
       if (isFirst) {
-        print('>>> ✅ RESULT: This IS the first user message!');
-        print('>>> (Clinic has never replied yet)');
       } else {
-        print('>>> ❌ RESULT: NOT the first user message');
-        print('>>> (Clinic has already replied $clinicMessageCount time(s))');
       }
 
       return isFirst;
     } catch (e) {
-      print('>>> ❌ ERROR checking first message: $e');
       return false;
     }
   }
@@ -738,7 +625,6 @@ class AdminMessagingController extends GetxController {
     try {
       await _authRepository.setUserOnline(_userSession.userId);
     } catch (e) {
-      print('Error setting user online: $e');
     }
   }
 
@@ -746,7 +632,6 @@ class AdminMessagingController extends GetxController {
     try {
       await _authRepository.setUserOffline(_userSession.userId);
     } catch (e) {
-      print('Error setting user offline: $e');
     }
   }
 
@@ -757,20 +642,14 @@ class AdminMessagingController extends GetxController {
         userStatuses[userId] = status;
       }
     } catch (e) {
-      print('Error loading user status: $e');
     }
   }
 
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToClinicConversationUpdates(String clinicId) {
-    print('>>> ============================================');
-    print('>>> SUBSCRIBING TO CLINIC CONVERSATIONS');
-    print('>>> Clinic ID: $clinicId');
-    print('>>> ============================================');
 
     if (_activeClinicId == clinicId && _conversationSubscription != null) {
-      print('>>> Already subscribed to this clinic');
       return;
     }
 
@@ -781,10 +660,6 @@ class AdminMessagingController extends GetxController {
       _conversationSubscription =
           _authRepository.subscribeToConversations(clinicId).listen(
         (realtimeMessage) {
-          print('>>> ============================================');
-          print('>>> REAL-TIME CONVERSATION EVENT');
-          print('>>> Event: ${realtimeMessage.events}');
-          print('>>> ============================================');
 
           try {
             final conversationData = realtimeMessage.payload;
@@ -793,43 +668,33 @@ class AdminMessagingController extends GetxController {
               documentId: conversationData['\$id'],
             );
 
-            print('>>> Conversation ID: ${conversationWithId.documentId}');
-            print('>>> Clinic ID: ${conversationWithId.clinicId}');
 
             if (conversationWithId.clinicId == clinicId) {
-              print('>>> ✅ Conversation belongs to this clinic');
 
               if (realtimeMessage.events
                   .contains('databases.*.collections.*.documents.*.update')) {
-                print('>>> UPDATE event');
                 _handleConversationUpdate(conversationWithId);
 
                 // CRITICAL FIX: Check for auto-reply on conversation UPDATE
                 // This catches when user sends a message (conversation gets updated)
                 if (conversationWithId.lastMessageId != null) {
-                  print('>>> 🤖 Checking auto-reply on conversation UPDATE...');
                   _checkAndSendAutoReply(conversationWithId.documentId!);
                 }
               } else if (realtimeMessage.events
                   .contains('databases.*.collections.*.documents.*.create')) {
-                print('>>> CREATE event - NEW CONVERSATION');
                 _handleNewConversation(conversationWithId);
 
                 // CRITICAL: Check for auto-reply on NEW conversation
                 if (conversationWithId.lastMessageId != null) {
-                  print('>>> 🤖 Checking auto-reply on NEW CONVERSATION...');
                   _checkAndSendAutoReply(conversationWithId.documentId!);
                 }
               }
             } else {
-              print('>>> ✗ Conversation does not belong to this clinic');
             }
           } catch (e) {
-            print('>>> ERROR processing conversation update: $e');
           }
         },
         onError: (error) {
-          print('>>> SUBSCRIPTION ERROR: $error');
           Future.delayed(const Duration(seconds: 2), () {
             if (_activeClinicId == clinicId) {
               subscribeToClinicConversationUpdates(clinicId);
@@ -837,98 +702,70 @@ class AdminMessagingController extends GetxController {
           });
         },
         onDone: () {
-          print('>>> Conversation subscription stream closed');
           _activeClinicId = null;
         },
       );
 
       _activeClinicId = clinicId;
-      print('>>> Real-time subscription established');
     } catch (e) {
-      print('>>> ERROR setting up subscription: $e');
     }
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
-    print('>>> _handleConversationUpdate called');
-    print('>>> Conversation: ${updatedConversation.documentId}');
-    print('>>> Last message: ${updatedConversation.lastMessageText}');
 
     final index = conversations.indexWhere(
       (c) => c.documentId == updatedConversation.documentId,
     );
 
     if (index != -1) {
-      print('>>> Found existing conversation at index: $index');
 
       final isCurrentConversation = currentConversation.value?.documentId ==
           updatedConversation.documentId;
 
       if (isCurrentConversation) {
-        print(
-            '>>> This is the current conversation - keeping clinic unread at 0');
         final resetClinicUnread =
             updatedConversation.copyWith(clinicUnreadCount: 0);
         conversations[index] = resetClinicUnread;
         currentConversation.value = resetClinicUnread;
       } else {
-        print('>>> Not current conversation - using actual unread counts');
-        print(
-            '>>> Clinic unread count: ${updatedConversation.clinicUnreadCount}');
         conversations[index] = updatedConversation;
       }
 
       if (updatedConversation.clinicUnreadCount > 0 && index != 0) {
-        print('>>> Moving conversation to top (has unread messages)');
         final conv = conversations.removeAt(index);
         conversations.insert(0, conv);
       }
 
       // CRITICAL: Trigger auto-reply check when conversation is updated with new message
       if (updatedConversation.lastMessageId != null) {
-        print('>>> Checking for auto-reply trigger (UPDATE)...');
         sendAutoReplyIfFirstMessage(updatedConversation.documentId!);
       }
 
-      print('>>> Conversation updated successfully');
     } else {
-      print('>>> Conversation not found in list - adding as new');
       _handleNewConversation(updatedConversation);
     }
   }
 
   void _handleNewConversation(Conversation newConversation) {
-    print('>>> _handleNewConversation called');
-    print('>>> New conversation ID: ${newConversation.documentId}');
 
     final exists =
         conversations.any((c) => c.documentId == newConversation.documentId);
 
     if (!exists) {
-      print('>>> Adding new conversation to list at position 0');
       conversations.insert(0, newConversation);
-      print('>>> New conversation added successfully');
-      print('>>> Total conversations: ${conversations.length}');
 
       // CRITICAL: Trigger auto-reply for NEW conversations
       if (newConversation.lastMessageId != null) {
-        print('>>> Checking for auto-reply trigger (NEW CONVERSATION)...');
         sendAutoReplyIfFirstMessage(newConversation.documentId!);
       }
     } else {
-      print('>>> Conversation already exists - skipping');
     }
   }
 
   void subscribeToMessages(String conversationId) {
-    print('>>> ============================================');
-    print('>>> SUBSCRIBING TO MESSAGES (CONTROLLER)');
-    print('>>> Conversation ID: $conversationId');
-    print('>>> ============================================');
 
     if (_activeConversationId == conversationId &&
         _messageSubscription != null) {
-      print('>>> Already subscribed - skipping');
       return;
     }
 
@@ -940,7 +777,6 @@ class AdminMessagingController extends GetxController {
       _messageSubscription = _authRepository
           .subscribeToMessages(conversationId)
           .listen((realtimeMessage) {
-        print('>>> [CONTROLLER] Real-time event: ${realtimeMessage.events}');
 
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.create')) {
@@ -955,7 +791,6 @@ class AdminMessagingController extends GetxController {
                 .indexWhere((m) => m.documentId == messageWithId.documentId);
 
             if (existingIndex == -1) {
-              print('>>> [CONTROLLER] ✅ Adding message to list');
               currentMessages.add(messageWithId);
 
               // CRITICAL FIX: Remove .refresh() call!
@@ -976,52 +811,37 @@ class AdminMessagingController extends GetxController {
                 markConversationAsRead(conversationId);
               }
             } else {
-              print('>>> [CONTROLLER] ⚠️ Duplicate - skipping');
             }
           } catch (e) {
-            print('>>> [CONTROLLER] ❌ Error: $e');
           }
         }
       }, onError: (error) {
-        print('>>> [CONTROLLER] ❌ Error: $error');
         _activeConversationId = null;
       });
 
-      print('>>> [CONTROLLER] ✅ Subscription established');
     } catch (e) {
-      print('>>> [CONTROLLER] ❌ Setup error: $e');
       _activeConversationId = null;
     }
   }
 
   Future<void> _checkAndSendAutoReply(String conversationId) async {
     try {
-      print('>>> ═══════════════════════════════════════════');
-      print('>>> 🔍 AUTO-REPLY CHECK (BACKGROUND)');
-      print('>>> Conversation ID: $conversationId');
-      print('>>> ═══════════════════════════════════════════');
 
       // Get auto-reply starter
       final autoReplyStarter = getAutoReplyStarter();
 
       if (autoReplyStarter == null) {
-        print('>>> ❌ No auto-reply configured - skipping');
         return;
       }
 
-      print(
-          '>>> ✅ Auto-reply starter found: "${autoReplyStarter.triggerText}"');
 
       // Check if this is the first user message
       final isFirst = await isFirstUserMessage(conversationId);
 
       if (!isFirst) {
-        print('>>> ❌ Not first message - clinic already replied');
         return;
       }
 
-      print('>>> ✅ This IS the first user message!');
-      print('>>> 📤 Sending auto-reply...');
 
       // Send the auto-reply
       await _authRepository.sendConversationStarterResponse(
@@ -1030,8 +850,6 @@ class AdminMessagingController extends GetxController {
         responseText: autoReplyStarter.responseText,
       );
 
-      print('>>> ✅ AUTO-REPLY SENT SUCCESSFULLY');
-      print('>>> ═══════════════════════════════════════════');
 
       // ❌ REMOVE THIS ENTIRE BLOCK! This is causing the reload!
       // The real-time subscription will pick up the new message automatically
@@ -1042,12 +860,7 @@ class AdminMessagingController extends GetxController {
       // }
 
       // ✅ ADD THIS INSTEAD: Just log that real-time will handle it
-      print('>>> Real-time subscription will deliver the auto-reply message');
     } catch (e) {
-      print('>>> ═══════════════════════════════════════════');
-      print('>>> ❌ AUTO-REPLY ERROR: $e');
-      print('>>> Stack: ${StackTrace.current}');
-      print('>>> ═══════════════════════════════════════════');
     }
   }
 
@@ -1061,13 +874,6 @@ class AdminMessagingController extends GetxController {
     final isAdminUserId = senderId == _userSession.userId;
     final isClinicId = senderId == currentClinicId.value;
 
-    print('>>> Checking if current user:');
-    print('>>>   senderId: $senderId');
-    print('>>>   adminUserId: ${_userSession.userId}');
-    print('>>>   clinicId: ${currentClinicId.value}');
-    print('>>>   isAdminUserId: $isAdminUserId');
-    print('>>>   isClinicId: $isClinicId');
-    print('>>>   Result: ${isAdminUserId || isClinicId}');
 
     return isAdminUserId || isClinicId;
   }
@@ -1094,14 +900,12 @@ class AdminMessagingController extends GetxController {
   }
 
   void pauseMessageSubscription() {
-    print('>>> ⏸️ Pausing controller message subscription');
     _messageSubscription?.cancel();
     _messageSubscription = null;
     _activeConversationId = null;
   }
 
   void resumeMessageSubscription(String conversationId) {
-    print('>>> ▶️ Resuming controller message subscription');
     subscribeToMessages(conversationId);
   }
 }

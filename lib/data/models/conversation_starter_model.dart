@@ -34,7 +34,6 @@ class ConversationStarter {
         autoReply = value == true; // This ensures we get false for null
       }
     } catch (e) {
-      print('Warning: Error reading isAutoReply: $e');
       autoReply = false;
     }
 

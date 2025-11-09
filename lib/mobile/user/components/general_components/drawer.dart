@@ -87,7 +87,6 @@ class _MyDrawerState extends State<MyDrawer>
         _animationController.forward();
       }
     } catch (e) {
-      print('Error loading user data: $e');
       setState(() {
         isLoading = false;
       });

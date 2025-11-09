@@ -181,9 +181,6 @@ class AdminChangePasswordController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      print('>>> ============================================');
-      print('>>> CHANGING ADMIN PASSWORD');
-      print('>>> ============================================');
 
       final currentPassword = currentPasswordController.text.trim();
       final newPassword = newPasswordController.text.trim();
@@ -196,8 +193,6 @@ class AdminChangePasswordController extends GetxController {
         oldPassword: currentPassword,
       );
 
-      print('>>> Password updated successfully');
-      print('>>> ============================================');
 
       isLoading.value = false;
       errorMessage.value = '';
@@ -207,13 +202,6 @@ class AdminChangePasswordController extends GetxController {
 
       return true;
     } on AppwriteException catch (e) {
-      print('>>> ============================================');
-      print('>>> APPWRITE ERROR DETAILS:');
-      print('>>> Code: ${e.code}');
-      print('>>> Type: ${e.type}');
-      print('>>> Message: ${e.message}');
-      print('>>> Response: ${e.response}');
-      print('>>> ============================================');
 
       isLoading.value = false;
 
@@ -235,10 +223,6 @@ class AdminChangePasswordController extends GetxController {
 
       return false;
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> UNEXPECTED ERROR: $e');
-      print('>>> ERROR TYPE: ${e.runtimeType}');
-      print('>>> ============================================');
 
       isLoading.value = false;
       errorMessage.value = 'An unexpected error occurred. Please try again.';

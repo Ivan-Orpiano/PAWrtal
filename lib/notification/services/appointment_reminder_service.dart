@@ -33,7 +33,6 @@ class AppointmentReminderService extends GetxService {
     super.onInit();
     await _initializeLocalNotifications();
     await _scheduleAllUpcomingAppointments();
-    print('>>> 📅 User Appointment Reminder Service initialized');
   }
 
   @override
@@ -64,14 +63,11 @@ class AppointmentReminderService extends GetxService {
         onDidReceiveNotificationResponse: _handleNotificationTap,
       );
 
-      print('>>> ✅ Local notifications initialized with timezone support');
     } catch (e) {
-      print('>>> ❌ Error initializing local notifications: $e');
     }
   }
 
   void _handleNotificationTap(NotificationResponse response) {
-    print('>>> 📱 Notification tapped: ${response.payload}');
 
     if (response.payload != null) {
       // Navigate to appointments page
@@ -79,7 +75,6 @@ class AppointmentReminderService extends GetxService {
         // You can parse the payload to get appointment details
         // Get.toNamed('/userHome'); // Adjust route as needed
       } catch (e) {
-        print('>>> Error handling notification tap: $e');
       }
     }
   }
@@ -89,11 +84,9 @@ class AppointmentReminderService extends GetxService {
     try {
       final userId = session.userId;
       if (userId.isEmpty) {
-        print('>>> ⚠️ No user logged in, skipping scheduling');
         return;
       }
 
-      print('>>> 🔍 Fetching user appointments...');
       final appointments = await authRepository.getUserAppointments(userId);
 
       // Filter for accepted appointments in the future
@@ -101,17 +94,13 @@ class AppointmentReminderService extends GetxService {
         return apt.status == 'accepted' && apt.dateTime.isAfter(DateTime.now());
       }).toList();
 
-      print(
-          '>>> Found ${upcomingAccepted.length} upcoming accepted appointments');
 
       // Schedule notification for each
       for (var appointment in upcomingAccepted) {
         await scheduleAppointmentReminder(appointment);
       }
 
-      print('>>> ✅ All upcoming appointments scheduled');
     } catch (e) {
-      print('>>> ❌ Error scheduling appointments: $e');
     }
   }
 
@@ -129,17 +118,9 @@ class AppointmentReminderService extends GetxService {
 
       // Don't schedule if reminder time is in the past
       if (reminderTime.isBefore(DateTime.now())) {
-        print(
-            '>>> ⏰ Reminder time is in the past, skipping: ${appointment.documentId}');
         return;
       }
 
-      print('>>> ============================================');
-      print('>>> 📅 SCHEDULING APPOINTMENT REMINDER');
-      print('>>> Appointment ID: ${appointment.documentId}');
-      print('>>> Appointment Time: ${appointment.dateTime}');
-      print('>>> Reminder Time: $reminderTime');
-      print('>>> ============================================');
 
       // Get pet and clinic details
       final petName = await _getPetName(appointment.petId);
@@ -169,11 +150,7 @@ class AppointmentReminderService extends GetxService {
         clinicName: clinicName,
       );
 
-      print('>>> ✅ Reminder scheduled successfully!');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error scheduling reminder: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -224,9 +201,7 @@ class AppointmentReminderService extends GetxService {
         payload: payload,
       );
 
-      print('>>> 📱 Local notification scheduled for: $scheduledDate');
     } catch (e) {
-      print('>>> ❌ Error scheduling local notification: $e');
 
       // Fallback: If timezone scheduling fails, show immediate notification (for testing)
       if (kDebugMode) {
@@ -274,9 +249,7 @@ class AppointmentReminderService extends GetxService {
       // Create the notification record
       await authRepository.createNotification(notification);
 
-      print('>>> 💾 In-app notification record created');
     } catch (e) {
-      print('>>> ⚠️ Error creating in-app notification: $e');
     }
   }
 
@@ -287,10 +260,6 @@ class AppointmentReminderService extends GetxService {
   /// 3. Appointment is rescheduled
   Future<void> cancelAppointmentReminder(String appointmentId) async {
     try {
-      print('>>> ============================================');
-      print('>>> ❌ CANCELLING APPOINTMENT REMINDER');
-      print('>>> Appointment ID: $appointmentId');
-      print('>>> ============================================');
 
       // Get notification ID
       final notificationId = _scheduledNotifications[appointmentId];
@@ -302,14 +271,10 @@ class AppointmentReminderService extends GetxService {
         // Remove from tracking
         _scheduledNotifications.remove(appointmentId);
 
-        print('>>> ✅ Reminder cancelled successfully!');
       } else {
-        print('>>> ⚠️ No scheduled reminder found for this appointment');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error cancelling reminder: $e');
     }
   }
 
@@ -348,13 +313,10 @@ class AppointmentReminderService extends GetxService {
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     try {
       final pending = await _localNotifications.pendingNotificationRequests();
-      print('>>> 📋 Pending notifications: ${pending.length}');
       for (var notification in pending) {
-        print('>>>   - ID: ${notification.id}, Title: ${notification.title}');
       }
       return pending;
     } catch (e) {
-      print('>>> Error getting pending notifications: $e');
       return [];
     }
   }
@@ -364,15 +326,12 @@ class AppointmentReminderService extends GetxService {
     try {
       await _localNotifications.cancelAll();
       _scheduledNotifications.clear();
-      print('>>> 🗑️ All reminders cancelled');
     } catch (e) {
-      print('>>> Error cancelling all reminders: $e');
     }
   }
 
   /// Manual refresh - reschedule all upcoming appointments
   Future<void> refreshAllReminders() async {
-    print('>>> 🔄 Refreshing all reminders...');
 
     // Cancel existing
     await cancelAllReminders();
@@ -380,7 +339,6 @@ class AppointmentReminderService extends GetxService {
     // Reschedule
     await _scheduleAllUpcomingAppointments();
 
-    print('>>> ✅ Refresh complete');
   }
 
   /// Get service statistics

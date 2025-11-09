@@ -76,7 +76,6 @@ class _PawmapState extends State<Pawmap> {
         });
       }
     } catch (e) {
-      print("Error fetching user location: $e");
       setState(() {
         userLocation = sanJoseDelMonteBounds.center;
       });
@@ -110,7 +109,6 @@ class _PawmapState extends State<Pawmap> {
               .getClinicRatingStats(clinic.documentId ?? '');
           statsCache[clinic.documentId ?? ''] = stats;
         } catch (e) {
-          print("Error loading rating stats for ${clinic.clinicName}: $e");
           statsCache[clinic.documentId ?? ''] = ClinicRatingStats(
             averageRating: 0.0,
             totalReviews: 0,
@@ -132,7 +130,6 @@ class _PawmapState extends State<Pawmap> {
         _applyFilters();
       }
     } catch (e) {
-      print("Error fetching clinics data: $e");
       if (mounted) {
         setState(() {
           error = "Failed to load clinics data";
@@ -157,12 +154,6 @@ class _PawmapState extends State<Pawmap> {
   }
 
   void _applyFilters() {
-    print('>>> ============================================');
-    print('>>> APPLYING FILTERS IN MOBILE MAPS');
-    print('>>> Filter: $selectedFilter');
-    print('>>> Search: $searchQuery');
-    print('>>> Total clinics: ${allClinics.length}');
-    print('>>> ============================================');
 
     var filtered = allClinics.toList();
 
@@ -178,17 +169,14 @@ class _PawmapState extends State<Pawmap> {
             clinic.address.toLowerCase().contains(searchQuery.toLowerCase()) ||
             services.toLowerCase().contains(searchQuery.toLowerCase());
       }).toList();
-      print('>>> After search: ${filtered.length} clinics');
     }
 
     // Apply status filter with closed dates support
     switch (selectedFilter) {
       case 'Open':
-        print('>>> Applying "Open" filter...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) {
-            print('>>> ${clinic.clinicName}: No settings');
             return false;
           }
 
@@ -200,16 +188,12 @@ class _PawmapState extends State<Pawmap> {
           final isOpen = settings.isOpen;
           final isOpenNow = settings.isOpenNow();
 
-          print(
-              '>>> ${clinic.clinicName}: isOpen=$isOpen, isOpenNow=$isOpenNow, closedToday=$isTodayClosedDate');
 
           return isOpen && isOpenNow && !isTodayClosedDate;
         }).toList();
-        print('>>> After "Open" filter: ${filtered.length} clinics');
         break;
 
       case 'Available Today':
-        print('>>> Applying "Available Today" filter...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) return false;
@@ -222,14 +206,11 @@ class _PawmapState extends State<Pawmap> {
           final result =
               settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
 
-          print('>>> ${clinic.clinicName}: Available Today = $result');
           return result;
         }).toList();
-        print('>>> After "Available Today" filter: ${filtered.length} clinics');
         break;
 
       case 'Closed':
-        print('>>> Applying "Closed" filter...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) return false;
@@ -241,14 +222,11 @@ class _PawmapState extends State<Pawmap> {
 
           final result =
               !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
-          print('>>> ${clinic.clinicName}: Closed = $result');
           return result;
         }).toList();
-        print('>>> After "Closed" filter: ${filtered.length} clinics');
         break;
 
       case 'Popular':
-        print('>>> Applying "Popular" filter...');
         // Sort by average rating first, then review count
         filtered.sort((a, b) {
           final aStats = ratingStatsCache[a.documentId ?? ''];
@@ -260,8 +238,6 @@ class _PawmapState extends State<Pawmap> {
           final aReviews = aStats?.totalReviews ?? 0;
           final bReviews = bStats?.totalReviews ?? 0;
 
-          print('>>> ${a.clinicName}: Rating=$aRating, Reviews=$aReviews');
-          print('>>> ${b.clinicName}: Rating=$bRating, Reviews=$bReviews');
 
           // Primary sort: Higher rating first
           if ((bRating - aRating).abs() > 0.01) {
@@ -277,16 +253,12 @@ class _PawmapState extends State<Pawmap> {
           final stats = ratingStatsCache[clinic.documentId ?? ''];
           final hasReviews = (stats?.totalReviews ?? 0) > 0;
           final hasRating = (stats?.averageRating ?? 0.0) > 0.0;
-          print(
-              '>>> ${clinic.clinicName}: hasReviews=$hasReviews, hasRating=$hasRating');
           return hasReviews && hasRating;
         }).toList();
-        print('>>> After "Popular" filter: ${filtered.length} clinics');
         break;
 
       case 'All':
       default:
-        print('>>> Showing all clinics');
         // Show all clinics, sorted by open status first
         filtered.sort((a, b) {
           final aSettings = clinicSettingsMap[a.documentId ?? ''];
@@ -322,22 +294,15 @@ class _PawmapState extends State<Pawmap> {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
       final hasLocation = settings?.location != null;
       if (!hasLocation) {
-        print('>>> ${clinic.clinicName}: No location data');
       }
       return hasLocation;
     }).toList();
 
-    print(
-        '>>> After location filter: ${filtered.length} clinics (removed ${beforeLocationFilter - filtered.length})');
 
     setState(() {
       filteredClinics = filtered;
     });
 
-    print('>>> ============================================');
-    print('>>> FILTER COMPLETE');
-    print('>>> Final: ${filteredClinics.length} clinics will be shown on map');
-    print('>>> ============================================');
   }
 
   int getFilterCount(String filter) {
@@ -420,7 +385,6 @@ class _PawmapState extends State<Pawmap> {
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print("Error getting current location: $e");
       return null;
     }
   }
@@ -444,8 +408,6 @@ class _PawmapState extends State<Pawmap> {
     Clinic? nearest;
     double shortestDistance = double.infinity;
 
-    print(
-        '>>> Finding nearest clinic from ${filteredClinics.length} filtered clinics');
 
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
@@ -455,7 +417,6 @@ class _PawmapState extends State<Pawmap> {
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
         final dist = calculateDistance(userLocation!, clinicLocation);
 
-        print('>>> ${clinic.clinicName}: ${dist.toStringAsFixed(2)} km');
 
         if (dist < shortestDistance) {
           shortestDistance = dist;
@@ -471,8 +432,6 @@ class _PawmapState extends State<Pawmap> {
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
         if (isWithinBounds(nearestLocation)) {
-          print(
-              '>>> Nearest clinic: ${nearest.clinicName} (${shortestDistance.toStringAsFixed(2)} km)');
           _mapController.move(nearestLocation, 17);
           fetchRoute(nearestLocation);
         } else {
@@ -481,7 +440,6 @@ class _PawmapState extends State<Pawmap> {
         }
       }
     } else {
-      print('>>> No clinics found in current filter');
       _showNoNearestClinicMessage('No clinics available in current filter');
     }
   }
@@ -519,14 +477,11 @@ class _PawmapState extends State<Pawmap> {
 
     final markers = <Marker>[];
 
-    print(
-        '>>> Creating markers for ${filteredClinics.length} filtered clinics');
 
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
       if (settings?.location == null) {
-        print('>>> ${clinic.clinicName}: Skipped (no location)');
         continue;
       }
 
@@ -534,7 +489,6 @@ class _PawmapState extends State<Pawmap> {
           LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
       if (!isWithinBounds(location)) {
-        print('>>> ${clinic.clinicName}: Skipped (out of bounds)');
         continue;
       }
 
@@ -560,8 +514,6 @@ class _PawmapState extends State<Pawmap> {
         markerColor = Colors.red;
       }
 
-      print(
-          '>>> ${clinic.clinicName}: Adding marker (${markerColor.toString()}, ${distanceInKm.toStringAsFixed(2)} km)');
 
       markers.add(Marker(
         point: location,
@@ -610,7 +562,6 @@ class _PawmapState extends State<Pawmap> {
       ));
     }
 
-    print('>>> Total markers created: ${markers.length}');
     return markers;
   }
 
@@ -647,7 +598,6 @@ class _PawmapState extends State<Pawmap> {
         }
       }
     } catch (e) {
-      print("Error fetching route: $e");
     }
   }
 

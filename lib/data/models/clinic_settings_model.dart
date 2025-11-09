@@ -92,7 +92,6 @@ class ClinicSettings {
           return List<String>.from(decoded);
         }
       } catch (e) {
-        print('Error parsing closed dates: $e');
       }
     }
     if (closedDates is List) {
@@ -111,7 +110,6 @@ class ClinicSettings {
           return Map<String, bool>.from(decoded);
         }
       } catch (e) {
-        print('Error parsing medical services: $e');
       }
     }
     if (medicalServices is Map) {
@@ -241,7 +239,6 @@ class ClinicSettings {
 
       return now.isAfter(openDateTime) && now.isBefore(closeDateTime);
     } catch (e) {
-      print('Error parsing operating hours: $e');
       return false;
     }
   }

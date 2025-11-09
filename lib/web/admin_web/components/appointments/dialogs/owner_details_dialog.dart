@@ -189,7 +189,6 @@ class OwnerDetailsDialog extends StatelessWidget {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        print('>>> Error loading profile picture: $error');
         return _buildPlaceholderAvatar();
       },
     );

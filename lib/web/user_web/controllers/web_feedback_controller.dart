@@ -58,14 +58,12 @@ class WebFeedbackController extends GetxController {
   /// Toggle pin status
   Future<void> togglePin(String feedbackId) async {
     try {
-      print('>>> Toggling pin for feedback: $feedbackId');
 
       // Find the feedback item
       final feedbackIndex =
           allFeedback.indexWhere((f) => f.documentId == feedbackId);
 
       if (feedbackIndex == -1) {
-        print('>>> Error: Feedback not found');
         return;
       }
 
@@ -76,8 +74,6 @@ class WebFeedbackController extends GetxController {
       final userName =
           session.userName.isNotEmpty ? session.userName : 'System';
 
-      print('>>> New pin status: $newPinStatus');
-      print('>>> Pinned by: $userName');
 
       // Update in database
       await authRepository.toggleFeedbackPin(
@@ -104,9 +100,7 @@ class WebFeedbackController extends GetxController {
 
       _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
 
-      print('>>> Pin toggle successful');
     } catch (e) {
-      print('>>> Error toggling pin: $e');
       _showError('Failed to toggle pin');
     }
   }
@@ -152,34 +146,23 @@ class WebFeedbackController extends GetxController {
   /// Setup real-time subscription for feedback changes
 void _setupRealtimeFeedbackSubscription() {
   try {
-    print('>>> Setting up real-time feedback subscription...');
     
     _feedbackSubscription = authRepository.appWriteProvider
         .subscribeToFeedbackChanges()
         .listen((event) {
-      print('>>> ============================================');
-      print('>>> REAL-TIME FEEDBACK EVENT RECEIVED');
-      print('>>> Event type: ${event.events}');
-      print('>>> ============================================');
 
       // Handle different event types
       if (event.events.contains('databases.*.collections.*.documents.*.create')) {
-        print('>>> New feedback created');
         _handleFeedbackCreated(event);
       } else if (event.events.contains('databases.*.collections.*.documents.*.update')) {
-        print('>>> Feedback updated');
         _handleFeedbackUpdated(event);
       } else if (event.events.contains('databases.*.collections.*.documents.*.delete')) {
-        print('>>> Feedback deleted');
         _handleFeedbackDeleted(event);
       }
     }, onError: (error) {
-      print('>>> Real-time subscription error: $error');
     });
 
-    print('>>> Real-time subscription active');
   } catch (e) {
-    print('>>> Error setting up real-time subscription: $e');
   }
 }
 
@@ -196,17 +179,14 @@ void _handleFeedbackCreated(RealtimeMessage event) {
       // Update pinned IDs if it's pinned
       if (feedback.isPinned) {
         pinnedFeedbackIds.add(feedback.documentId!);
-        print('>>> ✅ New pinned feedback added: ${feedback.documentId}');
       }
       
       // Re-apply filters and update stats
       filterFeedback();
       updateStatistics();
       
-      print('>>> ✅ New feedback added to local list');
     }
   } catch (e) {
-    print('>>> Error handling feedback created: $e');
   }
 }
 
@@ -230,11 +210,9 @@ void _handleFeedbackUpdated(RealtimeMessage event) {
         if (updatedFeedback.isPinned) {
           // Feedback was just pinned
           pinnedFeedbackIds.add(updatedFeedback.documentId!);
-          print('>>> 📌 Feedback pinned: ${updatedFeedback.documentId}');
         } else {
           // Feedback was just unpinned
           pinnedFeedbackIds.remove(updatedFeedback.documentId!);
-          print('>>> 📍 Feedback unpinned: ${updatedFeedback.documentId}');
         }
       }
       
@@ -244,7 +222,6 @@ void _handleFeedbackUpdated(RealtimeMessage event) {
         allFeedback.removeAt(index);
         filteredFeedback.removeWhere((f) => f.documentId == updatedFeedback.documentId);
         pinnedFeedbackIds.remove(updatedFeedback.documentId);
-        print('>>> 🗄️ Feedback archived and removed: ${updatedFeedback.documentId}');
       }
       // Force refresh
       allFeedback.refresh();
@@ -287,7 +264,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         return;
       }
 
-      print('>>> Loading daily report tracker for user: $userId');
 
       // Get user's feedback submissions from last 24 hours
       final allFeedback = await authRepository.getUserFeedback(userId);
@@ -300,7 +276,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         return feedback.submittedAt.isAfter(last24Hours);
       }).toList();
 
-      print('>>> Found ${recentReports.length} reports in last 24 hours');
 
       // Find the oldest report timestamp to use as reset time
       DateTime lastResetAt = now.subtract(Duration(hours: 24));
@@ -323,19 +298,12 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
       // Check if needs reset
       if (tracker.needsReset) {
-        print('>>> Tracker needs reset (>24 hours old)');
         dailyTracker.value = tracker.reset();
       } else {
         dailyTracker.value = tracker;
       }
 
-      print('>>> Daily tracker loaded:');
-      print('>>>   Reports today: ${dailyTracker.value!.reportCount}/3');
-      print('>>>   Remaining: ${dailyTracker.value!.remainingReports}');
-      print(
-          '>>>   Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
     } catch (e) {
-      print('>>> Error loading daily tracker: $e');
     } finally {
       isCheckingLimit.value = false;
     }
@@ -343,13 +311,11 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
   bool canSubmitFeedback() {
     if (dailyTracker.value == null) {
-      print('>>> No tracker loaded, allowing submission');
       return true;
     }
 
     // Check if needs reset first
     if (dailyTracker.value!.needsReset) {
-      print('>>> Tracker needs reset, resetting now...');
       dailyTracker.value = dailyTracker.value!.reset();
       return true;
     }
@@ -357,9 +323,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
     final canSubmit = !dailyTracker.value!.hasExceededLimit;
 
     if (!canSubmit) {
-      print('>>> Daily limit exceeded: ${dailyTracker.value!.reportCount}/3');
-      print(
-          '>>> Time until reset: ${_formatDuration(dailyTracker.value!.timeUntilReset)}');
     }
 
     return canSubmit;
@@ -614,15 +577,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
       final userName = session.userName;
       final userEmail = session.userEmail;
 
-      print('=== SUBMITTING FEEDBACK ===');
-      print('User ID: $userId');
-      print('User Name: $userName');
-      print('User Email: $userEmail');
-      print('Subject: ${subject.value}');
-      print('Description: ${description.value}');
-      print('Type: ${selectedType.value}');
-      print('Category: ${selectedCategory.value}');
-      print('Files: ${selectedFiles.length}');
 
       if (userId.isEmpty) {
         _showError("User session data is missing. Please log in again.");
@@ -666,13 +620,10 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
       final createdFeedback =
           await authRepository.createFeedbackAndReport(feedback);
 
-      print('Feedback created successfully: ${createdFeedback.documentId}');
 
       // STEP 3: Update daily tracker AFTER successful submission
       if (dailyTracker.value != null) {
         dailyTracker.value = dailyTracker.value!.incrementCount();
-        print(
-            '>>> Updated tracker: ${dailyTracker.value!.reportCount}/3 reports');
       } else {
         // Create new tracker if doesn't exist
         dailyTracker.value = UserDailyReportTracker(
@@ -692,9 +643,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
       return true;
     } catch (e, stackTrace) {
-      print('=== ERROR SUBMITTING FEEDBACK ===');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
       _showError("Failed to submit feedback. Please try again.");
       return false;
     } finally {
@@ -704,7 +652,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
   /// Clear the feedback form completely
   void clearForm() {
-    print('=== CLEARING FORM ===');
 
     // Clear text values
     subject.value = '';
@@ -724,24 +671,10 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
     selectedType.refresh();
     selectedCategory.refresh();
 
-    print('Form cleared successfully');
-    print('Type: ${selectedType.value.displayName}');
-    print('Category: ${selectedCategory.value.displayName}');
-    print('====================');
   }
 
   /// Debug helper method
   void debugFeedbackData() {
-    print('=== FEEDBACK FORM DATA ===');
-    print('Subject: ${subject.value}');
-    print('Description: ${description.value}');
-    print('Type: ${selectedType.value}');
-    print('Category: ${selectedCategory.value}');
-    print('Files: ${selectedFiles.length}');
-    print('User ID: ${session.userId}');
-    print('User Name: ${session.userName}');
-    print('User Email: ${session.userEmail}');
-    print('========================');
   }
 
   // ============= ADMIN-SIDE METHODS =============
@@ -764,7 +697,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
       pinnedFeedbackIds.value =
           feedback.where((f) => f.isPinned).map((f) => f.documentId!).toSet();
 
-      print('>>> Loaded ${pinnedFeedbackIds.length} pinned feedback items');
 
       // ✅ IMPORTANT: Apply filters AFTER loading (preserves user's filter selections)
       filterFeedback();
@@ -779,9 +711,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
   /// Checks subject + description for gibberish, scrambled words, and duplicates per user
   Future<void> autoCleanSpamFeedback() async {
     try {
-      print('>>> ============================================');
-      print('>>> STARTING ENHANCED SPAM & REDUNDANCY CLEANUP');
-      print('>>> ============================================');
 
       isCleaningSpam.value = true;
       int spamDetected = 0;
@@ -793,7 +722,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         return f.archivedAt == null;
       }).toList();
 
-      print('>>> Checking ${feedbackToCheck.length} feedbacks...');
 
       // Group feedback by user for redundancy check
       final Map<String, List<FeedbackAndReport>> feedbackByUser = {};
@@ -801,13 +729,10 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         feedbackByUser.putIfAbsent(feedback.userId, () => []).add(feedback);
       }
 
-      print('>>> Total users: ${feedbackByUser.length}');
 
       // Process each user's feedback
       for (var userId in feedbackByUser.keys) {
         final userFeedbacks = feedbackByUser[userId]!;
-        print(
-            '\n>>> 👤 Checking user: $userId (${userFeedbacks.length} feedbacks)');
 
         // Sort by submission time (oldest first)
         userFeedbacks.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
@@ -824,7 +749,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
             if (isSpam) {
               spamDetected++;
-              print('>>>   🚫 SPAM DETECTED: "${currentFeedback.subject}"');
 
               await _archiveWithReason(
                 currentFeedback.documentId!,
@@ -853,8 +777,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
               if (isRedundant) {
                 redundantDetected++;
-                print(
-                    '>>>   🔄 REDUNDANT DETECTED: "${currentFeedback.subject}"');
 
                 await _archiveWithReason(
                   currentFeedback.documentId!,
@@ -864,8 +786,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
               }
             }
           } catch (e) {
-            print(
-                '>>>   ❌ Error checking feedback ${currentFeedback.documentId}: $e');
           }
         }
       }
@@ -873,12 +793,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
       spamDetectedCount.value = spamDetected;
       autoArchivedCount.value = totalArchived;
 
-      print('\n>>> ============================================');
-      print('>>> CLEANUP COMPLETE');
-      print('>>> Spam Detected: $spamDetected');
-      print('>>> Redundant Detected: $redundantDetected');
-      print('>>> Total Archived: $totalArchived');
-      print('>>> ============================================');
 
       if (totalArchived > 0) {
         _showSuccess('Auto-cleaned $totalArchived spam/redundant feedback(s)');
@@ -887,7 +801,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         _showInfo('✅ All feedbacks look good - no spam detected!');
       }
     } catch (e) {
-      print('>>> ❌ Error in auto spam cleanup: $e');
       _showError('Spam cleanup failed: $e');
     } finally {
       isCleaningSpam.value = false;
@@ -909,7 +822,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         },
       );
     } catch (e) {
-      print('>>> Error archiving feedback: $e');
       rethrow;
     }
   }
@@ -1043,12 +955,8 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
     // Debug log for verification
     if (filtered.isNotEmpty) {
-      print('>>> Filtered ${filtered.length} feedbacks');
-      print('>>> Top 3 items:');
       for (int i = 0; i < (filtered.length > 3 ? 3 : filtered.length); i++) {
         final f = filtered[i];
-        print(
-            '>>>   ${i + 1}. ${f.subject} | ${f.isPinned ? "📌 PINNED" : "⚪"} | ${f.priority.displayName} | ${_formatDebugDate(f.submittedAt)}');
       }
     }
   }
@@ -1145,7 +1053,6 @@ Future<void> archiveFeedback(String documentId) async {
     // Get current admin/user info
     final userName = session.userName.isNotEmpty ? session.userName : 'System';
     
-    print('>>> Archiving feedback: $documentId by $userName');
     
     await authRepository.archiveFeedback(documentId, userName);
     
@@ -1165,9 +1072,7 @@ Future<void> archiveFeedback(String documentId) async {
     
     _showSuccess('Feedback archived successfully');
     
-    print('>>> Archive successful');
   } catch (e) {
-    print('>>> Error archiving feedback: $e');
     _showError('Failed to archive feedback: $e');
   } finally {
     isLoading.value = false;

@@ -50,20 +50,16 @@ class InAppNotificationService extends GetxService {
       final userId = session.userId;
 
       if (userId.isEmpty) {
-        print('>>> No user logged in, skipping notification initialization');
         _clearService();
         return;
       }
 
       // If user changed, clear everything and reinitialize
       if (_currentUserId != userId) {
-        print(
-            '>>> User changed from $_currentUserId to $userId, reinitializing...');
         _clearService();
         _currentUserId = userId;
       }
 
-      print('>>> Initializing notification service for user: $userId');
 
       // Load initial notifications
       await fetchNotifications();
@@ -71,15 +67,12 @@ class InAppNotificationService extends GetxService {
       // Setup real-time subscription
       _setupRealtimeSubscription();
 
-      print('>>> Notification service initialized successfully');
     } catch (e) {
-      print('>>> Error initializing notification service: $e');
     }
   }
 
   /// Clear all service data (for logout or account switch)
   void _clearService() {
-    print('>>> Clearing notification service data');
 
     // Cancel subscription
     _notificationSubscription?.cancel();
@@ -94,7 +87,6 @@ class InAppNotificationService extends GetxService {
 
   /// Public method to clear service (call on logout)
   void clearOnLogout() {
-    print('>>> Clearing notification service on logout');
     _clearService();
   }
 
@@ -106,8 +98,6 @@ class InAppNotificationService extends GetxService {
       // Cancel existing subscription if any
       _notificationSubscription?.cancel();
 
-      print(
-          '>>> Setting up notification real-time subscription for user: $userId');
 
       _notificationSubscription =
           authRepository.subscribeToUserNotifications(userId).listen(
@@ -115,20 +105,16 @@ class InAppNotificationService extends GetxService {
           _handleRealtimeUpdate(message);
         },
         onError: (error) {
-          print('>>> Real-time subscription error: $error');
         },
         cancelOnError: false,
       );
 
-      print('>>> Notification subscription active');
     } catch (e) {
-      print('>>> Error setting up notification subscription: $e');
     }
   }
 
   void _handleRealtimeUpdate(RealtimeMessage message) {
     try {
-      print('>>> Notification real-time update: ${message.events}');
 
       final payload = message.payload;
       final notificationId = payload['\$id'] as String?;
@@ -136,7 +122,6 @@ class InAppNotificationService extends GetxService {
       // CRITICAL FIX: Check if we already processed this notification
       if (message.events.any((e) => e.contains('.create')) &&
           _processedNotificationIds.contains(notificationId)) {
-        print('>>> Duplicate CREATE skipped: $notificationId');
         return;
       }
 
@@ -144,7 +129,6 @@ class InAppNotificationService extends GetxService {
 
       // Verify this notification is for current user
       if (notification.userId != _currentUserId) {
-        print('>>> Notification not for current user, skipping');
         return;
       }
 
@@ -158,12 +142,10 @@ class InAppNotificationService extends GetxService {
         }
       }
     } catch (e) {
-      print('>>> Error handling notification real-time update: $e');
     }
   }
 
   void _handleNewNotification(AppNotification notification) {
-    print('>>> New notification received: ${notification.title}');
 
     // CRITICAL FIX: Mark as processed to prevent duplicates
     if (notification.documentId != null) {
@@ -174,7 +156,6 @@ class InAppNotificationService extends GetxService {
     final exists =
         notifications.any((n) => n.documentId == notification.documentId);
     if (exists) {
-      print('>>> Notification already exists in list, skipping duplicate');
       return;
     }
 
@@ -191,7 +172,6 @@ class InAppNotificationService extends GetxService {
   }
 
   void _handleUpdatedNotification(AppNotification notification) {
-    print('>>> Notification updated: ${notification.documentId}');
 
     final index = notifications.indexWhere(
       (n) => n.documentId == notification.documentId,
@@ -213,7 +193,6 @@ class InAppNotificationService extends GetxService {
   }
 
   void _handleDeletedNotification(AppNotification notification) {
-    print('>>> Notification deleted: ${notification.documentId}');
 
     final wasUnread = notification.isUnread;
     notifications.removeWhere((n) => n.documentId == notification.documentId);
@@ -231,7 +210,6 @@ class InAppNotificationService extends GetxService {
   void _showNotificationBanner(AppNotification notification) {
     // Only show banner if Get context is available
     if (!Get.isRegistered<GetMaterialController>()) {
-      print('>>> Get not ready, skipping banner');
       return;
     }
 
@@ -254,7 +232,6 @@ class InAppNotificationService extends GetxService {
         },
       );
     } catch (e) {
-      print('>>> Error showing notification banner: $e');
     }
   }
 
@@ -292,19 +269,16 @@ class InAppNotificationService extends GetxService {
       final userId = session.userId;
 
       if (userId.isEmpty) {
-        print('>>> No user logged in');
         _clearService();
         return;
       }
 
       // Verify we're fetching for the correct user
       if (_currentUserId.isNotEmpty && _currentUserId != userId) {
-        print('>>> User mismatch detected, reinitializing...');
         await initialize();
         return;
       }
 
-      print('>>> Fetching notifications for user: $userId');
 
       final docs = await authRepository.getUserNotifications(userId);
 
@@ -327,10 +301,7 @@ class InAppNotificationService extends GetxService {
       // Update unread count
       unreadCount.value = notifications.where((n) => n.isUnread).length;
 
-      print(
-          '>>> Fetched ${notifications.length} notifications (${unreadCount.value} unread)');
     } catch (e) {
-      print('>>> Error fetching notifications: $e');
     } finally {
       isLoading.value = false;
     }
@@ -340,9 +311,7 @@ class InAppNotificationService extends GetxService {
   Future<void> markAsRead(String notificationId) async {
     try {
       await authRepository.markNotificationAsRead(notificationId);
-      print('>>> Marked notification as read: $notificationId');
     } catch (e) {
-      print('>>> Error marking notification as read: $e');
     }
   }
 
@@ -353,9 +322,7 @@ class InAppNotificationService extends GetxService {
       if (userId.isEmpty) return;
 
       await authRepository.markAllNotificationsAsRead(userId);
-      print('>>> Marked all notifications as read');
     } catch (e) {
-      print('>>> Error marking all as read: $e');
     }
   }
 
@@ -363,9 +330,7 @@ class InAppNotificationService extends GetxService {
   Future<void> deleteNotification(String notificationId) async {
     try {
       await authRepository.deleteNotification(notificationId);
-      print('>>> Deleted notification: $notificationId');
     } catch (e) {
-      print('>>> Error deleting notification: $e');
     }
   }
 
@@ -376,15 +341,12 @@ class InAppNotificationService extends GetxService {
       if (userId.isEmpty) return;
 
       await authRepository.deleteAllNotifications(userId);
-      print('>>> Deleted all notifications');
     } catch (e) {
-      print('>>> Error deleting all notifications: $e');
     }
   }
 
   /// Handle notification tap - FIXED: No navigation, just mark as read
   void handleNotificationTap(AppNotification notification) {
-    print('>>> Notification tapped: ${notification.title}');
 
     // Mark as read
     if (notification.isUnread && notification.documentId != null) {
@@ -393,7 +355,6 @@ class InAppNotificationService extends GetxService {
 
     // REMOVED: Navigation code
     // You can add custom logic here if needed without navigation
-    print('>>> Notification marked as read (navigation disabled)');
   }
 
   // Getters

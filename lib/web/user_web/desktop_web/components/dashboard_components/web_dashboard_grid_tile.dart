@@ -15,14 +15,9 @@ class WebDashboardGridTile extends StatefulWidget {
 class _WebDashboardGridTileState extends State<WebDashboardGridTile> {
   @override
   Widget build(BuildContext context) {
-    print('>>> ============================================');
-    print('>>> BUILDING GRID TILE');
-    print('>>> Number of clinics to display: ${widget.clinics.length}');
 
     for (var clinic in widget.clinics) {
-      print('>>> - ${clinic.clinicName} (ID: ${clinic.documentId})');
     }
-    print('>>> ============================================');
 
     return LayoutBuilder(
       builder: (context, constraints) {
