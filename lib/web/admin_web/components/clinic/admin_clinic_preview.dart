@@ -176,7 +176,6 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
     try {
       return controller.text;
     } catch (e) {
-      print('Error accessing controller text: $e');
       return '';
     }
   }
@@ -836,23 +835,12 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              print(
-                                  '>>> ============================================');
-                              print('>>> SAVING SERVICES FROM DIALOG');
-                              print(
-                                  '>>> Selected services: $tempSelectedServices');
-                              print(
-                                  '>>> Medical services map: $tempMedicalServices');
-                              print(
-                                  '>>> ============================================');
 
                               // Ensure all selected services have medical status
                               for (var service in tempSelectedServices) {
                                 if (!tempMedicalServices.containsKey(service)) {
                                   tempMedicalServices[service] =
                                       _isServiceMedicalByDefault(service);
-                                  print(
-                                      '>>> Added default medical status for: $service = ${tempMedicalServices[service]}');
                                 }
                               }
 
@@ -862,17 +850,10 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                               widget.controller.medicalServices
                                   .assignAll(tempMedicalServices);
 
-                              print(
-                                  '>>> Controller selectedServices: ${widget.controller.selectedServices}');
-                              print(
-                                  '>>> Controller medicalServices: ${widget.controller.medicalServices}');
 
                               // Save to database
                               await widget.controller.saveClinicSettings();
 
-                              print('>>> Services saved successfully');
-                              print(
-                                  '>>> ============================================');
 
                               if (context.mounted) Navigator.pop(context);
                             },
@@ -1146,9 +1127,7 @@ Widget build(BuildContext context) {
     return Obx(() {
       final images = widget.controller.galleryImages;
 
-      print('>>> Gallery Preview: ${images.length} images');
       for (var img in images) {
-        print('>>> Image URL: $img');
       }
 
       if (images.isEmpty) {
@@ -1205,7 +1184,6 @@ Widget build(BuildContext context) {
                     );
                   },
                   errorBuilder: (context, error, stackTrace) {
-                    print('>>> Error loading image: $error');
                     return Container(
                       color: Colors.grey.shade200,
                       child: const Center(
@@ -1321,7 +1299,6 @@ Widget build(BuildContext context) {
                     );
                   },
                   errorBuilder: (context, error, stackTrace) {
-                    print('>>> Error loading main image: $error');
                     return Container(
                       color: Colors.grey.shade200,
                       child: const Center(
@@ -1367,7 +1344,6 @@ Widget build(BuildContext context) {
                             );
                           },
                           errorBuilder: (context, error, stackTrace) {
-                            print('>>> Error loading image 2: $error');
                             return Container(
                               color: Colors.grey.shade200,
                               child: const Center(
@@ -1408,7 +1384,6 @@ Widget build(BuildContext context) {
                                   ));
                             },
                             errorBuilder: (context, error, stackTrace) {
-                              print('>>> Error loading image 3: $error');
                               return Container(
                                 color: Colors.grey.shade200,
                                 child: const Center(
@@ -1454,7 +1429,6 @@ Widget build(BuildContext context) {
                             );
                           },
                           errorBuilder: (context, error, stackTrace) {
-                            print('>>> Error loading image 4: $error');
                             return Container(
                               color: Colors.grey.shade200,
                               child: const Center(
@@ -1499,8 +1473,6 @@ Widget build(BuildContext context) {
                                       );
                                     },
                                     errorBuilder: (context, error, stackTrace) {
-                                      print(
-                                          '>>> Error loading image 5: $error');
                                       return Container(
                                         color: Colors.grey.shade200,
                                         child: const Center(
@@ -1646,8 +1618,6 @@ Widget build(BuildContext context) {
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
-                                print(
-                                    '>>> Error loading gallery image $index: $error');
                                 return Container(
                                   color: Colors.grey.shade200,
                                   child: const Center(
@@ -1706,7 +1676,6 @@ Widget build(BuildContext context) {
                         );
                       },
                       errorBuilder: (context, error, stackTrace) {
-                        print('>>> Error loading full image: $error');
                         return Container(
                           color: Colors.grey.shade200,
                           child: const Center(
@@ -2166,7 +2135,6 @@ Widget build(BuildContext context) {
 
       return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
     } catch (e) {
-      print('Error formatting time: $e');
       return time24;
     }
   }

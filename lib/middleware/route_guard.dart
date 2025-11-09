@@ -12,17 +12,12 @@ class RouteGuard extends GetMiddleware {
 
   @override
   RouteSettings? redirect(String? route) {
-    print('>>> ============================================');
-    print('>>> ROUTE GUARD: Intercepting navigation');
-    print('>>> Target route: $route');
-    print('>>> ============================================');
 
     // Allow public routes (landing, login, signup, splash)
     if (route == Routes.landing ||
         route == Routes.login || 
         route == Routes.signup || 
         route == Routes.splash) {
-      print('>>> Public route - allowing access');
       return null;
     }
 
@@ -31,15 +26,9 @@ class RouteGuard extends GetMiddleware {
     final sessionId = _storage.read('sessionId');
     final role = _storage.read('role');
 
-    print('>>> Session Check:');
-    print('>>> - User ID: ${userId ?? "NOT FOUND"}');
-    print('>>> - Session ID: ${sessionId != null ? "EXISTS" : "NOT FOUND"}');
-    print('>>> - Role: ${role ?? "NOT FOUND"}');
 
     // If no session, redirect to landing page
     if (userId == null || sessionId == null || role == null) {
-      print('>>> ✗ No valid session - redirecting to landing');
-      print('>>> ============================================');
       
       // Clear any invalid session data
       _storage.erase();
@@ -51,10 +40,6 @@ class RouteGuard extends GetMiddleware {
     final hasAccess = _validateRoleAccess(route, role);
 
     if (!hasAccess) {
-      print('>>> ✗ Unauthorized access attempt!');
-      print('>>> User role: $role');
-      print('>>> Target route: $route');
-      print('>>> ============================================');
       
       // Log security violation
       _logSecurityViolation(userId, role, route);
@@ -63,8 +48,6 @@ class RouteGuard extends GetMiddleware {
       return RouteSettings(name: _getHomeRouteForRole(role));
     }
 
-    print('>>> ✓ Access granted');
-    print('>>> ============================================');
     return null;
   }
 
@@ -109,13 +92,6 @@ class RouteGuard extends GetMiddleware {
   void _logSecurityViolation(String userId, String role, String? targetRoute) {
     final timestamp = DateTime.now().toIso8601String();
     
-    print('>>> ============================================');
-    print('>>> 🚨 SECURITY VIOLATION DETECTED 🚨');
-    print('>>> Timestamp: $timestamp');
-    print('>>> User ID: $userId');
-    print('>>> User Role: $role');
-    print('>>> Attempted Route: $targetRoute');
-    print('>>> ============================================');
 
     // Store violation in local storage for admin review
     final violations = _storage.read<List>('security_violations') ?? [];

@@ -322,7 +322,6 @@ class ClinicSettingsController extends GetxController {
       _originalSettings = updatedSettings;
       hasUnsavedChanges.value = false;
     } catch (e) {
-      print('Failed to auto-save settings after image upload: $e');
       // Don't throw error here, just log it
     }
   }
@@ -373,7 +372,6 @@ class ClinicSettingsController extends GetxController {
                   }
                   await _authRepository.deleteImage(fileIdToDelete);
                 } catch (e) {
-                  print('Failed to delete image from storage: $e');
                   // Don't fail the whole operation if storage deletion fails
                 }
 
@@ -406,14 +404,11 @@ class ClinicSettingsController extends GetxController {
   String getImageUrl(String imageId) {
     // Check if imageId is already a full URL (from web upload)
     if (imageId.startsWith('http://') || imageId.startsWith('https://')) {
-      print('Using existing URL: $imageId');
       return imageId;
     }
     
     // If it's just a file ID, construct the URL (from mobile upload)
-    print('Constructing URL for file ID: $imageId');
     final url = '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/$imageId/view?project=${AppwriteConstants.projectID}';
-    print('Constructed URL: $url');
     
     return url;
   }

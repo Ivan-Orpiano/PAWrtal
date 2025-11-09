@@ -45,7 +45,6 @@ class _WebClinicDescriptionUpdatedState
         _isLoadingSettings = false;
       });
     } catch (e) {
-      print("Error loading clinic settings for description: $e");
       setState(() {
         _isLoadingSettings = false;
       });
@@ -267,9 +266,6 @@ class _WebClinicDescriptionUpdatedState
               ? Get.find<MessagingController>()
               : Get.put(MessagingController());
 
-      print('=== FIXED: Starting conversation with clinic ===');
-      print('User ID: ${userSession.userId}');
-      print('Clinic ID: ${widget.clinic.documentId}');
 
       // CRITICAL FIX: Use the proper method that checks for existing conversations
       final conversation = await messagingController
@@ -285,13 +281,11 @@ class _WebClinicDescriptionUpdatedState
         return;
       }
 
-      print('✅ Conversation ready: ${conversation.documentId}');
 
       // ADDED: Small delay to ensure real-time subscriptions are set up
       await Future.delayed(const Duration(milliseconds: 300));
 
       if (context.mounted) {
-        print('Navigating to messages tab...');
 
         final homeController = Get.isRegistered<WebUserHomeController>()
             ? Get.find<WebUserHomeController>()
@@ -306,11 +300,8 @@ class _WebClinicDescriptionUpdatedState
         // Close the clinic page
         Navigator.pop(context);
 
-        print('✅ Navigation complete');
       }
     } catch (e) {
-      print('❌ Error in _startConversationWithClinic: $e');
-      print('Stack trace: ${StackTrace.current}');
       if (context.mounted) {
         Navigator.pop(context);
         _showErrorDialog(context, 'Error starting conversation: $e');

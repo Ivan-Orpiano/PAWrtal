@@ -56,7 +56,6 @@ class _LandingClinicPageState extends State<LandingClinicPage> {
         _isLoadingSettings = false;
       });
     } catch (e) {
-      print("Error loading clinic settings: $e");
       setState(() {
         _isLoadingSettings = false;
       });
@@ -78,7 +77,6 @@ class _LandingClinicPageState extends State<LandingClinicPage> {
         _isLoadingReviews = false;
       });
     } catch (e) {
-      print('Error loading reviews: $e');
       setState(() => _isLoadingReviews = false);
     }
   }

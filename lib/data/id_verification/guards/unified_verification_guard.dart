@@ -22,19 +22,14 @@ class UnifiedVerificationGuard {
     required String featureName, // "appointment" or "messaging"
   }) async {
     try {
-      print('>>> Checking verification for $featureName access...');
-      print('>>> User ID: $userId');
-      print('>>> Role: $userRole');
 
       // Admin and staff don't need ID verification
       if (userRole == 'admin' || userRole == 'staff') {
-        print('>>> Admin/Staff user - verification not required');
         return true;
       }
 
       // Check if user is verified
       final isVerified = await _authRepository.isUserIdVerified(userId);
-      print('>>> User verified: $isVerified');
 
       if (isVerified) {
         return true;
@@ -50,7 +45,6 @@ class UnifiedVerificationGuard {
 
       return false;
     } catch (e) {
-      print('>>> Error checking verification status: $e');
       
       // Show error in a user-friendly way
       if (context.mounted) {
@@ -355,7 +349,6 @@ class UnifiedVerificationGuard {
 
       return await _authRepository.isUserIdVerified(userId);
     } catch (e) {
-      print('>>> Error checking verification: $e');
       return false;
     }
   }

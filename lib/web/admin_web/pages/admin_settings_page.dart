@@ -575,11 +575,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     // Determine if user is staff
     final isStaff = userRole == 'staff';
 
-    print('>>> ============================================');
-    print('>>> BUILDING PROFILE CONTENT');
-    print('>>> User Role: $userRole');
-    print('>>> Is Staff: $isStaff');
-    print('>>> ============================================');
 
     // Initialize profile picture controller with unique tag
     final profilePictureController = Get.put(
@@ -591,7 +586,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     // CRITICAL: Fetch staff data immediately on widget build
     if (isStaff) {
       final staffId = storage.read("staffId") as String?;
-      print('>>> Staff ID from storage: $staffId');
 
       if (staffId != null && staffId.isNotEmpty) {
         // Fetch staff data synchronously using FutureBuilder
@@ -599,7 +593,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           future: Get.find<AuthRepository>().getStaffByDocumentId(staffId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              print('>>> Loading staff data...');
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -623,13 +616,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               profilePictureId = staff.image;
               userEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
 
-              print('>>> ============================================');
-              print('>>> STAFF DATA LOADED');
-              print('>>> Staff Name: ${staff.name}');
-              print('>>> Staff Email: $userEmail');
-              print('>>> Staff Image ID: $profilePictureId');
-              print('>>> Staff Username: ${staff.username}');
-              print('>>> ============================================');
 
               // Update storage
               storage.write('staffProfilePictureId', profilePictureId);
@@ -640,13 +626,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               if (profilePictureId.isNotEmpty) {
                 profilePictureController
                     .setCurrentProfilePicture(profilePictureId);
-                print(
-                    '>>> Profile picture set in controller: $profilePictureId');
               } else {
-                print('>>> No profile picture for staff');
               }
             } else {
-              print('>>> No staff data found or error occurred');
               // Fallback to storage values
               profilePictureId =
                   storage.read("staffProfilePictureId") as String? ?? '';
@@ -667,7 +649,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           },
         );
       } else {
-        print('>>> No staff ID in storage, using fallback values');
       }
     } else {
       // ADMIN: Use clinic profile picture
@@ -675,7 +656,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           storage.read("clinicProfilePictureId") as String?;
       final userEmail = storage.read("email") as String? ?? "admin@example.com";
 
-      print('>>> Admin profile picture ID: $profilePictureId');
 
       // Set current profile picture if available
       if (profilePictureId != null && profilePictureId.isNotEmpty) {
@@ -703,17 +683,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     bool isStaff,
   ) {
     return Obx(() {
-      print('>>> ============================================');
-      print('>>> BUILDING PROFILE IMAGE PREVIEW');
-      print('>>> Has selected file: ${controller.selectedFile.value != null}');
-      print(
-          '>>> Current picture ID: ${controller.currentProfilePictureId.value}');
-      print('>>> Is Staff: $isStaff');
 
       // If a new file is selected, show it
       if (controller.selectedFile.value != null &&
           controller.selectedFile.value!.bytes != null) {
-        print('>>> Showing selected file preview');
         return ClipRRect(
           borderRadius: BorderRadius.circular(60),
           child: Image.memory(
@@ -733,9 +706,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         final cleanedId = _extractFileIdFromUrl(currentPictureId);
 
         if (currentPictureId != cleanedId) {
-          print('>>> ⚠️ WARNING: Picture ID was a URL, cleaned it');
-          print('>>> Original: $currentPictureId');
-          print('>>> Cleaned: $cleanedId');
           currentPictureId = cleanedId;
 
           // Update the controller with the cleaned ID
@@ -746,9 +716,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           final imageUrl =
               Get.find<AuthRepository>().getImageUrl(currentPictureId);
 
-          print('>>> Showing current profile picture');
-          print('>>> Clean File ID: $currentPictureId');
-          print('>>> Image URL: $imageUrl');
 
           return ClipRRect(
             borderRadius: BorderRadius.circular(60),
@@ -759,7 +726,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               fit: BoxFit.cover,
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) {
-                  print('>>> Current profile picture loaded successfully');
                   return child;
                 }
                 return Center(
@@ -773,12 +739,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 );
               },
               errorBuilder: (context, error, stackTrace) {
-                print('>>> ============================================');
-                print('>>> ERROR LOADING PROFILE PICTURE');
-                print('>>> Error: $error');
-                print('>>> Clean File ID: $currentPictureId');
-                print('>>> URL: $imageUrl');
-                print('>>> ============================================');
                 return _buildPlaceholderAvatar(isStaff);
               },
             ),
@@ -787,7 +747,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       }
 
       // Show placeholder
-      print('>>> Showing placeholder avatar');
       return _buildPlaceholderAvatar(isStaff);
     });
   }
@@ -817,10 +776,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     AdminPfpController controller,
   ) async {
     try {
-      print('>>> ============================================');
-      print('>>> FETCHING STAFF PROFILE PICTURE');
-      print('>>> Staff Document ID: $staffId');
-      print('>>> ============================================');
 
       final authRepository = Get.find<AuthRepository>();
 
@@ -828,10 +783,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       final staff = await authRepository.getStaffByDocumentId(staffId);
 
       if (staff != null) {
-        print('>>> Staff found: ${staff.name}');
-        print('>>> Staff username: ${staff.username}');
-        print('>>> Staff email: ${staff.email}');
-        print('>>> Staff image field: ${staff.image}');
 
         // Store and set the staff's profile picture ID from the "image" field
         if (staff.image.isNotEmpty) {
@@ -839,36 +790,23 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           final cleanedId = _extractFileIdFromUrl(staff.image);
 
           if (cleanedId != staff.image) {
-            print('>>> Staff image was a URL, cleaned it');
-            print('>>> Original: ${staff.image}');
-            print('>>> Cleaned: $cleanedId');
           }
 
           storage.write('staffProfilePictureId', cleanedId);
           controller.setCurrentProfilePicture(cleanedId);
-          print('>>> Staff profile picture set successfully');
-          print('>>> Image ID stored: $cleanedId');
         } else {
-          print('>>> Staff has no profile picture (image field is empty)');
           storage.write('staffProfilePictureId', '');
         }
 
         // ALSO UPDATE EMAIL IN STORAGE
         final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
         storage.write('email', staffEmail);
-        print('>>> Staff email stored: $staffEmail');
       } else {
-        print('>>> Staff not found');
         storage.write('staffProfilePictureId', '');
         storage.write('email', 'N/A');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR FETCHING STAFF PROFILE PICTURE: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
 
       // Set defaults on error
       storage.write('staffProfilePictureId', '');
@@ -3454,7 +3392,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         return pathSegments[filesIndex + 1];
       }
     } catch (e) {
-      print('>>> Error extracting file ID from URL: $e');
     }
 
     return urlOrId;
@@ -3532,10 +3469,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     });
 
     try {
-      print('>>> ============================================');
-      print('>>> SEARCHING USER BY EMAIL');
-      print('>>> Email: $query');
-      print('>>> ============================================');
 
       final authRepository = Get.find<AuthRepository>();
 
@@ -3555,14 +3488,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         final user = User.fromMap(userDoc.data);
         user.documentId = userDoc.$id;
 
-        print('>>> ============================================');
-        print('>>> USER FOUND');
-        print('>>> Name: ${user.name}');
-        print('>>> Email: ${user.email}');
-        print('>>> Role: ${user.role}');
-        print('>>> ID Verified: ${user.idVerified}');
-        print('>>> Is Archived: ${user.isArchived}');
-        print('>>> ============================================');
 
         setState(() {
           _searchedUser = user;
@@ -3570,7 +3495,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           _searchError = null;
         });
       } else {
-        print('>>> User not found with email: $query');
         setState(() {
           _searchedUser = null;
           _isSearching = false;
@@ -3579,10 +3503,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         });
       }
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR SEARCHING USER: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
 
       setState(() {
         _searchedUser = null;
@@ -4270,7 +4190,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             );
           },
           errorBuilder: (context, error, stackTrace) {
-            print('>>> Error loading user profile picture: $error');
             return _buildDefaultUserAvatar(user.name);
           },
         ),

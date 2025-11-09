@@ -30,17 +30,14 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     // STEP 1: Load conversations once
-    print('>>> MESSAGES PAGE: Loading initial conversations');
     _messagingController.loadUserConversations();
 
     // STEP 2: CRITICAL - Subscribe to real-time updates
-    print('>>> MESSAGES PAGE: Setting up real-time subscription');
     _messagingController.subscribeToConversationUpdates();
 
     // STEP 3: Check if we need to restore a conversation from layout transition
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_messagingController.shouldRestoreConversation()) {
-        print('>>> MESSAGES PAGE: Restoring preserved conversation');
         final data = _messagingController.selectedConversationData.value!;
         final conversation = data['conversation'] as Conversation;
         final receiverId = data['receiverId'] as String;
@@ -80,7 +77,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
 
     // Only refresh when app resumes (to catch any missed real-time updates)
     if (state == AppLifecycleState.resumed) {
-      print('>>> MESSAGES PAGE: App resumed, refreshing conversations');
       _messagingController.loadUserConversations();
     }
   }
@@ -126,7 +122,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
         return conversationData;
       }
     } catch (e) {
-      print('Error loading clinic data: $e');
     }
 
     return {

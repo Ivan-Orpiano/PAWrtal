@@ -712,29 +712,22 @@ class _VaccinationCompletionDialogState
           _weightController.text.isNotEmpty ||
           _bpController.text.isNotEmpty ||
           _hrController.text.isNotEmpty) {
-        print('>>> DIALOG: Building vitals data...');
         vitalsData = {};
 
         if (_tempController.text.isNotEmpty) {
           vitalsData['temperature'] = double.parse(_tempController.text);
-          print('>>>   - temperature: ${vitalsData['temperature']}');
         }
         if (_weightController.text.isNotEmpty) {
           vitalsData['weight'] = double.parse(_weightController.text);
-          print('>>>   - weight: ${vitalsData['weight']}');
         }
         if (_bpController.text.isNotEmpty) {
           vitalsData['bloodPressure'] = _bpController.text;
-          print('>>>   - bloodPressure: ${vitalsData['bloodPressure']}');
         }
         if (_hrController.text.isNotEmpty) {
           vitalsData['heartRate'] = int.parse(_hrController.text);
-          print('>>>   - heartRate: ${vitalsData['heartRate']}');
         }
 
-        print('>>> DIALOG: Vitals data complete');
       } else {
-        print('>>> DIALOG: No vitals data provided');
       }
 
       final vaccinationData = {
@@ -754,13 +747,10 @@ class _VaccinationCompletionDialogState
         'veterinarianName': vetName,
       };
 
-      print('>>> DIALOG: Vaccination data prepared');
-      print('>>> DIALOG: Has vitals: ${vitalsData != null}');
 
       // Close dialog BEFORE starting the async operation
       if (mounted) Navigator.pop(context);
 
-      print('>>> DIALOG: Calling completeVaccinationServiceWithVitals...');
 
       // Call the updated method with vitals
       controller.completeVaccinationServiceWithVitals(

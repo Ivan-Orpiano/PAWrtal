@@ -44,7 +44,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   void dispose() {
     // CRITICAL: DON'T delete controller on dispose - only on logout
     // The controller should persist for caching to work
-    print('>>> Dashboard widget disposing - controller preserved');
     super.dispose();
   }
 
@@ -53,7 +52,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
     // CRITICAL: Only create controller if it doesn't exist
     if (!Get.isRegistered<AdminDashboardController>()) {
-      print('>>> Creating new AdminDashboardController');
 
       controller = Get.put(
         AdminDashboardController(
@@ -63,7 +61,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         permanent: true, // CHANGED: Make it permanent for caching
       );
     } else {
-      print('>>> Reusing existing AdminDashboardController (cached)');
       controller = Get.find<AdminDashboardController>();
     }
 
@@ -80,14 +77,11 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
     if (!migrationRun) {
       try {
-        print('>>> Running staff migration...');
         final authRepo = Get.find<AuthRepository>();
         await authRepo.migrateExistingStaffRecords();
 
         storage.write('staff_migration_completed', true);
-        print('>>> Staff migration completed successfully');
       } catch (e) {
-        print('>>> Migration error: $e');
       }
     }
   }
@@ -540,12 +534,9 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         permissionController.navigationLabels.indexOf('Appointments');
 
     if (appointmentsIndex == -1) {
-      print('>>> ERROR: Appointments page not found in navigation');
       return;
     }
 
-    print(
-        '>>> Navigating to Appointments at index $appointmentsIndex with filter: $filter');
 
     permissionController.setSelectedIndex(appointmentsIndex);
     controller.navigateToAppointments(filter);
@@ -565,17 +556,9 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         permissionController.navigationLabels.indexOf('Messages');
 
     if (messagesIndex == -1) {
-      print('>>> ERROR: Messages page not found in navigation');
       return;
     }
 
-    print('>>> ============================================');
-    print('>>> DASHBOARD: Navigating to Messages');
-    print('>>> Messages Index: $messagesIndex');
-    print('>>> User Name: $userName');
-    print('>>> User ID: $userId');
-    print('>>> Conversation ID: $conversationId');
-    print('>>> ============================================');
 
     // Store the conversation data to be opened
     Get.put(
@@ -587,12 +570,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       tag: 'pending_conversation',
     );
 
-    print('>>> Pending conversation data stored successfully');
 
     // Navigate to messages page
     permissionController.setSelectedIndex(messagesIndex);
 
-    print('>>> Navigation triggered');
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat) {
@@ -856,8 +837,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
                         profilePictureUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          print(
-                              '>>> Dashboard: Error loading pet image: $error');
                           // Fallback to gradient icon if image fails
                           return _buildPetAvatarFallback(appointment.status);
                         },
@@ -1049,11 +1028,9 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             permissionController.navigationLabels.indexOf('Messages');
 
         if (messagesIndex == -1) {
-          print('>>> ERROR: Messages page not found in navigation');
           return;
         }
 
-        print('>>> Navigating to Messages at index $messagesIndex');
         permissionController.setSelectedIndex(messagesIndex);
       },
     );
@@ -1104,17 +1081,9 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     final senderId = message['senderId'] as String;
     final senderName = message['senderName'] as String;
 
-    print('>>> Dashboard Message Item:');
-    print('>>>   - Sender: $senderName');
-    print('>>>   - Sender ID: $senderId');
-    print('>>>   - Conversation ID: $conversationId');
 
     return InkWell(
       onTap: () {
-        print('>>> Message clicked on dashboard');
-        print('>>>   - Opening conversation for: $senderName');
-        print('>>>   - User ID: $senderId');
-        print('>>>   - Conversation ID: $conversationId');
 
         _handleNavigateToMessagesWithConversation(
           conversationId,
@@ -1220,8 +1189,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               backgroundColor: Colors.grey[200],
               backgroundImage: NetworkImage(profilePictureUrl),
               onBackgroundImageError: (exception, stackTrace) {
-                print(
-                    'Error loading profile picture for ${messageData['senderId']}: $exception');
               },
               child: Container(
                 decoration: BoxDecoration(
@@ -1475,10 +1442,36 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             color: Colors.blue.shade600,
             shape: BoxShape.circle,
           ),
-          markerDecoration: BoxDecoration(
-            color: Colors.green.shade400,
-            shape: BoxShape.circle,
-          ),
+          // Remove markerDecoration since we're using custom markerBuilder
+          // markerDecoration: BoxDecoration(
+          //   color: Colors.green.shade400,
+          //   shape: BoxShape.circle,
+          // ),
+        ),
+        // Add custom marker builder
+        calendarBuilders: CalendarBuilders(
+          markerBuilder: (context, date, events) {
+            if (events.isEmpty) return const SizedBox.shrink();
+
+            return Positioned(
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade400,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${events.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         headerStyle: const HeaderStyle(
           formatButtonVisible: false,

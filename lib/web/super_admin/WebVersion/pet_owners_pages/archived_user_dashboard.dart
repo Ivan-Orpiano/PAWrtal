@@ -68,7 +68,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading archived users: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -78,7 +77,6 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       final stats = await _archiveService.getArchiveStats();
       setState(() => _stats = stats);
     } catch (e) {
-      print('Error loading stats: $e');
     }
   }
 
@@ -89,12 +87,10 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       _archiveSubscription = subscription as RealtimeSubscription?;
 
       subscription.listen((event) {
-        print('>>> Archive real-time event received');
         _loadArchivedUsers();
         _loadStats();
       });
     } catch (e) {
-      print('Error setting up real-time subscription: $e');
     }
   }
 

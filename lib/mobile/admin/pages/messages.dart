@@ -91,7 +91,6 @@ class _MessagesPageState extends State<MessagesPage>
         return userData;
       }
     } catch (e) {
-      print('Error loading user data: $e');
     }
 
     return {

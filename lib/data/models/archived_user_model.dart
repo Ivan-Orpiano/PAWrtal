@@ -65,7 +65,6 @@ Map<String, dynamic> originalData = {};
         originalData = Map<String, dynamic>.from(jsonDecode(dataString));
       }
     } catch (e) {
-      print('Error parsing original user data: $e');
     }
 
     return ArchivedUser(
@@ -102,7 +101,6 @@ Map<String, dynamic> toMap() {
     try {
       originalUserDataString = jsonEncode(originalUserData);
     } catch (e) {
-      print('>>> Error encoding originalUserData: $e');
       originalUserDataString = '{}';
     }
   }

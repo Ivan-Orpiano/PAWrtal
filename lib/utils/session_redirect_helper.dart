@@ -15,16 +15,9 @@ class SessionRedirectHelper {
     final sessionId = storage.read("sessionId");
     final role = storage.read("role");
 
-    print('>>> ============================================');
-    print('>>> $pageName: Checking existing session');
-    print('>>> User ID: ${userId ?? "NOT FOUND"}');
-    print('>>> Session ID: ${sessionId != null ? "EXISTS" : "NOT FOUND"}');
-    print('>>> Role: ${role ?? "NOT FOUND"}');
-    print('>>> ============================================');
 
     // If user has a valid session, redirect to their home page
     if (userId != null && sessionId != null && role != null) {
-      print('>>> ✅ Active session found - redirecting to home');
       
       // Redirect based on role
       Future.delayed(Duration.zero, () {
@@ -32,16 +25,12 @@ class SessionRedirectHelper {
         
         if (targetRoute != null) {
           Get.offAllNamed(targetRoute);
-          print('>>> Redirected to: $targetRoute');
         } else {
-          print('>>> ⚠️ Unknown role: $role - staying on $pageName');
         }
       });
     } else {
-      print('>>> ℹ️ No active session - user can access $pageName');
     }
     
-    print('>>> ============================================');
   }
 
   /// Get the appropriate home route based on user role

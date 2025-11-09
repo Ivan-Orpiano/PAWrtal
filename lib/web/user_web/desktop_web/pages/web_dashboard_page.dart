@@ -5,7 +5,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_dashboard_grid_tile.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_maps.dart';
-import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart'; // ADD THIS
+import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
@@ -33,6 +33,10 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
 
   Map<String, ClinicRatingStats> _ratingStatsCache = {};
 
+  // ✨ NEW: Cache management
+  final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheValidity = Duration(minutes: 5);
+
   @override
   void initState() {
     super.initState();
@@ -47,65 +51,57 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     super.dispose();
   }
 
-  void _setupRealtimeListeners() {
-    print('🔔 Setting up real-time listeners for clinic updates...');
+  bool _isCacheValid(String key) {
+    final timestamp = _cacheTimestamps[key];
+    if (timestamp == null) return false;
+    return DateTime.now().difference(timestamp) < _cacheValidity;
+  }
 
+  void _setupRealtimeListeners() {
     final authRepository = Get.find<AuthRepository>();
 
     _clinicSubscription = authRepository.subscribeToClinicChanges().listen(
         (RealtimeMessage event) {
-      print('🔔 Clinic real-time event received');
-      print('   Events: ${event.events}');
-
       final eventType = event.events.first;
 
       if (eventType.contains('.create')) {
-        print('✅ New clinic created - refreshing list');
         _showRealTimeNotification(
           'New clinic added to the network',
           Icons.add_business_rounded,
           Colors.green,
         );
-        _fetchClinicsData();
+        _fetchClinicsData(forceRefresh: true);
       } else if (eventType.contains('.update')) {
-        print('🔄 Clinic updated - refreshing list');
         final clinicName = event.payload['clinicName'] as String?;
         _showRealTimeNotification(
           'Clinic "${clinicName ?? 'Unknown'}" information updated',
           Icons.sync_rounded,
           Colors.blue,
         );
-        _fetchClinicsData();
+        _fetchClinicsData(forceRefresh: true);
       } else if (eventType.contains('.delete')) {
-        print('🗑️ Clinic deleted - refreshing list');
         _showRealTimeNotification(
           'A clinic has been removed',
           Icons.delete_rounded,
           Colors.red,
         );
-        _fetchClinicsData();
+        _fetchClinicsData(forceRefresh: true);
       }
     }, onError: (error) {
-      print('❌ Clinic subscription error: $error');
+      print('Realtime subscription error: $error');
     });
 
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
-      print('🔔 Settings real-time event received');
-      print('   Events: ${event.events}');
-
       final eventType = event.events.first;
 
       if (eventType.contains('.update') || eventType.contains('.create')) {
-        print('🔄 Clinic settings updated - refreshing list');
-        _fetchClinicsData();
+        _fetchClinicsData(forceRefresh: true);
       }
     }, onError: (error) {
-      print('❌ Settings subscription error: $error');
+      print('Settings subscription error: $error');
     });
-
-    print('✅ Real-time listeners initialized successfully');
   }
 
   void _showRealTimeNotification(String message, IconData icon, Color color) {
@@ -178,8 +174,16 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     );
   }
 
-  Future<void> _fetchClinicsData() async {
+  // ✨ OPTIMIZED: Parallel data loading with caching
+  Future<void> _fetchClinicsData({bool forceRefresh = false}) async {
     try {
+      // Check cache validity
+      if (!forceRefresh &&
+          _isCacheValid('dashboard') &&
+          allClinics.isNotEmpty) {
+        return;
+      }
+
       if (allClinics.isEmpty) {
         setState(() {
           isLoading = true;
@@ -189,54 +193,29 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
 
       final authRepository = Get.find<AuthRepository>();
 
-      // Fetch raw clinic documents
+      // Fetch clinics with settings (already optimized in your repo)
       final clinicsWithSettings = await authRepository.getClinicsWithSettings();
 
       final clinics = <Clinic>[];
       final settingsMap = <String, ClinicSettings?>{};
       final statsCache = <String, ClinicRatingStats>{};
 
-      print('>>> ============================================');
-      print('>>> FETCHING CLINICS DATA FOR DASHBOARD');
-      print('>>> Total clinics: ${clinicsWithSettings.length}');
-      print('>>> ============================================');
-
+      // Collect clinic IDs
+      final clinicIds = <String>[];
       for (final data in clinicsWithSettings) {
         final clinic = data['clinic'] as Clinic;
         final settings = data['settings'] as ClinicSettings?;
-
-        // CRITICAL: Get the correct clinic document ID
         final clinicDocId = clinic.documentId ?? '';
 
-        print('>>> Processing clinic: ${clinic.clinicName}');
-        print('>>>   Document ID: $clinicDocId');
-        print('>>>   Image URL: ${clinic.image}');
-        print('>>>   Dashboard Pic: ${clinic.dashboardPic}');
-
-        clinics.add(clinic);
-        settingsMap[clinicDocId] = settings;
-
-        // Load rating stats for each clinic
-        try {
-          final stats = await authRepository.getClinicRatingStats(clinicDocId);
-          statsCache[clinicDocId] = stats;
-
-          print(
-              '>>>   Rating: ${stats.averageRating} (${stats.totalReviews} reviews)');
-        } catch (e) {
-          print('>>>   Error loading stats: $e');
-          // Create empty stats for clinics without ratings
-          statsCache[clinicDocId] = ClinicRatingStats(
-            averageRating: 0.0,
-            totalReviews: 0,
-            ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-            reviewsWithText: 0,
-            reviewsWithImages: 0,
-          );
+        if (clinicDocId.isNotEmpty) {
+          clinics.add(clinic);
+          settingsMap[clinicDocId] = settings;
+          clinicIds.add(clinicDocId);
         }
-
-        print('>>> ---');
       }
+
+      // ✨ OPTIMIZATION: Batch load rating stats in parallel
+      await _batchLoadRatingStats(clinicIds, statsCache);
 
       if (mounted) {
         setState(() {
@@ -245,20 +224,11 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           _ratingStatsCache = statsCache;
           filteredClinics = _applyFilters(clinics);
           isLoading = false;
+          _cacheTimestamps['dashboard'] = DateTime.now();
         });
-
-        print('>>> ============================================');
-        print('>>> DATA LOADED SUCCESSFULLY');
-        print('>>> Total clinics: ${allClinics.length}');
-        print('>>> Filtered clinics: ${filteredClinics.length}');
-        print('>>> ============================================');
       }
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ERROR FETCHING CLINICS DATA: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
-
+      print('Error fetching clinics: $e\n$stackTrace');
       if (mounted) {
         setState(() {
           error = "Failed to load clinics data";
@@ -268,109 +238,160 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
     }
   }
 
+  // ✨ NEW: Batch load rating stats with parallel execution
+  Future<void> _batchLoadRatingStats(
+    List<String> clinicIds,
+    Map<String, ClinicRatingStats> statsCache,
+  ) async {
+    final authRepository = Get.find<AuthRepository>();
+
+    // Create futures for all requests
+    final futures = clinicIds.map((clinicId) async {
+      try {
+        final stats = await authRepository.getClinicRatingStats(clinicId);
+        return MapEntry(clinicId, stats);
+      } catch (e) {
+        // Return empty stats on error
+        return MapEntry(
+          clinicId,
+          ClinicRatingStats(
+            averageRating: 0.0,
+            totalReviews: 0,
+            ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+            reviewsWithText: 0,
+            reviewsWithImages: 0,
+          ),
+        );
+      }
+    });
+
+    // Execute all requests in parallel
+    final results = await Future.wait(futures);
+
+    // Populate cache
+    for (final entry in results) {
+      statsCache[entry.key] = entry.value;
+    }
+  }
+
   List<Clinic> _applyFilters(List<Clinic> clinics) {
     var filtered = clinics;
 
     // Apply search query filter
     if (searchQuery.isNotEmpty) {
+      final query = searchQuery.toLowerCase();
       filtered = filtered.where((clinic) {
         final settings = clinicSettingsMap[clinic.documentId ?? ''];
         final services = settings?.services.join(' ') ?? clinic.services;
 
-        return clinic.clinicName
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase()) ||
-            clinic.address.toLowerCase().contains(searchQuery.toLowerCase()) ||
-            services.toLowerCase().contains(searchQuery.toLowerCase());
+        return clinic.clinicName.toLowerCase().contains(query) ||
+            clinic.address.toLowerCase().contains(query) ||
+            services.toLowerCase().contains(query);
       }).toList();
     }
 
     // Apply tag filter
     switch (selectedFilter) {
       case 'Open':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return true;
-
-          // Check if today is a closed date
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          // Clinic is open if: isOpen flag is true, open now, and NOT a closed date
-          return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
-        }).toList();
+        filtered = _filterOpenClinics(filtered);
         break;
 
       case 'Closed':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          // Check if today is a closed date
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          // Clinic is closed if: NOT open, NOT open now, OR is a closed date
-          return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
-        }).toList();
+        filtered = _filterClosedClinics(filtered);
         break;
 
       case 'Popular':
-        // Sort by review count (descending) and rating (descending)
-        filtered.sort((a, b) {
-          final aStats = _ratingStatsCache[a.documentId ?? ''];
-          final bStats = _ratingStatsCache[b.documentId ?? ''];
-
-          final aReviews = aStats?.totalReviews ?? 0;
-          final bReviews = bStats?.totalReviews ?? 0;
-
-          // First sort by review count
-          if (aReviews != bReviews) {
-            return bReviews.compareTo(aReviews);
-          }
-
-          // If same review count, sort by rating
-          final aRating = aStats?.averageRating ?? 0.0;
-          final bRating = bStats?.averageRating ?? 0.0;
-          return bRating.compareTo(aRating);
-        });
-
-        // Only show clinics with at least 1 review for "Popular"
-        filtered = filtered.where((clinic) {
-          final stats = _ratingStatsCache[clinic.documentId ?? ''];
-          return (stats?.totalReviews ?? 0) > 0;
-        }).toList();
+        filtered = _filterPopularClinics(filtered);
         break;
 
       case 'All':
       default:
-        // Keep all clinics, but sort open ones first
-        filtered.sort((a, b) {
-          final aSettings = clinicSettingsMap[a.documentId ?? ''];
-          final bSettings = clinicSettingsMap[b.documentId ?? ''];
-
-          final aIsOpen = aSettings?.isOpen ?? true;
-          final bIsOpen = bSettings?.isOpen ?? true;
-
-          if (aIsOpen && !bIsOpen) return -1;
-          if (!aIsOpen && bIsOpen) return 1;
-
-          return a.clinicName.compareTo(b.clinicName);
-        });
+        filtered = _sortAllClinics(filtered);
         break;
     }
 
     return filtered;
   }
 
+  List<Clinic> _filterOpenClinics(List<Clinic> clinics) {
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return clinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      if (settings == null) return true;
+
+      final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
+    }).toList();
+  }
+
+  List<Clinic> _filterClosedClinics(List<Clinic> clinics) {
+    final today = DateTime.now();
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return clinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      if (settings == null) return false;
+
+      final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
+    }).toList();
+  }
+
+  List<Clinic> _filterPopularClinics(List<Clinic> clinics) {
+    final popular = clinics.where((clinic) {
+      final stats = _ratingStatsCache[clinic.documentId ?? ''];
+      return (stats?.totalReviews ?? 0) > 0;
+    }).toList();
+
+    popular.sort((a, b) {
+      final aStats = _ratingStatsCache[a.documentId ?? ''];
+      final bStats = _ratingStatsCache[b.documentId ?? ''];
+
+      final aReviews = aStats?.totalReviews ?? 0;
+      final bReviews = bStats?.totalReviews ?? 0;
+
+      if (aReviews != bReviews) {
+        return bReviews.compareTo(aReviews);
+      }
+
+      final aRating = aStats?.averageRating ?? 0.0;
+      final bRating = bStats?.averageRating ?? 0.0;
+      return bRating.compareTo(aRating);
+    });
+
+    return popular;
+  }
+
+  List<Clinic> _sortAllClinics(List<Clinic> clinics) {
+    clinics.sort((a, b) {
+      final aSettings = clinicSettingsMap[a.documentId ?? ''];
+      final bSettings = clinicSettingsMap[b.documentId ?? ''];
+
+      final aIsOpen = aSettings?.isOpen ?? true;
+      final bIsOpen = bSettings?.isOpen ?? true;
+
+      if (aIsOpen && !bIsOpen) return -1;
+      if (!aIsOpen && bIsOpen) return 1;
+
+      return a.clinicName.compareTo(b.clinicName);
+    });
+
+    return clinics;
+  }
+
+  // ✨ OPTIMIZATION: Debounced search
+  Timer? _searchDebounce;
   void _filterClinics(String query) {
-    setState(() {
-      searchQuery = query;
-      filteredClinics = _applyFilters(allClinics);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        searchQuery = query;
+        filteredClinics = _applyFilters(allClinics);
+      });
     });
   }
 
@@ -614,13 +635,12 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    // MODIFIED: Get controller instance
     final controller = Get.find<WebUserHomeController>();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: RefreshIndicator(
-        onRefresh: _fetchClinicsData,
+        onRefresh: () => _fetchClinicsData(forceRefresh: true),
         child: ListView(
           padding: const EdgeInsets.only(left: 65, right: 65, top: 16),
           children: [
@@ -635,7 +655,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
             ),
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              // MODIFIED: Use Obx to listen to shared state
               child: Obx(() => controller.showMapView.value
                   ? _buildMapView()
                   : _buildClinicList()),
@@ -649,7 +668,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         child: SizedBox(
           height: 50,
           width: 120,
-          // MODIFIED: Use Obx for button state
           child: Obx(() => FloatingActionButton.extended(
                 backgroundColor: Colors.white,
                 label: controller.showMapView.value
@@ -661,7 +679,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
                     ? const Icon(Icons.list_rounded, color: Colors.black)
                     : const Icon(Icons.map_rounded, color: Colors.black),
                 onPressed: () {
-                  // MODIFIED: Use controller to toggle
                   controller.toggleMapView();
                 },
               )),

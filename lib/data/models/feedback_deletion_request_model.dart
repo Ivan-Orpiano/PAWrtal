@@ -63,7 +63,6 @@ class FeedbackDeletionRequest {
             return decoded.map((e) => e.toString()).toList();
           }
         } catch (e) {
-          print('Error parsing attachments: $e');
           return [];
         }
       }

@@ -18,9 +18,6 @@ class ArchiveService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    print('>>> ============================================');
-    print('>>> ARCHIVE SERVICE INITIALIZED');
-    print('>>> ============================================');
     startScheduledDeletionService();
   }
 
@@ -33,8 +30,6 @@ class ArchiveService extends GetxService {
   /// Start the background service
   /// Runs every hour to check for users due for deletion
   void startScheduledDeletionService() {
-    print('>>> Starting scheduled deletion service...');
-    print('>>> Check interval: Every 1 hour');
 
     // Run immediately on start
     _processScheduledDeletions();
@@ -45,22 +40,18 @@ class ArchiveService extends GetxService {
       (timer) => _processScheduledDeletions(),
     );
 
-    print('>>> Scheduled deletion service started');
   }
 
   /// Stop the background service
   void stopScheduledDeletionService() {
-    print('>>> Stopping scheduled deletion service...');
     _deletionTimer?.cancel();
     _deletionTimer = null;
     isRunning.value = false;
-    print('>>> Scheduled deletion service stopped');
   }
 
   /// Process scheduled deletions
   Future<void> _processScheduledDeletions() async {
     if (isRunning.value) {
-      print('>>> Deletion process already running, skipping...');
       return;
     }
 
@@ -69,10 +60,6 @@ class ArchiveService extends GetxService {
       processingErrors.clear();
       lastRunTime.value = DateTime.now().toIso8601String();
 
-      print('>>> ============================================');
-      print('>>> PROCESSING SCHEDULED DELETIONS');
-      print('>>> Time: ${DateTime.now()}');
-      print('>>> ============================================');
 
       final result = await _authRepository.processScheduledDeletions();
 
@@ -80,25 +67,14 @@ class ArchiveService extends GetxService {
 
       if (result['errors'] != null && (result['errors'] as List).isNotEmpty) {
         processingErrors.value = List<String>.from(result['errors']);
-        print('>>> Errors encountered: ${processingErrors.length}');
         for (var error in processingErrors) {
-          print('>>>   - $error');
         }
       }
 
-      print('>>> ============================================');
-      print('>>> SCHEDULED DELETIONS COMPLETE');
-      print('>>> Total processed: ${result['totalProcessed']}');
-      print('>>> Successful: ${result['successfulDeletions']}');
-      print('>>> Failed: ${result['failedDeletions']}');
-      print('>>> ============================================');
 
       // Log to system
       _logDeletionActivity(result);
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ERROR IN SCHEDULED DELETION SERVICE: $e');
-      print('>>> ============================================');
       processingErrors.add('Service error: ${e.toString()}');
     } finally {
       isRunning.value = false;
@@ -107,7 +83,6 @@ class ArchiveService extends GetxService {
 
   /// Manual trigger for processing deletions (for admin dashboard)
   Future<Map<String, dynamic>> processNow() async {
-    print('>>> Manual deletion process triggered');
     await _processScheduledDeletions();
     
     return {
@@ -160,7 +135,6 @@ class ArchiveService extends GetxService {
 
       return dueSoon;
     } catch (e) {
-      print('>>> Error getting users due soon: $e');
       return [];
     }
   }
@@ -170,7 +144,6 @@ class ArchiveService extends GetxService {
     try {
       return await _authRepository.getArchiveStatistics();
     } catch (e) {
-      print('>>> Error getting archive stats: $e');
       return {
         'total': 0,
         'activeArchives': 0,
@@ -185,11 +158,6 @@ class ArchiveService extends GetxService {
   void _logDeletionActivity(Map<String, dynamic> result) {
     // You can implement logging to a separate collection here
     // For now, just console logging
-    print('>>> Deletion Activity Log:');
-    print('>>>   Time: ${DateTime.now()}');
-    print('>>>   Processed: ${result['totalProcessed']}');
-    print('>>>   Successful: ${result['successfulDeletions']}');
-    print('>>>   Failed: ${result['failedDeletions']}');
   }
 
   /// Check if a specific user is due for deletion
@@ -202,7 +170,6 @@ class ArchiveService extends GetxService {
              !archivedUser.isPermanentlyDeleted &&
              !archivedUser.isRecovered;
     } catch (e) {
-      print('>>> Error checking deletion status: $e');
       return false;
     }
   }
@@ -231,7 +198,6 @@ class ArchiveService extends GetxService {
         return '$daysLeft days remaining';
       }
     } catch (e) {
-      print('>>> Error getting time until deletion: $e');
       return null;
     }
   }
@@ -241,14 +207,12 @@ class ArchiveService extends GetxService {
     try {
       final usersDueSoon = await getUsersDueSoon();
 
-      print('>>> Sending deletion warnings to ${usersDueSoon.length} users');
 
       for (var user in usersDueSoon) {
         final daysLeft = user['daysLeft'] as int;
 
         // Send warning at 7 days, 3 days, and 1 day
         if (daysLeft == 7 || daysLeft == 3 || daysLeft == 1) {
-          print('>>> Warning sent to: ${user['email']} ($daysLeft days left)');
           
           // Here you can implement email/notification sending
           // await _sendDeletionWarningEmail(user);
@@ -256,7 +220,6 @@ class ArchiveService extends GetxService {
         }
       }
     } catch (e) {
-      print('>>> Error sending deletion warnings: $e');
     }
   }
 }

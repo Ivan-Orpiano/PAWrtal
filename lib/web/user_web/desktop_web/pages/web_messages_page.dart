@@ -121,7 +121,6 @@ void _autoSelectLatestConversationIfNeeded() async {
         return clinicData;
       }
     } catch (e) {
-      print('Error loading clinic: $e');
     }
 
     return {

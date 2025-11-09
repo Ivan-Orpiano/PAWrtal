@@ -54,16 +54,12 @@ class StaffAuthController extends GetxController {
     errorMessage.value = '';
 
     try {
-      print('=== STAFF CONTROLLER LOGIN ===');
 
       final result = await authRepository.staffLogin(
         emailController.text.trim(),
         passwordController.text,
       );
 
-      print('Login result: ${result['success']}');
-      print('Is staff: ${result['isStaff']}');
-      print('Role: ${result['role']}');
 
       if (result['success'] != true) {
         errorMessage.value = result['message'] ?? 'Login failed';
@@ -86,10 +82,8 @@ class StaffAuthController extends GetxController {
       isDoctor.value = staff.isDoctor;
       _getStorage.write('isDoctor', staff.isDoctor);
 
-      print('Staff doctor status: ${staff.isDoctor}');
 
       // CRITICAL: Store data in GetStorage for persistence
-      print('Storing in GetStorage...');
       _getStorage.write('role', 'staff');
       _getStorage.write('sessionId', sessionId.value);
       _getStorage.write('userId', staff.userId);
@@ -99,7 +93,6 @@ class StaffAuthController extends GetxController {
       _getStorage.write('staffDocId', staffDocId.value);
       _getStorage.write('authorities', staffAuthorities);
 
-      print('GetStorage saved. Role: ${_getStorage.read("role")}');
 
       Get.snackbar(
         'Success',
@@ -115,8 +108,6 @@ class StaffAuthController extends GetxController {
       await Future.delayed(const Duration(milliseconds: 500));
       Get.offAllNamed('/adminHome'); // Staff and admin share the same home
     } catch (e) {
-      print('=== LOGIN ERROR ===');
-      print('Error: $e');
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
 
       Get.snackbar(
@@ -139,9 +130,6 @@ class StaffAuthController extends GetxController {
       final storedRole = _getStorage.read('role');
       final storedUserId = _getStorage.read('userId');
 
-      print('Loading staff data...');
-      print('Stored role: $storedRole');
-      print('Stored userId: $storedUserId');
 
       if (storedRole == 'staff' && storedUserId != null) {
         final staff = await authRepository.getStaffByUserId(storedUserId);
@@ -153,13 +141,9 @@ class StaffAuthController extends GetxController {
           staffDocId.value = staff.documentId ?? '';
           isDoctor.value = staff.isDoctor;
 
-          print('Doctor status loaded: ${isDoctor.value}');
-          print('Staff data loaded successfully');
-          print('Authorities: ${staffAuthorities}');
         }
       }
     } catch (e) {
-      print('Error loading staff data: $e');
     }
   }
 
@@ -178,8 +162,6 @@ class StaffAuthController extends GetxController {
 
   bool hasAuthority(String authority) {
     final result = staffAuthorities.contains(authority);
-    print('Checking authority "$authority": $result');
-    print('Available authorities: $staffAuthorities');
     return result;
   }
 
@@ -219,7 +201,6 @@ class StaffAuthController extends GetxController {
         colorText: Colors.white,
       );
     } catch (e) {
-      print('Logout error: $e');
     }
   }
 }

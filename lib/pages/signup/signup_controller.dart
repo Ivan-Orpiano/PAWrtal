@@ -79,7 +79,6 @@ class SignUpController extends GetxController {
       termsAccepted.value = false;
       _clearAllErrors();
     } catch (e) {
-      print('Controller clear error: $e');
     }
   }
 
@@ -435,7 +434,6 @@ class SignUpController extends GetxController {
       }
 
       // Send OTP
-      print('>>> Sending OTP to $email...');
       final result = await _otpService.sendOTP(email, name);
 
       if (result['success'] == true) {
@@ -446,7 +444,6 @@ class SignUpController extends GetxController {
             result['message'] ?? 'Failed to send verification code';
       }
     } catch (error) {
-      print('>>> Error sending OTP: $error');
       generalError.value =
           'Network error. Please check your connection and try again.';
     } finally {
@@ -470,7 +467,6 @@ class SignUpController extends GetxController {
   /// NEW: Resend OTP
   Future<void> _resendOTP(String email, String name) async {
     try {
-      print('>>> Resending OTP to $email...');
       final result = await _otpService.sendOTP(email, name);
 
       if (result['success'] == true) {
@@ -493,7 +489,6 @@ class SignUpController extends GetxController {
         );
       }
     } catch (e) {
-      print('>>> Error resending OTP: $e');
       Get.snackbar(
         'Error',
         'Network error. Please try again.',
@@ -511,7 +506,6 @@ class SignUpController extends GetxController {
       isLoading.value = true;
 
       // Verify OTP
-      print('>>> Verifying OTP...');
       final verifyResult = await _otpService.verifyOTP(email, otp);
 
       if (verifyResult['success'] != true) {
@@ -529,7 +523,6 @@ class SignUpController extends GetxController {
       }
 
       // OTP verified! Now create the account
-      print('>>> OTP verified! Creating account...');
 
       final user = await _authRepository.signup({
         "userId": ID.unique(),
@@ -647,7 +640,6 @@ class SignUpController extends GetxController {
       isGoogleLoading.value = true;
       _clearAllErrors();
 
-      print('>>> WEB SIGNUP: Initiating Google Sign-Up...');
 
       final appWriteProvider = Get.find<AppWriteProvider>();
 
@@ -657,7 +649,6 @@ class SignUpController extends GetxController {
 
       // Code won't reach here due to redirect
     } catch (e) {
-      print('>>> WEB SIGNUP: Google Sign-Up error: $e');
 
       isGoogleLoading.value = false;
 
@@ -753,7 +744,6 @@ class SignUpController extends GetxController {
       passwordController.dispose();
       confirmPasswordController.dispose();
     } catch (e) {
-      print('Controller disposal error: $e');
     }
     super.onClose();
   }

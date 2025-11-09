@@ -54,7 +54,6 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
   /// NEW: Initialize controller synchronously in initState
   void _initializeController() {
-    print('>>> 🔧 Initializing AdminPetCardViewController...');
 
     // Register controller with unique tag
     final adminController = Get.put(
@@ -64,7 +63,6 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
       tag: widget.pet.petId,
     );
 
-    print('>>> ✅ Controller registered');
 
     // Fetch data AFTER first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -75,28 +73,17 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
   /// NEW: Load pet data after controller is initialized
   Future<void> _loadPetData(AdminPetCardViewController controller) async {
     try {
-      print('>>> 📊 Loading pet data...');
-      print('>>> Pet ID: ${widget.pet.petId}');
-      print('>>> Clinic ID: ${widget.clinicId}');
 
       // Load all data
       await controller.loadPetData(widget.pet, widget.clinicId);
 
-      print('>>> ✅ All data loaded successfully');
-      print('>>> Medical Records: ${controller.medicalRecords.length}');
-      print('>>> Vaccinations: ${controller.vaccinations.length}');
-      print(
-          '>>> Medical Appointments: ${controller.medicalAppointments.length}');
     } catch (e, stackTrace) {
-      print('>>> ❌ ERROR loading pet data: $e');
-      print('>>> Stack trace: $stackTrace');
     }
   }
 
   /// NEW: Initialize controller and fetch all data immediately
   Future<void> _initializeAndLoadData() async {
     try {
-      print('>>> ðŸ"§ ADMIN CARD VIEW: Initializing controller...');
 
       final adminController = Get.put(
         AdminPetCardViewController(
@@ -105,16 +92,11 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
         tag: widget.pet.petId,
       );
 
-      print('>>> âœ… Controller initialized');
-      print('>>> ðŸ"Š Fetching all pet data...');
 
       // âœ… CRITICAL: Pass clinic ID and fetch data immediately
       await adminController.loadPetData(widget.pet, widget.clinicId);
 
-      print('>>> âœ… All data loaded and counts updated');
     } catch (e, stackTrace) {
-      print('>>> âŒ ERROR initializing admin card view: $e');
-      print('>>> Stack trace: $stackTrace');
     }
   }
 
@@ -1090,7 +1072,6 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
       }
       return null;
     } catch (e) {
-      print('>>> Error fetching clinic profile picture ID: $e');
       return null;
     }
   }

@@ -24,9 +24,6 @@ class WebAdminHomeController extends GetxController {
 @override
 void onInit() {
   super.onInit();
-  print('>>> ============================================');
-  print('>>> WebAdminHomeController: Initializing...');
-  print('>>> ============================================');
 
   _loadUserRole();
   _buildNavigationBasedOnPermissions();
@@ -38,7 +35,6 @@ void onInit() {
 // 🆕 ADD THIS METHOD
 void _registerControllers() {
   try {
-    print('>>> Registering required controllers...');
     
     // Register WebAppointmentController if not already registered
     if (!Get.isRegistered<WebAppointmentController>()) {
@@ -49,29 +45,20 @@ void _registerControllers() {
         ),
         permanent: true, // Keep it alive
       );
-      print('>>> ✅ WebAppointmentController registered');
     } else {
-      print('>>> ℹ️ WebAppointmentController already registered');
     }
   } catch (e) {
-    print('>>> ❌ Error registering controllers: $e');
   }
 }
 
   void _loadUserRole() {
-    print('>>> Loading user role from storage...');
 
     final role = _getStorage.read("role") as String?;
     final clinicId = _getStorage.read("clinicId") as String?;
     final userId = _getStorage.read("userId") as String?;
 
-    print('>>> Raw data from storage:');
-    print('>>>   - role: $role');
-    print('>>>   - clinicId: $clinicId');
-    print('>>>   - userId: $userId');
 
     if (role == null || role.isEmpty) {
-      print('>>> ERROR: No role found in storage!');
       userRole.value = '';
     } else {
       userRole.value = role;
@@ -80,22 +67,16 @@ void _registerControllers() {
     // Load authorities for staff users
     if (role == "staff") {
       final authorities = _getStorage.read("authorities");
-      print('>>>   - raw authorities: $authorities');
-      print('>>>   - authorities type: ${authorities.runtimeType}');
 
       if (authorities != null) {
         if (authorities is List) {
           userAuthorities.value = List<String>.from(authorities);
-          print('>>>   - parsed authorities: ${userAuthorities.value}');
         } else if (authorities is String) {
           userAuthorities.value = [authorities];
-          print('>>>   - converted string to list: ${userAuthorities.value}');
         } else {
-          print('>>>   - ERROR: Unexpected authorities type');
           userAuthorities.value = [];
         }
       } else {
-        print('>>>   - WARNING: No authorities found');
         userAuthorities.value = [];
       }
     } else {
@@ -106,9 +87,6 @@ void _registerControllers() {
   }
 
   void _buildNavigationBasedOnPermissions() {
-    print('>>> ============================================');
-    print('>>> BUILDING NAVIGATION BASED ON PERMISSIONS');
-    print('>>> ============================================');
 
     // Clear existing pages and labels
     pages.clear();
@@ -117,96 +95,68 @@ void _registerControllers() {
     // HOME is always available for everyone
     pages.add(const AdminWebDashboard());
     navigationLabels.add("Home");
-    print('>>> Added: Home (always visible)');
 
     if (userRole.value == "admin") {
       // Admin sees all pages
       pages.add(const AdminWebClinicpage());
       navigationLabels.add("Clinic");
-      print('>>> Added: Clinic (admin full access)');
 
       pages.add(const AdminWebAppointments());
       navigationLabels.add("Appointments");
-      print('>>> Added: Appointments (admin full access)');
 
       pages.add(const AdminWebMessages());
       navigationLabels.add("Messages");
-      print('>>> Added: Messages (admin full access)');
 
       pages.add(const AdminWebStaffs());
       navigationLabels.add("Staffs");
-      print('>>> Added: Staffs (admin only)');
     } else if (userRole.value == "staff") {
       // Staff only sees pages they have permission for
       if (hasAuthority("Clinic")) {
         pages.add(const AdminWebClinicpage());
         navigationLabels.add("Clinic");
-        print('>>> Added: Clinic (staff has permission)');
       }
 
       if (hasAuthority("Appointments")) {
         pages.add(const AdminWebAppointments());
         navigationLabels.add("Appointments");
-        print('>>> Added: Appointments (staff has permission)');
       }
 
       if (hasAuthority("Messages")) {
         pages.add(const AdminWebMessages());
         navigationLabels.add("Messages");
-        print('>>> Added: Messages (staff has permission)');
       }
 
       // Staffs page is NEVER shown to staff users
-      print('>>> Staffs page: HIDDEN (staff user)');
     }
 
-    print('>>> Total pages built: ${pages.length}');
-    print('>>> Navigation labels: ${navigationLabels.join(", ")}');
-    print('>>> ============================================');
   }
 
   void _printAccessSummary() {
-    print('>>> ============================================');
-    print('>>> ACCESS SUMMARY');
-    print('>>> ============================================');
-    print('>>> Current role: "${userRole.value}"');
-    print('>>> Current authorities: ${userAuthorities.value}');
 
     if (userRole.value == "admin") {
-      print('>>> ADMIN: Full access to all pages');
     } else if (userRole.value == "staff") {
-      print('>>> STAFF: Limited access based on permissions');
-      print('>>> Has access to: ${userAuthorities.join(", ")}');
       final allPages = ["Clinic", "Appointments", "Messages"];
       final noAccess =
           allPages.where((page) => !userAuthorities.contains(page)).toList();
       if (noAccess.isNotEmpty) {
-        print('>>> No access to: ${noAccess.join(", ")}');
       }
-      print('>>> Staffs page: ALWAYS HIDDEN');
     }
 
-    print('>>> ============================================');
   }
 
   void setSelectedIndex(int index) {
     final maxIndex = pages.length - 1;
 
-    print('>>> Navigation: Attempting to go to index $index (max: $maxIndex)');
 
     if (index >= 0 && index <= maxIndex) {
       selectedIndex.value = index;
-      print('>>> Navigation: Success - now at ${navigationLabels[index]}');
 
       // Permission info
       if (userRole.value == "staff" && index > 0) {
         final pageName = navigationLabels[index];
-        print('>>> Page "$pageName" - Staff has permission (page is visible)');
       }
     } else {
-      print('>>> Navigation: ERROR - Index $index out of bounds');
       selectedIndex.value = 0;
-      print('>>> Navigation: Fallback to ${navigationLabels[0]}');
     }
   }
 
@@ -401,7 +351,6 @@ void _registerControllers() {
   }
 
   void refreshRoleData() {
-    print('>>> Manual refresh of role data requested');
     _loadUserRole();
     _buildNavigationBasedOnPermissions();
   }
@@ -426,46 +375,11 @@ void _registerControllers() {
 
   /// NEW: Log permission details for debugging
   void debugPrintPermissions() {
-    print('>>> ============================================');
-    print('>>> PERMISSION DEBUG INFO');
-    print('>>> ============================================');
-    print('>>> Role: $userRole');
-    print('>>> Is Admin: $isAdmin');
-    print('>>> Is Staff: $isStaff');
-    print('>>> Authorities: ${userAuthorities.value}');
-    print('>>> Accessible Features: ${getAccessibleFeatures().join(", ")}');
-    print('>>> Dashboard Widget Visibility:');
     getDashboardWidgetVisibility().forEach((widget, visible) {
-      print('>>>   - $widget: ${visible ? "VISIBLE" : "HIDDEN"}');
     });
-    print('>>> Permission Summary: ${getPermissionSummary()}');
-    print('>>> ============================================');
   }
 
   void debugPrintState() {
-    print('>>> ============================================');
-    print('>>> DEBUG STATE');
-    print('>>> ============================================');
-    print('>>> Role: ${userRole.value}');
-    print('>>> Is Admin: $isAdmin');
-    print('>>> Is Staff: $isStaff');
-    print('>>> Authorities: ${userAuthorities.value}');
-    print('>>> Pages count: ${pages.length}');
-    print('>>> Navigation labels: ${navigationLabels.join(", ")}');
-    print('>>> Selected index: ${selectedIndex.value}');
-    print('>>> Current page: ${navigationLabels[selectedIndex.value]}');
-    print(
-        '>>> Has full access to current page: ${hasFullAccessToCurrentPage()}');
-    print('>>> User: $userName ($userEmail)');
-    print('>>> Clinic ID: $clinicId');
-    print('>>> ============================================');
-    print('>>> STORAGE DUMP:');
-    print('>>>   - userId: ${_getStorage.read("userId")}');
-    print('>>>   - role: ${_getStorage.read("role")}');
-    print('>>>   - clinicId: ${_getStorage.read("clinicId")}');
-    print('>>>   - staffId: ${_getStorage.read("staffId")}');
-    print('>>>   - authorities: ${_getStorage.read("authorities")}');
-    print('>>> ============================================');
   }
 
   @override

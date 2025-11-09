@@ -68,7 +68,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         _isLoadingSettings = false;
       });
     } catch (e) {
-      print("Error loading clinic settings: $e");
       setState(() {
         _isLoadingSettings = false;
       });
@@ -90,7 +89,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         _isLoadingReviews = false;
       });
     } catch (e) {
-      print('Error loading reviews: $e');
       setState(() => _isLoadingReviews = false);
     }
   }
@@ -1480,9 +1478,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         ),
       );
 
-      print('=== FIXED MOBILE: Starting conversation with clinic ===');
-      print('User ID: ${userSession.userId}');
-      print('Clinic ID: ${widget.clinic.documentId}');
 
       final MessagingController messagingController =
           Get.find<MessagingController>();
@@ -1501,10 +1496,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         return;
       }
 
-      print('✅ Conversation ready: ${conversation.documentId}');
 
       if (context.mounted) {
-        print('Navigating to messages page...');
 
         Navigator.push(
           context,
@@ -1519,11 +1512,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
           ),
         );
 
-        print('✅ Navigation complete');
       }
     } catch (e) {
-      print('❌ Error in _startConversationWithClinic: $e');
-      print('Stack trace: ${StackTrace.current}');
       if (context.mounted) {
         Navigator.pop(context);
         _showErrorDialog(context, 'Error starting conversation: $e');

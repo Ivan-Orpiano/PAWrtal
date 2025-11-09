@@ -2196,10 +2196,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
           throw Exception('User document ID not found. Please log in again.');
         }
 
-        print('>>> Updating user profile...');
-        print('>>> Document ID: $userDocId');
-        print('>>> New Name: $name');
-        print('>>> New Phone: $phone');
 
         // Update in Appwrite
         final authRepository = Get.find<AuthRepository>();
@@ -2211,13 +2207,11 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
           },
         );
 
-        print('>>> ✅ Profile updated successfully in Appwrite');
 
         // Update GetStorage
         await storage.write("userName", name);
         await storage.write("phone", phone);
 
-        print('>>> ✅ Local storage updated');
 
         isLoading.value = false;
 
@@ -2234,7 +2228,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
         nameController.dispose();
         phoneController.dispose();
       } catch (e) {
-        print('>>> ERROR updating profile: $e');
         isLoading.value = false;
 
         String errorMessage = 'Failed to update profile. Please try again.';
@@ -2680,7 +2673,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       try {
         isLoading.value = true;
 
-        print('>>> Attempting to change password...');
 
         // Appwrite's updatePassword automatically verifies old password
         final authRepository = Get.find<AuthRepository>();
@@ -2689,7 +2681,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
           oldPassword: currentPassword,
         );
 
-        print('>>> ✅ Password updated successfully');
 
         isLoading.value = false;
 
@@ -2704,7 +2695,6 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
         newPasswordController.dispose();
         confirmPasswordController.dispose();
       } catch (e) {
-        print('>>> ERROR changing password: $e');
         isLoading.value = false;
 
         String errorMessage = 'Failed to change password. Please try again.';
