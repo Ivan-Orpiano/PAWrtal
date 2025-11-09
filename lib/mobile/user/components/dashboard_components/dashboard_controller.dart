@@ -18,16 +18,33 @@ class DashboardController extends GetxController {
   var searchQuery = ''.obs;
   var selectedFilter = 'All'.obs;
 
+  // Cache management
+  final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheValidity = Duration(minutes: 5);
+
   @override
   void onInit() {
     super.onInit();
     fetchClinics();
   }
 
-  Future<void> fetchClinics() async {
+  bool _isCacheValid(String key) {
+    final timestamp = _cacheTimestamps[key];
+    if (timestamp == null) return false;
+    return DateTime.now().difference(timestamp) < _cacheValidity;
+  }
+
+  Future<void> fetchClinics({bool forceRefresh = false}) async {
     try {
       isLoading.value = true;
 
+      // Check cache validity
+      if (!forceRefresh && _isCacheValid('clinics') && allClinics.isNotEmpty) {
+        isLoading.value = false;
+        return;
+      }
+
+      // ✨ OPTIMIZATION 1: Single database call for all clinics
       final result = await appwrite.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.clinicsCollectionID,
@@ -40,50 +57,96 @@ class DashboardController extends GetxController {
         return clinic;
       }).toList();
 
-      // Load clinic settings and rating stats for each clinic
-      final settingsMap = <String, ClinicSettings?>{};
-      final statsCache = <String, ClinicRatingStats>{};
+      final clinicIds = clinics
+          .map((c) => c.documentId ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
 
-      for (final clinic in clinics) {
-        try {
-          // Load settings
-          final settings = await authRepository
-              .getClinicSettingsByClinicId(clinic.documentId ?? '');
-          settingsMap[clinic.documentId ?? ''] = settings;
+      // ✨ OPTIMIZATION 2: Parallel loading of settings and ratings
+      final results = await Future.wait([
+        _batchLoadSettings(clinicIds),
+        _batchLoadRatingStats(clinicIds),
+      ]);
 
-          // Load rating stats
-          try {
-            final stats = await authRepository
-                .getClinicRatingStats(clinic.documentId ?? '');
-            statsCache[clinic.documentId ?? ''] = stats;
-          } catch (e) {
-            // Create empty stats if none found
-            statsCache[clinic.documentId ?? ''] = ClinicRatingStats(
-              averageRating: 0.0,
-              totalReviews: 0,
-              ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-              reviewsWithText: 0,
-              reviewsWithImages: 0,
-            );
-          }
-        } catch (e) {
-          settingsMap[clinic.documentId ?? ''] = null;
-        }
-      }
+      final settingsMap = results[0] as Map<String, ClinicSettings?>;
+      final statsCache = results[1] as Map<String, ClinicRatingStats>;
 
+      // Update state once
       allClinics.assignAll(clinics);
       clinicSettingsMap.assignAll(settingsMap);
       ratingStatsCache.assignAll(statsCache);
+
+      // Update cache timestamp
+      _cacheTimestamps['clinics'] = DateTime.now();
+
       applyFilters();
     } catch (e) {
+      print('Error fetching clinics: $e');
     } finally {
       isLoading.value = false;
     }
   }
 
+  // ✨ NEW: Batch load settings in parallel
+  Future<Map<String, ClinicSettings?>> _batchLoadSettings(
+    List<String> clinicIds,
+  ) async {
+    final settingsMap = <String, ClinicSettings?>{};
+
+    final futures = clinicIds.map((clinicId) async {
+      try {
+        final settings = await authRepository.getClinicSettingsByClinicId(clinicId);
+        return MapEntry(clinicId, settings);
+      } catch (e) {
+        return MapEntry(clinicId, null);
+      }
+    });
+
+    final results = await Future.wait(futures);
+
+    for (final entry in results) {
+      settingsMap[entry.key] = entry.value;
+    }
+
+    return settingsMap;
+  }
+
+  // ✨ NEW: Batch load rating stats in parallel
+  Future<Map<String, ClinicRatingStats>> _batchLoadRatingStats(
+    List<String> clinicIds,
+  ) async {
+    final statsCache = <String, ClinicRatingStats>{};
+
+    final futures = clinicIds.map((clinicId) async {
+      try {
+        final stats = await authRepository.getClinicRatingStats(clinicId);
+        return MapEntry(clinicId, stats);
+      } catch (e) {
+        return MapEntry(
+          clinicId,
+          ClinicRatingStats(
+            averageRating: 0.0,
+            totalReviews: 0,
+            ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+            reviewsWithText: 0,
+            reviewsWithImages: 0,
+          ),
+        );
+      }
+    });
+
+    final results = await Future.wait(futures);
+
+    for (final entry in results) {
+      statsCache[entry.key] = entry.value;
+    }
+
+    return statsCache;
+  }
+
   void updateSearchQuery(String query) {
     searchQuery.value = query;
-    applyFilters();
+    _debounceFilter();
   }
 
   void setFilter(String filter) {
@@ -91,190 +154,172 @@ class DashboardController extends GetxController {
     applyFilters();
   }
 
+  // ✨ OPTIMIZATION 3: Debounce search
+  Worker? _debounceWorker;
+  void _debounceFilter() {
+    _debounceWorker?.dispose();
+    _debounceWorker = debounce(
+      searchQuery,
+      (_) => applyFilters(),
+      time: const Duration(milliseconds: 300),
+    );
+  }
+
   void applyFilters() {
     var filtered = allClinics.toList();
 
     // Apply search filter
     if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
       filtered = filtered.where((clinic) {
         final settings = clinicSettingsMap[clinic.documentId ?? ''];
         final services = settings?.services.join(' ') ?? clinic.services;
 
-        return clinic.clinicName
-                .toLowerCase()
-                .contains(searchQuery.value.toLowerCase()) ||
-            clinic.address
-                .toLowerCase()
-                .contains(searchQuery.value.toLowerCase()) ||
-            services.toLowerCase().contains(searchQuery.value.toLowerCase());
+        return clinic.clinicName.toLowerCase().contains(query) ||
+            clinic.address.toLowerCase().contains(query) ||
+            services.toLowerCase().contains(query);
       }).toList();
     }
 
-    // Apply status filter with closed dates support
+    // Apply status filter
     switch (selectedFilter.value) {
       case 'Open':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
-        }).toList();
+        filtered = _filterOpenClinics(filtered);
         break;
 
       case 'Available Today':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return settings.isOpen &&
-              settings.isOpenToday() &&
-              !isTodayClosedDate;
-        }).toList();
+        filtered = _filterAvailableToday(filtered);
         break;
 
       case 'Closed':
-        filtered = filtered.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
-        }).toList();
+        filtered = _filterClosedClinics(filtered);
         break;
 
-        case 'Popular':
-          // FIXED: Sort by review count FIRST, then by rating
-          filtered.sort((a, b) {
-            final aStats = ratingStatsCache[a.documentId ?? ''];
-            final bStats = ratingStatsCache[b.documentId ?? ''];
-
-            final aReviews = aStats?.totalReviews ?? 0;
-            final bReviews = bStats?.totalReviews ?? 0;
-
-            final aRating = aStats?.averageRating ?? 0.0;
-            final bRating = bStats?.averageRating ?? 0.0;
-
-            // Primary sort: More reviews first
-            if (aReviews != bReviews) {
-              return bReviews.compareTo(aReviews);
-            }
-
-            // Secondary sort: Higher rating if review counts are equal
-            return bRating.compareTo(aRating);
-          });
-
-          // Only show clinics with at least 1 review and rating > 0
-          filtered = filtered.where((clinic) {
-            final stats = ratingStatsCache[clinic.documentId ?? ''];
-            return (stats?.totalReviews ?? 0) > 0 &&
-                (stats?.averageRating ?? 0.0) > 0.0;
-          }).toList();
-          break;
+      case 'Popular':
+        filtered = _filterPopularClinics(filtered);
+        break;
 
       case 'All':
       default:
-        // Sort open clinics first, then by name
-        filtered.sort((a, b) {
-          final aSettings = clinicSettingsMap[a.documentId ?? ''];
-          final bSettings = clinicSettingsMap[b.documentId ?? ''];
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-          final aIsClosedDate =
-              aSettings?.closedDates.contains(todayStr) ?? false;
-          final bIsClosedDate =
-              bSettings?.closedDates.contains(todayStr) ?? false;
-
-          final aIsOpen = (aSettings?.isOpen ?? true) &&
-              (aSettings?.isOpenNow() ?? false) &&
-              !aIsClosedDate;
-          final bIsOpen = (bSettings?.isOpen ?? true) &&
-              (bSettings?.isOpenNow() ?? false) &&
-              !bIsClosedDate;
-
-          if (aIsOpen && !bIsOpen) return -1;
-          if (!aIsOpen && bIsOpen) return 1;
-
-          return a.clinicName.compareTo(b.clinicName);
-        });
+        filtered = _sortAllClinics(filtered);
         break;
     }
 
     filteredClinics.assignAll(filtered);
   }
 
+  // ✨ OPTIMIZATION 4: Extract filter logic
+  List<Clinic> _filterOpenClinics(List<Clinic> clinics) {
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return clinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      if (settings == null) return false;
+
+      final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
+    }).toList();
+  }
+
+  List<Clinic> _filterAvailableToday(List<Clinic> clinics) {
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return clinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      if (settings == null) return false;
+
+      final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      return settings.isOpen && settings.isOpenToday() && !isTodayClosedDate;
+    }).toList();
+  }
+
+  List<Clinic> _filterClosedClinics(List<Clinic> clinics) {
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    return clinics.where((clinic) {
+      final settings = clinicSettingsMap[clinic.documentId ?? ''];
+      if (settings == null) return false;
+
+      final isTodayClosedDate = settings.closedDates.contains(todayStr);
+      return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
+    }).toList();
+  }
+
+  List<Clinic> _filterPopularClinics(List<Clinic> clinics) {
+    final popular = clinics.where((clinic) {
+      final stats = ratingStatsCache[clinic.documentId ?? ''];
+      return (stats?.totalReviews ?? 0) > 0 && (stats?.averageRating ?? 0.0) > 0.0;
+    }).toList();
+
+    popular.sort((a, b) {
+      final aStats = ratingStatsCache[a.documentId ?? ''];
+      final bStats = ratingStatsCache[b.documentId ?? ''];
+
+      final aReviews = aStats?.totalReviews ?? 0;
+      final bReviews = bStats?.totalReviews ?? 0;
+
+      if (aReviews != bReviews) {
+        return bReviews.compareTo(aReviews);
+      }
+
+      final aRating = aStats?.averageRating ?? 0.0;
+      final bRating = bStats?.averageRating ?? 0.0;
+      return bRating.compareTo(aRating);
+    });
+
+    return popular;
+  }
+
+  List<Clinic> _sortAllClinics(List<Clinic> clinics) {
+    clinics.sort((a, b) {
+      final aSettings = clinicSettingsMap[a.documentId ?? ''];
+      final bSettings = clinicSettingsMap[b.documentId ?? ''];
+
+      final today = DateTime.now();
+      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+      final aIsClosedDate = aSettings?.closedDates.contains(todayStr) ?? false;
+      final bIsClosedDate = bSettings?.closedDates.contains(todayStr) ?? false;
+
+      final aIsOpen = (aSettings?.isOpen ?? true) &&
+          (aSettings?.isOpenNow() ?? false) &&
+          !aIsClosedDate;
+      final bIsOpen = (bSettings?.isOpen ?? true) &&
+          (bSettings?.isOpenNow() ?? false) &&
+          !bIsClosedDate;
+
+      if (aIsOpen && !bIsOpen) return -1;
+      if (!aIsOpen && bIsOpen) return 1;
+
+      return a.clinicName.compareTo(b.clinicName);
+    });
+
+    return clinics;
+  }
+
   int getFilterCount(String filter) {
     switch (filter) {
       case 'All':
         return allClinics.length;
-
       case 'Open':
-        return allClinics.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
-        }).length;
-
+        return _filterOpenClinics(allClinics).length;
       case 'Available Today':
-        return allClinics.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return settings.isOpen &&
-              settings.isOpenToday() &&
-              !isTodayClosedDate;
-        }).length;
-
+        return _filterAvailableToday(allClinics).length;
       case 'Closed':
-        return allClinics.where((clinic) {
-          final settings = clinicSettingsMap[clinic.documentId ?? ''];
-          if (settings == null) return false;
-
-          final today = DateTime.now();
-          final todayStr =
-              '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-          final isTodayClosedDate = settings.closedDates.contains(todayStr);
-
-          return !settings.isOpen || !settings.isOpenNow() || isTodayClosedDate;
-        }).length;
-
+        return _filterClosedClinics(allClinics).length;
       case 'Popular':
-        // FIXED: Count clinics with reviews and ratings > 0
-        return allClinics.where((clinic) {
-          final stats = ratingStatsCache[clinic.documentId ?? ''];
-          return (stats?.totalReviews ?? 0) > 0 &&
-              (stats?.averageRating ?? 0.0) > 0.0;
-        }).length;
-
+        return _filterPopularClinics(allClinics).length;
       default:
         return 0;
     }
+  }
+
+  @override
+  void onClose() {
+    _debounceWorker?.dispose();
+    super.onClose();
   }
 }
